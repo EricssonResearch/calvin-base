@@ -17,7 +17,7 @@
 import json
 from calvin.requests import calvinresponse
 from calvin.utilities.calvinlogger import get_logger
-from calvin.runtime.north.control_apis.routes import uuid_re, handler
+from calvin.runtime.north.control_apis.routes import handler
 from calvin.runtime.north.control_apis.authentication import authentication_decorator
 
 _log = get_logger(__name__)
@@ -47,7 +47,7 @@ def handle_post_certificate_signing_request(self, handle, connection, match, dat
 
 #Only authorized users, e.g., an admin, should be allowed to query certificate enrollment passwords
 # from the CA runtime
-@handler(method="GET", path="/certificate_authority/certificate_enrollment_password/([0-9a-zA-Z\.\-/_]*)")
+@handler(method="GET", path="/certificate_authority/certificate_enrollment_password/{path}")
 @authentication_decorator
 def handle_get_certificate_enrollment_password(self, handle, connection, match, data, hdr):
     """
@@ -69,7 +69,7 @@ def handle_get_certificate_enrollment_password(self, handle, connection, match, 
 
 #Only authorized users, e.g.,an admin, should be allowed to query certificate enrollment passwords
 # from the CA runtime
-@handler(method="PUT", path="/certificate_authority/certificate_enrollment_password/([0-9a-zA-Z\.\-/_]*)")
+@handler(method="PUT", path="/certificate_authority/certificate_enrollment_password/{path}")
 @authentication_decorator
 def handle_edit_certificate_enrollment_password(self, handle, connection, match, data, hdr):
     """
@@ -224,7 +224,7 @@ def handle_get_authorization_policies(self, handle, connection, match, data, hdr
                        status=status)
 
 
-@handler(method="GET", path="/authorization/policies/(POLICY_" + uuid_re + "|" + uuid_re + ")")
+@handler(method="GET", path="/authorization/policies/{policy_id}")
 @authentication_decorator
 def handle_get_authorization_policy(self, handle, connection, match, data, hdr):
     """
@@ -245,7 +245,7 @@ def handle_get_authorization_policy(self, handle, connection, match, data, hdr):
     self.send_response(handle, connection, json.dumps({"policy": data}) if status == calvinresponse.OK else None,
                        status=status)
 
-@handler(method="PUT", path="/authorization/policies/(POLICY_" + uuid_re + "|" + uuid_re + ")")
+@handler(method="PUT", path="/authorization/policies/{policy_id}")
 @authentication_decorator
 def handle_edit_authorization_policy(self, handle, connection, match, data, hdr):
     """
@@ -267,7 +267,7 @@ def handle_edit_authorization_policy(self, handle, connection, match, data, hdr)
         status = calvinresponse.INTERNAL_ERROR
     self.send_response(handle, connection, None, status=status)
 
-@handler(method="DELETE", path="/authorization/policies/(POLICY_" + uuid_re + "|" + uuid_re + ")")
+@handler(method="DELETE", path="/authorization/policies/{policy_id}")
 @authentication_decorator
 def handle_del_authorization_policy(self, handle, connection, match, data, hdr):
     """

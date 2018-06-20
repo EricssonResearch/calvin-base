@@ -17,9 +17,9 @@
 import json
 from calvin.requests import calvinresponse
 import calvin.runtime.south.plugins.ui.uicalvinsys as ui
-from routes import handler, uuid_re
+from routes import handler
 
-@handler(method="GET", path="/uicalvinsys/" + uuid_re)
+@handler(method="GET", path="/uicalvinsys/{uuid}")
 def handle_get_uicalvinsys(self, handle, connection, match, data, hdr):
     """
     GET /uicalvinsys/<uuid>

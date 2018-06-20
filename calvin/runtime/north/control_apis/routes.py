@@ -17,20 +17,56 @@
 import types
 import re
 from inspect import cleandoc
+from calvin.utilities.calvinlogger import get_logger
+
+
+_log = get_logger(__name__)
 
 _routes = {}
 _methods = []
 _docs = []
 
-uuid_re = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+uuid_re = r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
 
-def handler(method, path):
+app_uuid_re = "(APP_" + uuid_re + "|" + uuid_re + ")"
+actor_uuid_re = "(ACTOR_" + uuid_re + "|" + uuid_re + ")"
+port_uuid_re = "(PORT_" + uuid_re + "|" + uuid_re + ")"
+repl_uuid_re = "(REPLICATION_" + uuid_re + "|" + uuid_re + ")"
+trace_uuid_re = "(TRACE_" + uuid_re + "|" + uuid_re + ")"
+node_uuid_re = "(NODE_" + uuid_re + "|" + uuid_re + ")"
+policy_uuid_re = "(POLICY_" + uuid_re + "|" + uuid_re + ")"
+path_re = r"(/?[0-9a-zA-Z\.\-/_]*)"
+
+path_regex = {
+    "uuid": uuid_re,
+    "application_id": app_uuid_re,
+    "actor_id": actor_uuid_re,
+    "port_id": port_uuid_re,
+    "replication_id": repl_uuid_re,
+    "trace_id": trace_uuid_re,
+    "node_id": node_uuid_re,
+    "policy_id": policy_uuid_re,
+    "path": path_re,
+    # "ident": ident_re
+}
+
+def handler(method, path, optional=None):
     def wrap(func):
         _docs.append(cleandoc(func.__doc__))
-        _routes[func] = method + " " + path + r"\s+HTTP/1"
+        if optional:
+            alts = "|".join(o for o in optional)
+            opts = "(?:({alts}))?".format(alts=alts)
+        else:
+            opts = ""
+        _routes[func] = "{method} {path}{opts}{end}".format(
+            method=method,
+            path=path.format(**path_regex),
+            opts=opts,
+            end=r"\s+HTTP/1")
         _methods.append(func)
         return func
     return wrap
+
 
 def register(func):
     _methods.append(func)

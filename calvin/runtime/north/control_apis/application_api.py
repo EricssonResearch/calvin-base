@@ -24,7 +24,7 @@ from calvin.csparser.dscodegen import calvin_dscodegen
 from calvin.runtime.north.appmanager import Deployer
 from calvin.runtime.north.plugins.port import DISCONNECT
 from calvin.utilities.security import security_enabled
-from routes import handler, register, uuid_re
+from routes import register, handler
 from authentication import authentication_decorator
 from calvin.utilities.replication_defs import PRE_CHECK, REPLICATION_STATUS
 
@@ -41,7 +41,7 @@ def handle_get_applications(self, handle, connection, match, data, hdr):
     """
     self.send_response(handle, connection, json.dumps(self.node.app_manager.list_applications()))
 
-@handler(method="DELETE", path="/application/(APP_" + uuid_re + "|" + uuid_re + ")")
+@handler(method="DELETE", path="/application/{application_id}")
 @authentication_decorator
 def handle_del_application(self, handle, connection, match, data, hdr):
     """
@@ -110,7 +110,7 @@ def handle_get_actors(self, handle, connection, match, data, hdr):
     self.send_response(
         handle, connection, json.dumps(actors))
 
-@handler(method="DELETE", path="/actor/(ACTOR_" + uuid_re + "|" + uuid_re + ")")
+@handler(method="DELETE", path="/actor/{actor_id}")
 @authentication_decorator
 def handle_del_actor(self, handle, connection, match, data, hdr):
     """
@@ -140,7 +140,7 @@ def _actor_report(self, handle, connection, match, data, hdr):
     self.send_response(handle, connection, None if report is None else json.dumps(report, default=repr), status=status)
 
 
-@handler(method="GET", path="/actor/(ACTOR_" + uuid_re + "|" + uuid_re + ")/report")
+@handler(method="GET", path="/actor/{actor_id}/report")
 @authentication_decorator
 def handle_get_actor_report(self, handle, connection, match, data, hdr):
     """
@@ -152,7 +152,7 @@ def handle_get_actor_report(self, handle, connection, match, data, hdr):
     self._actor_report(handle, connection, match, data, hdr)
 
 
-@handler(method="POST", path="/actor/(ACTOR_" + uuid_re + "|" + uuid_re + ")/report")
+@handler(method="POST", path="/actor/{actor_id}/report")
 @authentication_decorator
 def handle_post_actor_report(self, handle, connection, match, data, hdr):
     """
@@ -178,7 +178,7 @@ def handle_actor_migrate_lookup_peer_cb(self, key, value, handle, connection, ac
     else:
         self.send_response(handle, connection, None, status=calvinresponse.NOT_FOUND)
 
-@handler(method="POST", path="/actor/(ACTOR_" + uuid_re + "|" + uuid_re + ")/migrate")
+@handler(method="POST", path="/actor/{actor_id}/migrate")
 @authentication_decorator
 def handle_actor_migrate(self, handle, connection, match, data, hdr):
     """
@@ -236,7 +236,7 @@ def actor_migrate_cb(self, handle, connection, status, *args, **kwargs):
     """
     self.send_response(handle, connection, None, status=status.status)
 
-@handler(method="POST", path="/actor/(ACTOR_" + uuid_re + "|" + uuid_re + ")/disable")
+@handler(method="POST", path="/actor/{actor_id}/disable")
 @authentication_decorator
 def handle_actor_disable(self, handle, connection, match, data, hdr):
     """
@@ -252,7 +252,7 @@ def handle_actor_disable(self, handle, connection, match, data, hdr):
         status = calvinresponse.NOT_FOUND
     self.send_response(handle, connection, None, status)
 
-@handler(method="POST", path="/actor/(REPLICATION_" + uuid_re + "|" + uuid_re + ")/replicate")
+@handler(method="POST", path="/actor/{replication_id}/replicate")
 @authentication_decorator
 def handle_actor_replicate(self, handle, connection, match, data, hdr):
     """
@@ -289,7 +289,7 @@ def handle_actor_replicate(self, handle, connection, match, data, hdr):
 def handle_actor_replicate_cb(self, handle, connection, status):
     self.send_response(handle, connection, json.dumps(status.data), status=status.status)
 
-@handler(method="GET", path="/actor/(ACTOR_" + uuid_re + "|" + uuid_re + ")/port/(PORT_" + uuid_re + "|" + uuid_re + ")/state")
+@handler(method="GET", path="/actor/{actor_id}/port/{port_id}/state")
 @authentication_decorator
 def handle_get_port_state(self, handle, connection, match, data, hdr):
     """
@@ -543,7 +543,7 @@ def handle_deploy_cb(self, handle, connection, status, deployer, **kwargs):
         self.send_response(handle, connection, None, status=status.status)
 
 
-@handler(method="POST", path="/application/(APP_" + uuid_re + "|" + uuid_re + ")/migrate")
+@handler(method="POST", path="/application/{application_id}/migrate")
 @authentication_decorator
 def handle_post_application_migrate(self, handle, connection, match, data, hdr):
     """

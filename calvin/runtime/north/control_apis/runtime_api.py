@@ -84,7 +84,7 @@ def handle_get_nodes(self, handle, connection, match, data, hdr):
     self.send_response(handle, connection, json.dumps(self.node.network.list_links()))
 
 
-@handler(method="DELETE", path=r"/node(?:/(now|migrate|clean))?")
+@handler(method="DELETE", path="/node", optional=["/now", "/migrate", "/clean"])
 @authentication_decorator
 def handle_quit(self, handle, connection, match, data, hdr):
     """
@@ -108,7 +108,7 @@ def handle_quit(self, handle, connection, match, data, hdr):
     self.send_response(handle, connection, None, status=calvinresponse.ACCEPTED)
 
 
-@handler(method="OPTIONS", path=r"/[^\s]*")
+@handler(method="OPTIONS", path=r"/{path}")
 @authentication_decorator
 def handle_options(self, handle, connection, match, data, hdr):
     """
@@ -120,8 +120,7 @@ def handle_options(self, handle, connection, match, data, hdr):
 
     response = "HTTP/1.1 200 OK\n"
 
-    """ Copy the content of Access-Control-Request-Headers to the response
-    """
+    # Copy the content of Access-Control-Request-Headers to the response
     if 'access-control-request-headers' in hdr:
         response += "Access-Control-Allow-Headers: " + \
                     hdr['access-control-request-headers'] + "\n"
