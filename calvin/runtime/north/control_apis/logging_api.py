@@ -1,3 +1,19 @@
+# -*- coding: utf-8 -*-
+
+# Copyright (c) 2018 Ericsson AB
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import json
 import time
 from calvin.requests import calvinresponse
@@ -313,7 +329,7 @@ def log_log_message(self, message):
         del self.loggers[user_id]
 
 
-@handler(r"POST /log\sHTTP/1")
+@handler(method="POST", path="/log")
 @authentication_decorator
 def handle_post_log(self, handle, connection, match, data, hdr):
     """
@@ -386,7 +402,8 @@ def handle_post_log(self, handle, connection, match, data, hdr):
                        if status == calvinresponse.OK else None,
                        status=status)
 
-@handler(r"DELETE /log/(TRACE_" + uuid_re + "|" + uuid_re + ")\sHTTP/1")
+
+@handler(method="DELETE", path="/log/(TRACE_" + uuid_re + "|" + uuid_re + ")")
 @authentication_decorator
 def handle_delete_log(self, handle, connection, match, data, hdr):
     """
@@ -402,7 +419,7 @@ def handle_delete_log(self, handle, connection, match, data, hdr):
         status = calvinresponse.NOT_FOUND
     self.send_response(handle, connection, None, status=status)
 
-@handler(r"GET /log/(TRACE_" + uuid_re + "|" + uuid_re + ")\sHTTP/1")
+@handler(method="GET", path="/log/(TRACE_" + uuid_re + "|" + uuid_re + ")")
 @authentication_decorator
 def handle_get_log(self, handle, connection, match, data, hdr):
     """

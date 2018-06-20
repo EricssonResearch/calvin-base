@@ -1,3 +1,19 @@
+# -*- coding: utf-8 -*-
+
+# Copyright (c) 2018 Ericsson AB
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import json
 from calvin.requests import calvinresponse
 from calvin.utilities.calvinlogger import get_logger
@@ -12,7 +28,7 @@ _log = get_logger(__name__)
 
 #Can't be access controlled, as it is needed to find authorization server
 #    @authentication_decorator
-@handler(r"GET /id\sHTTP/1")
+@handler(method="GET", path="/id")
 def handle_get_node_id(self, handle, connection, match, data, hdr):
     """
     GET /id
@@ -23,7 +39,7 @@ def handle_get_node_id(self, handle, connection, match, data, hdr):
     self.send_response(handle, connection, json.dumps({'id': self.node.id}))
 
 
-@handler(r"GET /capabilities\sHTTP/1")
+@handler(method="GET", path="/capabilities")
 def handle_get_node_capabilities(self, handle, connection, match, data, hdr):
     """
     GET /capabilities
@@ -34,7 +50,7 @@ def handle_get_node_capabilities(self, handle, connection, match, data, hdr):
     self.send_response(handle, connection, json.dumps(get_calvinsys().list_capabilities() + get_calvinlib().list_capabilities()))
 
 
-@handler(r"POST /peer_setup\sHTTP/1")
+@handler(method="POST", path="/peer_setup")
 def handle_peer_setup(self, handle, connection, match, data, hdr):
     """
     POST /peer_setup
@@ -56,7 +72,7 @@ def handle_peer_setup_cb(self, handle, connection, status=None, peer_node_ids=No
     self.send_response(handle, connection, data, status=status.status)
 
 
-@handler(r"GET /nodes\sHTTP/1")
+@handler(method="GET", path="/nodes")
 @authentication_decorator
 def handle_get_nodes(self, handle, connection, match, data, hdr):
     """
@@ -68,7 +84,7 @@ def handle_get_nodes(self, handle, connection, match, data, hdr):
     self.send_response(handle, connection, json.dumps(self.node.network.list_links()))
 
 
-@handler(r"DELETE /node(?:/(now|migrate|clean))?\sHTTP/1")
+@handler(method="DELETE", path=r"/node(?:/(now|migrate|clean))?")
 @authentication_decorator
 def handle_quit(self, handle, connection, match, data, hdr):
     """
@@ -92,7 +108,7 @@ def handle_quit(self, handle, connection, match, data, hdr):
     self.send_response(handle, connection, None, status=calvinresponse.ACCEPTED)
 
 
-@handler(r"OPTIONS /[^\s]*\sHTTP/1")
+@handler(method="OPTIONS", path=r"/[^\s]*")
 @authentication_decorator
 def handle_options(self, handle, connection, match, data, hdr):
     """

@@ -1,17 +1,33 @@
+# -*- coding: utf-8 -*-
+
+# Copyright (c) 2018 Ericsson AB
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import json
 from calvin.requests import calvinresponse
 from calvin.utilities.calvinlogger import get_logger
-from routes import handler, register, uuid_re
-from authentication import authentication_decorator
+from calvin.runtime.north.control_apis.routes import uuid_re, handler
+from calvin.runtime.north.control_apis.authentication import authentication_decorator
 
 _log = get_logger(__name__)
 
 # No authentication decorator, this is called by the runtimes when deployed
 # without a certificate
-@handler(r"POST /certificate_authority/certificate_signing_request\sHTTP/1")
+@handler(method="POST", path="/certificate_authority/certificate_signing_request")
 def handle_post_certificate_signing_request(self, handle, connection, match, data, hdr):
     """
-    POST /certiticate_authority/certificate_signing_request
+    POST /certificate_authority/certificate_signing_request
     Send CSR to CA, that creates a x509 certificate and returns it
     Response status code: OK or INTERNAL_ERROR
     Response:
@@ -31,7 +47,7 @@ def handle_post_certificate_signing_request(self, handle, connection, match, dat
 
 #Only authorized users, e.g., an admin, should be allowed to query certificate enrollment passwords
 # from the CA runtime
-@handler(r"GET /certificate_authority/certificate_enrollment_password/([0-9a-zA-Z\.\-/_]*)\sHTTP/1")
+@handler(method="GET", path="/certificate_authority/certificate_enrollment_password/([0-9a-zA-Z\.\-/_]*)")
 @authentication_decorator
 def handle_get_certificate_enrollment_password(self, handle, connection, match, data, hdr):
     """
@@ -53,7 +69,7 @@ def handle_get_certificate_enrollment_password(self, handle, connection, match, 
 
 #Only authorized users, e.g.,an admin, should be allowed to query certificate enrollment passwords
 # from the CA runtime
-@handler(r"PUT /certificate_authority/certificate_enrollment_password/([0-9a-zA-Z\.\-/_]*)\sHTTP/1")
+@handler(method="PUT", path="/certificate_authority/certificate_enrollment_password/([0-9a-zA-Z\.\-/_]*)")
 @authentication_decorator
 def handle_edit_certificate_enrollment_password(self, handle, connection, match, data, hdr):
     """
@@ -75,7 +91,7 @@ def handle_edit_certificate_enrollment_password(self, handle, connection, match,
     self.send_response(handle, connection, None, status=status)
 
 
-@handler(r"GET /authentication/users_db\sHTTP/1")
+@handler(method="GET", path="/authentication/users_db")
 @authentication_decorator
 def handle_get_authentication_users_db(self, handle, connection, match, data, hdr):
     """
@@ -102,7 +118,7 @@ def handle_get_authentication_users_db(self, handle, connection, match, data, hd
                        status=status)
 
 
-@handler(r"PUT /authentication/users_db\sHTTP/1")
+@handler(method="PUT", path="/authentication/users_db")
 @authentication_decorator
 def handle_edit_authentication_users_db(self, handle, connection, match, data, hdr):
     """
@@ -129,7 +145,7 @@ def handle_edit_authentication_users_db(self, handle, connection, match, data, h
     self.send_response(handle, connection, None, status=status)
 
 
-@handler(r"GET /authentication/groups_db\sHTTP/1")
+@handler(method="GET", path="/authentication/groups_db")
 @authentication_decorator
 def handle_get_authentication_groups_db(self, handle, connection, match, data, hdr):
     """
@@ -147,8 +163,7 @@ def handle_get_authentication_groups_db(self, handle, connection, match, data, h
     # TODO:to be implemented
     pass
 
-
-@handler(r"PUT /authentication/groups_db\sHTTP/1")
+@handler(method="PUT", path="/authentication/groups_db")
 @authentication_decorator
 def handle_edit_authentication_groups_db(self, handle, connection, match, data, hdr):
     """
@@ -162,7 +177,7 @@ def handle_edit_authentication_groups_db(self, handle, connection, match, data, 
     pass
 
 
-@handler(r"POST /authorization/policies\sHTTP/1")
+@handler(method="POST", path="/authorization/policies")
 @authentication_decorator
 def handle_new_authorization_policy(self, handle, connection, match, data, hdr):
     """
@@ -184,7 +199,7 @@ def handle_new_authorization_policy(self, handle, connection, match, data, hdr):
                        status=status)
 
 
-@handler(r"GET /authorization/policies\sHTTP/1")
+@handler(method="GET", path="/authorization/policies")
 @authentication_decorator
 def handle_get_authorization_policies(self, handle, connection, match, data, hdr):
     """
@@ -209,7 +224,7 @@ def handle_get_authorization_policies(self, handle, connection, match, data, hdr
                        status=status)
 
 
-@handler(r"GET /authorization/policies/(POLICY_" + uuid_re + "|" + uuid_re + ")\sHTTP/1")
+@handler(method="GET", path="/authorization/policies/(POLICY_" + uuid_re + "|" + uuid_re + ")")
 @authentication_decorator
 def handle_get_authorization_policy(self, handle, connection, match, data, hdr):
     """
@@ -230,8 +245,7 @@ def handle_get_authorization_policy(self, handle, connection, match, data, hdr):
     self.send_response(handle, connection, json.dumps({"policy": data}) if status == calvinresponse.OK else None,
                        status=status)
 
-
-@handler(r"PUT /authorization/policies/(POLICY_" + uuid_re + "|" + uuid_re + ")\sHTTP/1")
+@handler(method="PUT", path="/authorization/policies/(POLICY_" + uuid_re + "|" + uuid_re + ")")
 @authentication_decorator
 def handle_edit_authorization_policy(self, handle, connection, match, data, hdr):
     """
@@ -253,8 +267,7 @@ def handle_edit_authorization_policy(self, handle, connection, match, data, hdr)
         status = calvinresponse.INTERNAL_ERROR
     self.send_response(handle, connection, None, status=status)
 
-
-@handler(r"DELETE /authorization/policies/(POLICY_" + uuid_re + "|" + uuid_re + ")\sHTTP/1")
+@handler(method="DELETE", path="/authorization/policies/(POLICY_" + uuid_re + "|" + uuid_re + ")")
 @authentication_decorator
 def handle_del_authorization_policy(self, handle, connection, match, data, hdr):
     """

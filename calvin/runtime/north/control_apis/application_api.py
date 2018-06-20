@@ -1,3 +1,19 @@
+# -*- coding: utf-8 -*-
+
+# Copyright (c) 2018 Ericsson AB
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import json
 from calvin.requests import calvinresponse
 from calvin.utilities.calvinlogger import get_logger
@@ -14,7 +30,7 @@ from calvin.utilities.replication_defs import PRE_CHECK, REPLICATION_STATUS
 
 _log = get_logger(__name__)
 
-@handler(r"GET /applications\sHTTP/1")
+@handler(method="GET", path="/applications")
 @authentication_decorator
 def handle_get_applications(self, handle, connection, match, data, hdr):
     """
@@ -25,8 +41,7 @@ def handle_get_applications(self, handle, connection, match, data, hdr):
     """
     self.send_response(handle, connection, json.dumps(self.node.app_manager.list_applications()))
 
-
-@handler(r"DELETE /application/(APP_" + uuid_re + "|" + uuid_re + ")\sHTTP/1")
+@handler(method="DELETE", path="/application/(APP_" + uuid_re + "|" + uuid_re + ")")
 @authentication_decorator
 def handle_del_application(self, handle, connection, match, data, hdr):
     """
@@ -51,7 +66,7 @@ def handle_del_application_cb(self, handle, connection, status=None):
     self.send_response(handle, connection, data, status=status.status)
 
 
-@handler(r"POST /actor\sHTTP/1")
+@handler(method="POST", path="/actor")
 @authentication_decorator
 def handle_new_actor(self, handle, connection, match, data, hdr):
     """
@@ -82,7 +97,7 @@ def handle_new_actor(self, handle, connection, match, data, hdr):
         handle, connection, None if actor_id is None else json.dumps({'actor_id': actor_id}), status=status)
 
 
-@handler(r"GET /actors\sHTTP/1")
+@handler(method="GET", path="/actors")
 @authentication_decorator
 def handle_get_actors(self, handle, connection, match, data, hdr):
     """
@@ -95,8 +110,7 @@ def handle_get_actors(self, handle, connection, match, data, hdr):
     self.send_response(
         handle, connection, json.dumps(actors))
 
-
-@handler(r"DELETE /actor/(ACTOR_" + uuid_re + "|" + uuid_re + ")\sHTTP/1")
+@handler(method="DELETE", path="/actor/(ACTOR_" + uuid_re + "|" + uuid_re + ")")
 @authentication_decorator
 def handle_del_actor(self, handle, connection, match, data, hdr):
     """
@@ -113,17 +127,8 @@ def handle_del_actor(self, handle, connection, match, data, hdr):
         status = calvinresponse.NOT_FOUND
     self.send_response(handle, connection, None, status=status)
 
-
-# FIXME: The regex cannot possibly be correct?
-@handler(r"(?:GET|POST) /actor/(ACTOR_" + uuid_re + "|" + uuid_re + ")/report\sHTTP/1")
-@authentication_decorator
-def handle_actor_report(self, handle, connection, match, data, hdr):
-    """
-    GET /actor/{actor-id}/report
-    Some actor store statistics on inputs and outputs, this reports these. Not always present.
-    Response status code: OK or NOT_FOUND
-    Response: Depends on actor
-    """
+@register
+def _actor_report(self, handle, connection, match, data, hdr):
     try:
         # Now we allow passing in arguments (must be dictionary or None)
         report = self.node.am.report(match.group(1), data)
@@ -133,6 +138,31 @@ def handle_actor_report(self, handle, connection, match, data, hdr):
         report = None
         status = calvinresponse.NOT_FOUND
     self.send_response(handle, connection, None if report is None else json.dumps(report, default=repr), status=status)
+
+
+@handler(method="GET", path="/actor/(ACTOR_" + uuid_re + "|" + uuid_re + ")/report")
+@authentication_decorator
+def handle_get_actor_report(self, handle, connection, match, data, hdr):
+    """
+    GET /actor/{actor-id}/report
+    Some actor store statistics on inputs and outputs, this reports these. Not always present.
+    Response status code: OK or NOT_FOUND
+    Response: Depends on actor
+    """
+    self._actor_report(handle, connection, match, data, hdr)
+
+
+@handler(method="POST", path="/actor/(ACTOR_" + uuid_re + "|" + uuid_re + ")/report")
+@authentication_decorator
+def handle_post_actor_report(self, handle, connection, match, data, hdr):
+    """
+    POST /actor/{actor-id}/report
+    Some actors accept external input using this function. Not always present.
+    Response status code: OK or NOT_FOUND
+    Response: Depends on actor
+    """
+    self._actor_report(handle, connection, match, data, hdr)
+
 
 @register
 def handle_actor_migrate_proto_cb(self, handle, connection, status, *args, **kwargs):
@@ -148,7 +178,7 @@ def handle_actor_migrate_lookup_peer_cb(self, key, value, handle, connection, ac
     else:
         self.send_response(handle, connection, None, status=calvinresponse.NOT_FOUND)
 
-@handler(r"POST /actor/(ACTOR_" + uuid_re + "|" + uuid_re + ")/migrate\sHTTP/1")
+@handler(method="POST", path="/actor/(ACTOR_" + uuid_re + "|" + uuid_re + ")/migrate")
 @authentication_decorator
 def handle_actor_migrate(self, handle, connection, match, data, hdr):
     """
@@ -206,8 +236,7 @@ def actor_migrate_cb(self, handle, connection, status, *args, **kwargs):
     """
     self.send_response(handle, connection, None, status=status.status)
 
-
-@handler(r"POST /actor/(ACTOR_" + uuid_re + "|" + uuid_re + ")/disable\sHTTP/1")
+@handler(method="POST", path="/actor/(ACTOR_" + uuid_re + "|" + uuid_re + ")/disable")
 @authentication_decorator
 def handle_actor_disable(self, handle, connection, match, data, hdr):
     """
@@ -223,8 +252,7 @@ def handle_actor_disable(self, handle, connection, match, data, hdr):
         status = calvinresponse.NOT_FOUND
     self.send_response(handle, connection, None, status)
 
-
-@handler(r"POST /actor/(REPLICATION_" + uuid_re + "|" + uuid_re + ")/replicate\sHTTP/1")
+@handler(method="POST", path="/actor/(REPLICATION_" + uuid_re + "|" + uuid_re + ")/replicate")
 @authentication_decorator
 def handle_actor_replicate(self, handle, connection, match, data, hdr):
     """
@@ -261,8 +289,7 @@ def handle_actor_replicate(self, handle, connection, match, data, hdr):
 def handle_actor_replicate_cb(self, handle, connection, status):
     self.send_response(handle, connection, json.dumps(status.data), status=status.status)
 
-
-@handler(r"GET /actor/(ACTOR_" + uuid_re + "|" + uuid_re + ")/port/(PORT_" + uuid_re + "|" + uuid_re + ")/state\sHTTP/1")
+@handler(method="GET", path="/actor/(ACTOR_" + uuid_re + "|" + uuid_re + ")/port/(PORT_" + uuid_re + "|" + uuid_re + ")/state")
 @authentication_decorator
 def handle_get_port_state(self, handle, connection, match, data, hdr):
     """
@@ -278,8 +305,7 @@ def handle_get_port_state(self, handle, connection, match, data, hdr):
         status = calvinresponse.NOT_FOUND
     self.send_response(handle, connection, json.dumps(state), status)
 
-
-@handler(r"POST /connect\sHTTP/1")
+@handler(method="POST", path="/connect")
 @authentication_decorator
 def handle_connect(self, handle, connection, match, data, hdr):
     """
@@ -322,8 +348,7 @@ def handle_connect_cb(self, handle, connection, **kwargs):
                        status=status.status)
     _log.debug("Handle connect finnished")
 
-
-@handler(r"POST /set_port_property\sHTTP/1")
+@handler(method="POST", path="/set_port_property")
 @authentication_decorator
 def handle_set_port_property(self, handle, connection, match, data, hdr):
     """
@@ -362,8 +387,7 @@ def handle_set_port_property(self, handle, connection, match, data, hdr):
         status = calvinresponse.CalvinResponse(calvinresponse.NOT_FOUND)
     self.send_response(handle, connection, None, status=status.status)
 
-
-@handler(r"POST /deploy\sHTTP/1")
+@handler(method="POST", path="/deploy")
 @authentication_decorator
 def handle_deploy(self, handle, connection, match, data, hdr):
     """
@@ -519,7 +543,7 @@ def handle_deploy_cb(self, handle, connection, status, deployer, **kwargs):
         self.send_response(handle, connection, None, status=status.status)
 
 
-@handler(r"POST /application/(APP_" + uuid_re + "|" + uuid_re + ")/migrate\sHTTP/1")
+@handler(method="POST", path="/application/(APP_" + uuid_re + "|" + uuid_re + ")/migrate")
 @authentication_decorator
 def handle_post_application_migrate(self, handle, connection, match, data, hdr):
     """
@@ -558,7 +582,7 @@ def handle_post_application_migrate_cb(self, handle, connection, status, **kwarg
     _log.analyze(self.node.id, "+ MIGRATED", {'status': status.status})
     self.send_response(handle, connection, None, status=status.status)
 
-@handler(r"POST /disconnect\sHTTP/1")
+@handler(method="POST", path="/disconnect")
 @authentication_decorator
 def handle_disconnect(self, handle, connection, match, data, hdr):
     """

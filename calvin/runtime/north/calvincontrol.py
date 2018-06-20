@@ -16,10 +16,10 @@
 
 import json
 from random import randint
+from urlparse import urlparse
 from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.runtime.south.plugins.async import server_connection
-from urlparse import urlparse
 from calvin.requests import calvinresponse
 from calvin.utilities.security import Security
 from calvin.utilities import calvinuuid

@@ -1,3 +1,19 @@
+# -*- coding: utf-8 -*-
+
+# Copyright (c) 2018 Ericsson AB
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import json
 import re
 from calvin.requests import calvinresponse
@@ -9,7 +25,7 @@ from calvin.utilities.attribute_resolver import format_index_string
 
 _log = get_logger(__name__)
 
-@handler(r"POST /index/([0-9a-zA-Z\.\-/_]*)\sHTTP/1")
+@handler(method="POST", path=r"/index/([0-9a-zA-Z\.\-/_]*)")
 @authentication_decorator
 def handle_post_index(self, handle, connection, match, data, hdr):
     """
@@ -29,8 +45,7 @@ def handle_post_index(self, handle, connection, match, data, hdr):
     self.node.storage.add_index(
         match.group(1), data['value'], cb=CalvinCB(self.index_cb, handle, connection), **kwargs)
 
-
-@handler(r"DELETE /index/([0-9a-zA-Z\.\-/_]*)\sHTTP/1")
+@handler(method="DELETE", path=r"/index/([0-9a-zA-Z\.\-/_]*)")
 @authentication_decorator
 def handle_delete_index(self, handle, connection, match, data, hdr):
     """
@@ -52,7 +67,7 @@ def handle_delete_index(self, handle, connection, match, data, hdr):
 
 
 # Can't be access controlled, as it is needed to find authorization server
-@handler(r"GET /index/([0-9a-zA-Z\.\-/_]*)(?:\?root_prefix_level=([0-9]*))?\sHTTP/1")
+@handler(method="GET", path=r"/index/([0-9a-zA-Z\.\-/_]*)(?:\?root_prefix_level=([0-9]*))?")
 def handle_get_index(self, handle, connection, match, data, hdr):
     """
     GET /index/{key}?root_prefix_level={level}
@@ -89,7 +104,7 @@ def get_index_cb(self, handle, connection, value, *args, **kwargs):
                        status=calvinresponse.NOT_FOUND if value is None else calvinresponse.OK)
 
 
-@handler(r"POST /storage/([0-9a-zA-Z\.\-/_]*)\sHTTP/1")
+@handler(method="POST", path=r"/storage/([0-9a-zA-Z\.\-/_]*)")
 @authentication_decorator
 def handle_post_storage(self, handle, connection, match, data, hdr):
     """
@@ -105,7 +120,7 @@ def handle_post_storage(self, handle, connection, match, data, hdr):
     self.node.storage.set("", match.group(1), data['value'], cb=CalvinCB(self.index_cb, handle, connection))
 
 
-@handler(r"GET /storage/([0-9a-zA-Z\.\-/_]*)\sHTTP/1")
+@handler(method="GET", path=r"/storage/([0-9a-zA-Z\.\-/_]*)")
 @authentication_decorator
 def handle_get_storage(self, handle, connection, match, data, hdr):
     """
@@ -124,7 +139,7 @@ def get_storage_cb(self, key, value, handle, connection):
                        status=calvinresponse.NOT_FOUND if missing else calvinresponse.OK)
 
 
-@handler(r"GET /dumpstorage\sHTTP/1")
+@handler(method="GET", path="/dumpstorage")
 @authentication_decorator
 def handle_dump_storage(self, handle, connection, match, data, hdr):
     """
@@ -155,7 +170,8 @@ def handle_post_node_attribute_indexed_public_cb(self, key, value, handle, conne
         _log.error("Failed to update node %s", e)
         self.send_response(handle, connection, None, status=calvinresponse.INTERNAL_ERROR)
 
-@handler(r"POST /node/(NODE_" + uuid_re + "|" + uuid_re + ")/attributes/indexed_public\sHTTP/1")
+
+@handler(method="POST", path="/node/(NODE_" + uuid_re + "|" + uuid_re + ")/attributes/indexed_public")
 @authentication_decorator
 def handle_post_node_attribute_indexed_public(self, handle, connection, match, data, hdr):
     """
@@ -193,7 +209,7 @@ def storage_cb(self, key, value, handle, connection):
                        status=calvinresponse.NOT_FOUND if missing else calvinresponse.OK)
 
 
-@handler(r"GET /node/(NODE_" + uuid_re + "|" + uuid_re + ")\sHTTP/1")
+@handler(method="GET", path="/node/(NODE_" + uuid_re + "|" + uuid_re + ")")
 @authentication_decorator
 def handle_get_node(self, handle, connection, match, data, hdr):
     """
@@ -211,7 +227,7 @@ def handle_get_node(self, handle, connection, match, data, hdr):
         func=self.storage_cb, handle=handle, connection=connection))
 
 
-@handler(r"GET /application/(APP_" + uuid_re + "|" + uuid_re + ")\sHTTP/1")
+@handler(method="GET", path="/application/(APP_" + uuid_re + "|" + uuid_re + ")")
 @authentication_decorator
 def handle_get_application(self, handle, connection, match, data, hdr):
     """
@@ -230,7 +246,7 @@ def handle_get_application(self, handle, connection, match, data, hdr):
         func=self.storage_cb, handle=handle, connection=connection))
 
 
-@handler(r"GET /actor/(ACTOR_" + uuid_re + "|" + uuid_re + ")\sHTTP/1")
+@handler(method="GET", path="/actor/(ACTOR_" + uuid_re + "|" + uuid_re + ")")
 @authentication_decorator
 def handle_get_actor(self, handle, connection, match, data, hdr):
     """
@@ -254,7 +270,7 @@ def handle_get_actor(self, handle, connection, match, data, hdr):
 
 
 # @authentication_decorator # Disabled in original code
-@handler(r"GET /actor/(ACTOR_" + uuid_re + "|" + uuid_re + ")/port/(PORT_" + uuid_re + "|" + uuid_re + ")\sHTTP/1")
+@handler(method="GET", path="/actor/(ACTOR_" + uuid_re + "|" + uuid_re + ")/port/(PORT_" + uuid_re + "|" + uuid_re + ")")
 def handle_get_port(self, handle, connection, match, data, hdr):
     """
         GET /actor/{actor-id}/port/{port-id}
@@ -265,7 +281,7 @@ def handle_get_port(self, handle, connection, match, data, hdr):
         func=self.storage_cb, handle=handle, connection=connection))
 
 
-@handler(r"POST /node/resource/cpuAvail\sHTTP/1")
+@handler(method="POST", path="/node/resource/cpuAvail")
 @authentication_decorator
 def handle_resource_cpu_avail(self, handle, connection, match, data, hdr):
     """
@@ -280,7 +296,7 @@ def handle_resource_cpu_avail(self, handle, connection, match, data, hdr):
     """
     self.node.cpu_monitor.set_avail(data['value'], CalvinCB(self.index_cb, handle, connection))
 
-@handler(r"POST /node/resource/memAvail\sHTTP/1")
+@handler(method="POST", path="/node/resource/memAvail")
 @authentication_decorator
 def handle_resource_mem_avail(self, handle, connection, match, data, hdr):
     """
