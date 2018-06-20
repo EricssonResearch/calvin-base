@@ -1,9 +1,28 @@
+# -*- coding: utf-8 -*-
+
+# Copyright (c) 2018 Ericsson AB
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import json
 from calvin.requests import calvinresponse
 from routes import handler, uuid_re
 from calvin.runtime.north.proxyhandler import ProxyHandler
+from calvin.utilities.calvinlogger import get_logger
 
-@handler(r"GET /proxy/(NODE_" + uuid_re + "|" + uuid_re + ")/capabilities\sHTTP/1")
+_log = get_logger(__name__)
+
+@handler(method="GET", path="/proxy/(NODE_" + uuid_re + "|" + uuid_re + ")/capabilities")
 def handle_get_proxy_capabilities(self, handle, connection, match, data, hdr):
     """
     GET /proxy/<uuid>/capabilities
@@ -19,7 +38,7 @@ def handle_get_proxy_capabilities(self, handle, connection, match, data, hdr):
     self.send_response(handle, connection,
             json.dumps(data) if status == calvinresponse.OK else None, status=status)
 
-@handler(r"DELETE /proxy/(NODE_" + uuid_re + "|" + uuid_re + ")(?:/(now|migrate|clean))?\sHTTP/1")
+@handler(method="DELETE", path="/proxy/(NODE_" + uuid_re + "|" + uuid_re + ")(?:/(now|migrate|clean))?")
 def handle_delete_proxy(self, handle, connection, match, data, hdr):
     """
     DELETE /proxy/{node-id}/{/now|/migrate|/clean}
