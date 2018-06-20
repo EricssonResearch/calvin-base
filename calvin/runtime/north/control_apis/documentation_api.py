@@ -16,7 +16,7 @@
 
 import json
 from calvin.actorstore.store import DocumentationStore
-from routes import handler, docs
+from routes import docs, handler
 from authentication import authentication_decorator
 
 @handler(method="GET", path="/")
@@ -75,11 +75,11 @@ def handle_get_base_doc(self, handle, connection, match, data, hdr):
 
         self.send_response(handle, connection, json.dumps(data), status=200)
 
-@handler(method="GET", path="/actor_doc(\S*)")
+@handler(method="GET", path="/actor_doc{path}")
 @authentication_decorator
 def handle_get_actor_doc(self, handle, connection, match, data, hdr):
     """
-    GET /actor_doc {path}
+    GET /actor_doc/{path}
     Get documentation in 'raw' format for actor or module at {path}
     Path is formatted as '/{module}/{submodule}/ ... /{actor}'.
     If {path} is empty return top-level documentation.

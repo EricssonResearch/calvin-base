@@ -16,17 +16,17 @@
 
 import json
 from calvin.requests import calvinresponse
-from routes import handler, uuid_re
+from routes import handler
 from calvin.runtime.north.proxyhandler import ProxyHandler
 from calvin.utilities.calvinlogger import get_logger
 
 _log = get_logger(__name__)
 
-@handler(method="GET", path="/proxy/(NODE_" + uuid_re + "|" + uuid_re + ")/capabilities")
+@handler(method="GET", path="/proxy/{node_id}/capabilities")
 def handle_get_proxy_capabilities(self, handle, connection, match, data, hdr):
     """
-    GET /proxy/<uuid>/capabilities
-    Get capabilities from proxy peer
+    GET /proxy/{node-id}/capabilities
+    Get capabilities from proxy peer {node-id}
     Response status code: Capabilities
     """
     try:
@@ -38,7 +38,7 @@ def handle_get_proxy_capabilities(self, handle, connection, match, data, hdr):
     self.send_response(handle, connection,
             json.dumps(data) if status == calvinresponse.OK else None, status=status)
 
-@handler(method="DELETE", path="/proxy/(NODE_" + uuid_re + "|" + uuid_re + ")(?:/(now|migrate|clean))?")
+@handler(method="DELETE", path="/proxy/{node_id}", optional=["/now", "/migrate", "/clean"])
 def handle_delete_proxy(self, handle, connection, match, data, hdr):
     """
     DELETE /proxy/{node-id}/{/now|/migrate|/clean}

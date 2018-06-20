@@ -18,7 +18,7 @@ import json
 import time
 from calvin.requests import calvinresponse
 from calvin.utilities import calvinuuid
-from routes import handler, register, uuid_re
+from routes import register, handler
 from authentication import authentication_decorator
 
 LOG_ACTOR_FIRING = 0
@@ -403,7 +403,7 @@ def handle_post_log(self, handle, connection, match, data, hdr):
                        status=status)
 
 
-@handler(method="DELETE", path="/log/(TRACE_" + uuid_re + "|" + uuid_re + ")")
+@handler(method="DELETE", path="/log/{trace_id}")
 @authentication_decorator
 def handle_delete_log(self, handle, connection, match, data, hdr):
     """
@@ -419,7 +419,7 @@ def handle_delete_log(self, handle, connection, match, data, hdr):
         status = calvinresponse.NOT_FOUND
     self.send_response(handle, connection, None, status=status)
 
-@handler(method="GET", path="/log/(TRACE_" + uuid_re + "|" + uuid_re + ")")
+@handler(method="GET", path="/log/{trace_id}")
 @authentication_decorator
 def handle_get_log(self, handle, connection, match, data, hdr):
     """
