@@ -55,7 +55,7 @@ class TestActorMigration(CalvinActorMigrationTestBase):
         Create a RecTimer actor and connect it to a source and a sink.
         Migrate it from runtime1 to runtime2
         """
-        dut = self.request_handler.new_actor(self.rt1, 'std.RecTimer', 'dut', delay=0.1)
+        dut = self.request_handler.new_actor_wargs(self.rt1, 'std.RecTimer', 'dut', delay=0.1)
         src = self.request_handler.new_actor(self.rt1, 'std.CountTimer', 'src')
         snk = self.request_handler.new_actor_wargs(self.rt1, 'test.Sink', 'snk', store_tokens=1, quiet=1)
 
