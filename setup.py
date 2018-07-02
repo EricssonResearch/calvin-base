@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2015 Ericsson AB
+# Copyright (c) 2015 - 2018 Ericsson AB
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ def read_description(fname):
 
 
 setup(name='calvin',
-      version='0.8',
+      version='1.0',
       url="http://github.com/EricssonResearch/calvin-base",
       license="Apache Software License",
       author="Team Calvin @ Ericsson Research",
@@ -35,25 +35,26 @@ setup(name='calvin',
           'pytest-twisted'
       ],
       install_requires=[
-          'colorlog==2.6.1',
-          'kademlia==0.5',
-          'rpcudp==1.0',
-          'ply==3.8',
-          'Twisted==15.5.0',
-          'requests==2.9.1',
-          'wrapt==1.10.2',
-          'netifaces==0.10.4',
-          'pyOpenSSL==17.1.0',
-          'cryptography==1.9.0',
-          'passlib==1.7.0',
-          'PyJWT==1.4.0',
-          'service-identity==17.0.0',
-          'ndg-httpsclient==0.4.2',
-          'pyasn1>=0.4.2',
-          'pystache==0.5.4',
-          'jsonschema==2.6.0',
-          'u-msgpack-python==2.4.1',
-          'cbor==1.0.0'
+        'colorlog==2.6.1',
+        'rpcudp==1.0',
+        'kademlia==0.5',
+        'ply==3.8',
+        'Twisted==15.5.0',
+        'requests==2.9.1',
+        'infi.traceback==0.3.12',
+        'wrapt==1.10.2',
+        'netifaces==0.10.4',
+        'pyOpenSSL==17.1.0',
+        'cryptography==1.9.0',
+        'passlib==1.7.0',
+        'PyJWT==1.4.0',
+        'service-identity==17.0.0',
+        'ndg-httpsclient==0.4.2',
+        'pyasn1>=0.4.2',
+        'pystache==0.5.4',
+        'jsonschema==2.6.0',
+        'u-msgpack-python==2.4.1',
+        'cbor==1.0.0'
       ],
       description="Calvin is a distributed runtime and development framework for an actor based dataflow"
                   "programming methodology",
