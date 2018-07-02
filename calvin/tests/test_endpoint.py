@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2016 Philip Ståhl
+# Copyright (c) 2016 - 2018 Ericsson AB
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -150,7 +150,7 @@ class TestTunnelEndpoint(unittest.TestCase):
         self.tunnel_out.reply(nbr, 'NACK')
         assert self.tunnel_out.port.queue.com_cancel.called
         assert self.scheduler.tunnel_tx_nack.called
-        
+
 
     def test_nack_reply(self):
         self.tunnel_out.port.write_token(Token(1))
