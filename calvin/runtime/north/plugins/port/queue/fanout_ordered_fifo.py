@@ -34,6 +34,7 @@ class FanoutOrderedFIFO(FanoutBase):
         self.reader_turn = None
         self.turn_pos = 0
         self._set_turn()
+        self._is_ordered = False
         self._type = "dispatch:ordered"
 
     def _set_turn(self):
@@ -80,17 +81,20 @@ class FanoutOrderedFIFO(FanoutBase):
             # print order, self.readers
             raise Exception("Illegal port order list")
         self.readers = order
+        self._is_ordered = True
 
     def add_reader(self, reader, properties):
         super(FanoutOrderedFIFO, self).add_reader(reader, properties)
-        self.readers.sort()
-    
+        if not self._is_ordered:
+            # Once a port ordering is set we no longer re-sort the list
+            self.readers.sort()
+
     def remove_reader(self, reader):
         removed = super(FanoutOrderedFIFO, self).remove_reader(reader)
         if removed:
             self._reset_turn()
         return removed
-            
+
     def write(self, data, metadata):
         #_log.debug("WRITE1 %s" % metadata)
         if not self.slots_available(1, metadata):
