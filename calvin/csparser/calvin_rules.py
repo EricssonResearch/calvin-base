@@ -97,7 +97,7 @@ def t_STRING(t):
     # Remove the double quotes
     t.value = t.value[1:-1]
     if not is_raw:
-        t.value = t.value.decode('string_escape')
+        t.value = t.value.encode('ascii').decode('unicode_escape') # TODO: Really?
     return t
 
 
