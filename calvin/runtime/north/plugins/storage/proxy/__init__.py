@@ -56,7 +56,7 @@ class StorageProxy(StorageBase):
         _log.info("PROXY start")
         o=urlparse(self.master_uri)
         fqdn = socket.getfqdn(o.hostname)
-        self._server_node_name = fqdn.decode('unicode-escape')
+        self._server_node_name = fqdn.encode('ascii').decode('unicode-escape') # TODO: Really?
         self.node.network.join([self.master_uri],
                                callback=CalvinCB(self._start_link_cb, org_cb=cb),
                                corresponding_server_node_names=[self._server_node_name])
@@ -68,7 +68,7 @@ class StorageProxy(StorageBase):
         self.tunnel.register_tunnel_down(CalvinCB(self.tunnel_down, org_cb=org_cb))
         self.tunnel.register_tunnel_up(CalvinCB(self.tunnel_up, org_cb=org_cb))
         self.tunnel.register_recv(self.tunnel_recv_handler)
-        
+
     def _start_link_cb(self, status, uri, peer_node_id, org_cb):
         _log.analyze(self.node.id, "+", {'status': str(status)}, peer_node_id=peer_node_id)
 
@@ -76,7 +76,7 @@ class StorageProxy(StorageBase):
 
         if status != 200:
             self.retries += 1
-                
+
             if self.max_retries - self.retries != 0:
                 delay = 0.5 * self.retries if self.retries < 20 else 10
                 _log.info("Link to proxy failed, retrying in {}".format(delay))
