@@ -168,7 +168,7 @@ def setup(request):
             except:
                 traceback.print_exc()
         elif stype == "notstarted":
-            _conf.set('global', 'storage_type', 'dht')
+            _conf.set('global', 'storage_type', 'local')
             list(map(partial(prep_node, stype), nodes[stype]))
         elif stype == "sql":
             _conf.set('global', 'storage_type', 'sql')

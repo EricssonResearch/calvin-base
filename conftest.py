@@ -93,6 +93,7 @@ def testarg_actor(request):
     return request.config.getoption("--actor")
 
 
+# Skip all DHT related tests (for now at least)
 collect_ignore = ['calvin/runtime/south/plugins/storage/twistedimpl/dht/tests/test_append.py',
                   'calvin/runtime/south/plugins/storage/twistedimpl/dht/tests/test_dht_server.py',
                   'calvin/runtime/south/plugins/storage/twistedimpl/securedht/tests/test_secappend.py',
