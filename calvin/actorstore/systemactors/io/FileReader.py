@@ -49,7 +49,7 @@ class FileReader(Actor):
         self.setup()
 
     def setup(self):
-        self.file_not_found = False
+        self._file_not_found = False
         self.file = None
         self.filelen = 0
         self.totalread = 0
@@ -71,13 +71,13 @@ class FileReader(Actor):
             calvinsys.close(obj)
             self.file = calvinsys.open(self, "io.filereader", filename=filename)
         if self.file is None:
-            self.file_not_found = True
+            self._file_not_found = True
 
-    @stateguard(lambda self: self.file_not_found)
+    @stateguard(lambda self: self._file_not_found)
     @condition([], ['out'])
     def file_not_found(self):
         token = ExceptionToken(value="File not found")
-        self.file_not_found = False  # Only report once
+        self._file_not_found = False  # Only report once
         return (token, )
 
     @stateguard(lambda self: self.file is not None and calvinsys.can_read(self.file))
