@@ -503,7 +503,9 @@ class GlobalStore(ActorStore):
                 signature = {u'actor_type': str(desc['actor_type']),
                              u'inports': sorted([str(i) for i in desc['component'].inports]),
                              u'outports': sorted([str(i) for i in desc['component'].outports])}
-        return hashlib.sha256(json.dumps(signature, separators=(',', ':'), sort_keys=True)).hexdigest()
+        signature_str = json.dumps(signature, separators=(',', ':'), sort_keys=True)
+        signature_bytes = signature_str.encode('ascii')
+        return hashlib.sha256(signature_bytes).hexdigest()
 
     @staticmethod
     def list_sort(obj):
@@ -526,7 +528,8 @@ class GlobalStore(ActorStore):
         """
         # return hashlib.sha256(json.dumps(GlobalStore.list_sort(desc), separators=(',', ':'), sort_keys=True)).hexdigest()
         # FIXME: This is a temporary hack to make things work while we rewrite the store and signing infrastructure
-        return hashlib.sha256(GlobalStore.actor_signature(desc)).hexdigest()
+        actor_signature_bytes = GlobalStore.actor_signature(desc).encode('ascii')
+        return hashlib.sha256(actor_signature_bytes).hexdigest()
 
     def export_actor(self, desc):
         signature = self.actor_signature(desc)
