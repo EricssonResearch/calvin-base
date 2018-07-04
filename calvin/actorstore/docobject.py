@@ -341,7 +341,7 @@ class ActorDoc(DocObject):
         def _escape_string_arg(arg):
             if type(arg) == str or type(arg) == str:
                 # Handle \n, \r etc
-                return '"{}"'.format(arg).encode('string_escape')
+                return '"{}"'.format(arg).decode('ascii').encode('unicode_escape')
             if arg is True:
                 return 'true'
             if arg is False:
