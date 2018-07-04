@@ -80,8 +80,8 @@ class CS(object):
                                         security_dir=security_dir,
                                         force=False,
                                         readonly=False)
-            except:
-                _log.error("creation of new CS credentials failed")
+            except Exception as e:
+                _log.error("creation of new CS credentials failed: {}".format(e))
             print("Made new code signer")
 
     def new_cs_credentials(self, organization, commonName, security_dir=None, force=False, readonly=False):
@@ -93,7 +93,7 @@ class CS(object):
 
 
         os.umask(0o077)
-        code_signers_dir = self.get_code_signers_credentials_path(security_dir) 
+        code_signers_dir = self.get_code_signers_credentials_path(security_dir)
         if not os.path.isdir(code_signers_dir):
             try:
                 os.mkdir(code_signers_dir, 0o700)
@@ -152,7 +152,7 @@ class CS(object):
             raise ValueError("Password must be longer")
 
         chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ123456789!#%&/()=?[]{}"
-        return "".join(chars[ord(c) % len(chars)] for c in urandom(length))
+        return "".join(chars[c % len(chars)] for c in urandom(length)) # TODO: Why ord?
 
     def remove_cs(self, cs_name, security_dir=None):
         """
@@ -216,11 +216,11 @@ class CS(object):
         stdout, stderr = log.communicate()
         if log.returncode != 0:
             raise IOError(stderr)
-        with open(sign_file, 'rt') as f:
+        with open(sign_file, 'rb') as f:
             signature = f.read()
-        with open(file, 'rt') as f:
+        with open(file, 'rb') as f:
             content= f.read()
-        with open(self.certificate, 'rt') as f:
+        with open(self.certificate, 'rb') as f:
             trusted_cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, f.read())
             try:
                 # Verify signature
@@ -253,4 +253,4 @@ class CS(object):
         _log.debug("get_cs_credentials_path")
         return os.path.join(certificate.get_security_credentials_path(security_dir), "code_signers")
 
-      
+

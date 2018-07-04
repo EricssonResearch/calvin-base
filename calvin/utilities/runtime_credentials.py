@@ -212,8 +212,8 @@ class RuntimeCredentials(object):
             self.configuration = self._parse_opensslconf()
             _log.debug("Runtime openssl.conf already exists, self.configuration={}".format(self.configuration))
 #            print "Runtime openssl.conf already exists, self.configuration={}".format(self.configuration)
-            self.node_id =  self.configuration['req_distinguished_name']['dnQualifier'] 
-            self.node_name =self.configuration['req_distinguished_name']['commonName'] 
+            self.node_id =  self.configuration['req_distinguished_name']['dnQualifier']
+            self.node_name =self.configuration['req_distinguished_name']['commonName']
             self.domain =   self.configuration['req_distinguished_name']['0.organizationName']
             self.runtime_dir=self.configuration['RT_default']['dir']
             self.private_key=self.configuration['RT_default']['private_key']
@@ -283,7 +283,7 @@ class RuntimeCredentials(object):
                     value = self.__class__.DEFAULT[section][option]
 #                    print "\t{}={}".format(option, value)
                 self.config.set(section, option, value)
-        with open(self.configfile, 'wb') as configfd:
+        with open(self.configfile, 'w') as configfd:
             self.config.write(configfd)
             configfd.close()
         confsort.reorder(self.configfile)
@@ -371,7 +371,7 @@ class RuntimeCredentials(object):
                 return _ca_conf["domain_name"]
         except Exception as err:
             _log.debug("get_domain: err={}".format(err))
-            _log.debug("get_domain: Could not read security domain from config. [Security not enabled]")  
+            _log.debug("get_domain: Could not read security domain from config. [Security not enabled]")
         _log.debug("get_domain: Domain not found in Calvin config, let's use supplied domain")
         if domain:
             return domain
@@ -512,7 +512,7 @@ class RuntimeCredentials(object):
 
     def get_runtime_certificate_chain_as_list(self):
         """
-        Return certificate chain as a list of strings and as a list 
+        Return certificate chain as a list of strings and as a list
         of OpenSSL certificate objects
         """
         # TODO: make for flexible to support intermediate certificates
@@ -621,7 +621,7 @@ class RuntimeCredentials(object):
     def get_own_cert_as_string(self):
         """
         Return the signed runtime certificate
-        in the "mine" folder as a string. Only the runtime certificate is returned, 
+        in the "mine" folder as a string. Only the runtime certificate is returned,
         not the entire chain
         """
         certpath, cert, certstr = self.get_own_cert()
@@ -680,7 +680,7 @@ class RuntimeCredentials(object):
 #        _log.debug("store_own_cert:\n\tcertstring={}\n\tcertpath={}".format(certstring, certpath))
         path = self._store_cert("mine", certstring=certstring, certpath=certpath)
         #Let's update openssl.conf, but this entry should probably not
-        #be trusted, it is likely that someone will copy certs into the folder 
+        #be trusted, it is likely that someone will copy certs into the folder
         #by other means
 #        self.configuration['RT_default']['certificate'] = path
 #        self.update_opensslconf()
@@ -750,7 +750,7 @@ class RuntimeCredentials(object):
     def get_truststore(self, type):
         """
         Returns the truststore for the type of usage as list of
-        certificate strings, a list of OpenSSL objects and as a 
+        certificate strings, a list of OpenSSL objects and as a
         OpenSSL truststore object
         Args:
             type: either of [ceritificate.TRUSTSTORE_SIGN, certificate.TRUSTSTORE_TRANSPORT]
@@ -760,7 +760,7 @@ class RuntimeCredentials(object):
             truststore: OpenSSL X509 store object with trusted CA certificates
         """
         return self.certificate.get_truststore(type, security_dir=self.security_dir)
-#        ca_cert_list_str, ca_cert_list_x509, truststore = certificate.get_truststore(type, 
+#        ca_cert_list_str, ca_cert_list_x509, truststore = certificate.get_truststore(type,
 #                                                    security_dir=self.security_dir)
 #        return ca_cert_list_str, ca_cert_list_x509, truststore
 
@@ -817,7 +817,7 @@ class RuntimeCredentials(object):
             _log.error("Either data or the signature is missing from signed data, err={}".format(err))
             raise
         #Try to find certificate locally or in storage
-        self.get_certificate(cert_name=certname, 
+        self.get_certificate(cert_name=certname,
                              callback=CalvinCB(verify_signed_data_from_certstring,
                                               signature,
                                               data,

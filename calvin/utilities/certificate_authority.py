@@ -347,7 +347,7 @@ class CA(object):
             os.makedirs(directory, 0o700)
         except OSError as e:
             _log.error("Failed to create directory, err={}".format(e))
-        with open(self.configfile, 'wb') as configfd:
+        with open(self.configfile, 'w') as configfd:
             self.config.write(configfd)
             configfd.close()
         confsort.reorder(self.configfile)
@@ -582,7 +582,7 @@ class CA(object):
 
             #Validate challenge password, skip this if the node is a CA
             #If csmanage is used, no enrollment_password will be used, so skip verification
-            if not is_ca and enrollment_password: 
+            if not is_ca and enrollment_password:
                 try:
                     self.validate_enrollment_password(enrollment_password, common_name)
 #                    self.validate_enrollment_password(csr_path, common_name)
@@ -670,8 +670,8 @@ class CA(object):
                                    stderr=subprocess.PIPE,
                                    stdin=subprocess.PIPE)
 
-            log.stdin.write("y\r\n")
-            stdout, stderr = log.communicate("y\r\n")
+            log.stdin.write(b"y\r\n")
+            stdout, stderr = log.communicate(b"y\r\n")
             if log.returncode != 0:
                 raise IOError(stderr)
             try:
@@ -739,7 +739,7 @@ class CA(object):
             raise ValueError("Password must be longer")
 
         chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ123456789!#%&/()=?[]{}"
-        return "".join(chars[ord(c) % len(chars)] for c in urandom(length))
+        return "".join(chars[c % len(chars)] for c in urandom(length))
 
 
     def cert_enrollment_add_new_runtime(self, node_name, password=None):
