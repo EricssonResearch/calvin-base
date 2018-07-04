@@ -67,7 +67,7 @@ class DynOps(object):
     Dynamic operations built around hiraki of iterables.
     Leafs typically async operations filling in values from responses.
     Root and down are lazy evaluated.
-    
+
     This should be used as an iterable, but with the extra exception
     PauseIteration which indicate that the iterable is not finsihed but
     waiting for dynamic filled in elements at leafs. Set a callback
@@ -94,7 +94,7 @@ class DynOps(object):
         self._trigger = trigger
 
     def miss_cb_str(self):
-        return "" if self._trigger else "<NoCB>" 
+        return "" if self._trigger else "<NoCB>"
 
     def trig(self):
         _log.debug("%s TRIG BEGIN" % (self.__str__()))
@@ -126,9 +126,6 @@ class DynOps(object):
                 #self.trig()
                 return InfiniteElement()
         return self.op()
-
-    def __next__(self):
-        return next(self)
 
     def __repr__(self):
         # Force to use the str, good e.g. when adding tuple elements for Collect.
@@ -311,7 +308,7 @@ class Difference(DynOps):
                 n = next(self.first)
                 _log.debug("%s.next() = %s" % (self.__str__(), str(n)))
                 if n not in self.remove:
-                    self.remove.add(n)  # Enforce set behaviour 
+                    self.remove.add(n)  # Enforce set behaviour
                     _log.debug("%s.next() ACTUAL = %s" % (self.__str__(), str(n)))
                     return n
         paused = False
@@ -340,9 +337,9 @@ class Difference(DynOps):
         sub = self.first.__str__()
         for line in sub.splitlines():
             f += "\n\t" + line
-        return "Difference%s%s%s(first=%s, %s\n)" % (("<" + self.name + ">") if self.name else "", "<Inf>" if self.infinite_set else "", 
+        return "Difference%s%s%s(first=%s, %s\n)" % (("<" + self.name + ">") if self.name else "", "<Inf>" if self.infinite_set else "",
                                                f, self.miss_cb_str(), s[:-2])
-        
+
 
 class Map(DynOps):
     """ A Dynamic Operations Map operation
@@ -350,7 +347,7 @@ class Map(DynOps):
         When 'eager' kwarg is True it will calculate candidate values directly instead of lazyily
         The map function must take the output List dynamic iterable as first argument
         The second argument is a persistent dictionary (populated from the kwargs supplied when creating Map)
-        The third argument is a list of booleans if respective iterable have reached the end, 
+        The third argument is a list of booleans if respective iterable have reached the end,
             any such iterable will have None elements
         The following params are *args or the exact same number of arguments as iterables supplied.
         The map function is allowed to raise StopIteration which will prematurely end the iteration.
@@ -451,21 +448,21 @@ class Map(DynOps):
                     raise e
             # If lazy break out of while True with the return value (or exception) otherwise break when no progress
             if not eager:
-                _log.debug("Map%s(func=%s) TRY OUT %s" % (("<" + self.name + ">") if self.name else "", 
+                _log.debug("Map%s(func=%s) TRY OUT %s" % (("<" + self.name + ">") if self.name else "",
                                                          self.func.__name__, self.out_iter))
                 try:
                     e = next(self.out_iter)
                 except StopIteration:
-                    _log.debug("Map%s(func=%s) GOT STOP" % (("<" + self.name + ">") if self.name else "", 
+                    _log.debug("Map%s(func=%s) GOT STOP" % (("<" + self.name + ">") if self.name else "",
                                                          self.func.__name__))
                     self.during_next = False
                     raise StopIteration
                 except PauseIteration:
-                    _log.debug("Map%s(func=%s) GOT PAUSE" % (("<" + self.name + ">") if self.name else "", 
+                    _log.debug("Map%s(func=%s) GOT PAUSE" % (("<" + self.name + ">") if self.name else "",
                                                          self.func.__name__))
                     self.during_next = False
                     raise PauseIteration
-                _log.debug("Map%s(func=%s) GOT OUT %s" % (("<" + self.name + ">") if self.name else "", 
+                _log.debug("Map%s(func=%s) GOT OUT %s" % (("<" + self.name + ">") if self.name else "",
                                                          self.func.__name__, e))
                 self.during_next = False
                 return e
@@ -499,7 +496,7 @@ class Map(DynOps):
 
 class Chain(DynOps):
     """ A Dynamic Operations Chain iterable operation
-        
+
     """
 
     def __init__(self, it):
@@ -642,7 +639,7 @@ class List(DynOps):
             self.trig()
 
     def auto_final(self, max_length):
-        _log.debug("%s:auto_final max:%d index:%d final:%s trigger:%s" % (self.__str__(), 
+        _log.debug("%s:auto_final max:%d index:%d final:%s trigger:%s" % (self.__str__(),
                         max_length, self.index, str(self._final), str(self._trigger)))
         self.max_length = max_length
         if self.index >= self.max_length:
@@ -679,7 +676,7 @@ class List(DynOps):
             c += 1
         s = s[:-2]
         s += ">>>" if c==self.index else ""
-        return "List%s%s%s(%s\n)" % (("<" + self.name + ">") if self.name else "", "#" if self._final else "-", 
+        return "List%s%s%s(%s\n)" % (("<" + self.name + ">") if self.name else "", "#" if self._final else "-",
                                     self.miss_cb_str(), s)
 
 
