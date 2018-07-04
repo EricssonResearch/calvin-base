@@ -108,10 +108,10 @@ class TestSecurity(unittest.TestCase):
         runtimes = helpers.create_CA_and_generate_runtime_certs(domain_name, credentials_testdir, NBR_OF_RUNTIMES)
 
         #Initiate Requesthandler with trusted CA cert
-        truststore_dir = certificate.get_truststore_path(type=certificate.TRUSTSTORE_TRANSPORT, 
+        truststore_dir = certificate.get_truststore_path(type=certificate.TRUSTSTORE_TRANSPORT,
                                                          security_dir=credentials_testdir)
         request_handler = RequestHandler(verify=truststore_dir)
-        #Let's use the admin user0 for request_handler 
+        #Let's use the admin user0 for request_handler
         request_handler.set_credentials({"user": "user0", "password": "pass0"})
 
         rt_conf = copy.deepcopy(_conf)
@@ -135,7 +135,7 @@ class TestSecurity(unittest.TestCase):
                     })
         rt0_conf.save("/tmp/calvin5000.conf")
 
-        # Other runtimes 
+        # Other runtimes
         rt_conf.set('global','storage_type','proxy')
         rt_conf.set('global','storage_proxy',"calvinip://%s:5000" % ip_addr )
         rt_conf.set("security", "security_conf", {
@@ -173,11 +173,11 @@ class TestSecurity(unittest.TestCase):
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             request_handler.set_credentials({"user": "user1", "password": "pass1"})
-            result = request_handler.deploy_application(runtimes[1]["RT"], "correctly_signed", content['file'], 
+            result = request_handler.deploy_application(runtimes[1]["RT"], "correctly_signed", content['file'],
                         content=content,
                         check=True)
         except Exception as e:
-            if e.message.startswith("401"):
+            if str(e).startswith("401"):
                 raise Exception("Failed security verification of app correctly_signed")
             _log.exception("Test deploy failed")
             raise Exception("Failed deployment of app correctly_signed, no use to verify if requirements fulfilled")

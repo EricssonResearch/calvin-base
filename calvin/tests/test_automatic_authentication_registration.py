@@ -107,10 +107,10 @@ class TestSecurity(unittest.TestCase):
         runtimes = helpers.create_CA_and_generate_runtime_certs(domain_name, credentials_testdir, NBR_OF_RUNTIMES)
 
         #Initiate Requesthandler with trusted CA cert
-        truststore_dir = certificate.get_truststore_path(type=certificate.TRUSTSTORE_TRANSPORT, 
+        truststore_dir = certificate.get_truststore_path(type=certificate.TRUSTSTORE_TRANSPORT,
                                                          security_dir=credentials_testdir)
         request_handler = RequestHandler(verify=truststore_dir)
-        #Let's use the admin user0 for request_handler 
+        #Let's use the admin user0 for request_handler
         request_handler.set_credentials({"user": "user0", "password": "pass0"})
 
         rt_conf = copy.deepcopy(_conf)
@@ -130,7 +130,7 @@ class TestSecurity(unittest.TestCase):
                     })
         rt0_conf.save("/tmp/calvin5000.conf")
 
-        # Other runtimes 
+        # Other runtimes
         rt_conf.set('global','storage_type','proxy')
         rt_conf.set('global','storage_proxy',"calvinip://%s:5000" % ip_addr )
         rt_conf.set("security", "security_conf", {
@@ -168,7 +168,7 @@ class TestSecurity(unittest.TestCase):
             request_handler.set_credentials({"user": "user1", "password": "pass1"})
             result = request_handler.deploy_application(runtimes[1]["RT"], "test_script", script)
         except Exception as e:
-#            if e.message.startswith("401"):
+#            if str(e).startswith("401"):
 #                raise Exception("Failed security verification of app test_script")
             _log.error("Test deploy failed, err={}".format(e))
             raise Exception("Failed deployment of app test_script, no use to verify if requirements fulfilled")
