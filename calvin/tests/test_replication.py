@@ -58,7 +58,7 @@ NBR_RUNTIMES = max(3, int(os.environ.get("CALVIN_NBR_RUNTIMES", 3)))  # At least
 def deploy_app(deployer, runtimes=None):
     runtimes = runtimes if runtimes else [ deployer.runtime ]
     return helpers.deploy_app(request_handler, deployer, runtimes)
-    
+
 def expected_tokens(rt, actor_id, t_type='seq'):
     return helpers.expected_tokens(request_handler, rt, actor_id, t_type)
 
@@ -108,7 +108,7 @@ def get_runtime(n=1):
     r = runtimes[:]
     random.shuffle(r)
     return r[:n]
-  
+
 def setup_module(module):
     global rt1, rt2, rt3
     global runtimes
@@ -963,7 +963,7 @@ class TestReplication(object):
         #keys = set([k.keys()[0] for k in actual])
         #print keys
         #print [k.values()[0] for k in actual]
-        
+
         sum_replicas = request_handler.get_index(rt1, "replicas/actors/"+response['replication_map']['testScript:sum'], root_prefix_level=3)['result']
         ident_replicas = request_handler.get_index(rt1, "replicas/actors/"+response['replication_map']['testScript:ident'], root_prefix_level=3)['result']
         replicas = sum_replicas + ident_replicas
@@ -1079,7 +1079,7 @@ class TestReplication(object):
                 break
             except Exception as e:
                 #_log.exception("expected exception for extra runtime")
-                msg = str(e.message)
+                msg = str(e)
                 if msg.startswith("504"):
                     # Timeout error, i.e. gone
                     break

@@ -98,13 +98,13 @@ class TestSecurity(unittest.TestCase):
         except Exception as err:
             print("Failed to remove old tesdir, err={}".format(err))
             pass
-        #This test does not really need signed actors/applications, but do it anyway to be 
+        #This test does not really need signed actors/applications, but do it anyway to be
         #be able to deploy application similarly as the other security tests
         helpers.sign_files_for_security_tests(credentials_testdir)
         runtimes = helpers.create_CA_and_get_enrollment_passwords(domain_name, credentials_testdir, NBR_OF_RUNTIMES)
 
         #Initiate Requesthandler with trusted CA cert
-        truststore_dir = certificate.get_truststore_path(type=certificate.TRUSTSTORE_TRANSPORT, 
+        truststore_dir = certificate.get_truststore_path(type=certificate.TRUSTSTORE_TRANSPORT,
                                                          security_dir=credentials_testdir)
         request_handler = RequestHandler(verify=truststore_dir)
 
@@ -151,11 +151,11 @@ class TestSecurity(unittest.TestCase):
             if not content:
                 raise Exception("Failed finding script, signature and cert, stopping here")
             request_handler.set_credentials({"user": "user3", "password": "pass3"})
-            result = request_handler.deploy_application(runtimes[0]["RT"], "unsignedApp_unsignedActors", content['file'], 
+            result = request_handler.deploy_application(runtimes[0]["RT"], "unsignedApp_unsignedActors", content['file'],
                         content=content,
                         check=True)
         except Exception as e:
-            if e.message.startswith("401"):
+            if str(e).startswith("401"):
                 raise Exception("Failed to deploy unsignedApp_unsignedActors")
             _log.exception("Test deploy failed")
             raise Exception("Failed deployment of app unsignedApp_unsignedActors, no use to verify if requirements fulfilled")
