@@ -116,9 +116,9 @@ class TestServer(object):
         print_header("Test_Line_Received")
         ####################################################################
         assert self.conn.data_available is False
-        yield threads.defer_to_thread(self.client_socket.send, "sending string \r\n")
+        yield threads.defer_to_thread(self.client_socket.send, b"sending string \r\n") # Raw send, use bytestring
         yield threads.defer_to_thread(data_available, self.conn)
-        assert self.conn.data_get() == "sending string "
+        assert self.conn.data_get() == "sending string " # TODO: LineReceiver returns strings?
 
         print_header("Teardown")
         self.factory.stop()
@@ -143,17 +143,17 @@ class TestServer(object):
 
         print_header("Test_Short_Line_Received")
         ####################################################################
-        yield threads.defer_to_thread(self.client_socket.send, "123end")
+        yield threads.defer_to_thread(self.client_socket.send, b"123end") # Socket => bytes
         yield threads.defer_to_thread(data_available, self.conn)
 
         assert self.conn.data_get() == "123"
 
         print_header("Test_Long_Line_Received")
         ####################################################################
-        yield threads.defer_to_thread(self.client_socket.send, "1234end")
+        yield threads.defer_to_thread(self.client_socket.send, b"1234end") # Socket => bytes
         yield threads.defer_to_thread(data_available, self.conn)
 
-        assert self.conn.data_get() == "1234"
+        assert self.conn.data_get() == "1234" # TODO: LineReceiver returns string
 
         print_header("Teardown")
         self.factory.stop()
@@ -184,12 +184,12 @@ class TestServer(object):
         print_header("Test_Data_Received")
         ####################################################################
         assert self.conn.data_available is False
-        yield threads.defer_to_thread(self.client_socket.send, "abcdefghijklmnopqrstuvxyz123456789")
+        yield threads.defer_to_thread(self.client_socket.send, b"abcdefghijklmnopqrstuvxyz123456789") # Socket => bytes
         yield threads.defer_to_thread(data_available, self.conn)
-        assert self.conn.data_get() == "abcdefghij"
-        assert self.conn.data_get() == "klmnopqrst"
-        assert self.conn.data_get() == "uvxyz12345"
-        assert self.conn.data_get() == "6789"
+        assert self.conn.data_get() == b"abcdefghij" # TODO: Raw socket => bytes
+        assert self.conn.data_get() == b"klmnopqrst"
+        assert self.conn.data_get() == b"uvxyz12345"
+        assert self.conn.data_get() == b"6789"
 
         print_header("Teardown")
         self.factory.stop()

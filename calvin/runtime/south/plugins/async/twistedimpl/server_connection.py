@@ -104,11 +104,11 @@ class UDPServerProtocol(DatagramProtocol):
 class RawDataProtocol(Protocol):
     """A Calvin Server object"""
     def __init__(self, factory, max_length, actor_id):
-        self.MAX_LENGTH          = max_length
-        self.data_available      = False
-        self.connection_lost     = False
-        self.factory             = factory
-        self._data_buffer        = []
+        self.max_length= max_length
+        self.data_available = False
+        self.connection_lost = False
+        self.factory = factory
+        self._data_buffer = []
         self._actor_id = actor_id
 
     def connectionMade(self):
@@ -123,8 +123,8 @@ class RawDataProtocol(Protocol):
     def dataReceived(self, data):
         self.data_available = True
         while len(data) > 0:
-            self._data_buffer.append(data[:self.MAX_LENGTH])
-            data = data[self.MAX_LENGTH:]
+            self._data_buffer.append(data[:self.max_length])
+            data = data[self.max_length:]
         self.factory.trigger()
 
     def send(self, data):
@@ -178,7 +178,7 @@ class LineProtocol(LineReceiver):
             data = self._line_buffer.pop(0)
             if not self._line_buffer:
                 self.data_available = False
-            return data
+            return data.decode('UTF-8') # TODO: Needs discussion
         else:
             raise Exception("Connection error: no data available")
 
@@ -255,16 +255,22 @@ class HTTPProtocol(LineReceiver):
 
 
 class ServerProtocolFactory(Factory):
-    def __init__(self, trigger, mode='line', delimiter='\r\n', max_length=8192, actor_id=None, node_name=None):
-        self._trigger            = trigger
-        self.mode                = mode
-        self.delimiter           = delimiter
-        self.MAX_LENGTH          = max_length
-        self.connections         = []
+    def __init__(self, trigger, mode='line', delimiter=b'\r\n', max_length=8192, actor_id=None, node_name=None):
+
+        # TODO: Is this the way to do it:
+        if isinstance(delimiter, str):
+            self.delimiter = delimiter.encode('ascii')
+        else:
+            # assume bytes
+            self.delimiter = delimiter
+        self._trigger = trigger
+        self.mode = mode
+        self.max_length= max_length
+        self.connections = []
         self.pending_connections = []
-        self._port               = None
-        self._actor_id           = actor_id
-        self._node_name          = node_name
+        self._port = None
+        self._actor_id = actor_id
+        self._node_name = node_name
 
     def trigger(self):
         self._trigger(self._actor_id)
@@ -273,7 +279,7 @@ class ServerProtocolFactory(Factory):
         if self.mode == 'line':
             connection = LineProtocol(self, self.delimiter, actor_id=self._actor_id)
         elif self.mode == 'raw':
-            connection = RawDataProtocol(self, self.MAX_LENGTH, actor_id=self._actor_id)
+            connection = RawDataProtocol(self, self.max_length, actor_id=self._actor_id)
         elif self.mode == 'http':
             connection = HTTPProtocol(self, actor_id=self._actor_id)
         else:
