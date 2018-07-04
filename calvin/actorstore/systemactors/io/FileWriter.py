@@ -89,7 +89,7 @@ class FileWriter(Actor):
     @stateguard(lambda self: self.file and calvinsys.can_write(self.file))
     @condition(action_input=['data'])
     def writef(self, data):
-        calvinsys.write(self.file, data.encode('utf-8'))
+        calvinsys.write(self.file, data)
 
     action_priority = (writef,)
     requires = ['io.filewriter']

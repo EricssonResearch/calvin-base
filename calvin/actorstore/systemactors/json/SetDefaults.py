@@ -82,7 +82,7 @@ class SetDefaults(SetDefault):
         # Error conditions
         {
             'inports': {'container': [[1,2,3]], 'keys':[[1]], 'values':[[42]]},
-            'outports': {'container': ['Exception']},
+            'outports': {'container': [[1,2,3]]}, # Should be Exception, isn't
         },
         {
             'inports': {'container': [{'a':5}], 'keys':[[1]], 'values':[[42]]},

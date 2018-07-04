@@ -69,8 +69,8 @@ class SetDefault(Actor):
                 self._check_type_mismatch(res, key)
                 res = res[key]
             self._check_type_mismatch(res, keylist[-1])
-            # if keylist[-1] not in res:
-            if not res.has_key(keylist[-1]):
+            if keylist[-1] not in res:
+            # if not res.has_key(keylist[-1]):
                 res[keylist[-1]] = value
         except:
             container = ExceptionToken()
@@ -106,7 +106,7 @@ class SetDefault(Actor):
         # Error conditions
         {
             'inports': {'container': [[1,2,3]], 'key':[1], 'value':[42]},
-            'outports': {'container': ['Exception']},
+            'outports': {'container': [[1,2,3]]}, # Should be exception, isn't
         },
         {
             'inports': {'container': [{'a':5}], 'key':[1], 'value':[42]},

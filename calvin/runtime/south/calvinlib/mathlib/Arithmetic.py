@@ -32,7 +32,7 @@ _log = get_logger(__name__)
 class Arithmetic(base_calvinlib_object.BaseCalvinlibObject):
 
     """
-    Operations on numbers 
+    Operations on numbers
     """
 
     init_schema = {
@@ -45,7 +45,7 @@ class Arithmetic(base_calvinlib_object.BaseCalvinlibObject):
         "properties": {
             "rel": { "type": "string" }
         }
-        
+
     }
 
     operator_schema = {
@@ -67,7 +67,7 @@ class Arithmetic(base_calvinlib_object.BaseCalvinlibObject):
 
     def init(self):
         pass
-    
+
     def relation(self, rel):
         try:
             return {
@@ -88,14 +88,14 @@ class Arithmetic(base_calvinlib_object.BaseCalvinlibObject):
                 '+': operator.add,
                 '-': operator.sub,
                 '*': operator.mul,
-                '/': operator.div,
+                '/': operator.truediv,
                 'div': operator.floordiv,
                 'mod': operator.mod,
             }[op]
         except KeyError:
             _log.warning("Invalid operator '{}', will always produce 'null'".format(op))
             return lambda x,y: None
-        
+
     def eval(self, expr, bindings):
         try:
             return eval(expr, {}, bindings)
