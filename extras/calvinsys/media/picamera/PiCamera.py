@@ -15,6 +15,9 @@
 # limitations under the License.
 
 from __future__ import absolute_import
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
 # -*- coding: utf-8 -*-
 
 # Copyright (c) 2017 Ericsson AB
@@ -31,6 +34,9 @@ from __future__ import absolute_import
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from future import standard_library
+standard_library.install_aliases()
+from builtins import *
 from . import picamera
 
 from calvin.runtime.south.calvinsys import base_calvinsys_object

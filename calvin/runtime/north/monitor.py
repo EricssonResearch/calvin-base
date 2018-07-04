@@ -14,6 +14,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import *
+from builtins import object
 import time
 
 from calvin.utilities.calvinlogger import get_logger
@@ -41,13 +49,13 @@ class Event_Monitor(object):
 
     def next_slot(self):
         if self._backoff:
-            val = min(self._backoff.values(), key=lambda x : x[0])
+            val = min(list(self._backoff.values()), key=lambda x : x[0])
             return val[0]
         return None
 
     def _check_backoff(self):
         current = time.time()
-        for ep in self._backoff.keys():
+        for ep in list(self._backoff.keys()):
             tc = self._backoff[ep][0]
             if tc < current:
                 self.clear_backoff(ep)

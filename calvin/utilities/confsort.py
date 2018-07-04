@@ -18,10 +18,18 @@ Option Parser sorting module.
 This module implements a sorting method for options in a
 configuration file.
 """
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import *
+from builtins import object
 from operator import itemgetter, attrgetter, methodcaller
 
 
-class Options:
+class Options(object):
     """
     Collection of options.
     """
@@ -64,7 +72,7 @@ class Options:
         return self.options
 
 
-class Option:
+class Option(object):
     """
     Class to store one option in a section of a ConfigParser.
     """

@@ -14,6 +14,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import division
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import *
+from past.utils import old_div
 from calvin.runtime.south.calvinsys.io.sr04distance import BaseSR04
 from calvin.runtime.south.plugins.async import async
 
@@ -68,7 +76,7 @@ class PIGPIOSR04(BaseSR04.BaseSR04):
         self._elapsed = None
         self._detection = None
         # Return value in meters rather than mm
-        return distance/1000.0
+        return old_div(distance,1000.0)
 
 
     def close(self):

@@ -15,6 +15,14 @@
 # limitations under the License.
 
 from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import range
+from builtins import *
+from builtins import object
 import pytest
 import sys
 import os
@@ -22,7 +30,7 @@ import random
 import time
 import json
 import uuid
-import Queue
+import queue
 import multiprocessing
 import traceback
 

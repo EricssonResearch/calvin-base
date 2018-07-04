@@ -1,3 +1,12 @@
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import range
+from builtins import *
+from builtins import object
 import unittest
 import pytest
 
@@ -28,7 +37,7 @@ class TestFanoutMappedFIFO(unittest.TestCase):
             
     def setup_readers(self, n):
         reader_map = {"%d" % i:"reader-%d" % i for i in range(1, n+1)}
-        for reader in reader_map.values():
+        for reader in list(reader_map.values()):
             self.outport.add_reader(reader, {})
         self.outport.set_config({"port-mapping": reader_map})
     
@@ -194,7 +203,7 @@ class TestFanoutMappedFIFO(unittest.TestCase):
             
     def testSetConfig_Normal(self):
         reader_map = {"%d" % i:"reader-%d" % i for i in range(1, 4)}
-        for reader in reader_map.values():
+        for reader in list(reader_map.values()):
             self.outport.add_reader(reader, {})
         self.outport.set_config({"port-mapping": reader_map})
         

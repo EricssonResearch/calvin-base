@@ -15,6 +15,14 @@
 # limitations under the License.
 
 from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import range
+from builtins import *
+from builtins import object
 import pytest
 import sys
 import os
@@ -22,7 +30,7 @@ import traceback
 import random
 import time
 import json
-import Queue
+import queue
 
 from twisted.application import service, internet
 from twisted.python.log import ILogObserver
@@ -45,7 +53,7 @@ class KNet(object):
             print("Starting reactor only once")
             self.reactor_thread = Thread(target=reactor.run, args=(False,)).start()
 
-        for a in xrange(number):
+        for a in range(number):
             self.nodes.append(ServerApp(server_type))
 
 
@@ -90,7 +98,7 @@ class ServerApp(object):
         reactor.callFromThread(func, *args, **kwargs)
 
     def __getattr__(self, name):
-        class caller:
+        class caller(object):
             def __init__(self, f, func):
                 self.f = f
                 self.func = func
@@ -147,7 +155,7 @@ def do_sync(func, **kwargs):
     if 'test' in kwargs:
         test = kwargs.pop('test')
 
-    q = Queue.Queue()
+    q = queue.Queue()
 
     def respond(value):
         q.put(value)
@@ -156,7 +164,7 @@ def do_sync(func, **kwargs):
     d.addCallback(respond)
     try:
         a = q.get(timeout=timeout)
-    except Queue.Empty:
+    except queue.Empty:
         assert False
 
     if test is not None:

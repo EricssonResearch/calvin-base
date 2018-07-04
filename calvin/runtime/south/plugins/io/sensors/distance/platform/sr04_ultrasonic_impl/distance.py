@@ -14,6 +14,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import division
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import *
+from past.utils import old_div
 from calvin.runtime.south.plugins.io.sensors.distance import base_distance
 from calvin.runtime.south.plugins.async import async, threads
 from calvin.runtime.south.plugins.io.gpio import gpiopin
@@ -86,8 +94,8 @@ class Distance(base_distance.DistanceBase):
         t_1 = time()
         # Round to nearest 10 cm, convert to m
         self.distance = (t_1 - self.t_0)*17150 # cm, w/ decimals
-        self.distance = round(self.distance/10.0, 0)*10.0 # cm, nearest 10
-        self.distance = self.distance / 100.0 # m
+        self.distance = round(old_div(self.distance,10.0), 0)*10.0 # cm, nearest 10
+        self.distance = old_div(self.distance, 100.0) # m
         async.call_from_thread(self._new_measurement, self.distance)
         async.call_from_thread(self._setup_next)
 

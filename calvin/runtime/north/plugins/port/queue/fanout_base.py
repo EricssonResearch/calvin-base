@@ -14,6 +14,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from builtins import range
+from past.builtins import basestring
+from builtins import *
+from builtins import object
 from calvin.runtime.north.calvin_token import Token
 from calvin.runtime.north.plugins.port.queue.common import QueueEmpty, COMMIT_RESPONSE
 from calvin.runtime.north.plugins.port import DISCONNECT
@@ -42,13 +53,13 @@ class FanoutBase(object):
         self._type = None
         
     def __str__(self):
-        fifo = "\n".join([str(k) + ": " + ", ".join(map(lambda x: str(x), self.fifo[k])) for k in self.fifo.keys()])
+        fifo = "\n".join([str(k) + ": " + ", ".join([str(x) for x in self.fifo[k]]) for k in list(self.fifo.keys())])
         return "Queue: %s\nTokens: %s\nw:%s, r:%s, tr:%s" % (self._type, fifo, self.write_pos, self.read_pos, self.tentative_read_pos)
 
     def _state(self):
         state = {
             'queuetype': self._type,
-            'fifo': {p: [t.encode() for t in tokens] for p, tokens in self.fifo.items()},
+            'fifo': {p: [t.encode() for t in tokens] for p, tokens in list(self.fifo.items())},
             'N': self.N,
             'readers': self.readers,
             'write_pos': self.write_pos,
@@ -59,7 +70,7 @@ class FanoutBase(object):
 
     def _set_state(self, state):
         self._type = state.get('queuetype')
-        self.fifo = {p: [Token.decode(t) for t in tokens] for p, tokens in state['fifo'].items()}
+        self.fifo = {p: [Token.decode(t) for t in tokens] for p, tokens in list(state['fifo'].items())}
         self.N = state['N']
         self.readers = state['readers']
         self.write_pos = state['write_pos']
@@ -133,7 +144,7 @@ class FanoutBase(object):
     
     def set_exhausted_tokens(self, tokens):
         _log.debug("exhausted_tokens %s %s" % (self._type, tokens))
-        if tokens and tokens.values()[0]:
+        if tokens and list(tokens.values())[0]:
             _log.error("Got exhaust tokens on scheduler_fifo port %s" % str(tokens))
         return self.nbr_peers
     

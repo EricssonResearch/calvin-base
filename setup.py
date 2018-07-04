@@ -14,6 +14,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import *
 import os
 from setuptools import setup
 
@@ -35,26 +42,27 @@ setup(name='calvin',
           'pytest-twisted'
       ],
       install_requires=[
-        'colorlog==2.6.1',
-        'rpcudp==1.0',
-        'kademlia==0.5',
-        'ply==3.8',
-        'Twisted==15.5.0',
-        'requests==2.9.1',
-        'infi.traceback==0.3.12',
-        'wrapt==1.10.2',
-        'netifaces==0.10.4',
-        'pyOpenSSL==17.1.0',
-        'cryptography==1.9.0',
-        'passlib==1.7.0',
-        'PyJWT==1.4.0',
-        'service-identity==17.0.0',
-        'ndg-httpsclient==0.4.2',
+        'future',
+        'colorlog',
+        'rpcudp',
+        'kademlia',
+        'ply',
+        'Twisted',
+        'requests',
+        'infi.traceback',
+        'wrapt',
+        'netifaces',
+        'pyOpenSSL',
+        'cryptography',
+        'passlib',
+        'PyJWT',
+        'service-identity',
+        'ndg-httpsclient',
         'pyasn1>=0.4.2',
-        'pystache==0.5.4',
-        'jsonschema==2.6.0',
-        'u-msgpack-python==2.4.1',
-        'cbor==1.0.0'
+        'pystache',
+        'jsonschema',
+        'u-msgpack-python',
+        'cbor'
       ],
       description="Calvin is a distributed runtime and development framework for an actor based dataflow"
                   "programming methodology",

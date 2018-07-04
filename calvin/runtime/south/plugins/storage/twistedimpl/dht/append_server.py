@@ -18,6 +18,15 @@
 # transferKeyValues, get_concat, _nodesFound, _handleFoundValues
 # see https://github.com/bmuller/kademlia/blob/master/LICENSE
 
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import map
+from builtins import str
+from builtins import *
 import json
 import uuid
 import types
@@ -97,13 +106,13 @@ class KademliaProtocolAppend(KademliaProtocol):
         return True
 
     def rpc_find_node(self, sender, nodeid, key):
-        self.log.info("finding neighbors of %i in local table" % long(nodeid.encode('hex'), 16))
+        self.log.info("finding neighbors of %i in local table" % int(nodeid.encode('hex'), 16))
         source = Node(nodeid, sender[0], sender[1])
         _log.debug("rpc_find_node sender=%s, source=%s, key=%s" % (sender, source, base64.b64encode(key)))
         self.maybeTransferKeyValues(source)
         self.router.addContact(source)
         node = Node(key)
-        return map(tuple, self.router.findNeighbors(node, exclude=source))
+        return list(map(tuple, self.router.findNeighbors(node, exclude=source)))
     #
     ###############################################################################
 
@@ -122,7 +131,7 @@ class KademliaProtocolAppend(KademliaProtocol):
         """
         _log.debug("**** transfer key values %s ****" % node)
         ds = []
-        for key, value in self.storage.iteritems():
+        for key, value in self.storage.items():
             keynode = Node(digest(key))
             neighbors = self.router.findNeighbors(keynode)
             _log.debug("transfer? nbr neighbors=%d, key=%s, value=%s" % (len(neighbors), base64.b64encode(key), str(value)))
@@ -297,7 +306,7 @@ class AppendServer(Server):
         node = Node(dkey)
 
         def store(nodes):
-            _log.debug("setting '%s' to %s on %s" % (key, value, map(str, nodes)))
+            _log.debug("setting '%s' to %s on %s" % (key, value, list(map(str, nodes))))
             # if this node is close too, then store here as well
             if (not nodes or self.node.distanceTo(node) < max([n.distanceTo(node) for n in nodes]) or
                 dkey in self.storage):
@@ -407,7 +416,7 @@ class ValueListSpiderCrawl(ValueSpiderCrawl):
         """
         toremove = []
         foundValues = []
-        for peerid, response in responses.items():
+        for peerid, response in list(responses.items()):
             response = RPCFindResponse(response)
             if not response.happened():
                 toremove.append(peerid)

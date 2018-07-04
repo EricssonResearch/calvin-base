@@ -14,6 +14,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import *
+import importlib
 import os
 import sys
 import imp
@@ -22,7 +30,7 @@ from calvin.utilities import calvinconfig
 
 
 # Spec
-_modules = {'dht': {'dht': 'dht_server'}, 'securedht': {'securedht': 'dht_server'}, 'sql': {'sql': 'sql_client'}}
+_modules = {'sql': {'sql': 'sql_client'}}
 
 fw_modules = None
 __all__ = []
@@ -41,8 +49,8 @@ if not fw_path in fw_modules:
     raise Exception("No framework '%s' with that name, avalible ones are '%s'" % (fw_path, fw_modules))
 
 
-for module, _classes in _modules.items():
-    for _name, _module in _classes.items():
-        module_obj = __import__("%s.%s.%s" % (fw_path, module, _module), globals=globals(), fromlist=[''])
+for module, _classes in list(_modules.items()):
+    for _name, _module in list(_classes.items()):
+        module_obj = importlib.import_module(".{}.{}.{}".format(fw_path, module, _module), package="calvin.runtime.south.plugins.storage")
         globals()[_name] = module_obj
         __all__.append(module_obj)

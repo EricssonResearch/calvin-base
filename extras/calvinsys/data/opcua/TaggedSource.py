@@ -14,6 +14,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from builtins import *
+from builtins import object
 import time
 import opcua
 from socket import error as socket_error
@@ -219,7 +228,7 @@ class TaggedSource(base_calvinsys_object.BaseCalvinsysObject):
                 raise FatalException("Server has no namespace %s" % (namespace))
 
             # Build node-ids for parameters
-            parameters = {"ns={};{}".format(namespace_idx, str(desc["address"])) : str(tag) for tag, desc in paramconfig.items()}
+            parameters = {"ns={};{}".format(namespace_idx, str(desc["address"])) : str(tag) for tag, desc in list(paramconfig.items())}
 
             # collect nodes for all parameters
             try:
@@ -231,14 +240,14 @@ class TaggedSource(base_calvinsys_object.BaseCalvinsysObject):
                 # create subscription
                 subscription = client.create_subscription(monitoring_interval, ChangeHandler(notify_change, node_to_tag))
                 # subscribe
-                subscription.subscribe_data_change(node_to_tag.keys())
+                subscription.subscribe_data_change(list(node_to_tag.keys()))
                 # Not all servers support this, will give "BadNodeIdUnknown" during setup
                 # TODO: When is this of interest?
                 # subscription.subscribe_events()
             except Exception as e:
                 raise FatalException("Failed to setup subscription %s" % (e,))
 
-            return client, parameters.keys()[0], subscription
+            return client, list(parameters.keys())[0], subscription
 
         def connect_and_subscribe():
             try:

@@ -14,6 +14,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from builtins import map
+from builtins import range
+from builtins import *
+from builtins import object
 from calvin.runtime.north.plugins.storage import storage_factory
 from calvin.csparser.port_property_syntax import list_port_property_capabilities
 from calvin.runtime.south.plugins.async import async
@@ -87,7 +98,7 @@ class Storage(object):
             self.storage.set(key=key, value=self.localstore[key],
                              cb=CalvinCB(func=self.set_cb, org_key=None, org_value=None, org_cb=None, silent=True))
 
-        for key, value in self.localstore_sets.iteritems():
+        for key, value in self.localstore_sets.items():
             if isinstance(key, tuple):
                 self._flush_add_index(key, value['+'])
                 self._flush_remove_index(key, value['-'])
@@ -146,9 +157,9 @@ class Storage(object):
         import json
         with tempfile.NamedTemporaryFile(mode='w', prefix="storage", delete=False) as fp:
             fp.write("[")
-            json.dump({str(k): str(v) for k, v in self.localstore.items()}, fp)
+            json.dump({str(k): str(v) for k, v in list(self.localstore.items())}, fp)
             fp.write(", ")
-            json.dump({str(k): list(v['+']) for k, v in self.localstore_sets.items()}, fp)
+            json.dump({str(k): list(v['+']) for k, v in list(self.localstore_sets.items())}, fp)
             fp.write("]")
             name = fp.name
         return name
@@ -651,7 +662,7 @@ class Storage(object):
         indexes = self._index_strings(index, root_prefix_level)
         # Collect a value set from all key-indexes that include the indexes, always compairing full index levels
         local_values = set(itertools.chain(
-            *(v['+'] for k, v in self.localstore_sets.items()
+            *(v['+'] for k, v in list(self.localstore_sets.items())
                 if all(map(lambda x, y: False if x is None else True if y is None else x==y, k, indexes)))))
         if self.started:
             self.storage.get_index(prefix="index-", index=indexes,
@@ -774,14 +785,14 @@ class Storage(object):
             node.super_node_class = 1
         else:
             node.super_node_class = 0
-        self.add_index(['supernode'] + map(str, range(node.super_node_class + 1)), node.id, root_prefix_level=1)
+        self.add_index(['supernode'] + list(map(str, list(range(node.super_node_class + 1)))), node.id, root_prefix_level=1)
 
     def _remove_super_node(self, node):
         if node.super_node_class is not None:
-            self.remove_index(['supernode'] + map(str, range(node.super_node_class + 1)), node.id, root_prefix_level=1)
+            self.remove_index(['supernode'] + list(map(str, list(range(node.super_node_class + 1)))), node.id, root_prefix_level=1)
 
     def get_super_node(self, super_node_class, cb):
-        self.get_index(['supernode'] + map(str, range(super_node_class + 1)), root_prefix_level=1, cb=cb)
+        self.get_index(['supernode'] + list(map(str, list(range(super_node_class + 1)))), root_prefix_level=1, cb=cb)
 
     def _add_node_index(self, node, cb=None):
         indexes = node.attributes.get_indexed_public()
@@ -881,7 +892,7 @@ class Storage(object):
                  value={"name": application.name,
                         "ns": application.ns,
                         # FIXME when all users of the actors field is updated, save the full dict only
-                        "actors": application.actors.keys(),
+                        "actors": list(application.actors.keys()),
                         "actors_name_map": application.actors,
                         "origin_node_id": application.origin_node_id},
                  cb=cb)
@@ -907,13 +918,13 @@ class Storage(object):
         _log.debug("Add actor %s id %s" % (actor, node_id))
         data = {"name": actor.name, "type": actor._type, "node_id": node_id}
         inports = []
-        for p in actor.inports.values():
+        for p in list(actor.inports.values()):
             port = {"id": p.id, "name": p.name}
             inports.append(port)
             self.add_port(p, node_id, actor.id)
         data["inports"] = inports
         outports = []
-        for p in actor.outports.values():
+        for p in list(actor.outports.values()):
             port = {"id": p.id, "name": p.name}
             outports.append(port)
             self.add_port(p, node_id, actor.id)
@@ -1102,7 +1113,7 @@ class Storage(object):
         if 'cmd' in payload and payload['cmd'] in self._proxy_cmds:
             # Call this nodes storage methods, which could be local or DHT,
             # prefix is empty since that is already in the key (due to these calls come from the storage plugin level).
-            kwargs = {k: v for k, v in payload.iteritems() if k in ('key', 'value', 'prefix', 'index')}
+            kwargs = {k: v for k, v in payload.items() if k in ('key', 'value', 'prefix', 'index')}
             kwargs.setdefault('prefix', "")
             if payload['cmd'].endswith("_INDEX"):
                 kwargs.pop('prefix')

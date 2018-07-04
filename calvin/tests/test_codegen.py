@@ -15,6 +15,15 @@
 # limitations under the License.
 
 from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from builtins import zip
+from past.builtins import basestring
+from builtins import *
 from calvin.Tools.cscompiler import compile_file
 import unittest
 import json
@@ -78,7 +87,7 @@ def compare(dut, ref):
         # print "iterable"
         # print "Comparing {} and {}".format(dut, ref)
         assert len(dut) == len(ref)
-        pairs = zip(dut, ref)
+        pairs = list(zip(dut, ref))
         for pair in pairs:
             compare(*pair)
     else:
@@ -89,7 +98,7 @@ def compare(dut, ref):
 # See https://stackoverflow.com/a/25851972
 def ordered(obj):
     if isinstance(obj, dict):
-        return sorted((k, ordered(v)) for k, v in obj.items())
+        return sorted((k, ordered(v)) for k, v in list(obj.items()))
     if isinstance(obj, list):
         return sorted(ordered(x) for x in obj)
     else:

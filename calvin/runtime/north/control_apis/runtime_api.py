@@ -15,6 +15,12 @@
 # limitations under the License.
 
 from __future__ import absolute_import
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from future import standard_library
+standard_library.install_aliases()
+from builtins import *
 import json
 from calvin.requests import calvinresponse
 from calvin.utilities.calvinlogger import get_logger
@@ -67,7 +73,7 @@ def handle_peer_setup(self, handle, connection, match, data, hdr):
 def handle_peer_setup_cb(self, handle, connection, status=None, peer_node_ids=None):
     _log.analyze(self.node.id, "+", status.encode())
     if peer_node_ids:
-        data = json.dumps({k: (v[0], v[1].status) for k, v in peer_node_ids.items()})
+        data = json.dumps({k: (v[0], v[1].status) for k, v in list(peer_node_ids.items())})
     else:
         data = None
     self.send_response(handle, connection, data, status=status.status)

@@ -14,6 +14,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from past.builtins import basestring
+from builtins import *
+from builtins import object
 from calvin.runtime.north.calvin_token import Token
 from calvin.runtime.north.plugins.port.queue.common import QueueFull, COMMIT_RESPONSE
 from calvin.runtime.north.plugins.port import DISCONNECT
@@ -54,13 +64,13 @@ class CollectBase(object):
 
 
     def __str__(self):
-        fifo = "\n".join([str(k) + ": " + ", ".join(map(lambda x: str(x), self.fifo[k])) for k in self.fifo.keys()])
+        fifo = "\n".join([str(k) + ": " + ", ".join([str(x) for x in self.fifo[k]]) for k in list(self.fifo.keys())])
         return "Tokens: %s\nw:%s, r:%s, tr:%s" % (fifo, self.write_pos, self.read_pos, self.tentative_read_pos)
 
     def _state(self):
         state = {
             'queuetype': self._type,
-            'fifo': {p: [t.encode() for t in tokens] for p, tokens in self.fifo.items()},
+            'fifo': {p: [t.encode() for t in tokens] for p, tokens in list(self.fifo.items())},
             'N': self.N,
             'writers': self.writers,
             'write_pos': self.write_pos,
@@ -73,7 +83,7 @@ class CollectBase(object):
 
     def _set_state(self, state):
         self._type = state.get('queuetype')
-        self.fifo = {p: [Token.decode(t) for t in tokens] for p, tokens in state['fifo'].items()}
+        self.fifo = {p: [Token.decode(t) for t in tokens] for p, tokens in list(state['fifo'].items())}
         self.N = state['N']
         self.writers = state['writers']
         self.write_pos = state['write_pos']
@@ -153,7 +163,7 @@ class CollectBase(object):
     def any_outstanding_exhaustion_tokens(self):
         # Between having asked actor to exhaust and receiving exhaustion tokens we don't want to assume that
         # the exhaustion is done.
-        return any([not t[1] for t in self.termination.values()])
+        return any([not t[1] for t in list(self.termination.values())])
 
     def set_exhausted_tokens(self, tokens):
         _log.debug("set_exhausted_tokens %s %s new:%s existing:%s writers:%s" % (
@@ -161,11 +171,11 @@ class CollectBase(object):
             self.exhausted_tokens, self.writers))
         # Extend lists of current exhaust tokens, not replace (with likely empty list).
         # This is useful when a disconnect happens from both directions or other reasons
-        self.exhausted_tokens.update({k: self.exhausted_tokens.get(k, []) + v   for k, v in tokens.items()})
-        for peer_id in tokens.keys():
+        self.exhausted_tokens.update({k: self.exhausted_tokens.get(k, []) + v   for k, v in list(tokens.items())})
+        for peer_id in list(tokens.keys()):
             self.termination[peer_id] = (self.termination[peer_id][0], True)
         remove = []
-        for peer_id, exhausted_tokens in self.exhausted_tokens.items():
+        for peer_id, exhausted_tokens in list(self.exhausted_tokens.items()):
             if peer_id not in self.writers:
                 # Make sure only writers in the exhausted_tokens
                 remove.append(peer_id)
@@ -176,7 +186,7 @@ class CollectBase(object):
             _log.debug("set_exhausted_tokens remove %s %s" % (peer_id, self.exhausted_tokens[peer_id]))
             del self.exhausted_tokens[peer_id]
         # Remove any terminated queues if empty
-        for peer_id in tokens.keys():
+        for peer_id in list(tokens.keys()):
             if peer_id not in self.writers:
                 continue
             if (self.write_pos[peer_id] == self.read_pos[peer_id] and
@@ -235,14 +245,14 @@ class CollectBase(object):
         # Transfer in exhausted tokens when possible
         remove = []
         #_log.debug("commit collect exhausted_tokens %s" % self.exhausted_tokens)
-        for peer_id, exhausted_tokens in self.exhausted_tokens.items():
+        for peer_id, exhausted_tokens in list(self.exhausted_tokens.items()):
             if self._transfer_exhaust_tokens(peer_id, exhausted_tokens):
                 remove.append(peer_id)
         for peer_id in remove:
             del self.exhausted_tokens[peer_id]
         # When a terminated queue is fully consumed remove it
         remove = []
-        for peer_id, termination in self.termination.items():
+        for peer_id, termination in list(self.termination.items()):
             if (self.write_pos[peer_id] == self.read_pos[peer_id] and
                 termination[0] in [DISCONNECT.EXHAUST_PEER_RECV, DISCONNECT.EXHAUST_INPORT] and
                 termination[1]):

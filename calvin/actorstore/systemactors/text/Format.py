@@ -14,6 +14,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from builtins import *
 from calvin.actor.actor import Actor, manage, condition, calvinlib
 
 
@@ -56,7 +64,7 @@ class Format(Actor):
         except Exception:
             res = {}
         retval = self.fmt
-        for key, value in res.iteritems():
+        for key, value in res.items():
             retval = retval.replace('{' + key + '}', str(value))
         retval = retval.replace(r"\{", "{").replace(r"\}", "}")
 

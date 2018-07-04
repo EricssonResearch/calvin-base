@@ -14,6 +14,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import map
+from builtins import *
+from builtins import object
 from calvin.runtime.south.plugins.async import async
 from calvin.requests import calvinresponse
 import itertools
@@ -136,7 +145,7 @@ class StorageLocal(object):
         index = [prefix] + index
         # Collect a value set from all key-indexes that include the indexes, always compairing full index levels
         values = set(itertools.chain(
-            *(v for k, v in self._data.items()
+            *(v for k, v in list(self._data.items())
                 if all(map(lambda x, y: False if x is None else True if y is None else x==y, k, index)))))
         async.DelayedCall(0, cb, list(values))
 

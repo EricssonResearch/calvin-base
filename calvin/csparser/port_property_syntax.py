@@ -1,4 +1,10 @@
 from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import *
 port_property_data = {
     'name': {
         'doc': """Calvin-base supported port properties""",
@@ -234,7 +240,7 @@ def list_port_property_capabilities(which="runtime.base.1"):
     data = port_property_sets[which]
     property_capabilities = []
     # list all of the details as well as the collective name of the properties
-    for propertyname, value in data.items():
+    for propertyname, value in list(data.items()):
         if value['capability_type'] == "ignore":
             continue
         if value['capability_type'] == "category":
@@ -251,12 +257,12 @@ def list_port_property_capabilities(which="runtime.base.1"):
 
 def get_port_property_capabilities(properties):
     property_capabilities = set([])
-    for key, values in properties.items():
+    for key, values in list(properties.items()):
         if isinstance(values, (list, tuple)):
             value = values[0]
         else:
             value = values
-        if key not in port_property_data.keys():
+        if key not in list(port_property_data.keys()):
             # This should not happen so just ignore it
             continue
         ppdata = port_property_sets['all'][key]
@@ -273,7 +279,7 @@ def get_port_property_capabilities(properties):
 
 def get_port_property_runtime(properties, prepend=True):
     runtimes = []
-    for rt, ppdata in port_property_sets.items():
+    for rt, ppdata in list(port_property_sets.items()):
         if rt == "all":
             continue
         available = set(list_port_property_capabilities(which=rt))
@@ -297,7 +303,7 @@ def generate_doc():
     p = "# Port Properties \n"
     p += """This page list the port properties that can be specified in a Calvinscript.\n"""
     s = ""
-    for pp, value in port_property_sets['all'].items():
+    for pp, value in list(port_property_sets['all'].items()):
         if not value["user-level"]:
             continue
         p += "* `" + pp + "`\n"
@@ -310,7 +316,7 @@ def generate_doc():
         s += "\n"
         if value.get("type", "unknown") != "category":
             continue
-        for name, data in value.get("values", {}).items():
+        for name, data in list(value.get("values", {}).items()):
             s += "* `\"" + name + "\"`: " + data.get("doc", "") + " "
             s += generate_port_dir_doc("argument", data.get("direction", "unknown")) + "\n"
     return p + "\n" + s

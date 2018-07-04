@@ -1,3 +1,7 @@
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
 
 # -*- coding: utf-8 -*-
 
@@ -15,6 +19,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from future import standard_library
+standard_library.install_aliases()
+from builtins import *
 from calvin.runtime.south.calvinsys import base_calvinsys_object
 
 class BaseDS18B20(base_calvinsys_object.BaseCalvinsysObject):

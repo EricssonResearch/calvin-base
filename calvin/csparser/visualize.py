@@ -1,5 +1,14 @@
 from __future__ import print_function
 from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
+from future import standard_library
+standard_library.install_aliases()
+from builtins import zip
+from builtins import range
+from builtins import *
+from past.utils import old_div
+from builtins import object
 import string
 import random
 import inspect
@@ -90,7 +99,7 @@ class DotRenderer(BaseRenderer):
 
     def _truncate_label(self, label, maxlen=16):
         if len(label) > maxlen:
-            label = label[:maxlen/2-2] + " ... " + label[-maxlen/2-2:]
+            label = label[:old_div(maxlen,2)-2] + " ... " + label[old_div(-maxlen,2)-2:]
         return label
 
     def preamble(self):

@@ -1,3 +1,10 @@
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import *
 import pytest
 import unittest
 from mock import Mock
@@ -24,14 +31,14 @@ def app_from_script(script, script_name):
         return {}, errors, warnings
 
     actors = {}
-    for name, setup in deployable['actors'].iteritems():
+    for name, setup in deployable['actors'].items():
         a_type = setup['actor_type']
         a_args = setup['args']
         a_args.update({"name":name}) # Optional, for human readability only
         a = create_actor(a_type, a_args)
         actors[name] = a
 
-    for src, dests in deployable['connections'].iteritems():
+    for src, dests in deployable['connections'].items():
         for dest in dests:
             a_name, p_name = src.split('.')
             outport = actors[a_name].outports[p_name]

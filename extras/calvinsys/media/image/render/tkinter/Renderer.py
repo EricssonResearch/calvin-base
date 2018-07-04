@@ -15,9 +15,16 @@
 # limitations under the License.
 
 
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import *
 from PIL import ImageTk, Image
-import Tkinter as tkinter
-import StringIO
+import tkinter as tkinter
+import io
 import base64
 from calvin.runtime.south.plugins.async import async
 from calvin.utilities.calvinlogger import get_logger
@@ -46,7 +53,7 @@ class Renderer(BaseRenderer.BaseRenderer):
             root.update()
             if self._render_in_progress:
                 raw_image = base64.b64decode(self._b64image)
-                buf = StringIO.StringIO(raw_image)
+                buf = io.StringIO(raw_image)
                 pil_image = Image.open(buf)
                 tk_image = ImageTk.PhotoImage(pil_image)
                 if not panel:

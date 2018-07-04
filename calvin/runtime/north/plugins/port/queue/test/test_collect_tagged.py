@@ -1,3 +1,11 @@
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import *
+from builtins import object
 import pytest
 
 from calvin.runtime.north.plugins.port import queue
@@ -16,7 +24,7 @@ def create_port(routing="collect-unordered"):
     return queue.get(port)
 
 def unwrap(data):
-    return data.value.items()[0]
+    return list(data.value.items())[0]
             
 @pytest_unittest
 class TestCollectUnorderedFIFOTagged(TestCollectUnorderedFIFO):
@@ -75,7 +83,7 @@ class TestCollectUnorderedFIFOTagged(TestCollectUnorderedFIFO):
                 data_2.setdefault(tag, []).append(data)
         except QueueEmpty:
             pass
-        for tag, data in data_1.items():
+        for tag, data in list(data_1.items()):
             self.assertEqual(data, data_2[tag][:len(data)])
         
     def testCommit(self):
@@ -91,7 +99,7 @@ class TestCollectUnorderedFIFOTagged(TestCollectUnorderedFIFO):
         # should be empty now
         with self.assertRaises(QueueEmpty):
             self.inport.peek(None)
-        for tag, data in values.items():
+        for tag, data in list(values.items()):
             for i in [1,2,3]:
                 if tag == "writer-%d" % i:
                     self.assertEqual(["data-%d" % d for d in [i, i+3]], data)

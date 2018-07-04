@@ -15,6 +15,14 @@
 # limitations under the License.
 
 # from twisted.internet.task import react
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import *
+from builtins import object
 from twisted.internet import reactor
 from twisted.web.client import Agent
 from twisted.web.http_headers import Headers
@@ -29,8 +37,8 @@ from twisted.web.client import FileBodyProducer
 from twisted.internet.defer import Deferred
 from twisted.internet.protocol import Protocol
 
-from StringIO import StringIO
-from urllib import urlencode
+from io import StringIO
+from urllib.parse import urlencode
 
 from calvin.utilities.calvin_callback import CalvinCBClass
 
@@ -84,7 +92,7 @@ def encode_params(params):
 
 def encode_headers(headers):
     twisted_headers = Headers()
-    for k, v in headers.items():
+    for k, v in list(headers.items()):
         key = k.encode('ascii', 'ignore')
         val = v.encode('ascii', 'ignore')
         twisted_headers.addRawHeader(key, val)

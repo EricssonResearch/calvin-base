@@ -1,4 +1,7 @@
 from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
+from __future__ import absolute_import
 
 # -*- coding: utf-8 -*-
 
@@ -16,6 +19,10 @@ from __future__ import print_function
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from future import standard_library
+standard_library.install_aliases()
+from builtins import *
+from past.utils import old_div
 from calvin.runtime.south.plugins.async import threads, async
 from calvin.utilities.calvinlogger import get_logger
 from calvin.runtime.south.calvinsys import base_calvinsys_object
@@ -80,7 +87,7 @@ class MongoDB(base_calvinsys_object.BaseCalvinsysObject):
         self.items = 0
 
         def report():
-            _log.info("Current rate: {} items in {} seconds ({:5.2f}/sec)".format(self.items, self.logging_interval, self.items/self.logging_interval))
+            _log.info("Current rate: {} items in {} seconds ({:5.2f}/sec)".format(self.items, self.logging_interval, old_div(self.items,self.logging_interval)))
             self.items = 0
             if self.stats:
                 self.stats.reset()

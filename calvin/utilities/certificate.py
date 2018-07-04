@@ -18,8 +18,16 @@ Openssl wrapper used to generate and sign certificates.
 This module depends on openssl.
 """
 from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
 
-import ConfigParser
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from builtins import *
+from builtins import object
+import configparser
 import os
 import subprocess
 import sys
@@ -604,7 +612,7 @@ def decrypt_object_with_RSA(private_key, password, encrypted_object):
     plaintext = _unwrap_object_with_symmetric_key(wrapped_object)
     return plaintext
 
-class TrustStore():
+class TrustStore(object):
     def __init__(self, truststore_dir):
         self.truststore_dir=truststore_dir
         self.truststore = self._initialize_truststore()
@@ -783,7 +791,7 @@ class TrustStore():
         return cert
 
 
-class Certificate():
+class Certificate(object):
     def __init__(self, security_dir=None):
         homefolder = get_home()
         default_path = os.path.join(homefolder, ".calvin", "security")

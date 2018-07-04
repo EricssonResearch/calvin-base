@@ -15,6 +15,16 @@
 # limitations under the License.
 
 from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import zip
+from builtins import str
+from builtins import range
+from builtins import *
+from builtins import object
 import unittest
 import time
 import shutil
@@ -116,7 +126,7 @@ def actual_tokens_multiple(rt, actor_ids, size=5, retries=20):
 def assert_lists_equal(expected, actual, min_length=5):
     assert len(actual) >= min_length
     assert actual
-    assert reduce(lambda a, b: a and b[0] == b[1], zip(expected, actual), True)
+    assert reduce(lambda a, b: a and b[0] == b[1], list(zip(expected, actual)), True)
 
 #
 def wait_until_nbr(rt, actor_id, size=5, retries=20, sleep=0.1):
@@ -334,7 +344,7 @@ class CalvinSecureTestBase(unittest.TestCase):
 
     def _assert_lists_equal(self, expected, actual):
         assert actual
-        assert reduce(lambda a, b: a and b[0] == b[1], zip(expected, actual), True)
+        assert reduce(lambda a, b: a and b[0] == b[1], list(zip(expected, actual)), True)
 
     def get_port_property(self, app_info, actor, port, direction, key):
         """Access port properties in a robust way since order might change between parser revisions"""
@@ -915,7 +925,7 @@ class TestRemoteConnection(CalvinSecureTestBase):
 
         expected_1 = expected_tokens(rt, src1, 'seq')
         expected_2 = expected_tokens(rt, src2, 'seq')
-        expected = helpers.flatten_zip(zip(expected_1, expected_2))
+        expected = helpers.flatten_zip(list(zip(expected_1, expected_2)))
 
         assert_lists_equal(expected, actual)
 
@@ -951,7 +961,7 @@ class TestRemoteConnection(CalvinSecureTestBase):
 
         expected_1 = expected_tokens(rt, src1, 'seq')
         expected_2 = expected_tokens(rt, src2, 'seq')
-        expected = helpers.flatten_zip(zip(expected_1, expected_2))
+        expected = helpers.flatten_zip(list(zip(expected_1, expected_2)))
 
         assert_lists_equal(expected, actual_1)
         assert_lists_equal(expected_1, actual_2)
@@ -1323,14 +1333,14 @@ class TestCalvinScript(CalvinSecureTestBase):
             actors.extend(request_handler.get_actors(rt))
             actors.extend(request_handler.get_actors(rt1))
             actors.extend(request_handler.get_actors(rt2))
-            intersection = [a for a in actors if a in d.actor_map.values()]
+            intersection = [a for a in actors if a in list(d.actor_map.values())]
             if len(intersection) > 0:
                 print("Not all actors removed, checking in %s" % (retry, ))
                 time.sleep(retry)
             else:
                 break
 
-        for actor in d.actor_map.values():
+        for actor in list(d.actor_map.values()):
             assert actor not in actors
 
 #@pytest.mark.essential
@@ -1640,7 +1650,7 @@ class TestEnabledToEnabledBug(CalvinSecureTestBase):
 
         actual = actual_tokens(rt1, snk, 10)
 
-        self.assert_lists_equal(range(1, 10), actual)
+        self.assert_lists_equal(list(range(1, 10)), actual)
 
         request_handler.delete_actor(rt1, src)
         request_handler.delete_actor(rt1, snk)
@@ -1661,7 +1671,7 @@ class TestEnabledToEnabledBug(CalvinSecureTestBase):
         snk = d.actor_map['simple:snk']
 
         actual = actual_tokens(rt1, snk, 10)
-        self.assert_lists_equal(range(1, 10), actual)
+        self.assert_lists_equal(list(range(1, 10)), actual)
 
         helpers.destroy_app(d)
 
@@ -1676,7 +1686,7 @@ class TestEnabledToEnabledBug(CalvinSecureTestBase):
 
         actual = actual_tokens(rt1, snk, 10)
 
-        self.assert_lists_equal(range(1, 10), actual)
+        self.assert_lists_equal(list(range(1, 10)), actual)
 
         request_handler.delete_actor(rt1, src)
         request_handler.delete_actor(rt1, ity)
@@ -1692,7 +1702,7 @@ class TestEnabledToEnabledBug(CalvinSecureTestBase):
         request_handler.connect(rt2, ity, 'token', rt1.id, src, 'integer')
 
         actual = actual_tokens(rt3, snk, 10)
-        self.assert_lists_equal(range(1,10), actual)
+        self.assert_lists_equal(list(range(1,10)), actual)
 
         request_handler.delete_actor(rt1, src)
         request_handler.delete_actor(rt2, ity)
@@ -1708,10 +1718,10 @@ class TestEnabledToEnabledBug(CalvinSecureTestBase):
         request_handler.connect(rt3, snk, 'token', rt2.id, ity, 'token')
 
         actual = actual_tokens(rt3, snk, 10)
-        self.assert_lists_equal(range(1,10), actual)
+        self.assert_lists_equal(list(range(1,10)), actual)
 
         actual = actual_tokens(rt3, snk, len(actual)+1)
-        self.assert_lists_equal(range(1,len(actual)), actual)
+        self.assert_lists_equal(list(range(1,len(actual))), actual)
 
         request_handler.delete_actor(rt1, src)
         request_handler.delete_actor(rt2, ity)
@@ -1728,7 +1738,7 @@ class TestEnabledToEnabledBug(CalvinSecureTestBase):
 
         actual = actual_tokens(rt1, snk, 10)
 
-        self.assert_lists_equal(range(1, 10), actual)
+        self.assert_lists_equal(list(range(1, 10)), actual)
 
         request_handler.delete_actor(rt1, src)
         request_handler.delete_actor(rt1, ity)
@@ -1751,7 +1761,7 @@ class TestEnabledToEnabledBug(CalvinSecureTestBase):
         snk = d.actor_map['simple:snk']
 
         actual = actual_tokens(rt1, snk, 10)
-        self.assert_lists_equal(range(1,10), actual)
+        self.assert_lists_equal(list(range(1,10)), actual)
 
         helpers.destroy_app(d)
 
@@ -2729,7 +2739,7 @@ class TestConstantifyOnPort(CalvinSecureTestBase):
         actual2 = wait_for_tokens(rt1, snk2, 10)
 
         expected1 = ['X']*len(actual1)
-        expected2 = range(1, len(actual2))
+        expected2 = list(range(1, len(actual2)))
 
         self.assert_lists_equal(expected1, actual1, min_length=10)
         self.assert_lists_equal(expected2, actual2, min_length=10)
@@ -3412,8 +3422,8 @@ class TestCollectPort(CalvinSecureTestBase):
 
         high = [x for x in actual if x > 999]
         low = [x for x in actual if x < 999]
-        self.assert_lists_equal(range(1001,1006), high, min_length=4)
-        self.assert_lists_equal(range(1,6), low, min_length=4)
+        self.assert_lists_equal(list(range(1001,1006)), high, min_length=4)
+        self.assert_lists_equal(list(range(1,6)), low, min_length=4)
 
         helpers.destroy_app(d)
 
@@ -3460,8 +3470,8 @@ class TestCollectPort(CalvinSecureTestBase):
 
         high = sorted([x for x in actual1 + actual2 if x > 999])
         low = sorted([x for x in actual1 + actual2 if x < 999])
-        self.assert_lists_equal(range(1001,1006), high, min_length=4)
-        self.assert_lists_equal(range(1,6), low, min_length=4)
+        self.assert_lists_equal(list(range(1001,1006)), high, min_length=4)
+        self.assert_lists_equal(list(range(1,6)), low, min_length=4)
 
         helpers.destroy_app(d)
 
@@ -3508,8 +3518,8 @@ class TestCollectPort(CalvinSecureTestBase):
 
         high = sorted([x for x in actual1 + actual2 if x > 999])
         low = sorted([x for x in actual1 + actual2 if x < 999])
-        self.assert_lists_equal(range(1001,1006), high, min_length=4)
-        self.assert_lists_equal(range(1,6), low, min_length=4)
+        self.assert_lists_equal(list(range(1001,1006)), high, min_length=4)
+        self.assert_lists_equal(list(range(1,6)), low, min_length=4)
 
         helpers.destroy_app(d)
 
@@ -3539,8 +3549,8 @@ class TestCollectPort(CalvinSecureTestBase):
 
         high = [x for x in actual if x > 999]
         low = [x for x in actual if x < 999]
-        self.assert_lists_equal(range(1001,1006), high, min_length=4)
-        self.assert_lists_equal(range(1,6), low, min_length=4)
+        self.assert_lists_equal(list(range(1001,1006)), high, min_length=4)
+        self.assert_lists_equal(list(range(1,6)), low, min_length=4)
         helpers.destroy_app(d)
 
 
@@ -3576,8 +3586,8 @@ class TestPortRouting(CalvinSecureTestBase):
         print(actuals)
         high = [x for x in actuals[-1] if x > 999]
         low = [x for x in actuals[-1] if x < 999]
-        self.assert_lists_equal(range(1001,1200), high[:-4], min_length=20)
-        self.assert_lists_equal(range(1,200), low[:-4], min_length=20)
+        self.assert_lists_equal(list(range(1001,1200)), high[:-4], min_length=20)
+        self.assert_lists_equal(list(range(1,200)), low[:-4], min_length=20)
         helpers.destroy_app(d)
 
     @pytest.mark.xfail
@@ -3613,8 +3623,8 @@ class TestPortRouting(CalvinSecureTestBase):
 
         high = [x for x in actuals[-1] if x > 999]
         low = [x for x in actuals[-1] if x < 999]
-        self.assert_lists_equal(range(1001,1200), high[:-4], min_length=20)
-        self.assert_lists_equal(range(1,200), low[:-4], min_length=20)
+        self.assert_lists_equal(list(range(1001,1200)), high[:-4], min_length=20)
+        self.assert_lists_equal(list(range(1,200)), low[:-4], min_length=20)
         helpers.destroy_app(d)
 
     @pytest.mark.xfail
@@ -3652,8 +3662,8 @@ class TestPortRouting(CalvinSecureTestBase):
 
         high = [x for x in actuals[-1] if x > 999]
         low = [x for x in actuals[-1] if x < 999]
-        self.assert_lists_equal(range(1001,1200), high[:-4], min_length=20)
-        self.assert_lists_equal(range(1,200), low[:-4], min_length=20)
+        self.assert_lists_equal(list(range(1001,1200)), high[:-4], min_length=20)
+        self.assert_lists_equal(list(range(1,200)), low[:-4], min_length=20)
         helpers.destroy_app(d)
 
     @pytest.mark.xfail
@@ -3688,15 +3698,15 @@ class TestPortRouting(CalvinSecureTestBase):
 
         assert all([len(t)==1 for t in actuals[-1]])
         # Check that src_one tag is there also after last migration
-        assert "src_one" in set([t.keys()[0] for t in actuals[-1][len(actuals[-2])+1:]])
+        assert "src_one" in set([list(t.keys())[0] for t in actuals[-1][len(actuals[-2])+1:]])
         # Check that src_one tag is there before migration
-        assert "src_one" in set([t.keys()[0] for t in actuals[1]])
+        assert "src_one" in set([list(t.keys())[0] for t in actuals[1]])
 
-        nbrs = [t.values()[0] for t in actuals[-1]]
+        nbrs = [list(t.values())[0] for t in actuals[-1]]
         high = [x for x in nbrs if x > 999]
         low = [x for x in nbrs if x < 999]
-        self.assert_lists_equal(range(1001,1200), high[:-4], min_length=20)
-        self.assert_lists_equal(range(1,200), low[:-4], min_length=20)
+        self.assert_lists_equal(list(range(1001,1200)), high[:-4], min_length=20)
+        self.assert_lists_equal(list(range(1,200)), low[:-4], min_length=20)
         helpers.destroy_app(d)
 
     @pytest.mark.xfail
@@ -3734,15 +3744,15 @@ class TestPortRouting(CalvinSecureTestBase):
 
         assert all([len(t)==1 for t in actuals[-1]])
         # Check that src_one tag is there also after last migration
-        assert "src_one" in set([t.keys()[0] for t in actuals[-1][len(actuals[-2])+1:]])
+        assert "src_one" in set([list(t.keys())[0] for t in actuals[-1][len(actuals[-2])+1:]])
         # Check that src_one tag is there before migration
-        assert "src_one" in set([t.keys()[0] for t in actuals[1]])
+        assert "src_one" in set([list(t.keys())[0] for t in actuals[1]])
 
-        nbrs = [t.values()[0] for t in actuals[-1]]
+        nbrs = [list(t.values())[0] for t in actuals[-1]]
         high = [x for x in nbrs if x > 999]
         low = [x for x in nbrs if x < 999]
-        self.assert_lists_equal(range(1001,1200), high[:-4], min_length=20)
-        self.assert_lists_equal(range(1,200), low[:-4], min_length=20)
+        self.assert_lists_equal(list(range(1001,1200)), high[:-4], min_length=20)
+        self.assert_lists_equal(list(range(1,200)), low[:-4], min_length=20)
         helpers.destroy_app(d)
 
     @pytest.mark.xfail
@@ -3781,15 +3791,15 @@ class TestPortRouting(CalvinSecureTestBase):
 
         assert all([len(t)==1 for t in actuals[-1]])
         # Check that src_one tag is there also after last migration
-        assert "src_one" in set([t.keys()[0] for t in actuals[-1][len(actuals[-2])+1:]])
+        assert "src_one" in set([list(t.keys())[0] for t in actuals[-1][len(actuals[-2])+1:]])
         # Check that src_one tag is there before migration
-        assert "src_one" in set([t.keys()[0] for t in actuals[1]])
+        assert "src_one" in set([list(t.keys())[0] for t in actuals[1]])
 
-        nbrs = [t.values()[0] for t in actuals[-1]]
+        nbrs = [list(t.values())[0] for t in actuals[-1]]
         high = [x for x in nbrs if x > 999]
         low = [x for x in nbrs if x < 999]
-        self.assert_lists_equal(range(1001,1200), high[:-4], min_length=20)
-        self.assert_lists_equal(range(1,200), low[:-4], min_length=20)
+        self.assert_lists_equal(list(range(1001,1200)), high[:-4], min_length=20)
+        self.assert_lists_equal(list(range(1,200)), low[:-4], min_length=20)
         helpers.destroy_app(d)
 
     @pytest.mark.xfail
@@ -3827,14 +3837,14 @@ class TestPortRouting(CalvinSecureTestBase):
 
         assert all([len(t)==2 for t in actuals[-1]])
         # Check that src_one tag is there also after last migration
-        assert "src_one" in set([k for t in actuals[-1][len(actuals[-2])+1:] for k in t.keys()])
+        assert "src_one" in set([k for t in actuals[-1][len(actuals[-2])+1:] for k in list(t.keys())])
         # Check that src_one tag is there before migration
-        assert "src_one" in set([k for t in actuals[1] for k in t.keys()])
+        assert "src_one" in set([k for t in actuals[1] for k in list(t.keys())])
 
         high = [x['src_two'] for x in actuals[-1]]
         low = [x['src_one'] for x in actuals[-1]]
-        self.assert_lists_equal(range(1001,1200), high[:-4], min_length=20)
-        self.assert_lists_equal(range(1,200), low[:-4], min_length=20)
+        self.assert_lists_equal(list(range(1001,1200)), high[:-4], min_length=20)
+        self.assert_lists_equal(list(range(1,200)), low[:-4], min_length=20)
         helpers.destroy_app(d)
 
     @pytest.mark.xfail
@@ -3870,14 +3880,14 @@ class TestPortRouting(CalvinSecureTestBase):
 
         assert all([len(t) in [1, 2] for t in actuals[-1]])
         # Check that src_one tag is there also after last migration
-        assert "src_one" in set([k for t in actuals[-1][len(actuals[-2])+1:] for k in t.keys()])
+        assert "src_one" in set([k for t in actuals[-1][len(actuals[-2])+1:] for k in list(t.keys())])
         # Check that src_one tag is there before migration
-        assert "src_one" in set([k for t in actuals[1] for k in t.keys()])
+        assert "src_one" in set([k for t in actuals[1] for k in list(t.keys())])
 
         high = [x['src_two'] for x in actuals[-1] if 'src_two' in x]
         low = [x['src_one'] for x in actuals[-1] if 'src_one' in x]
-        self.assert_lists_equal(range(1001,1200), high[:-4], min_length=20)
-        self.assert_lists_equal(range(1,200), low[:-4], min_length=20)
+        self.assert_lists_equal(list(range(1001,1200)), high[:-4], min_length=20)
+        self.assert_lists_equal(list(range(1,200)), low[:-4], min_length=20)
         helpers.destroy_app(d)
 
     def testCollectOneTagPortWithException(self):
@@ -3913,8 +3923,8 @@ class TestPortRouting(CalvinSecureTestBase):
         self.assert_lists_equal(exceptions, [{u'src_one': u'End of stream'}]*10)
         high = [x['src_two'] for x in actual if isinstance(x, dict) and 'src_two' in x]
         low = [x['src_one'] for x in actual if isinstance(x, dict) and 'src_one' in x]
-        self.assert_lists_equal(range(1001,1200), high, min_length=15)
-        self.assert_lists_equal(range(1,4)*10, low, min_length=15)
+        self.assert_lists_equal(list(range(1001,1200)), high, min_length=15)
+        self.assert_lists_equal(list(range(1,4))*10, low, min_length=15)
 
         helpers.destroy_app(d)
 
@@ -3951,8 +3961,8 @@ class TestPortRouting(CalvinSecureTestBase):
         self.assert_lists_equal(exceptions, [{u'src_one': u'End of stream'}]*10)
         high = [x['src_two'] for x in actual if isinstance(x, dict) and 'src_two' in x]
         low = [x['src_one'] for x in actual if isinstance(x, dict) and 'src_one' in x]
-        self.assert_lists_equal(range(1001,1200), high, min_length=15)
-        self.assert_lists_equal(range(1,4)*10, low, min_length=15)
+        self.assert_lists_equal(list(range(1001,1200)), high, min_length=15)
+        self.assert_lists_equal(list(range(1,4))*10, low, min_length=15)
 
         helpers.destroy_app(d)
 
@@ -3989,14 +3999,14 @@ class TestPortRouting(CalvinSecureTestBase):
         self.assert_lists_equal(exceptions, [{u'src_one': u'End of stream'}]*10)
         high = [x['src_two'] for x in actual if isinstance(x, dict) and 'src_two' in x]
         low = [x['src_one'] for x in actual if isinstance(x, dict) and 'src_one' in x]
-        self.assert_lists_equal(range(1001,1200), high, min_length=15)
-        self.assert_lists_equal(range(1,4)*10, low, min_length=15)
+        self.assert_lists_equal(list(range(1001,1200)), high, min_length=15)
+        self.assert_lists_equal(list(range(1,4))*10, low, min_length=15)
 
         # Test that kept in sync but skewed one token for every exception
         comp = [x['src_two'] - x['src_one'] - 1000 for x in actual if isinstance(x, dict)]
-        self.assert_lists_equal(range(0,45,3), comp[0::3], min_length=5)
-        self.assert_lists_equal(range(0,45,3), comp[1::3], min_length=5)
-        self.assert_lists_equal(range(0,45,3), comp[2::3], min_length=5)
+        self.assert_lists_equal(list(range(0,45,3)), comp[0::3], min_length=5)
+        self.assert_lists_equal(list(range(0,45,3)), comp[1::3], min_length=5)
+        self.assert_lists_equal(list(range(0,45,3)), comp[2::3], min_length=5)
         helpers.destroy_app(d)
 
     def testRoundRobinPortRemoteMoveMany1(self):
@@ -4295,8 +4305,8 @@ class TestPortRouting(CalvinSecureTestBase):
 
         high = [x for x in actuals[-1] if x > 999]
         low = [x for x in actuals[-1] if x < 999]
-        self.assert_lists_equal(range(1001,1200), high[:-4], min_length=15)
-        self.assert_lists_equal(range(1,200), low[:-4], min_length=15)
+        self.assert_lists_equal(list(range(1001,1200)), high[:-4], min_length=15)
+        self.assert_lists_equal(list(range(1,200)), low[:-4], min_length=15)
         helpers.destroy_app(d)
 
 #@pytest.mark.essential
@@ -4423,7 +4433,7 @@ class TestReplication(object):
         # Check OK distribution of paths
         dist = Counter([t // 10000 for t in actual2])
         print(dist)
-        assert all([dist.values() > 10])
+        assert all([list(dist.values()) > 10])
         assert len(dist) == (nbr_replicas + 1)
 
         #print request_handler.report(rt2, proc, kwargs={'cmd_str': "self.state()"})
@@ -4433,10 +4443,10 @@ class TestReplication(object):
         actual3 = wait_for_tokens(rt1, snk, len(expected) + 100)
         dist2 = Counter([t // 10000 for t in actual3])
         print(dist2)
-        assert all([dist[k] < dist2[k] for k in dist.keys()])
+        assert all([dist[k] < dist2[k] for k in list(dist.keys())])
 
         helpers.delete_app(request_handler, rt1, response['application_id'],
-                           check_actor_ids=response['actor_map'].values()+ proc_rep)
+                           check_actor_ids=list(response['actor_map'].values())+ proc_rep)
         # Check all actors and replicas deleted
         actors = set(request_handler.get_actors(rt1) + request_handler.get_actors(rt2) + request_handler.get_actors(rt3))
         assert src not in actors
@@ -4511,13 +4521,13 @@ class TestReplication(object):
         # Check OK distribution of paths
         dist = Counter([t // 10000 for t in actual2])
         print(dist)
-        assert all([dist.values() > 10])
+        assert all([list(dist.values()) > 10])
         assert len(dist) == (nbr_replicas + 1)
 
         #print request_handler.report(rt2, proc, kwargs={'cmd_str': "self.state()"})
 
         helpers.delete_app(request_handler, rt1, response['application_id'],
-                           check_actor_ids=response['actor_map'].values()+ proc_rep)
+                           check_actor_ids=list(response['actor_map'].values())+ proc_rep)
         # Check all actors and replicas deleted
         actors = set(request_handler.get_actors(rt1) + request_handler.get_actors(rt2) + request_handler.get_actors(rt3))
         assert src not in actors
@@ -4624,11 +4634,11 @@ class TestReplication(object):
         # Check OK distribution of paths
         dist = Counter(actuals_mod)
         print(dist)
-        assert all([dist.values() > 10])
+        assert all([list(dist.values()) > 10])
         assert len(dist) == (nbr_replicas + 1)
 
         helpers.delete_app(request_handler, rt1, response['application_id'],
-                           check_actor_ids=response['actor_map'].values()+ proc_rep + src_rep)
+                           check_actor_ids=list(response['actor_map'].values())+ proc_rep + src_rep)
         # Check all actors and replicas deleted
         actors = set(request_handler.get_actors(rt1) + request_handler.get_actors(rt2) + request_handler.get_actors(rt3))
         assert src not in actors

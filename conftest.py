@@ -15,6 +15,13 @@
 # limitations under the License.
 
 from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from builtins import *
 import pytest
 import uuid
 import logging
@@ -84,3 +91,17 @@ def pytest_configure(config):
 @pytest.fixture
 def testarg_actor(request):
     return request.config.getoption("--actor")
+
+
+collect_ignore = ['calvin/runtime/south/plugins/storage/twistedimpl/dht/tests/test_append.py',
+                  'calvin/runtime/south/plugins/storage/twistedimpl/dht/tests/test_dht_server.py',
+                  'calvin/runtime/south/plugins/storage/twistedimpl/securedht/tests/test_secappend.py',
+                  'calvin/runtime/south/plugins/storage/twistedimpl/securedht/tests/test_dht_server_evil.py',
+                  'calvin/runtime/south/plugins/storage/twistedimpl/securedht/tests/test_dht_server_nice.py',
+                  'calvin/runtime/south/plugins/storage/twistedimpl/securedht/tests/test_dht_server_nice2.py',
+                  'calvin/runtime/south/plugins/storage/twistedimpl/securedht/tests/test_dht_server_nice3.py',
+                  'calvin/runtime/south/plugins/storage/twistedimpl/securedht/tests/test_dht_server_nice4.py',
+                  'calvin/runtime/south/plugins/storage/twistedimpl/securedht/tests/test_secdht_server.py'
+]
+
+

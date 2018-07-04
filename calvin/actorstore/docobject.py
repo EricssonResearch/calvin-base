@@ -1,4 +1,12 @@
 from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from builtins import *
+from builtins import object
 import json
 import inspect
 import pystache
@@ -331,7 +339,7 @@ class ActorDoc(DocObject):
     @property
     def fargs(self):
         def _escape_string_arg(arg):
-            if type(arg) == str or type(arg) == unicode:
+            if type(arg) == str or type(arg) == str:
                 # Handle \n, \r etc
                 return '"{}"'.format(arg).encode('string_escape')
             if arg is True:
@@ -342,7 +350,7 @@ class ActorDoc(DocObject):
                 return 'null'
             return arg
             # return '"{}"'.format(arg)
-        return ", ".join(self.args['mandatory'] + ["{}={}".format(k, _escape_string_arg(v)) for k,v in self.args['optional'].iteritems()])
+        return ", ".join(self.args['mandatory'] + ["{}={}".format(k, _escape_string_arg(v)) for k,v in self.args['optional'].items()])
 
     @property
     def inports_compact(self):
@@ -384,7 +392,7 @@ class PortDoc(DocObject):
                 return str(v)
             l = ", ".join(v)
             return "[{}]".format(l) if l else ""
-        res = ", ".join(["{}:{}".format(k, _fmt_val(v)) for k,v in self.properties.iteritems()])
+        res = ", ".join(["{}:{}".format(k, _fmt_val(v)) for k,v in self.properties.items()])
         return res
 
 

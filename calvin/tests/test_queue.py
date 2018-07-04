@@ -15,6 +15,15 @@
 # limitations under the License.
 
 from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import zip
+from builtins import str
+from builtins import range
+from builtins import *
 import pytest
 import unittest
 from calvin.runtime.north.plugins.port import queue
@@ -268,7 +277,7 @@ class QueueTests(unittest.TestCase):
         self.assertFalse(f.tokens_available(1, "r2"))
 
         # Fill up
-        self.assertEquals([True] * 4, [f.write(Token(t), None) for t in map(lambda x: str(x), range(1,5))])
+        self.assertEquals([True] * 4, [f.write(Token(t), None) for t in [str(x) for x in range(1,5)]])
         self.assertTrue(f.tokens_available(2, "r1"))
         self.assertTrue(f.tokens_available(2, "r2"))
 
@@ -329,7 +338,7 @@ class QueueTests(unittest.TestCase):
 
         for k in range(10):
             # Fill up
-            self.assertEquals([True] * 4, [f.write(Token(t), None) for t in map(lambda x: str(x), range(k*4+1,k*4+5))])
+            self.assertEquals([True] * 4, [f.write(Token(t), None) for t in [str(x) for x in range(k*4+1,k*4+5)]])
 
             # Empty
             for r in ['r1', 'r2']:
@@ -368,7 +377,7 @@ class QueueTests(unittest.TestCase):
 
         for k in range(10):
             # Fill up
-            self.assertEquals([True] * 4, [f.write(Token(t), None) for t in map(lambda x: str(x), range(k*4+1,k*4+5))])
+            self.assertEquals([True] * 4, [f.write(Token(t), None) for t in [str(x) for x in range(k*4+1,k*4+5)]])
 
             # Empty
             for r in ['r1', 'r2']:
@@ -410,7 +419,7 @@ class QueueTests(unittest.TestCase):
         except:
             pass
         print([t.value for t in tokens])
-        assert [t.value for t in tokens] == range(0,10) * 4
+        assert [t.value for t in tokens] == list(range(0,10)) * 4
 
     def test_collect_unordered2(self):
         f = queue.collect_unordered.CollectUnordered({'routing': 'collect-unordered', 'nbr_peers': 10}, {})

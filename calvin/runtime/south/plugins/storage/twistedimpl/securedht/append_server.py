@@ -18,6 +18,15 @@
 # transferKeyValues, get_concat, _nodesFound, _handleFoundValues
 # see https://github.com/bmuller/kademlia/blob/master/LICENSE
 
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import map
+from builtins import str
+from builtins import *
 import json
 import uuid
 import types
@@ -112,7 +121,7 @@ def hexify_list(list):
 
 def hexify_dict(dict):
     hex_dict=[]
-    for key,value in dict.iteritems():
+    for key,value in dict.items():
         hex_list.append(value.encode('hex'))
     return hex_list
 
@@ -701,7 +710,7 @@ class KademliaProtocolAppend(KademliaProtocol):
             return None
         self.router.addContact(source)
         node = Node(key)
-        bucket = map(list, self.router.findNeighbors(node, exclude=source))
+        bucket = list(map(list, self.router.findNeighbors(node, exclude=source)))
         _log.debug("KademliaProtocolAppend::rpc_find_node: bucket={}. Let us now sign challenge={}".format(hexify_list_of_nodes(bucket), challenge))
         try:
             payload = self.payload_to_be_signed(nodeid,
@@ -1334,7 +1343,7 @@ class KademliaProtocolAppend(KademliaProtocol):
         on the new node (per section 2.5 of the paper)
         """
         _log.debug("**** transfer key values to node {}****".format(node.id.encode('hex')))
-        for key, value in self.storage.iteritems():
+        for key, value in self.storage.items():
             keynode = Node(digest(key))
             neighbors = self.router.findNeighbors(keynode)
             _log.debug("transfer? target=%s nbr neighbors=%d, key=%s, value=%s" % (node.id.encode('hex'), len(neighbors), key.encode('hex'), str(value)))
@@ -1391,7 +1400,7 @@ class AppendServer(Server):
                        "\n\tself.node.id={}"
                        "\n\tid={}".format(results, challenge, self.node.id.encode('hex'), id.encode('hex')))
             nodes = []
-            for addr, result in results.items():
+            for addr, result in list(results.items()):
                 ip = addr[0]
                 port = addr[1]
                 if result[0]:
@@ -1708,7 +1717,7 @@ class ValueSpiderCrawl(SpiderCrawl, crawling.ValueSpiderCrawl):
         _log.debug("ValueSpiderCrawl::_nodesFound")
         toremove = []
         foundValues = []
-        for peerid, response in responses.items():
+        for peerid, response in list(responses.items()):
             response = crawling.RPCFindResponse(response)
             if not response.happened():
                 toremove.append(peerid)
@@ -1782,7 +1791,7 @@ class ValueListSpiderCrawl(ValueSpiderCrawl):
 
         hex_responses={}
         try:
-            for key,value in responses.iteritems():
+            for key,value in responses.items():
                 hex_responses[key.encode('hex')] = []
                 if isinstance(value[1], dict):
                     hex_responses[key.encode('hex')].append(value[1])
@@ -1798,7 +1807,7 @@ class ValueListSpiderCrawl(ValueSpiderCrawl):
                        "\n\tpreviouslyFoundValues={}".format(err, responses, previouslyFoundValues))
         toremove = []
         foundValues = []
-        for peerid, response in responses.items():
+        for peerid, response in list(responses.items()):
             response = crawling.RPCFindResponse(response)
             if not response.happened():
                 toremove.append(peerid)

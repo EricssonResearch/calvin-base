@@ -15,6 +15,13 @@
 # limitations under the License.
 
 from __future__ import absolute_import
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from future import standard_library
+standard_library.install_aliases()
+from builtins import *
+from builtins import object
 import json
 import time
 from calvin.requests import calvinresponse
@@ -59,7 +66,7 @@ def log_actor_firing(self, actor_id, action_method, tokens_produced, tokens_cons
     """ Trace actor firing
     """
     disconnected = []
-    for user_id, logger in self.loggers.iteritems():
+    for user_id, logger in self.loggers.items():
         if not logger.events or LOG_ACTOR_FIRING in logger.events:
             if not logger.actors or actor_id in logger.actors:
                 data = {}
@@ -88,7 +95,7 @@ def log_actor_new(self, actor_id, actor_name, actor_type, is_shadow):
     """ Trace actor new
     """
     disconnected = []
-    for user_id, logger in self.loggers.iteritems():
+    for user_id, logger in self.loggers.items():
         if not logger.events or LOG_ACTOR_NEW in logger.events:
             if not logger.actors or actor_id in logger.actors:
                 data = {}
@@ -115,7 +122,7 @@ def log_actor_destroy(self, actor_id):
     """ Trace actor destroy
     """
     disconnected = []
-    for user_id, logger in self.loggers.iteritems():
+    for user_id, logger in self.loggers.items():
         if not logger.events or LOG_ACTOR_DESTROY in logger.events:
             if not logger.actors or actor_id in logger.actors:
                 data = {}
@@ -139,7 +146,7 @@ def log_actor_migrate(self, actor_id, dest_node_id):
     """ Trace actor migrate
     """
     disconnected = []
-    for user_id, logger in self.loggers.iteritems():
+    for user_id, logger in self.loggers.items():
         if not logger.events or LOG_ACTOR_MIGRATE in logger.events:
             if not logger.actors or actor_id in logger.actors:
                 data = {}
@@ -164,7 +171,7 @@ def log_actor_replicate(self, actor_id, replica_actor_id, replication_id, dest_n
     """ Trace actor replication
     """
     disconnected = []
-    for user_id, logger in self.loggers.iteritems():
+    for user_id, logger in self.loggers.items():
         if not logger.events or LOG_ACTOR_REPLICATE in logger.events:
             if not logger.actors or actor_id in logger.actors:
                 data = {}
@@ -191,7 +198,7 @@ def log_actor_dereplicate(self, actor_id, replica_actor_id, replication_id):
     """ Trace actor dereplication
     """
     disconnected = []
-    for user_id, logger in self.loggers.iteritems():
+    for user_id, logger in self.loggers.items():
         if not logger.events or LOG_ACTOR_DEREPLICATE in logger.events:
             if not logger.actors or actor_id in logger.actors:
                 data = {}
@@ -217,7 +224,7 @@ def log_application_new(self, application_id, application_name):
     """ Trace application new
     """
     disconnected = []
-    for user_id, logger in self.loggers.iteritems():
+    for user_id, logger in self.loggers.items():
         if not logger.events or LOG_APPLICATION_NEW in logger.events:
             data = {}
             data['timestamp'] = time.time()
@@ -241,7 +248,7 @@ def log_application_destroy(self, application_id):
     """ Trace application destroy
     """
     disconnected = []
-    for user_id, logger in self.loggers.iteritems():
+    for user_id, logger in self.loggers.items():
         if not logger.events or LOG_APPLICATION_DESTROY in logger.events:
             data = {}
             data['timestamp'] = time.time()
@@ -264,7 +271,7 @@ def log_link_connected(self, peer_id, uri):
     """ Trace node connect
     """
     disconnected = []
-    for user_id, logger in self.loggers.iteritems():
+    for user_id, logger in self.loggers.items():
         if not logger.events or LOG_LINK_CONNECTED in logger.events:
             data = {}
             data['timestamp'] = time.time()
@@ -288,7 +295,7 @@ def log_link_disconnected(self, peer_id):
     """ Trace node connect
     """
     disconnected = []
-    for user_id, logger in self.loggers.iteritems():
+    for user_id, logger in self.loggers.items():
         if not logger.events or LOG_LINK_DISCONNECTED in logger.events:
             data = {}
             data['timestamp'] = time.time()
@@ -311,7 +318,7 @@ def log_log_message(self, message):
     """ Log message that is displayed at listener
     """
     disconnected = []
-    for user_id, logger in self.loggers.iteritems():
+    for user_id, logger in self.loggers.items():
         if not logger.events or LOG_LOG_MESSAGE in logger.events:
             data = {}
             data['timestamp'] = time.time()

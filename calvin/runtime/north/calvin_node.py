@@ -14,6 +14,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import *
+from builtins import object
 from multiprocessing import Process
 # For trace
 import sys
@@ -190,7 +198,7 @@ class Node(object):
             peer_node_ids[uri] = (peer_node_id, status)
         if not peers:
             # Get highest status, i.e. any error
-            comb_status = max([s for _, s in peer_node_ids.values()])
+            comb_status = max([s for _, s in list(peer_node_ids.values())])
             org_cb(peer_node_ids=peer_node_ids, status=comb_status)
 
     def logging_callback(self, preamble=None, *args, **kwargs):
@@ -273,7 +281,7 @@ class Node(object):
             # No actors, we're basically done
             return self.stop()
         actors = []
-        for actor in self.am.actors.values():
+        for actor in list(self.am.actors.values()):
             # Do not delete migrating actors (for now)
             if actor._migrating_to is None:
                 actors.append(actor)
@@ -300,7 +308,7 @@ class Node(object):
         already_migrating = []
         if not self.am.actors:
             return self.stop(callback)
-        for actor in self.am.actors.values():
+        for actor in list(self.am.actors.values()):
             if actor._migrating_to is None:
                 actors.append(actor)
             else:

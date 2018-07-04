@@ -16,6 +16,15 @@
 
 from __future__ import print_function
 from __future__ import absolute_import
+from __future__ import unicode_literals
+from __future__ import division
+from future import standard_library
+standard_library.install_aliases()
+from builtins import zip
+from builtins import str
+from past.builtins import basestring
+from builtins import *
+from builtins import object
 import os
 import glob
 import imp
@@ -334,11 +343,11 @@ class ActorStore(Store):
     def _validate_port_properties(self, port_properties, direction):
         # TODO break out the validation and consolidate it with codegen.py:ConsolidatePortProperty
         issues = []
-        for key, values in port_properties.items():
+        for key, values in list(port_properties.items()):
             if not isinstance(values, (list, tuple)):
                 values = [values]
             for value in values:
-                if key not in port_property_data.keys():
+                if key not in list(port_property_data.keys()):
                     reason = "Port property {} is unknown".format(key)
                     issues.append(calvinresponse.CalvinResponse(calvinresponse.BAD_REQUEST, {'reason': reason}))
                     continue
@@ -346,7 +355,7 @@ class ActorStore(Store):
                 if ppdata['type'] == "category":
                     if value not in ppdata['values']:
                         reason = "Port property {} can only have values {}".format(
-                            key, ", ".join(ppdata['values'].keys()))
+                            key, ", ".join(list(ppdata['values'].keys())))
                         issues.append(calvinresponse.CalvinResponse(calvinresponse.BAD_REQUEST, {'reason': reason}))
                         continue
                     if direction not in ppdata['values'][value]['direction']:
@@ -482,24 +491,24 @@ class GlobalStore(ActorStore):
             generates a signature string
         """
         if 'is_primitive' not in desc or desc['is_primitive']:
-            signature = {u'actor_type': unicode(desc['actor_type']),
-                         u'inports': sorted([unicode(i) for i in desc['inports']]),
-                         u'outports': sorted([unicode(i) for i in desc['outports']])}
+            signature = {u'actor_type': str(desc['actor_type']),
+                         u'inports': sorted([str(i) for i in desc['inports']]),
+                         u'outports': sorted([str(i) for i in desc['outports']])}
         else:
             if type(desc['component']) is dict:
-                signature = {u'actor_type': unicode(desc['actor_type']),
-                             u'inports': sorted([unicode(i) for i in desc['component']['inports']]),
-                             u'outports': sorted([unicode(i) for i in desc['component']['outports']])}
+                signature = {u'actor_type': str(desc['actor_type']),
+                             u'inports': sorted([str(i) for i in desc['component']['inports']]),
+                             u'outports': sorted([str(i) for i in desc['component']['outports']])}
             else:
-                signature = {u'actor_type': unicode(desc['actor_type']),
-                             u'inports': sorted([unicode(i) for i in desc['component'].inports]),
-                             u'outports': sorted([unicode(i) for i in desc['component'].outports])}
+                signature = {u'actor_type': str(desc['actor_type']),
+                             u'inports': sorted([str(i) for i in desc['component'].inports]),
+                             u'outports': sorted([str(i) for i in desc['component'].outports])}
         return hashlib.sha256(json.dumps(signature, separators=(',', ':'), sort_keys=True)).hexdigest()
 
     @staticmethod
     def list_sort(obj):
         if isinstance(obj, dict):
-            for k, v in obj.iteritems():
+            for k, v in obj.items():
                 obj[k] = GlobalStore.list_sort(v)
             return obj
         elif isinstance(obj, (set, list, tuple)):
@@ -608,7 +617,7 @@ class GlobalStore(ActorStore):
         if not final[0] and desc != dynops.FailedElement:
             if desc['is_primitive']:
                 mandatory = desc['args']['mandatory']
-                optional = desc['args']['optional'].keys()
+                optional = list(desc['args']['optional'].keys())
             else:
                 mandatory = desc['component']['arg_identifiers']
                 optional = []
@@ -786,7 +795,7 @@ if __name__ == '__main__':
         with_defaults = [x for x in l if 'args' in d.metadata(x) and d.metadata(x)['args']['optional']]
         print("With default params:")
         for a in with_defaults:
-            print("  ", a, ":", d.metadata(a)['args']['optional'].keys())
+            print("  ", a, ":", list(d.metadata(a)['args']['optional'].keys()))
 
     list_actors()
     list_actors_with_default_args()

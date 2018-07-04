@@ -14,6 +14,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from past.builtins import basestring
+from builtins import *
+from builtins import object
 import re
 import os
 from calvin.runtime.north.authorization.policy_information_point import PolicyInformationPoint
@@ -469,7 +479,7 @@ class PolicyDecisionPoint(object):
     def _to_string(self, value):
         if isinstance(value, str):
             return value.decode("UTF-8")
-        elif isinstance(value, unicode):
+        elif isinstance(value, str):
             return value
         else:
             return str(value).decode("UTF-8")

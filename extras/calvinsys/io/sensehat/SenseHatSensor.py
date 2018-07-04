@@ -1,3 +1,7 @@
+from __future__ import division
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import absolute_import
 
 # -*- coding: utf-8 -*-
 
@@ -15,6 +19,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from future import standard_library
+standard_library.install_aliases()
+from builtins import *
+from past.utils import old_div
 from calvin.runtime.south.calvinsys import base_calvinsys_object
 from calvin.runtime.south.plugins.io.sensehat import sensehat
 from calvin.utilities.calvinlogger import get_logger
@@ -83,7 +91,7 @@ class SenseHatSensor(base_calvinsys_object.BaseCalvinsysObject):
     def write(self, _=None):
         def set_value(value, *args, **kwargs):
             if isinstance(value, float) or isinstance(value, int):
-                self._value = int((10**self._precision*value))/10.0**self._precision
+                self._value = old_div(int((10**self._precision*value)),10.0**self._precision)
             else:
                 _log.warning("Failed reading '{}' from sensehat: {}".format(self._sensor, value))
                 self._value = None

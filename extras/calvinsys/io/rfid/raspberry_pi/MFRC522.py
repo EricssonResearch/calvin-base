@@ -4,9 +4,19 @@
 # [1]: https://www.nxp.com/docs/en/data-sheet/MFRC522.pdf 
 
 from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from builtins import range
+from builtins import *
+from past.utils import old_div
+from builtins import object
 import pigpio
 
-class IR:
+class IR(object):
     # Interrupt names
     # Bit 7 has different uses
     IRqInv  = 0x80
@@ -35,7 +45,7 @@ S_READ = 5
 S_STOP = 6
 
 
-class MFRC522:
+class MFRC522(object):
   # FIXME: Make configurable    
   RST_PIN = 25 # Pin number 22 
   IRQ_PIN = 24 # Pin number 18
@@ -484,9 +494,9 @@ class MFRC522:
     prescale_lo = 0x3E
     # Compute settings for timer_hit and timer_lo
     divider = 256*prescale_hi + prescale_lo
-    f_timer = 13.56e6/(2.0*divider+1.0)
-    tick_s = 1.0/f_timer
-    ticks = int(period/tick_s)
+    f_timer = old_div(13.56e6,(2.0*divider+1.0))
+    tick_s = old_div(1.0,f_timer)
+    ticks = int(old_div(period,tick_s))
     timer_hi = ticks>>8 & 0xFF
     timer_lo = ticks & 0xFF
     

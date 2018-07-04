@@ -17,8 +17,16 @@
 Openssl wrapper used to generate and sign certificates.
 This module depends on openssl.
 """
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
 
-import ConfigParser
+from future import standard_library
+standard_library.install_aliases()
+from builtins import *
+from builtins import object
+import configparser
 import os
 import subprocess
 import sys
@@ -54,7 +62,7 @@ TRUSTSTORE_TRANSPORT ="truststore_for_transport"
 TRUSTSTORE_SIGN ="truststore_for_signing"
 
 
-class RuntimeCredentials():
+class RuntimeCredentials(object):
     """
     Create new runtime certificate.
     Return name of certificate signing request file.
@@ -141,7 +149,7 @@ class RuntimeCredentials():
         self.cert_name=None
         self.cert_path=None
         self.configfile = None
-        self.config=ConfigParser.SafeConfigParser()
+        self.config=configparser.SafeConfigParser()
         self.configuration=None
         self.config.optionxform = str
         os.umask(0o077)
@@ -242,7 +250,7 @@ class RuntimeCredentials():
         """
 #            print "new_opensslconf"
         _log.debug("__init__::new_opensslconf")
-        for section in self.__class__.DEFAULT.keys():
+        for section in list(self.__class__.DEFAULT.keys()):
             self.config.add_section(section)
 #            print "[{}]".format(section)
             hostname = socket.gethostname()
@@ -292,8 +300,8 @@ class RuntimeCredentials():
             # Empty openssl.conf file or could not successfully parse the file.
             self.new_opensslconf()
         configuration = {}
-        for section in self.__class__.DEFAULT.keys():
-            for option in self.__class__.DEFAULT[section].keys():
+        for section in list(self.__class__.DEFAULT.keys()):
+            for option in list(self.__class__.DEFAULT[section].keys()):
                 raw = self.config.get(section, option)
                 value = raw.split("#")[0].strip()  # Remove comments
 

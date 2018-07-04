@@ -1,4 +1,12 @@
 from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from builtins import *
+from builtins import object
 import sys
 import string
 
@@ -166,7 +174,7 @@ class IssueTracker(object):
                 # This should not fail
                 if not did_warn:
                     sys.stderr.write("Bad format string '{}', using default.\n".format(str(item_format)))
-                    sys.stderr.write("Available keys: {}\n".format(str(combined.keys())))
+                    sys.stderr.write("Available keys: {}\n".format(str(list(combined.keys()))))
                     did_warn = True
                 x = fmt.format(self._default_format, **combined)
 

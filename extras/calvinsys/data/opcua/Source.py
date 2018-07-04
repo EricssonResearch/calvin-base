@@ -14,6 +14,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import division
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from builtins import *
+from past.utils import old_div
+from builtins import object
 import time
 from collections import deque
 from socket import error as socket_error
@@ -156,9 +166,9 @@ class Source(base_calvinsys_object.BaseCalvinsysObject):
         if logging_interval:
             def show_stats():
                 incoming = self.stats["incoming"]
-                speed_in = self.stats["current_in"]/logging_interval
+                speed_in = old_div(self.stats["current_in"],logging_interval)
                 outgoing = self.stats["outgoing"]
-                speed_out = self.stats["current_out"]/logging_interval
+                speed_out = old_div(self.stats["current_out"],logging_interval)
                 _log.info("{} - incoming {} ({}/sec), sent: {} ({}/sec)".format(endpoint, incoming, speed_in, outgoing, speed_out))
                 self.stats["current_in"] = 0
                 self.stats["current_out"] = 0
@@ -241,7 +251,7 @@ class Source(base_calvinsys_object.BaseCalvinsysObject):
                 raise FatalException("Server has no namespace %s" % (namespace,))
 
             # Build node-ids for parameters
-            parameters = {"ns={};{}".format(namespace_idx, str(desc["address"])) : str(tag) for tag, desc in paramconfig.items()}
+            parameters = {"ns={};{}".format(namespace_idx, str(desc["address"])) : str(tag) for tag, desc in list(paramconfig.items())}
 
             # collect nodes for all parameters
             try:
@@ -253,14 +263,14 @@ class Source(base_calvinsys_object.BaseCalvinsysObject):
                 # create subscription
                 subscription = client.create_subscription(monitoring_interval, ChangeHandler(notify_change, node_to_tag))
                 # subscribe
-                subscription.subscribe_data_change(node_to_tag.keys())
+                subscription.subscribe_data_change(list(node_to_tag.keys()))
                 # Not all servers support this, will give "BadNodeIdUnknown" during setup
                 # TODO: When is this of interest?
                 # subscription.subscribe_events()
             except Exception as e:
                 raise FatalException("Failed to setup subscription %s" % (e,))
 
-            return client, parameters.keys()[0], subscription
+            return client, list(parameters.keys())[0], subscription
 
         def connect_and_subscribe():
             if self.client:

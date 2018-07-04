@@ -1,4 +1,13 @@
 from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import zip
+from builtins import str
+from builtins import range
+from builtins import *
 from calvin.utilities.nodecontrol import dispatch_node
 from calvin.utilities.attribute_resolver import format_index_string
 from calvin.utilities import calvinconfig
@@ -69,9 +78,9 @@ def multi_report(request_handler, rt, actor_ids):
     """
     result = []
     if isinstance(rt, (list, tuple, set)):
-        args = zip(rt, actor_ids)
+        args = list(zip(rt, actor_ids))
     else:
-        args = zip([rt]*len(actor_ids), actor_ids)
+        args = list(zip([rt]*len(actor_ids), actor_ids))
     for runtime, actor_id in args:
         result.append(request_handler.report(runtime, actor_id))
     return result
@@ -235,7 +244,7 @@ def expected_sum(n):
             s = s + n
             yield s
 
-    return list(cumsum(range(1, n + 1)))
+    return list(cumsum(list(range(1, n + 1))))
 
 def expected_tokens(request_handler, rt, actor_id, t_type):
 

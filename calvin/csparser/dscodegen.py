@@ -1,5 +1,12 @@
 from __future__ import print_function
 from __future__ import absolute_import
+from __future__ import unicode_literals
+from __future__ import division
+from future import standard_library
+standard_library.install_aliases()
+from builtins import map
+from builtins import *
+from builtins import object
 from . import astnode as ast
 from . import visitor
 from . import astprint
@@ -88,7 +95,7 @@ class DeployInfo(object):
     @visitor.when(ast.Node)
     def visit(self, node):
         if not node.is_leaf():
-            map(self.visit, node.children)
+            list(map(self.visit, node.children))
 
     @visitor.when(ast.RuleApply)
     def visit(self, node):
@@ -128,7 +135,7 @@ class Backport(object):
         self.issuetracker = issuetracker
 
     def transform(self, requirements):
-        for actor, rule in requirements.iteritems():
+        for actor, rule in requirements.items():
             try:
                 new_rule = self.mangle(rule)
                 requirements[actor] = new_rule if type(new_rule) is list else [new_rule]

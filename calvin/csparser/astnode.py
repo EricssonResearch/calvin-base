@@ -1,5 +1,13 @@
 from __future__ import print_function
 from __future__ import absolute_import
+from __future__ import unicode_literals
+from __future__ import division
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from builtins import hex
+from builtins import *
+from builtins import object
 import inspect
 from copy import copy, deepcopy
 from calvin.requests import calvinresponse
@@ -28,7 +36,7 @@ class Node(object):
         if not attr_dict:
             # No or empty attr dict matches.
             return True
-        for key, value in attr_dict.iteritems():
+        for key, value in attr_dict.items():
             if isinstance(key, tuple):
                 # Allow matching of sub attributes, usefull when having Id values
                 try:

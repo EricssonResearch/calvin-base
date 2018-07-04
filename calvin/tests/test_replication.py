@@ -16,6 +16,17 @@
 
 
 from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import map
+from builtins import str
+from builtins import range
+from builtins import *
+from builtins import object
+from past.utils import old_div
 import time
 import pytest
 import os
@@ -215,14 +226,14 @@ class TestReplication(object):
         snk_place = map(lambda x: snk in x, actor_place).index(True)
         time.sleep(0.4)
         actual = sorted(request_handler.report(runtimes[snk_place], snk))
-        keys = set([k.keys()[0] for k in actual])
+        keys = set([list(k.keys())[0] for k in actual])
         print(keys)
-        print([k.values()[0] for k in actual])
+        print([list(k.values())[0] for k in actual])
         result = request_handler.replicate(leader_rt, replication_id=response['replication_map']['testScript:sum'], dereplicate=True)
         print("DEREPLICATION RESULT:", result)
         time.sleep(0.3)
         actual = sorted(request_handler.report(runtimes[snk_place], snk))
-        print([k.values()[0] for k in actual])
+        print([list(k.values())[0] for k in actual])
         replicas = request_handler.get_index(rt1, "replicas/actors/"+response['replication_map']['testScript:sum'], root_prefix_level=3)['result']
         print("REPLICAS", replicas)
         self.app_id = None
@@ -302,7 +313,7 @@ class TestReplication(object):
         snk_place = map(lambda x: snk in x, actor_place).index(True)
         time.sleep(0.4)
         actual = sorted(request_handler.report(runtimes[snk_place], snk))
-        keys = set([k.keys()[0] for k in actual])
+        keys = set([list(k.keys())[0] for k in actual])
         print(keys)
         #print [k.values()[0] for k in actual]
         result = request_handler.replicate(leader_rt, replication_id=response['replication_map']['testScript:src'], dereplicate=True)
@@ -310,15 +321,15 @@ class TestReplication(object):
         time.sleep(0.3)
         actual = sorted(request_handler.report(runtimes[snk_place], snk))
         #print [k.values()[0] for k in actual]
-        counters = {p:[] for p in set([k.keys()[0] for k in actual])}
-        for p in counters.keys():
-            counters[p] = [k.values()[0] for k in actual if k.keys()[0] == p]
+        counters = {p:[] for p in set([list(k.keys())[0] for k in actual])}
+        for p in list(counters.keys()):
+            counters[p] = [list(k.values())[0] for k in actual if list(k.keys())[0] == p]
         #print counters
-        countersmm = {p: (min(v), max(v)) for p, v in counters.items()}
+        countersmm = {p: (min(v), max(v)) for p, v in list(counters.items())}
         # All min and max belongs in same 100000 range
-        assert all([v[0]/100000 == v[1]/100000 for v in countersmm.values()])
+        assert all([old_div(v[0],100000) == old_div(v[1],100000) for v in list(countersmm.values())])
         # All 5 10000 ranges included
-        assert len(set([v[0]/100000 for v in countersmm.values()])) == 5
+        assert len(set([old_div(v[0],100000) for v in list(countersmm.values())])) == 5
         print("MAX MIN", countersmm)
         replicas = request_handler.get_index(rt1, "replicas/actors/"+response['replication_map']['testScript:src'], root_prefix_level=3)['result']
         print("REPLICAS", replicas)
@@ -419,14 +430,14 @@ class TestReplication(object):
         snk_place = map(lambda x: snk in x, actor_place).index(True)
         time.sleep(0.4)
         actual = sorted(request_handler.report(runtimes[snk_place], snk))
-        keys = set([k.keys()[0] for k in actual])
+        keys = set([list(k.keys())[0] for k in actual])
         print(keys)
-        print([k.values()[0] for k in actual])
+        print([list(k.values())[0] for k in actual])
         result = request_handler.replicate(leader_rt, replication_id=response['replication_map']['testScript:shadow'], dereplicate=True)
         print("DEREPLICATION RESULT:", result)
         time.sleep(0.3)
         actual = sorted(request_handler.report(runtimes[snk_place], snk))
-        print([k.values()[0] for k in actual])
+        print([list(k.values())[0] for k in actual])
         replicas = request_handler.get_index(rt1, "replicas/actors/"+response['replication_map']['testScript:shadow'], root_prefix_level=3)['result']
         print("REPLICAS", replicas)
         self.app_id = None
@@ -613,11 +624,11 @@ class TestReplication(object):
         snk_place = map(lambda x: snk in x, actor_place).index(True)
         time.sleep(0.4)
         actual = sorted(request_handler.report(runtimes[snk_place], snk))
-        keys = set([k.keys()[0] for k in actual])
+        keys = set([list(k.keys())[0] for k in actual])
         print(keys)
-        print([k.values()[0] for k in actual])
+        print([list(k.values())[0] for k in actual])
         actual = sorted(request_handler.report(runtimes[snk_place], snk))
-        print([k.values()[0] for k in actual])
+        print([list(k.values())[0] for k in actual])
         replicas = request_handler.get_index(rt1, "replicas/actors/"+response['replication_map']['testScript:sum'], root_prefix_level=3)['result']
         print("REPLICAS", replicas)
         self.app_id = None
@@ -700,15 +711,15 @@ class TestReplication(object):
         snk_place = map(lambda x: snk in x, actor_place).index(True)
         time.sleep(0.4)
         actual = sorted(request_handler.report(runtimes[snk_place], snk))
-        keys = set([k.keys()[0] for k in actual])
+        keys = set([list(k.keys())[0] for k in actual])
         print(keys)
-        print([k.values()[0] for k in actual])
+        print([list(k.values())[0] for k in actual])
         actual = sorted(request_handler.report(runtimes[snk_place], snk))
-        print([k.values()[0] for k in actual])
+        print([list(k.values())[0] for k in actual])
 
         # Make them dereplicate
         print("DEREPLICATE")
-        for aid, nid in placed_burn.items():
+        for aid, nid in list(placed_burn.items()):
             try:
                 request_handler.report(rt_by_id[nid], aid, kwargs={'duration':0.01})
             except:
@@ -798,7 +809,7 @@ class TestReplication(object):
             for r in replicas:
                 d = request_handler.get_actor(rt1, r)
                 placed_burn[r] = d['node_id']
-            for aid, nid in placed_burn.items():
+            for aid, nid in list(placed_burn.items()):
                 try:
                     request_handler.report(rt_by_id[nid], aid, kwargs={'duration':duration})
                 except:
@@ -808,11 +819,11 @@ class TestReplication(object):
                 replicas = request_handler.get_index(rt1, "replicas/actors/"+response['replication_map']['testScript:burn'], root_prefix_level=3)['result']
                 nbr_replicas.setdefault(duration_str, []).append(replicas)
                 time.sleep(1)
-            print("NBR REPLICAS", duration_str, ":", map(len, nbr_replicas[duration_str]))
+            print("NBR REPLICAS", duration_str, ":", list(map(len, nbr_replicas[duration_str])))
 
         def mean(array):
-            a = map(len, array)
-            return sum(a)/float(len(a))
+            a = list(map(len, array))
+            return old_div(sum(a),float(len(a)))
 
         assert mean(nbr_replicas[str(0.005)]) < 0.2
         assert mean(nbr_replicas[str(0.015)]) > 0.5 and mean(nbr_replicas[str(0.015)]) < 1.9
@@ -836,7 +847,7 @@ class TestReplication(object):
 
     def testManualConcurrentReplication(self, rt_order3):
         _log.analyze("TESTRUN", "+", {})
-        _log.debug("testManualConcurrentReplication %s" % map(str, rt_order3))
+        _log.debug("testManualConcurrentReplication %s" % list(map(str, rt_order3)))
         script = """
             src   : std.CountTimer(sleep=0.03)
             sum   : std.Sum()
@@ -945,7 +956,7 @@ class TestReplication(object):
         while len(tagtag) < 25 and fails < 20:
             time.sleep(0.5)
             actual = request_handler.report(runtimes[snk_place], snk)
-            tagtag = set([k.keys()[0] + "+" + k.values()[0].keys()[0] for k in actual])
+            tagtag = set([list(k.keys())[0] + "+" + list(k.values())[0].keys()[0] for k in actual])
             fails += 1
         print("TAG-TAG combinations", len(tagtag), tagtag)
         assert len(tagtag) == 25
@@ -1164,7 +1175,7 @@ class TestReplication(object):
         keys = set([])
         while len(tokens1) < 50 and len(keys) < (counter + 1) and fails < 20:
             tokens1 = request_handler.report(snk_rt, snk)
-            keys = set([k.keys()[0] for k in tokens1])
+            keys = set([list(k.keys())[0] for k in tokens1])
             fails += 1
             time.sleep(0.5)
         assert len(tokens1) >= 50 and len(keys) == (counter + 1)
@@ -1254,7 +1265,7 @@ class TestConstrainedReplication(object):
         except:
             pass
         from subprocess import Popen
-        constrained_p = range(3)
+        constrained_p = list(range(3))
         for i in range(3):
             constrained_p[i] = Popen([os.getenv("CALVIN_CONSTRAINED"), '-a',
             '{"indexed_public": {"node_name": {"organization": "com.ericsson", "purpose": "distributed-test", "group": "rest", "name": "constrained%d"}}}' % i,
@@ -1262,8 +1273,8 @@ class TestConstrainedReplication(object):
         self.constrained_proc = constrained_p
         time.sleep(1)
 
-        constrained_id = range(3)
-        constrained_data = range(3)
+        constrained_id = list(range(3))
+        constrained_data = list(range(3))
         for i in range(3):
             fails = 0
             while fails < 20:
@@ -1319,10 +1330,10 @@ class TestConstrainedReplication(object):
         while len(keys) < 5 and fails < 20:
             time.sleep(0.2)
             actual = request_handler.report(runtimes[snk_place], snk)
-            keys = set([k.keys()[0] for k in actual])
+            keys = set([list(k.keys())[0] for k in actual])
             fails += 1
         print(keys)
-        print(sorted([k.values()[0] for k in actual]))
+        print(sorted([list(k.values())[0] for k in actual]))
         assert len(keys) == 5
 
         # abolish a constrained runtime not having the original actor
@@ -1390,7 +1401,7 @@ class TestConstrainedReplication(object):
         except:
             pass
         from subprocess import Popen
-        constrained_p = range(3)
+        constrained_p = list(range(3))
         for i in range(3):
             constrained_p[i] = Popen([os.getenv("CALVIN_CONSTRAINED"), '-a',
             '{"indexed_public": {"node_name": {"organization": "com.ericsson", "purpose": "distributed-test", "group": "rest", "name": "constrained%d"}}}' % i,
@@ -1398,8 +1409,8 @@ class TestConstrainedReplication(object):
         self.constrained_proc = constrained_p
         time.sleep(1)
 
-        constrained_id = range(3)
-        constrained_data = range(3)
+        constrained_id = list(range(3))
+        constrained_data = list(range(3))
         for i in range(3):
             fails = 0
             while fails < 20:
@@ -1455,10 +1466,10 @@ class TestConstrainedReplication(object):
         while len(keys) < 5 and fails < 20:
             time.sleep(0.2)
             actual = request_handler.report(runtimes[snk_place], snk)
-            keys = set([k.keys()[0] for k in actual])
+            keys = set([list(k.keys())[0] for k in actual])
             fails += 1
         print(keys)
-        print(sorted([k.values()[0] for k in actual]))
+        print(sorted([list(k.values())[0] for k in actual]))
         assert len(keys) == 5
 
         # abolish a constrained runtime not having the original actor
@@ -1526,7 +1537,7 @@ class TestConstrainedReplication(object):
         except:
             pass
         from subprocess import Popen
-        constrained_p = range(3)
+        constrained_p = list(range(3))
         for i in range(3):
             constrained_p[i] = Popen([os.getenv("CALVIN_CONSTRAINED"), '-a',
             '{"indexed_public": {"node_name": {"organization": "com.ericsson", "purpose": "distributed-test", "group": "rest", "name": "constrained%d"}}}' % i,
@@ -1534,8 +1545,8 @@ class TestConstrainedReplication(object):
         self.constrained_proc = constrained_p
         time.sleep(1)
 
-        constrained_id = range(3)
-        constrained_data = range(3)
+        constrained_id = list(range(3))
+        constrained_data = list(range(3))
         for i in range(3):
             fails = 0
             while fails < 20:
@@ -1591,12 +1602,12 @@ class TestConstrainedReplication(object):
         while len(keys) < 5 and fails < 20:
             time.sleep(0.2)
             actual = request_handler.report(runtimes[snk_place], snk)
-            keys = set([k.keys()[0] for k in actual])
+            keys = set([list(k.keys())[0] for k in actual])
             fails += 1
         print(keys)
         assert len(keys) == 5
 
-        tag_index = set([k.keys()[0] + ":" + k.values()[0].split(':', 1)[0] for k in actual])
+        tag_index = set([list(k.keys())[0] + ":" + list(k.values())[0].split(':', 1)[0] for k in actual])
         print(tag_index)
         assert len(tag_index) == 5
 

@@ -14,6 +14,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import map
+from builtins import str
+from builtins import *
 import time
 import traceback
 import platform
@@ -85,11 +94,11 @@ def parse_http_response(data):
 
     lines = header.split('\r\n')
     cmd = lines[0].split(' ')
-    lines = map(lambda x: x.replace(': ', ':', 1), lines[1:])
-    lines = filter(lambda x: len(x) > 0, lines)
+    lines = [x.replace(': ', ':', 1) for x in lines[1:]]
+    lines = [x for x in lines if len(x) > 0]
 
     headers = [x.split(':', 1) for x in lines]
-    headers = dict(map(lambda x: (x[0].lower(), x[1]), headers))
+    headers = dict([(x[0].lower(), x[1]) for x in headers])
 
     return cmd, headers
 
@@ -101,7 +110,7 @@ class ServerBase(DatagramProtocol):
         self._dstarted = d
         self.ignore_list = []
         self.ips = ips
-        self._msearches_resp = {sid: {} for sid in MS.keys()}
+        self._msearches_resp = {sid: {} for sid in list(MS.keys())}
         self._node_id = node_id
         self._control_uri = control_uri
 
@@ -121,14 +130,14 @@ class ServerBase(DatagramProtocol):
                 # Only reply to our requests
                 if SERVICE_UUID in headers['st'] and address not in self.ignore_list:
 
-                    for k, addrs in self._services.items():
+                    for k, addrs in list(self._services.items()):
                         for addr in addrs:
                             # Only tell local about local
                             if addr[0] == "127.0.0.1" and address[0] != "127.0.0.1":
                                 continue
                             response = MS_RESP[SERVICE_UUID] % ('%s:%d' % addr, str(time.time()),
                                                                 k, self._control_uri + "/node/" + self._node_id, datetimeToString())
-                            if "cert" in self._msearches_resp[SERVICE_UUID].keys():
+                            if "cert" in list(self._msearches_resp[SERVICE_UUID].keys()):
                                 response += "CERTIFICATE: {}\r\n\r\n".format(self._msearches_resp[SERVICE_UUID]["cert"])
                             _log.debug("ServerBase::Sending response: %s" % repr(response))
                             delay = random.randint(0, min(5, int(headers['mx'])))
@@ -136,7 +145,7 @@ class ServerBase(DatagramProtocol):
                                                   response, address)
                 elif CA_SERVICE_UUID in headers['st'] and address not in self.ignore_list\
                     and self._msearches_resp[CA_SERVICE_UUID]["sign"]:
-                    for k, addrs in self._services.items():
+                    for k, addrs in list(self._services.items()):
                         for addr in addrs:
                             # Only tell local about local
                             if addr[0] == "127.0.0.1" and address[0] != "127.0.0.1":
@@ -194,7 +203,7 @@ class ClientBase(DatagramProtocol):
     def __init__(self, dclient=None):
         self._dstarted = dclient
         self._service = None
-        self._msearches = {sid: {'cb': None, 'stopped': False, 'stop': False} for sid in MS.keys()}
+        self._msearches = {sid: {'cb': None, 'stopped': False, 'stop': False} for sid in list(MS.keys())}
 
     def startProtocol(self):
         if self._dstarted:
@@ -329,7 +338,7 @@ class SSDPServiceDiscovery(ServiceDiscoveryBase):
         reactor.callLater(0, local_start_msearch)
 
     def stop_all_search(self):
-        for service_uuid in MS.keys():
+        for service_uuid in list(MS.keys()):
             self.port.protocol.set_callback(service_uuid, None)
             self.port.protocol.stop(service_uuid)
 

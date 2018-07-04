@@ -14,6 +14,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+import importlib
+standard_library.install_aliases()
+from builtins import *
+from builtins import object
 from calvin.actor.actorport import PortMeta
 import calvin.requests.calvinresponse as response
 from calvin.utilities import calvinlogger
@@ -30,8 +39,8 @@ from calvin.utilities.calvinlogger import get_logger
 _log = get_logger(__name__)
 
 
-for module, class_ in _MODULES.items():
-    module_obj = __import__(module, globals=globals())
+for module, class_ in list(_MODULES.items()):
+    module_obj = importlib.import_module(name=".{}".format(module), package="calvin.runtime.north.plugins.port.connection")
     globals()[class_] = getattr(module_obj, class_)
 
 
@@ -91,7 +100,7 @@ class ConnectionFactory(object):
 
     def init(self):
         data = {}
-        for class_name in _MODULES.values():
+        for class_name in list(_MODULES.values()):
             _log.debug("Init connection method %s" % class_name)
             C = globals()[class_name]
             data[C.__name__] = C(self.node, PURPOSE.INIT, None, None, None, self, **self.kwargs).init()

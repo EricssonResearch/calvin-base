@@ -14,19 +14,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import *
+from builtins import object
 from abc import ABCMeta, abstractmethod
 import os
 import glob
 import json
 from calvin.utilities import calvinuuid
 from calvin.utilities.calvinlogger import get_logger
+from future.utils import with_metaclass
 
 _log = get_logger(__name__)
 
 # This is an abstract class for the PRP (Policy Retrieval Point)
-class PolicyRetrievalPoint(object):
-    __metaclass__ = ABCMeta  # Metaclass for defining Abstract Base Classes
-
+class PolicyRetrievalPoint(with_metaclass(ABCMeta, object)):
     @abstractmethod
     def get_policy(self, id):
         """Return a JSON representation of the policy identified by id"""

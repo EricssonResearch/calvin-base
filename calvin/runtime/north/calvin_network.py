@@ -14,6 +14,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import division
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import zip
+from builtins import *
+from past.utils import old_div
+from builtins import object
 import os
 import time
 import glob
@@ -99,7 +109,7 @@ class CalvinLink(CalvinBaseLink):
             reply = self.replies.pop(payload['msg_uuid'])
 
             # RTT here also inlcudes delay(actors running...) times in remote runtime
-            self._rtt = (self._rtt*2 + (time.time() - reply['send_time']))/3
+            self._rtt = old_div((self._rtt*2 + (time.time() - reply['send_time'])),3)
 
             reply['callback'](response.CalvinResponse(encoded=payload['value']))
         except KeyError:
@@ -286,7 +296,7 @@ class CalvinNetwork(object):
                   use a default configuration, e.g. choose port number.
         """
         if not uris:
-            uris = [schema + "://default" for schema in self.transports.keys()]
+            uris = [schema + "://default" for schema in list(self.transports.keys())]
 
         for uri in uris:
             schema, addr = uri.split(':', 1)
@@ -299,7 +309,7 @@ class CalvinNetwork(object):
                   use a default configuration, e.g. choose port number.
         """
         if not uris:
-            uris = [schema + "://default" for schema in self.transports.keys()]
+            uris = [schema + "://default" for schema in list(self.transports.keys())]
 
         for uri in uris:
             schema, addr = uri.split(':', 1)
@@ -335,8 +345,8 @@ class CalvinNetwork(object):
             if not (uri in self.pending_joins or peer_id in self.pending_joins_by_id or peer_id in self._links):
                 # No simultaneous join detected
                 schema = uri.split(":", 1)[0]
-                _log.analyze(self.node.id, "+", {'uri': uri, 'peer_id': peer_id, 'schema': schema, 'transports': self.transports.keys()}, peer_node_id=peer_id)
-                if schema in self.transports.keys():
+                _log.analyze(self.node.id, "+", {'uri': uri, 'peer_id': peer_id, 'schema': schema, 'transports': list(self.transports.keys())}, peer_node_id=peer_id)
+                if schema in list(self.transports.keys()):
                     # store we have a pending join and its callback
                     if peer_id:
                         self.pending_joins_by_id[peer_id] = uri
@@ -662,11 +672,11 @@ class CalvinNetwork(object):
 
     def link_check(self, rt_uuid):
         """ Check if we have the link otherwise raise exception """
-        if rt_uuid not in self._links.iterkeys():
+        if rt_uuid not in iter(self._links.keys()):
             raise KeyError("ERROR_LINK_NOT_ESTABLISHED")
 
     def list_links(self):
         return list(self._links.keys())
 
     def list_direct_links(self):
-        return [peer_id for peer_id, l in self._links.items() if isinstance(l, CalvinLink)]
+        return [peer_id for peer_id, l in list(self._links.items()) if isinstance(l, CalvinLink)]

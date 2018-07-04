@@ -1,5 +1,13 @@
 from __future__ import print_function
 from __future__ import absolute_import
+from __future__ import unicode_literals
+from __future__ import division
+from future import standard_library
+standard_library.install_aliases()
+from builtins import map
+from builtins import hex
+from builtins import *
+from builtins import object
 from . import visitor
 from . import astnode as ast
 
@@ -20,7 +28,7 @@ class DotPrinter(object):
         self.properties(node)
         self.edges(node)
         if node.children:
-            map(self.visit, node.children)
+            list(map(self.visit, node.children))
 
     def add(self, stmt):
         self.statements.append(stmt)

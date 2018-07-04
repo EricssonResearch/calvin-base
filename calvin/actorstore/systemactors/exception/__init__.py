@@ -5,3 +5,10 @@ Depending the application, this may or may not indicated that the process has co
 
 Another common use of EOS tokens is to create lists and dictionaries with varying number of members, see docs for module 'json', in particular 'json.List' and 'json.Dict'.
 """
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import *

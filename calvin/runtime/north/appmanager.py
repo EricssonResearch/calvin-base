@@ -14,6 +14,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import map
+from builtins import str
+from builtins import zip
+from builtins import range
+from builtins import *
+from builtins import object
 import os
 import copy
 from calvin.utilities.calvin_callback import CalvinCB
@@ -64,19 +76,19 @@ class Application(object):
             pass
 
     def get_actors(self):
-        return self.actors.keys()
+        return list(self.actors.keys())
 
     def get_actor_name_map(self, ns):
-        actors = {v: [k] for k, v in self.actors.items() if v is not None}
+        actors = {v: [k] for k, v in list(self.actors.items()) if v is not None}
         # Collect all actors under top component name
         components = {}
         l = (len(ns)+1) if ns else 0
-        for name, _id in actors.iteritems():
+        for name, _id in actors.items():
              if name.find(':',l)> -1:
                 # This is a component
                 # component name including optional namespace
                 component = ':'.join(name.split(':')[0:(2 if ns else 1)])
-                if component in components.keys():
+                if component in list(components.keys()):
                     components[component] += _id
                 else:
                     components[component] = _id
@@ -86,7 +98,7 @@ class Application(object):
     def __str__(self):
         s = "id: " + self.id + "\n"
         s += "name: " + self.name + "\n"
-        for _id, name in self.actors.iteritems():
+        for _id, name in self.actors.items():
             s += "actor: " + _id + ", " + (name if name else "<UNKNOWN>") + "\n"
             if self.actor_placement and _id in self.actor_placement and self.actor_placement[_id]:
                 s += "\t" + str(list(self.actor_placement[_id])) + "\n"
@@ -105,12 +117,12 @@ class Application(object):
             self.node_info[node_id] = [actor_id]
 
     def complete_node_info(self):
-        return sum([len(a) for a in self.node_info.itervalues()]) == len(self.actors)
+        return sum([len(a) for a in self.node_info.values()]) == len(self.actors)
 
     def group_components(self):
         self.components = {}
         l = (len(self.ns)+1) if self.ns else 0
-        for name in self.actors.values():
+        for name in list(self.actors.values()):
              if name.find(':',l)> -1:
                 # This is part of a component
                 # component name including optional namespace
@@ -210,7 +222,7 @@ class AppManager(object):
         application.replication_ids = []
         application._replicas_actor_final = {}
         application._replicas_node_final = {}
-        for actor_id in application.actors.keys():
+        for actor_id in list(application.actors.keys()):
             if actor_id in self._node.am.list_actors():
                 application.update_node_info(self._node.id, actor_id)
                 replication_id = self._node.am.actors[actor_id]._replication_id.id
@@ -298,8 +310,8 @@ class AppManager(object):
             # Already called
             return
         _log.analyze(self._node.id, "+ BEGIN 2", {'node_info': application.node_info, 'origin_node_id': application.origin_node_id})
-        application._destroy_node_ids = {n: None for n in application.node_info.keys()}
-        for node_id, actor_ids in application.node_info.iteritems():
+        application._destroy_node_ids = {n: None for n in list(application.node_info.keys())}
+        for node_id, actor_ids in application.node_info.items():
             if not node_id:
                 _log.analyze(self._node.id, "+ UNKNOWN NODE", {})
                 application._destroy_node_ids[None] = response.CalvinResponse(False, data=actor_ids)
@@ -332,13 +344,13 @@ class AppManager(object):
     def _destroy_final_cb(self, application, node_id, status):
         _log.analyze(self._node.id, "+", {'node_id': node_id, 'status': status})
         application._destroy_node_ids[node_id] = status
-        if any([s is None for s in application._destroy_node_ids.values()]):
+        if any([s is None for s in list(application._destroy_node_ids.values())]):
             return
         # Done
-        for replication_id, replica_ids in application._replicas_actor_final.items():
+        for replication_id, replica_ids in list(application._replicas_actor_final.items()):
             for replica_id in replica_ids:
                 self._node.storage.remove_replica(replication_id, replica_id)
-        for replication_id, replica_node_ids in application._replicas_node_final.items():
+        for replication_id, replica_node_ids in list(application._replicas_node_final.items()):
             for replica_node_id in replica_node_ids:
                 self._node.storage.remove_replica_node_force(replication_id, replica_node_id)
         if all(application._destroy_node_ids.values()):
@@ -347,7 +359,7 @@ class AppManager(object):
             # Missing is the actors that could not be found.
             # FIXME retry? They could have moved
             missing = []
-            for status in application._destroy_node_ids.values():
+            for status in list(application._destroy_node_ids.values()):
                 missing += [] if status.data is None else status.data
             application.destroy_cb(status=response.CalvinResponse(False, data=missing))
         self._node.control.log_application_destroy(application.id)
@@ -430,7 +442,7 @@ class AppManager(object):
         actor_ids = app.get_actors()
         app.actor_placement_nbr = len(actor_ids)
         for actor_id in actor_ids:
-            if actor_id not in self._node.am.actors.keys():
+            if actor_id not in list(self._node.am.actors.keys()):
                 _log.debug("Only apply requirements to local actors")
                 app.actor_placement[actor_id] = None
                 continue
@@ -450,11 +462,11 @@ class AppManager(object):
         # all possible actor placements derived
         _log.analyze(self._node.id, "+ ACTOR PLACEMENT", {'placement': app.actor_placement}, tb=True)
         status = response.CalvinResponse(True)
-        if any([not n for n in app.actor_placement.values()]):
+        if any([not n for n in list(app.actor_placement.values())]):
             # At least one actor have no required placement
             # Let them stay on this node
             app.actor_placement = {actor_id: set([self._node.id]) if placement is None else placement
-                                     for actor_id, placement in app.actor_placement.items()}
+                                     for actor_id, placement in list(app.actor_placement.items())}
             # Status will indicate success, but be different than the normal OK code
             status = response.CalvinResponse(response.CREATED)
             _log.analyze(self._node.id, "+ MISS PLACEMENT", {'app_id': app.id, 'placement': app.actor_placement}, tb=True)
@@ -464,11 +476,11 @@ class AppManager(object):
 
         # Get list of all possible nodes
         node_ids = set([])
-        for possible_nodes in app.actor_placement.values():
+        for possible_nodes in list(app.actor_placement.values()):
             node_ids |= possible_nodes
         node_ids = list(node_ids)
         node_ids = [n for n in node_ids if not isinstance(n, dynops.InfiniteElement)]
-        for actor_id, possible_nodes in app.actor_placement.iteritems():
+        for actor_id, possible_nodes in app.actor_placement.items():
             if any([isinstance(n, dynops.InfiniteElement) for n in possible_nodes]):
                 app.actor_placement[actor_id] = node_ids
         _log.analyze(self._node.id, "+ ACTOR MATRIX", {'actor_ids': actor_ids, 'actor_matrix': actor_matrix,
@@ -492,7 +504,7 @@ class AppManager(object):
             #weighted_actor_placement[actor_id] = node_ids[weights.index(max(weights))]
             # Get a list of nodes in sorted weighted order
             weighted_actor_placement[actor_id] = [n for (w, n) in sorted(zip(weights, node_ids), reverse=True)]
-        for actor_id, node_id in weighted_actor_placement.iteritems():
+        for actor_id, node_id in weighted_actor_placement.items():
             _log.debug("Actor deployment %s \t-> %s" % (app.actors[actor_id], node_id))
             # FIXME add callback that recreate the actor locally
             self._node.am.robust_migrate(actor_id, node_id[:], None)
@@ -514,7 +526,7 @@ class AppManager(object):
         actor_matrix = [[0 for x in range(l)] for x in range(l)]
         for actor_id in list_actors:
             connections = self._node.am.connections(actor_id)
-            for p in connections['inports'].values():
+            for p in list(connections['inports'].values()):
                 try:
                     peer_actor_id = self._node.pm._get_local_port(port_id=p[1]).owner.id
                 except:
@@ -546,7 +558,7 @@ class AppManager(object):
                                               self._node.am, actors=value['actors_name_map'], deploy_info=deploy_info)
         app.group_components()
         app._migrated_actors = {a: None for a in app.actors}
-        for actor_id, actor_name in app.actors.iteritems():
+        for actor_id, actor_name in app.actors.items():
             req = app.get_req(actor_name)
             if not req:
                 _log.analyze(self._node.id, "+ NO REQ", {'actor_id': actor_id, 'actor_name': actor_name})
@@ -576,11 +588,11 @@ class AppManager(object):
     def _migrated_cb(self, status, app, actor_id, cb, **kwargs):
         app._migrated_actors[actor_id] = status
         _log.analyze(self._node.id, "+", {'actor_id': actor_id, 'status': status, 'statuses': app._migrated_actors})
-        if any([s is None for s in app._migrated_actors.values()]):
+        if any([s is None for s in list(app._migrated_actors.values())]):
             return
         # Done
         if cb:
-            cb(status=response.CalvinResponse(all([s for s in app._migrated_actors.values()])))
+            cb(status=response.CalvinResponse(all([s for s in list(app._migrated_actors.values())])))
 
 class Deployer(object):
 
@@ -807,26 +819,26 @@ class Deployer(object):
         if not self.deployable['valid']:
             raise Exception("Deploy information is not valid")
 
-        for actor_name, info in self.deployable['actors'].iteritems():
+        for actor_name, info in self.deployable['actors'].items():
             self.lookup_and_verify(actor_name, info, cb=CalvinCB(self._deploy_instantiate))
 
     def _deploy_instantiate(self):
         self._deploy_counter += 1
         if self._deploy_counter < len(self.deployable['actors']):
             return
-        for actor_name, info in self._verified_actors.iteritems():
+        for actor_name, info in self._verified_actors.items():
             self.check_requirements_and_sec_policy(actor_name, info[0], info[1], cb=CalvinCB(self._deploy_finalize))
 
     def _deploy_finalize(self):
         self._instantiate_counter += 1
         if self._instantiate_counter < len(self._verified_actors):
             return
-        for component_name, actor_names in self.components.iteritems():
+        for component_name, actor_names in self.components.items():
             actor_ids = [self.actor_map[n] for n in actor_names]
             for actor_id in actor_ids:
                 self.node.am.actors[actor_id].component_add(actor_ids)
 
-        for src, dst_list in self.deployable['connections'].iteritems():
+        for src, dst_list in self.deployable['connections'].items():
             if len(dst_list) > 1:
                 src_name, src_port = src.split('.')
                 _log.debug("GET PROPERTIES for %s, %s.%s" % (src, src_name, src_port))
@@ -841,9 +853,9 @@ class Deployer(object):
                 self.node.pm.set_port_properties(actor_id=self.actor_map[src_name], port_dir='out', port_name=src_port,
                                                  **kwargs)
 
-        self._connection_count = sum(map(len, self.deployable['connections'].values()))
+        self._connection_count = sum(map(len, list(self.deployable['connections'].values())))
         self._connection_status = response.CalvinResponse(True)
-        for src, dst_list in self.deployable['connections'].iteritems():
+        for src, dst_list in self.deployable['connections'].items():
             src_actor, src_port = src.split('.')
             for dst in dst_list:
                 dst_actor, dst_port = dst.split('.')
@@ -860,7 +872,7 @@ class Deployer(object):
         if self._connection_count == 0:
             _log.debug("_wait_for_all_connections final")
             # Replication manager needs to fetch port info if supervise ShadowActor
-            self.node.rm.deployed_actors_connected(self.actor_map.values())
+            self.node.rm.deployed_actors_connected(list(self.actor_map.values()))
             self._wait_for_all_connections_and_requires()
 
     def _wait_for_all_connections_and_requires(self):

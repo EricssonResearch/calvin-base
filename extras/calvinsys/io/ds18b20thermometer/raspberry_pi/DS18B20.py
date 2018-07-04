@@ -14,6 +14,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import division
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import *
+from past.utils import old_div
 from extras.calvinsys.io.ds18b20thermometer.BaseDS18B20 import BaseDS18B20
 from calvin.utilities.calvinlogger import get_logger
 from calvin.runtime.south.plugins.async import async
@@ -59,7 +67,7 @@ class DS18B20(BaseDS18B20):
 
         if equals_pos != -1:
             temp_string = lines[1][equals_pos + 2:]
-            self._temperature = float(temp_string)/1000.0
+            self._temperature = old_div(float(temp_string),1000.0)
             self._temperature = self._temperature
         else :
             self._in_progress = async.DelayedCall(1.0, self._read_temp)

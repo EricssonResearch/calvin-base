@@ -16,6 +16,14 @@
 # limitations under the License.
 
 from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from past.builtins import basestring
+from builtins import *
 import argparse
 import json
 import pprint
@@ -126,7 +134,7 @@ def main():
             log.append(logline)
 
     pprint.pprint(pid_to_node_id)
-    int_pid_to_node_id = {int(k): v for k,v in pid_to_node_id.iteritems()}
+    int_pid_to_node_id = {int(k): v for k,v in pid_to_node_id.items()}
     pids = list(pids)
     print("PIDS", pids)
 

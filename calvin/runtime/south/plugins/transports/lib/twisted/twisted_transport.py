@@ -14,6 +14,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from builtins import *
+from builtins import object
 import time
 
 from calvin.utilities.calvin_callback import CalvinCB
@@ -111,7 +120,7 @@ class CalvinTransport(base_transport.BaseTransport):
         msg = _join_request
         msg['id'] = self._rt_id
         msg['sid'] = self._get_msg_uuid()
-        msg['serializers'] = self.get_coders().keys()
+        msg['serializers'] = list(self.get_coders().keys())
         self._join_start = time.time()
         self.send(msg, coder=self._get_join_coder())
 
@@ -276,7 +285,7 @@ class CalvinServer(base_transport.BaseServer):
             _log.info("Peer %s already connected" % uri)
             # Disconnect client localy and remove callbacks
             
-            class ErrorMessage:
+            class ErrorMessage(object):
                 def __init__(self, str):
                     self._str = str
 

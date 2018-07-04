@@ -14,6 +14,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import next
+from builtins import str
+from builtins import *
+from builtins import object
 from calvin.utilities import dynops
 from calvin.utilities import calvinlogger
 from calvin.runtime.north.plugins.requirements import req_operations
@@ -171,7 +181,7 @@ class ReqMatch(object):
                 # Replace Infinte Element with all known real ids
                 if any([isinstance(node_id, dynops.InfiniteElement) for node_id in self.possible_placements]):
                     try:
-                        replace_ids = self.node.network._links.keys() + [self.node.id]
+                        replace_ids = list(self.node.network._links.keys()) + [self.node.id]
                     except:
                         replace_ids = [self.node.id]
                     self.possible_placements = set(replace_ids)

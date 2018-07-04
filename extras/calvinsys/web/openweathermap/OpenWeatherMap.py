@@ -14,6 +14,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import division
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import *
+from past.utils import old_div
 import requests
 from calvin.runtime.south.plugins.async import threads
 from calvin.utilities.calvinlogger import get_logger
@@ -101,7 +109,7 @@ class OpenWeatherMap(base_calvinsys_object.BaseCalvinsysObject):
             result['city'] = data['name']
             result['country'] = data['sys']['country']
             result['weather'] = data['weather'][0]['description']
-            result['temperature'] = int(100*(data['main']['temp'] - 273.15))/100.0
+            result['temperature'] = old_div(int(100*(data['main']['temp'] - 273.15)),100.0)
             result['humidity'] = data['main']['humidity']
             result['pressure'] = data['main']['pressure']
         return result

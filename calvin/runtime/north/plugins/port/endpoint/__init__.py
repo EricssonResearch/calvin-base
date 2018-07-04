@@ -14,6 +14,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import *
+import importlib
 from calvin.runtime.north.plugins.port.endpoint.common import Endpoint
 
 # Endpoint methods
@@ -23,7 +31,7 @@ from calvin.utilities.calvinlogger import get_logger
 _log = get_logger(__name__)
 
 
-for module, classes in _MODULES.items():
-    module_obj = __import__(module, globals=globals())
+for module, classes in list(_MODULES.items()):
+    module_obj = importlib.import_module(name=".{}".format(module), package="calvin.runtime.north.plugins.port.endpoint")
     for class_ in classes:
         globals()[class_] = getattr(module_obj, class_)

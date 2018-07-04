@@ -1,3 +1,11 @@
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import *
+from builtins import object
 import pytest
 
 pytest_unittest = pytest.mark.unittest
@@ -96,7 +104,7 @@ class TestFanoutRandomFIFO(TestFanoutRoundRobinFIFO):
         # check that 1 token has been consumed
         # check that there are 6-consumed tokens total:
         available = 0
-        for r, f in self.outport.fifo.items():
+        for r, f in list(self.outport.fifo.items()):
             while self.outport.tokens_available(1, r):
                 self.outport.peek(r)
                 available += 1

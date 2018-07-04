@@ -15,6 +15,13 @@
 # limitations under the License.
 
 from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import *
+from builtins import object
 import logging
 
 from calvin.utilities import calvinuuid
@@ -135,7 +142,7 @@ class CalvinCBClass(object):
         self.__callback_valid_names = callback_valid_names
         if not callbacks:
             return
-        for name, cbs in callbacks.iteritems():
+        for name, cbs in callbacks.items():
             if self.__callback_valid_names is None or name in self.__callback_valid_names:
                 self.__callbacks[name] = dict()
                 for cb in cbs:
@@ -151,7 +158,7 @@ class CalvinCBClass(object):
 
     def callback_valid_names(self):
         """ Returns list of valid or current names that callbacks can be registered on."""
-        return self.__callback_valid_names if self.__callback_valid_names else self.__callbacks.keys()
+        return self.__callback_valid_names if self.__callback_valid_names else list(self.__callbacks.keys())
 
     def callback_register(self, name, cb):
         """ Registers a callback on a name.
@@ -167,7 +174,7 @@ class CalvinCBClass(object):
         """ Unregisters a callback
             _id: the id of the callback to unregister (CalvinCB and CalvinCBGroup have an attribute id)
         """
-        for k, v in self.__callbacks.iteritems():
+        for k, v in self.__callbacks.items():
             if _id in v:
                 self.__callbacks[k].pop(_id)
                 if not self.__callbacks[k]:
@@ -194,7 +201,7 @@ class CalvinCBClass(object):
 
         # So we can change __callbacks from callbacks
         local_copy = self.__callbacks[name].copy()
-        for cb in local_copy.itervalues():
+        for cb in local_copy.values():
             try:
                 reply[cb._id] = cb(*args, **kwargs)
             except:

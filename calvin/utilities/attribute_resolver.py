@@ -16,6 +16,17 @@
 
 # import copy
 from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import next
+from builtins import str
+from builtins import map
+from builtins import range
+from builtins import *
+from builtins import object
 import re
 
 from calvin.utilities.calvinlogger import get_logger
@@ -173,7 +184,7 @@ class AttributeResolverHelper(object):
     def _to_unicode(value):
         if isinstance(value, str):
             return value.decode("UTF-8")
-        elif isinstance(value, unicode):
+        elif isinstance(value, str):
             return value
         else:
             return str(value).decode("UTF-8")
@@ -182,14 +193,14 @@ class AttributeResolverHelper(object):
     def owner_resolver(cls, attr):
         if not isinstance(attr, dict):
             raise Exception('Owner attribute must be a dictionary with %s keys.' % owner_keys)
-        resolved = [cls._to_unicode(attr[k]) if k in attr.keys() else None for k in owner_keys]
+        resolved = [cls._to_unicode(attr[k]) if k in list(attr.keys()) else None for k in owner_keys]
         return resolved
 
     @classmethod
     def node_name_resolver(cls, attr):
         if not isinstance(attr, dict):
             raise Exception('Node name attribute must be a dictionary with %s keys.' % node_name_keys)
-        resolved = [cls._to_unicode(attr[k]) if k in attr.keys() else None for k in node_name_keys]
+        resolved = [cls._to_unicode(attr[k]) if k in list(attr.keys()) else None for k in node_name_keys]
         return resolved
 
     @classmethod
@@ -202,21 +213,21 @@ class AttributeResolverHelper(object):
                 raise Exception("country must be ISO 3166-1 alpha2")
         if "stateOrProvince" in attr and "country" not in attr:
             raise Exception("country required for stateOrProvince, see ISO 3166-2 for proper code")
-        resolved = [cls._to_unicode(attr[k]) if k in attr.keys() else None for k in address_keys]
+        resolved = [cls._to_unicode(attr[k]) if k in list(attr.keys()) else None for k in address_keys]
         return resolved
 
     @classmethod
     def cpu_avail_resolver(cls, attr):
         if attr not in cpuAvail_keys:
             raise Exception('CPU availability must be: %s' % cpuAvail_keys)
-        resolved = map(cls._to_unicode, cpuAvail_keys[:cpuAvail_keys.index(attr) + 1])
+        resolved = list(map(cls._to_unicode, cpuAvail_keys[:cpuAvail_keys.index(attr) + 1]))
         return resolved
 
     @classmethod
     def cpu_total_resolver(cls, attr):
         if attr not in cpuTotal_keys:
             raise Exception('CPU power must be: %s' % cpuTotal_keys)
-        resolved = map(cls._to_unicode, cpuTotal_keys[:cpuTotal_keys.index(attr) + 1])
+        resolved = list(map(cls._to_unicode, cpuTotal_keys[:cpuTotal_keys.index(attr) + 1]))
         return resolved
 
     @classmethod
@@ -230,14 +241,14 @@ class AttributeResolverHelper(object):
     def mem_avail_resolver(cls, attr):
         if attr not in memAvail_keys:
             raise Exception('RAM availability must be: %s' % memAvail_keys)
-        resolved = map(cls._to_unicode, memAvail_keys[:memAvail_keys.index(attr) + 1])
+        resolved = list(map(cls._to_unicode, memAvail_keys[:memAvail_keys.index(attr) + 1]))
         return resolved
 
     @classmethod
     def mem_total_resolver(cls, attr):
         if attr not in memTotal_keys:
             raise Exception('RAM must be: %s' % memTotal_keys)
-        resolved = map(cls._to_unicode, memTotal_keys[:memTotal_keys.index(attr) + 1])
+        resolved = list(map(cls._to_unicode, memTotal_keys[:memTotal_keys.index(attr) + 1]))
         return resolved
 
     @classmethod
@@ -320,7 +331,7 @@ def format_index_string(attr, trim=True):
     attr_type = None
     attribute = None
     if isinstance(attr, dict):
-        attr_type, attribute = next(attr.iteritems())
+        attr_type, attribute = next(iter(attr.items()))
     elif isinstance(attr, (list, tuple)):
         attr_type, attribute = attr[0], attr[1]
     _attr = attr_resolver[attr_type](attribute)
@@ -354,13 +365,13 @@ class AttributeResolver(object):
 
     def set_indexed_public(self, attributes):
         attr = {}
-        for attr_type, attribute in attributes.items():
+        for attr_type, attribute in list(attributes.items()):
             attr[attr_type] = attr_resolver[attr_type](attribute)
         self.attr["indexed_public"] = attr
 
     def resolve_indexed_public(self, attr):
         if attr:
-            for attr_type, attribute in attr.items():
+            for attr_type, attribute in list(attr.items()):
                 try:
                     attr[attr_type] = attr_resolver[attr_type](attribute)
                 except Exception:
@@ -412,7 +423,7 @@ class AttributeResolver(object):
 
     def get_indexed_public(self, as_list=False):
         # Return all indexes encoded for storage as a list of lists
-        return [AttributeResolverHelper.encode_index([AttributeResolverHelper._to_unicode(k)] + v, as_list=as_list) for k, v in self.attr["indexed_public"].items()]
+        return [AttributeResolverHelper.encode_index([AttributeResolverHelper._to_unicode(k)] + v, as_list=as_list) for k, v in list(self.attr["indexed_public"].items())]
 
     def get_node_name_as_str(self):
         """
@@ -433,7 +444,7 @@ class AttributeResolver(object):
         are concatenated using "." to form the key (e.g. "owner.organization").
         """
         return {attr_type + "." + keys[attr_type][i]: value 
-                for attr_type, value_list in self.attr["indexed_public"].iteritems() 
+                for attr_type, value_list in self.attr["indexed_public"].items() 
                 for i, value in enumerate(value_list) if value is not None}
 
 if __name__ == "__main__":

@@ -14,6 +14,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import range
+from past.builtins import basestring
+from builtins import *
+from builtins import object
 import json
 import requests
 import inspect
@@ -93,7 +103,7 @@ class RequestHandler(object):
             _log.error("Incorrectly formated credentials supplied, credentials={}".format(credentials))
             self.credentials=None
 
-    def check_response(self, response, success=range(200, 207), key=None):
+    def check_response(self, response, success=list(range(200, 207)), key=None):
         if isinstance(response, Response):
             if response.status_code in success:
                 if response.status_code == "204":
@@ -328,7 +338,7 @@ class RequestHandler(object):
         }
         if content and 'sign' in content:
             data["sec_sign"] = {}
-            for cert_hash, signature in content['sign'].iteritems():
+            for cert_hash, signature in content['sign'].items():
                 data["sec_sign"][cert_hash] = signature.encode('hex_codec')
         r = self._post(rt, timeout, async, DEPLOY, data)
         return self.check_response(r)

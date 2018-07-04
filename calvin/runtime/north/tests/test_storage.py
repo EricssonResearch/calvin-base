@@ -14,6 +14,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import *
+from builtins import object
 from calvin.requests import calvinresponse
 from calvin.utilities import calvinuuid
 from calvin.runtime.north import storage
@@ -24,7 +32,7 @@ from calvin.tests import DummyNode
 from calvin.tests.helpers_twisted import create_callback, wait_for
 from calvin.utilities import calvinconfig
 import calvin.tests
-import Queue
+import queue
 import pytest
 import time
 
@@ -36,7 +44,7 @@ if not hasattr(pytest, 'inlineCallbacks'):
     pytest.inlineCallbacks = _dummy_inline
 
 def setup_module(module):
-    calvinconfig.get().set('global', 'storage_type', 'dht')
+    calvinconfig.get().set('global', 'storage_type', 'local')
 
 @pytest.mark.skipif(pytest.inlineCallbacks == _dummy_inline,
                     reason="No inline twisted plugin enabled, please use --twisted to py.test")
@@ -44,8 +52,8 @@ class TestSetFlushAndGet(object):
 
     @pytest.inlineCallbacks
     def test_late_start(self):
-        self.q = Queue.Queue()
-        self.q2 = Queue.Queue()
+        self.q = queue.Queue()
+        self.q2 = queue.Queue()
 
         def cb(key, value):
             self.q2.put({"key": key, "value": value})
@@ -72,7 +80,7 @@ class TestSetFlushAndGet(object):
         assert value[0][0]
 
         yield wait_for(self.storage.localstore.keys, condition=lambda x: not x())
-        assert not self.storage.localstore.keys()
+        assert not list(self.storage.localstore.keys())
 
         cb, d = create_callback()
         self.storage.get("test", "3", cb)
@@ -100,7 +108,7 @@ class TestStorageStarted(object):
 
     @pytest.inlineCallbacks
     def test_node_functions(self):
-        self.q = Queue.Queue()
+        self.q = queue.Queue()
 
         def cb(key, value):
             self.q.put({"key": key, "value": value})
@@ -128,7 +136,7 @@ class TestStorageStarted(object):
 
     @pytest.inlineCallbacks
     def test_application_functions(self):
-        self.q = Queue.Queue()
+        self.q = queue.Queue()
 
         def cb(key, value):
             self.q.put({"key": key, "value": value})
@@ -158,7 +166,7 @@ class TestStorageStarted(object):
 
     @pytest.inlineCallbacks
     def test_actor_functions(self):
-        self.q = Queue.Queue()
+        self.q = queue.Queue()
 
         def cb(key, value):
             self.q.put({"key": key, "value": value})
@@ -208,7 +216,7 @@ class TestStorageNotStarted(object):
 
     @pytest.inlineCallbacks
     def test_node_functions(self):
-        self.q = Queue.Queue()
+        self.q = queue.Queue()
 
         def cb(key, value):
             self.q.put({"key": key, "value": value})
@@ -229,7 +237,7 @@ class TestStorageNotStarted(object):
 
     @pytest.inlineCallbacks
     def test_application_functions(self):
-        self.q = Queue.Queue()
+        self.q = queue.Queue()
 
         def cb(key, value):
             self.q.put({"key": key, "value": value})
@@ -257,7 +265,7 @@ class TestStorageNotStarted(object):
 
     @pytest.inlineCallbacks
     def test_actor_and_port_functions(self):
-        self.q = Queue.Queue()
+        self.q = queue.Queue()
 
         def cb(key, value):
             self.q.put({"key": key, "value": value})

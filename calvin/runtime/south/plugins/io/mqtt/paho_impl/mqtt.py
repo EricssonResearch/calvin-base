@@ -14,6 +14,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from builtins import *
 from calvin.runtime.south.plugins.io.mqtt import base_mqtt
 from calvin.runtime.south.plugins.async import async
 from paho.mqtt import client
@@ -23,7 +31,7 @@ from calvin.utilities.calvinlogger import get_logger
 _log = get_logger(__name__)
 
 def stringify(thing):
-    if isinstance(thing, unicode):
+    if isinstance(thing, str):
         return str(thing)
     else:
         return thing
@@ -166,7 +174,7 @@ class Client(base_mqtt.BaseClient):
 
     def _on_message(self, client, userdata, message):
         _log.debug("New message: %r" % (message.topic,))
-        for sub, subscribers in self._subscriptions.items():
+        for sub, subscribers in list(self._subscriptions.items()):
             if topic_matches_sub(sub, message.topic):
                 for subscriber in subscribers:
                     subscriber.new_message(message.topic, message.payload)

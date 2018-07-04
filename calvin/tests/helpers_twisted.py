@@ -1,4 +1,12 @@
 from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import range
+from builtins import *
+from past.utils import old_div
 from twisted.internet import defer, reactor
 from calvin.runtime.south.plugins.async import threads
 from calvin.utilities.calvin_callback import CalvinCB
@@ -81,7 +89,7 @@ def create_callback(timeout=.5, test_part=None):
 
 @pytest.inlineCallbacks
 def wait_for(function, condition=lambda x: x(), timeout=1, test_part=None):
-    for a in range(int(timeout/.1)):
+    for a in range(int(old_div(timeout,.1))):
         if condition(function):
             break
         yield threads.defer_to_thread(time.sleep, .1)

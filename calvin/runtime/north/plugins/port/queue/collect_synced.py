@@ -15,6 +15,13 @@
 # limitations under the License.
 
 from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import zip
+from builtins import *
 from calvin.runtime.north.calvin_token import Token
 from calvin.runtime.north.plugins.port.queue.common import QueueFull, QueueEmpty, COMMIT_RESPONSE
 from calvin.runtime.north.plugins.port.queue.collect_base import CollectBase
@@ -71,14 +78,14 @@ class CollectSynced(CollectBase):
             value[self.tags[writer]] = data.value
         if self.tags_are_ordering:
             # ensure values sorted on index in original ordering
-            value = [x for (y,x) in sorted(zip(value.keys(), value.values()))]
+            value = [x for (y,x) in sorted(zip(list(value.keys()), list(value.values())))]
         return Token(value)
 
     def _set_port_mapping(self, mapping):
         if not set(mapping.values()) == set(self.writers):
             print(mapping, self.writers)
             raise Exception("Illegal port mapping dictionary")
-        self.tags = { v: k for k,v in mapping.items() }
+        self.tags = { v: k for k,v in list(mapping.items()) }
 
     def _set_port_order(self, order):
         if not set(order) == set(self.writers):

@@ -14,6 +14,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import map
+from builtins import zip
+from builtins import *
+from builtins import object
 import os
 import os.path
 import json
@@ -70,7 +79,7 @@ class CalvinSysDoc(object):
         if what and what in self.objects:
             data += self.create_doc(what, self.objects[what], formatting)
         else:
-            for obj, schemas in sorted(self.objects.iteritems()):
+            for obj, schemas in sorted(self.objects.items()):
                 data += self.create_doc(obj, schemas, formatting)
         return data
 

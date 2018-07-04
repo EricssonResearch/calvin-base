@@ -14,6 +14,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import map
+from builtins import bytes
+from builtins import str
+from builtins import range
+from builtins import *
 import os
 import traceback
 import random
@@ -180,8 +191,8 @@ class evilKademliaProtocolAppend(append_server.KademliaProtocolAppend):
         elif self.evilType == "eclipse":
             self.rpc_find_node = self.eclipse_rpc_find_node
             self.rpc_find_value = self.eclipse_rpc_find_value
-            self.closest_neighbour = map(list,
-                                        self.router.findNeighbors((self.router.node)))
+            self.closest_neighbour = list(map(list,
+                                        self.router.findNeighbors((self.router.node))))
             self.false_neighbour_list = []
             for i in range(0, 10):
                 fakeid = hashlib.sha1(str(random.getrandbits(255))).digest()
@@ -205,9 +216,9 @@ class evilKademliaProtocolAppend(append_server.KademliaProtocolAppend):
 
     def poison_routing_tables(self):
         fakeid = hashlib.sha1(str(random.getrandbits(255))).digest()
-        self.neighbours = map(list, self.router.findNeighbors(Node(fakeid),
-                                                             k=20))
-        my_randoms = random.sample(xrange(len(self.neighbours)), 1)
+        self.neighbours = list(map(list, self.router.findNeighbors(Node(fakeid),
+                                                             k=20)))
+        my_randoms = random.sample(range(len(self.neighbours)), 1)
         for nodeToAttack in my_randoms: 
             for nodeToImpersonate in range(0, len(self.neighbours)):
                 if nodeToImpersonate != nodeToAttack:
@@ -267,7 +278,7 @@ class evilKademliaProtocolAppend(append_server.KademliaProtocolAppend):
         node = Node(key)
         decider = random.random()
         fakeid = hashlib.sha1(str(random.getrandbits(255))).digest()
-        self.neighbours = map(list, self.router.findNeighbors(Node(fakeid),k=20))
+        self.neighbours = list(map(list, self.router.findNeighbors(Node(fakeid),k=20)))
         if decider < 0.1:
             self.poison_routing_tables()
         elif decider > 0.95:
@@ -360,7 +371,7 @@ class evilAppendServer(append_server.AppendServer):
 
         def initTable(results, challenge, id):
             nodes = []
-            for addr, result in results.items():
+            for addr, result in list(results.items()):
                 ip = addr[0]
                 port = addr[1]
                 if result[0]:
@@ -428,7 +439,7 @@ def drawNetworkState(name, servers, amount_of_servers):
     for servno in range(0, amount_of_servers):
         rndnode = Node(hashlib.sha1(str(random.getrandbits(255))).digest())
         findNeighbors = servers[servno].dht_server.kserver.protocol.router.findNeighbors
-        neighbors = map(tuple, findNeighbors(rndnode, k=50))
+        neighbors = list(map(tuple, findNeighbors(rndnode, k=50)))
         for neighbor in neighbors:
             printPort = servers[servno].dht_server.port.getHost().port
             edge = pydot.Edge(str(printPort),

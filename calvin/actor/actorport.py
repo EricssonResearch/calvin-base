@@ -15,6 +15,14 @@
 # limitations under the License.
 
 from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from builtins import *
+from builtins import object
 from calvin.utilities import calvinuuid
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.runtime.north.plugins.port import queue
@@ -73,7 +81,7 @@ class Port(object):
             # FIXME: Will not work in the general case.
             #        Extend calvinsys with runtime API and use that instead
             mapping = config['port-mapping']
-            config['port-mapping'] = {k:port_to_id[p] for k,p in mapping.iteritems()}
+            config['port-mapping'] = {k:port_to_id[p] for k,p in mapping.items()}
 
         self.queue.set_config(config)
 

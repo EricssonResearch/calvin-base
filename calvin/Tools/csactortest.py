@@ -16,6 +16,12 @@
 # limitations under the License.
 
 from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import *
 import argparse as Argparse
 import calvin.actorstore.tests.test_actors as Test
 import os.path as Path

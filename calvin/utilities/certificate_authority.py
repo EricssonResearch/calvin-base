@@ -17,8 +17,16 @@
 Openssl wrapper used to generate and sign certificates.
 This module depends on openssl.
 """
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
 
-import ConfigParser
+from future import standard_library
+standard_library.install_aliases()
+from builtins import *
+from builtins import object
+import configparser
 import os
 import subprocess
 import sys
@@ -130,7 +138,7 @@ class CaNotFound(Exception):
     pass
 
 
-class CA():
+class CA(object):
     """
     A openssl.conf configuration parser class.
     Create this object by pointing at the configuration file
@@ -197,7 +205,7 @@ class CA():
         _log.debug("__init__")
         self.configfile = None
         self.commonName = commonName or 'runtime'
-        self.config = ConfigParser.SafeConfigParser()
+        self.config = configparser.SafeConfigParser()
         self.config.optionxform = str
         self.enrollment_challenge_db_path =None
         self.enrollment_challenge_db = {}
@@ -322,7 +330,7 @@ class CA():
         """
         directory = os.path.dirname(self.configfile)
 
-        for section in self.__class__.DEFAULT.keys():
+        for section in list(self.__class__.DEFAULT.keys()):
             self.config.add_section(section)
             for option in self.__class__.DEFAULT[section]:
                 if option == "0.organizationName":
@@ -352,8 +360,8 @@ class CA():
             # Empty openssl.conf file or could not successfully parse the file.
             self.new_opensslconf()
         configuration = {}
-        for section in self.__class__.DEFAULT.keys():
-            for option in self.__class__.DEFAULT[section].keys():
+        for section in list(self.__class__.DEFAULT.keys()):
+            for option in list(self.__class__.DEFAULT[section].keys()):
                 raw = self.config.get(section, option)
                 value = raw.split("#")[0].strip()  # Remove comments
 

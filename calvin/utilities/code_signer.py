@@ -18,7 +18,14 @@ Openssl wrapper used to generate and sign certificates.
 This module depends on openssl.
 """
 from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
 
+from future import standard_library
+standard_library.install_aliases()
+from builtins import *
+from builtins import object
 import os
 import subprocess
 import sys
@@ -39,7 +46,7 @@ from calvin.utilities.utils import get_home
 _log = get_logger(__name__)
 _conf = calvinconfig.get()
 
-class CS():
+class CS(object):
     """
     A Code Signer (CS) class used to sign actors and applications.
     The CS is uniquely identified by its organization and common

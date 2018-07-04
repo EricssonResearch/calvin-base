@@ -15,6 +15,16 @@
 # limitations under the License.
 
 from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import next
+from builtins import str
+from builtins import range
+from builtins import *
+from builtins import object
 import random
 
 from calvin.utilities.calvinlogger import get_logger
@@ -103,7 +113,7 @@ class DynOps(object):
     def __iter__(self):
         return self
 
-    def next(self):
+    def __next__(self):
         if self.infinite_set:
             _log.debug("%s INFINITE" % self.__str__())
             if self.infinite_sent:
@@ -239,9 +249,9 @@ class Intersection(DynOps):
             self.candidates.update(set.intersection(*[self.drawn[id(v)] for v in self.iters if not self.infs[id(v)]]))
             _log.debug("Intersection%s%s%s candidates: %s drawn: %s infs: %s"  % (("<" + self.name + ">") if self.name else "",
                                            "<Inf>" if self.infinite_set else "",
-                                           "#" if self._final else "-", self.candidates, self.drawn.values(), self.infs.values()))
+                                           "#" if self._final else "-", self.candidates, list(self.drawn.values()), list(self.infs.values())))
             # remove from individual iterables
-            for v in self.drawn.values():
+            for v in list(self.drawn.values()):
                 v.difference_update(self.candidates)
             # Remove previously seen
             self.candidates.difference_update(self.set)
@@ -414,7 +424,7 @@ class Map(DynOps):
                 l = min([len(self.drawn[id(i)]) for i in self.iters if not self.final[id(i)]])
             except ValueError:
                 l = 0
-            _log.debug("Map%s(func=%s) Loop: %d, Final:%s" % (("<" + self.name + ">") if self.name else "", self.func.__name__, l, self.final.values()))
+            _log.debug("Map%s(func=%s) Loop: %d, Final:%s" % (("<" + self.name + ">") if self.name else "", self.func.__name__, l, list(self.final.values())))
             # Execute map function l times
             for i in range(l):
                 try:
@@ -430,7 +440,7 @@ class Map(DynOps):
             # If no more elements to apply map on, then one final map execution to allow the map function to finalize
             if all(self.final.values()):
                 try:
-                    self.func(self.out_iter, self.kwargs, self.final.values(),
+                    self.func(self.out_iter, self.kwargs, list(self.final.values()),
                               *([None]*len(self.iters)))
                 except PauseIteration:
                     pass

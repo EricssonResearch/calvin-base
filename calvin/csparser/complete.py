@@ -1,3 +1,12 @@
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import map
+from builtins import *
+from builtins import object
 import re
 
 from calvin.actorstore.store import DocumentationStore
@@ -155,7 +164,7 @@ class Completion(object):
 
     def _complete_module(self, matched):
         partial = matched.group(1) or ''
-        modules = self.metadata.keys()
+        modules = list(self.metadata.keys())
         s, c = self._filter_partial(modules, partial)
         return self.wrap_result(s, c, 'module', postamble='.')
 
@@ -213,7 +222,7 @@ class Finder(object):
         descend = not node.is_leaf() and self.depth < self.maxdepth
         if descend:
             self.depth += 1
-            map(self.visit, node.children)
+            list(map(self.visit, node.children))
             self.depth -= 1
 
     def find_all(self, root, query, maxdepth=1024):

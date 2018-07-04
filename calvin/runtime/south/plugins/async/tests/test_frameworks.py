@@ -17,9 +17,17 @@
 """
     Tests for frameworks
 """
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
 
+from future import standard_library
+standard_library.install_aliases()
+from builtins import *
+from builtins import object
 import inspect
-
+import importlib
 from calvin.utilities import calvinlogger
 from calvin.runtime.south.plugins.async import get_frameworks
 from calvin.runtime.south.plugins.async import twistedimpl
@@ -68,10 +76,9 @@ class TestFrameworks(object):
                 Just test that all fw have all the API specified.
         """
         for framework in FRAMEWORKS:
-            for module, items in MODULES.items():
-                module_obj = __import__("calvin.runtime.south.plugins.async.%s.%s" % (framework, module),
-                                        globals=globals(), fromlist=[''])
-                for item, info in items.items():
+            for module, items in list(MODULES.items()):
+                module_obj = importlib.import_module(".{}.{}".format(framework, module), package="calvin.runtime.south.plugins.async")
+                for item, info in list(items.items()):
                     # Check for existans
                     item_obj = getattr(module_obj, item, None)
                     comp_obj = info['comp']

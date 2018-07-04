@@ -14,6 +14,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from builtins import next
+from builtins import range
+from past.builtins import basestring
+from builtins import *
+from builtins import object
 from calvin.runtime.north.calvin_token import Token
 from calvin.runtime.north.plugins.port.queue.common import QueueFull, QueueEmpty, COMMIT_RESPONSE
 from calvin.runtime.north.plugins.port import DISCONNECT
@@ -139,12 +151,12 @@ class FanoutFIFO(object):
     def any_outstanding_exhaustion_tokens(self):
         # Between having asked actor to exhaust and receiving exhaustion tokens we don't want to assume that
         # the exhaustion is done.
-        return any([not t[1] for t in self.termination.values()])
+        return any([not t[1] for t in list(self.termination.values())])
 
     def set_exhausted_tokens(self, tokens):
-        _log.debug("set_exhausted_tokens %s %s %s" % (self._type, tokens, {k:DISCONNECT.reverse_mapping[v[0]] for k, v in self.termination.items()}))
+        _log.debug("set_exhausted_tokens %s %s %s" % (self._type, tokens, {k:DISCONNECT.reverse_mapping[v[0]] for k, v in list(self.termination.items())}))
         self.exhausted_tokens.update(tokens)
-        for peer_id in tokens.keys():
+        for peer_id in list(tokens.keys()):
             try:
                 # We can get set_exhaust_token even after done with the termination, since it is a confirmation
                 # from peer port it has handled the exhaustion also
@@ -152,15 +164,15 @@ class FanoutFIFO(object):
             except:
                 pass
         remove = []
-        for peer_id, exhausted_tokens in self.exhausted_tokens.items():
+        for peer_id, exhausted_tokens in list(self.exhausted_tokens.items()):
             if self._transfer_exhaust_tokens(peer_id, exhausted_tokens):
                 remove.append(peer_id)
         for peer_id in remove:
             del self.exhausted_tokens[peer_id]
         # If fully consumed remove peer_ids in tokens
-        for peer_id in tokens.keys():
+        for peer_id in list(tokens.keys()):
             if (self.termination.get(peer_id, (-1,))[0] in [DISCONNECT.EXHAUST_PEER_RECV, DISCONNECT.EXHAUST_INPORT] and
-                min(self.read_pos.values() or [0]) == self.write_pos):
+                min(list(self.read_pos.values()) or [0]) == self.write_pos):
                 del self.termination[peer_id]
                 # Acting as inport then only one reader, remove it if still around
                 try:
@@ -199,7 +211,7 @@ class FanoutFIFO(object):
         return True
 
     def slots_available(self, length, metadata):
-        last_readpos = min(self.read_pos.values() or [0])
+        last_readpos = min(list(self.read_pos.values()) or [0])
         return (self.N - ((self.write_pos - last_readpos) % self.N) - 1) >= length
 
     def tokens_available(self, length, metadata):
@@ -226,7 +238,7 @@ class FanoutFIFO(object):
         _log.debug("COMMIT EXHAUSTING???")
         self.read_pos[metadata] = self.tentative_read_pos[metadata]
         remove = []
-        for peer_id, exhausted_tokens in self.exhausted_tokens.items():
+        for peer_id, exhausted_tokens in list(self.exhausted_tokens.items()):
             if self._transfer_exhaust_tokens(peer_id, self.exhausted_tokens[peer_id]):
                 # Emptied
                 remove.append(peer_id)
@@ -235,9 +247,9 @@ class FanoutFIFO(object):
         # If fully consumed remove queue
         terminated = False
         if self.termination:
-            _log.debug("COMMIT %s %s" % (metadata, {k:DISCONNECT.reverse_mapping[v[0]] for k, v in self.termination.items()}))
+            _log.debug("COMMIT %s %s" % (metadata, {k:DISCONNECT.reverse_mapping[v[0]] for k, v in list(self.termination.items())}))
         if (self.termination.get(metadata, (-1,))[0] in [DISCONNECT.EXHAUST_PEER_RECV, DISCONNECT.EXHAUST_INPORT] and
-            min(self.read_pos.values() or [0]) == self.write_pos and
+            min(list(self.read_pos.values()) or [0]) == self.write_pos and
             self.termination.get(metadata, (-1, False))[1]):
             del self.termination[metadata]
             terminated = True

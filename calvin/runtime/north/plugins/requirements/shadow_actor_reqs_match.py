@@ -14,6 +14,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import *
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.utilities import dynops
 from calvin.utilities.calvinlogger import get_logger
@@ -38,7 +45,7 @@ def extract_capabilities(out_iter, kwargs, final, value):
     if not final[0] and value != dynops.FailedElement:
         _log.debug("shadow_match:extract_capabilities VALUE %s" % value)
         mandatory = value['args']['mandatory']
-        optional = value['args']['optional'].keys()
+        optional = list(value['args']['optional'].keys())
         # To be valid actor type all mandatory params need to be supplied and only valid params
         if all([p in shadow_params for p in mandatory]) and all([p in (mandatory + optional) for p in shadow_params]):
             _log.debug("shadow_match:extract_capabilities ACT")

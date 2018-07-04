@@ -15,6 +15,16 @@
 # limitations under the License.
 
 from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import next
+from builtins import str
+from builtins import range
+from builtins import *
+from builtins import object
 import pytest
 import sys
 import argparse
@@ -33,7 +43,7 @@ _log = calvinlogger.get_logger(__name__)
 class MockCalvinSys(CalvinSys):
 
     def init(self, capabilities):
-        for key, value in capabilities.iteritems():
+        for key, value in capabilities.items():
             module = value['module']
             value['path'] = module
             value['module'] = None
@@ -487,11 +497,11 @@ class ActorTester(object):
             sys.stderr.write(''.join(traceback.format_exc()))
             raise e
 
-        for inport in actor.inports.values():
+        for inport in list(actor.inports.values()):
             inport.set_queue(queue.fanout_fifo.FanoutFIFO({'queue_length': 100, 'direction': "in"}, {}))
             inport.endpoint = DummyInEndpoint(inport)
             inport.queue.add_reader(inport.id, {})
-        for outport in actor.outports.values():
+        for outport in list(actor.outports.values()):
             outport.set_queue(queue.fanout_fifo.FanoutFIFO({'queue_length': 100, 'direction': "out"}, {}))
             outport.queue.add_reader(actor.id, {})
             outport.endpoints.append(DummyOutEndpoint(outport))
@@ -546,7 +556,7 @@ class ActorTester(object):
                     print("Actor %s failed during setup of test %d: %s" % (actor, test_index, e.message))
                     raise Exception("Failed during setup of test %d" % (test_index, ))
 
-            for port, values in inputs.iteritems():
+            for port, values in inputs.items():
                 pwrite(aut, port, values)
 
             self.test_sys.verify_read_write_during_init(aut, actor)
@@ -555,7 +565,7 @@ class ActorTester(object):
             sched = scheduler.BaseScheduler(None, None)
             sched._fire_actor(aut)
 
-            for port, values in outputs.iteritems():
+            for port, values in outputs.items():
                 try:
                     vals = pread(aut, port, len(values))
                     if type(values) is set:
@@ -596,7 +606,7 @@ class ActorTester(object):
 
 def merge_results(result1, result2):
   result = {}
-  for k in result1.keys():
+  for k in list(result1.keys()):
     x = result1[k]
     if type(x) is list:
       x.extend(result2[k])
@@ -614,7 +624,7 @@ def show_result(header, result):
 
 def show_issue(header, result):
     print(header)
-    for actor, reason in result.iteritems():
+    for actor, reason in result.items():
         print("  %s: %s" % (actor, reason))
 
 
@@ -644,7 +654,7 @@ def test_actors(actor="", show=False, path=None):
         t.collect_actors(actor)
         failures = t.instantiate_actors()
     results = t.test_actors()
-    for actor, error in failures.iteritems():
+    for actor, error in failures.items():
         # Could be updated to support a list of errors, only one at a time for now.
         results['fail'][actor] = error
 

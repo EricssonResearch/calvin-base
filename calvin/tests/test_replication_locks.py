@@ -15,6 +15,12 @@
 # limitations under the License.
 
 from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import *
 import pytest
 import unittest
 import time
@@ -29,9 +35,9 @@ class TestLocalEndpoint(unittest.TestCase):
     def setUp(self):
         self.rm = ReplicationManager(DummyNode())
         self.rm.managed_replications = {"RM1": ReplicationData(), "RM2":ReplicationData()}
-        for rid, r in self.rm.managed_replications.items():
+        for rid, r in list(self.rm.managed_replications.items()):
             r.id = rid
-            r.peer_replication_ids = self.rm.managed_replications.keys()
+            r.peer_replication_ids = list(self.rm.managed_replications.keys())
             r.peer_replication_ids.remove(rid)
         # Make both rm ids local
         self.rm.leaders_cache = {"RM1": self.rm.node.id, "RM2": self.rm.node.id}

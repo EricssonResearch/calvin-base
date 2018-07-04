@@ -1,5 +1,11 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import *
 import pytest
 import time
 import glob
@@ -82,7 +88,7 @@ def runtimes(request):
     return runtime_1, runtime_2
     
 def migrate_actors(runtime_1, runtime_2, actors):
-    for actor_name, actor_id in actors.items():
+    for actor_name, actor_id in list(actors.items()):
         migrate_actor(runtime_1["handle"], actor_id, runtime_2["id"])
         time.sleep(1.0)
         migrate_actor(runtime_2["handle"], actor_id, runtime_1["id"])

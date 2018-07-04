@@ -14,6 +14,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import *
+from builtins import object
 import importlib
 from jsonschema import validate
 
@@ -56,7 +64,7 @@ class CalvinLib(object):
         blacklist = _conf.get(None, 'capabilities_blacklist') or []
         for capability in blacklist:
             capabilities.pop(capability, None)
-        for key, value in capabilities.iteritems():
+        for key, value in capabilities.items():
             module = value['module']
             value['path'] = module
             value['module'] = None
@@ -103,7 +111,7 @@ class CalvinLib(object):
         """
         Returns list of requirements this system satisfies
         """
-        return self.capabilities.keys()
+        return list(self.capabilities.keys())
 
     def remove(self, obj):
         """
@@ -120,7 +128,7 @@ class MockCalvinLib(CalvinLib):
         """
         setup capabilities from config
         """
-        for key, value in capabilities.iteritems():
+        for key, value in capabilities.items():
             module = value['module']
             value['path'] = module
             value['module'] = None

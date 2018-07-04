@@ -1,5 +1,14 @@
 # -*- coding: utf-8 -*-
 
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import map
+from builtins import *
+from builtins import object
 from calvin.runtime.north import storage
 from calvin.requests import calvinresponse
 import calvin.utilities.calvinconfig
@@ -90,7 +99,7 @@ class TestCpuMonitor(object):
 
             # verify index ok and present for level i
             self.done = False
-            self.storage.get_index(index=self.CPUAVAIL_INDEX_BASE + map(str, values[:values.index(i)+1]), root_prefix_level=2, cb=CalvinCB(self.cb2))
+            self.storage.get_index(index=self.CPUAVAIL_INDEX_BASE + list(map(str, values[:values.index(i)+1])), root_prefix_level=2, cb=CalvinCB(self.cb2))
             yield wait_for(self._test_done)
             assert self.node.id in self.get_ans
 
@@ -164,7 +173,7 @@ class TestCpuMonitor(object):
 
             # verify index ok and present for level i
             self.done = False
-            self.storage.get_index(index=self.CPUTOTAL_INDEX_BASE + map(str, values[:values.index(i)+1]), root_prefix_level=2, cb=CalvinCB(self.cb2))
+            self.storage.get_index(index=self.CPUTOTAL_INDEX_BASE + list(map(str, values[:values.index(i)+1])), root_prefix_level=2, cb=CalvinCB(self.cb2))
             yield wait_for(self._test_done)
             assert self.node.id in self.get_ans
 
@@ -232,7 +241,7 @@ class TestMemMonitor(object):
 
             # verify index ok and present for level i
             self.done = False
-            self.storage.get_index(index=self.MEMAVAIL_INDEX_BASE + map(str, values[:values.index(i)+1]), root_prefix_level=2, cb=CalvinCB(self.cb2))
+            self.storage.get_index(index=self.MEMAVAIL_INDEX_BASE + list(map(str, values[:values.index(i)+1])), root_prefix_level=2, cb=CalvinCB(self.cb2))
             yield wait_for(self._test_done)
             assert self.node.id in self.get_ans
 
@@ -306,6 +315,6 @@ class TestMemMonitor(object):
 
             # verify index ok and present for level i
             self.done = False
-            self.storage.get_index(index=self.MEMTOTAL_INDEX_BASE + map(str, values[:values.index(i)+1]), root_prefix_level=2, cb=CalvinCB(self.cb2))
+            self.storage.get_index(index=self.MEMTOTAL_INDEX_BASE + list(map(str, values[:values.index(i)+1])), root_prefix_level=2, cb=CalvinCB(self.cb2))
             yield wait_for(self._test_done)
             assert self.node.id in self.get_ans

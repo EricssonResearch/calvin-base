@@ -18,9 +18,16 @@
         Abstraction for the diffrent frameworks that can be used by the system.
 
 """
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
 
+from future import standard_library
+standard_library.install_aliases()
+from builtins import *
 import os
-
+import importlib
 from calvin.utilities import calvinconfig
 
 
@@ -65,7 +72,7 @@ def get_frameworks():
 if _FW_PATH not in _FW_MODULES:
     raise Exception("No framework '%s' with that name, avalible ones are '%s'" % (_FW_PATH, _FW_MODULES))
 
-for module, _classes in _MODULES.items():
-    module_obj = __import__("%s.%s" % (_FW_PATH, module), globals=globals(), fromlist=[''])
+for module, _classes in list(_MODULES.items()):
+    module_obj = importlib.import_module(name=".{}.{}".format(_FW_PATH, module), package="calvin.runtime.south.plugins.async")
     globals()[module] = module_obj
     __all__.append(module_obj)

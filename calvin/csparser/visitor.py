@@ -1,3 +1,7 @@
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
 # The MIT License (MIT)
 #
 # Copyright (c) 2013 Curtis Schlak
@@ -20,6 +24,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
+from future import standard_library
+standard_library.install_aliases()
+from builtins import *
+from builtins import object
 import inspect
 
 __all__ = ['on', 'when']
@@ -62,7 +70,7 @@ class Dispatcher(object):
     else:
       issub = issubclass
       t = self.targets
-      ks = t.iterkeys()
+      ks = iter(t.keys())
       return [t[k](*args, **kw) for k in ks if issub(typ, k)]
 
   def add_target(self, typ, target):

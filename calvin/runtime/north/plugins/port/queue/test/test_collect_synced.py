@@ -1,3 +1,12 @@
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import range
+from builtins import *
+from builtins import object
 import pytest
 import unittest
 
@@ -17,7 +26,7 @@ def create_port(routing):
     return queue.get(port)
 
 def unwrap(data):
-    return data.value.items()[0]
+    return list(data.value.items())[0]
     
 @pytest_unittest
 class TestCollectSyncedFIFO(unittest.TestCase):

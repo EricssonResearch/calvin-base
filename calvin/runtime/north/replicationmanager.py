@@ -14,6 +14,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from builtins import *
+from builtins import object
 import copy
 import time
 
@@ -262,9 +271,9 @@ class ReplicationManager(object):
         state['replication'] = {'_type': actor._type}
         # Move port id, name and property (not queue, i.e. peer and tokens) into replication ns
         state['replication']['inports'] = {k:
-            {n: v[n] for n in ('id', 'name', 'properties')} for k, v in state['private']['inports'].items()}
+            {n: v[n] for n in ('id', 'name', 'properties')} for k, v in list(state['private']['inports'].items())}
         state['replication']['outports'] = {k:
-            {n: v[n] for n in ('id', 'name', 'properties')} for k, v in state['private']['outports'].items()}
+            {n: v[n] for n in ('id', 'name', 'properties')} for k, v in list(state['private']['outports'].items())}
         state['private']['inports'] = {}
         state['private']['outports'] = {}
         # Only original that needs to measure pressure
@@ -293,7 +302,7 @@ class ReplicationManager(object):
         return calvinresponse.CalvinResponse(True, {'replication_id': replication_data.id})
 
     def deployed_actors_connected(self, actor_ids):
-        for replication_data in self.managed_replications.values():
+        for replication_data in list(self.managed_replications.values()):
             if replication_data.original_actor_id not in actor_ids:
                 continue
             # supervised actor now fully connected
@@ -306,12 +315,12 @@ class ReplicationManager(object):
             state = actor.serialize()
             # Move port id, name and property (not queue, i.e. peer and tokens) into replication ns
             replication_data.actor_state['replication']['inports'] = {k:
-                {n: v[n] for n in ('id', 'name', 'properties')} for k, v in state['private']['inports'].items()}
+                {n: v[n] for n in ('id', 'name', 'properties')} for k, v in list(state['private']['inports'].items())}
             replication_data.actor_state['replication']['outports'] = {k:
-                {n: v[n] for n in ('id', 'name', 'properties')} for k, v in state['private']['outports'].items()}
+                {n: v[n] for n in ('id', 'name', 'properties')} for k, v in list(state['private']['outports'].items())}
             # Find which peers also has replication, will prevent simultaneous replication
             collect = set([])
-            for port in actor.inports.values() + actor.outports.values():
+            for port in list(actor.inports.values()) + list(actor.outports.values()):
                 try:
                     # Should still be local
                     for endpoint in port.endpoints:
@@ -326,10 +335,10 @@ class ReplicationManager(object):
                 self.move_replication_leader(replication_data.id, replication_data._move_to_leader)
 
     def list_master_actors(self):
-        return [a for a_id, a in self.node.am.actors.items() if a._replication_id.original_actor_id == a_id]
+        return [a for a_id, a in list(self.node.am.actors.items()) if a._replication_id.original_actor_id == a_id]
 
     def list_replication_actors(self, replication_id):
-        return [a_id for a_id, a in self.node.am.actors.items() if a._replication_id.id == replication_id]
+        return [a_id for a_id, a in list(self.node.am.actors.items()) if a._replication_id.id == replication_id]
 
     def move_replication_leader(self, replication_id, dst_node_id, cb=None):
         _log.debug("move_replication_leader")
@@ -391,7 +400,7 @@ class ReplicationManager(object):
             if cb:
                 cb(status=calvinresponse.CalvinResponse(calvinresponse.OK))
             return calvinresponse.CalvinResponse(calvinresponse.OK)
-        if replication_id in self.managed_replications.keys():
+        if replication_id in list(self.managed_replications.keys()):
             self.remove_replication_leader(replication_id)
             if cb:
                 cb(status=calvinresponse.CalvinResponse(calvinresponse.OK))
@@ -659,7 +668,7 @@ class ReplicationManager(object):
         rep_state = replication_data.actor_state['replication']
         # Need to first build connection_list from previous connections
         connection_list = []
-        ports = [p['id'] for p in rep_state['inports'].values() + rep_state['outports'].values()]
+        ports = [p['id'] for p in list(rep_state['inports'].values()) + list(rep_state['outports'].values())]
         _log.debug("REPLICA CONNECT %s " % ports)
 
         def _got_port(key, value, port, dir):
@@ -679,9 +688,9 @@ class ReplicationManager(object):
                 # Got all responses
                 self._replicate_cont(replication_data, state, connection_list, dst_node_id, callback=callback)
 
-        for port in rep_state['inports'].values():
+        for port in list(rep_state['inports'].values()):
             self.node.storage.get_port(port['id'], cb=CalvinCB(_got_port, port=port, dir="in"))
-        for port in rep_state['outports'].values():
+        for port in list(rep_state['outports'].values()):
             self.node.storage.get_port(port['id'], cb=CalvinCB(_got_port, port=port, dir="out"))
 
     def _replicate_cont(self, replication_data, state, connection_list, dst_node_id, callback):
@@ -816,7 +825,7 @@ class ReplicationManager(object):
         _log.debug("REPLICATION LOOP")
         if self.node.quitting:
             return
-        for replication_data in self.managed_replications.values():
+        for replication_data in list(self.managed_replications.values()):
             _log.debug("REPLICATION LOOP %s %s" % (replication_data.id, REPLICATION_STATUS.reverse_mapping[replication_data.status]))
             if replication_data.status != REPLICATION_STATUS.READY:
                 continue
@@ -869,7 +878,7 @@ class ReplicationManager(object):
     def check_pressure(self, actor_ids):
         if not actor_ids:
             # No actors, then check all for too low pressure
-            for actor_id, actor in self.node.am.actors.items():
+            for actor_id, actor in list(self.node.am.actors.items()):
                 actor._replication_id.measure_pressure()
                 actor_ids.add(actor_id)
         for actor_id in actor_ids:

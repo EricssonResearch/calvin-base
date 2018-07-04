@@ -15,6 +15,13 @@
 # limitations under the License.
 
 from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import *
+from builtins import object
 import importlib
 from functools import partial
 from jsonschema import validate
@@ -62,7 +69,7 @@ class CalvinSys(object):
         blacklist = _conf.get(None, 'capabilities_blacklist') or []
         for capability in blacklist:
             _ = capabilities.pop(capability, None)
-        for key, value in capabilities.iteritems():
+        for key, value in capabilities.items():
             module = value['module']
             value['path'] = module
             value['module'] = None
@@ -140,7 +147,7 @@ class CalvinSys(object):
         """
         Returns list of requirements this system satisfies
         """
-        return self.capabilities.keys()
+        return list(self.capabilities.keys())
 
     def _get_capability_object(self, ref, required=True):
         """
@@ -193,7 +200,7 @@ class CalvinSys(object):
         if obj:
             obj.close()
             self._objects.pop(ref)
-            for actor, refs in self._actors.iteritems():
+            for actor, refs in self._actors.items():
                 if ref in refs:
                     refs.remove(ref)
 
@@ -245,7 +252,7 @@ class CalvinSys(object):
         """
             deserializes a list of calvinsys objects and associates them with given actor
         """
-        for ref, csobj in csobjects.items():
+        for ref, csobj in list(csobjects.items()):
             capability, pyclass = self._get_class(csobj["name"])
             # Ensure platform attributes take precedence
             data = csobj["args"]

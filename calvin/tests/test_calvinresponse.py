@@ -14,6 +14,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import range
+from builtins import *
 import pytest
 
 from calvin.requests.calvinresponse import RESPONSE_CODES, CalvinResponse
@@ -22,7 +30,7 @@ pytestmark = pytest.mark.unittest
 
 
 def test_boolean_value():
-    success_list = range(200, 207)
+    success_list = list(range(200, 207))
     for code in RESPONSE_CODES:
         response = CalvinResponse(code)
         if code in success_list:

@@ -16,6 +16,13 @@
 # limitations under the License.
 
 from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import range
+from builtins import *
 import argparse
 import time
 import json
@@ -248,7 +255,7 @@ def discover(timeout=2, retries=5):
         finally:
             _log.debug("Closing socket")
             sock.close()
-    return responses.values()
+    return list(responses.values())
 
 def runtime_certificate(rt_attributes):
     import copy

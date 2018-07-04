@@ -14,6 +14,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import *
 from calvin.runtime.north.plugins.port import endpoint
 from calvin.runtime.north.plugins.port import queue
 import calvin.requests.calvinresponse as response
@@ -108,9 +115,9 @@ class LocalConnection(BaseConnection):
         # Update storage, the ports are disconnected even if an inport during exhaustion still delivers tokens
         if terminate:
             self.node.storage.add_port(self.port, self.node.id, self.port.owner.id,
-                                        exhausting_peers=peer_remaining_tokens.keys())
+                                        exhausting_peers=list(peer_remaining_tokens.keys()))
             self.node.storage.add_port(self.peer_port_meta.port, self.node.id, self.peer_port_meta.port.owner.id,
-                                        exhausting_peers=remaining_tokens.keys())
+                                        exhausting_peers=list(remaining_tokens.keys()))
 
         try:
             # Remove this peer from the list of peer connections

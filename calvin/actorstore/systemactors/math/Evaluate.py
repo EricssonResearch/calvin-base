@@ -14,6 +14,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from past.builtins import basestring
+from builtins import *
 from calvin.actor.actor import Actor, manage, condition, calvinlib
 from calvin.utilities.calvinlogger import get_actor_logger
 from calvin.runtime.north.calvin_token import ExceptionToken
@@ -34,7 +42,7 @@ class Evaluate(Actor):
     """
     @manage(['expr'])
     def init(self, expr):
-        self.expr = expr if type(expr) is str or type(expr) is unicode else None
+        self.expr = expr if type(expr) is str or type(expr) is str else None
         self.setup()
 
     def setup(self):

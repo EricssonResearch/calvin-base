@@ -15,9 +15,18 @@
 # limitations under the License.
 
 from __future__ import absolute_import
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from builtins import range
+from builtins import *
+from builtins import object
 import json
 from random import randint
-from urlparse import urlparse
+from urllib.parse import urlparse
 from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.runtime.south.plugins.async import server_connection
@@ -117,7 +126,7 @@ class CalvinControl(object):
             addr, conn = self.server.accept()
             self.connections[addr] = conn
 
-        for handle, connection in self.connections.items():
+        for handle, connection in list(self.connections.items()):
             if connection.data_available:
                 command, headers, data = connection.data_get()
                 self.route_request(handle, connection, command, headers, data)
@@ -243,7 +252,7 @@ class CalvinControlTunnelServer(object):
         self.node.proto.register_tunnel_handler("control", CalvinCB(self.tunnel_request_handles))
 
     def stop(self):
-        for _, control in self.controltunnels.items():
+        for _, control in list(self.controltunnels.items()):
             control.close()
 
     def tunnel_request_handles(self, tunnel):
@@ -317,7 +326,7 @@ class CalvinControlTunnel(object):
             self.connections[msg_id] = conn
             _log.debug("New connection msg_id: %s" % msg_id)
 
-        for msg_id, connection in self.connections.items():
+        for msg_id, connection in list(self.connections.items()):
             if connection.data_available:
                 command, headers, data = connection.data_get()
                 _log.debug("CalvinControlTunnel handle_request msg_id: %s command: %s" % (msg_id, command))

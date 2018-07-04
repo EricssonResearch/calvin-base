@@ -15,10 +15,18 @@
 # limitations under the License.
 
 from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import range
+from builtins import *
+from builtins import object
 import sys
 import traceback
 import time
-import Queue
+import queue
 import os
 import OpenSSL.crypto
 import json
@@ -115,7 +123,7 @@ class ThreadWrapper(object):
 class TwistedWaitObject(object):
     def __init__(self, func, **kwargs):
         self._value = None
-        self._q = Queue.Queue()
+        self._q = queue.Queue()
         self._done = False
         self._func = func
         self._kwargs = kwargs
@@ -150,7 +158,7 @@ class TwistedWaitObject(object):
             return self._value
         try:
             value = self._q.get(timeout=timeout)
-        except Queue.Empty:
+        except queue.Empty:
             logger("Timeout in %s(%s)" % (self._func, self._kwargs))
             raise
         return value

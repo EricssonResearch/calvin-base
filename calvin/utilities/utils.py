@@ -14,6 +14,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import zip
+from builtins import range
+from builtins import *
+from builtins import object
 import os
 
 from calvin.utilities.calvinlogger import get_logger
@@ -33,8 +43,8 @@ def get_local_ip():
 
 
 def enum(*sequential, **named):
-    enums = dict(zip(sequential, range(len(sequential))), **named)
-    reverse = dict((value, key) for key, value in enums.iteritems())
+    enums = dict(list(zip(sequential, list(range(len(sequential))))), **named)
+    reverse = dict((value, key) for key, value in enums.items())
     enums['reverse_mapping'] = reverse
     return type('Enum', (), enums)
 

@@ -16,6 +16,12 @@
 
 from __future__ import print_function
 from __future__ import absolute_import
+from __future__ import unicode_literals
+from __future__ import division
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from builtins import *
 import json
 from calvin.requests import calvinresponse
 from calvin.utilities.calvinlogger import get_logger
@@ -457,7 +463,7 @@ def handle_deploy(self, handle, connection, match, data, hdr):
         signed_data=data['app_info'] if 'app_info' in data else data['script']
         content = {
                 'file': signed_data,
-                'sign': {h: s.decode('hex_codec') for h, s in data['sec_sign'].iteritems()}}
+                'sign': {h: s.decode('hex_codec') for h, s in data['sec_sign'].items()}}
         compiler.compile_script_check_security(
             data,
             filename=data["name"],

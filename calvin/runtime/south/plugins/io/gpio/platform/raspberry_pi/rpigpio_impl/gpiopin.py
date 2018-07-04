@@ -14,6 +14,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import division
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import range
+from builtins import *
+from past.utils import old_div
 import time
 import RPi.GPIO as GPIO
 from calvin.runtime.south.plugins.io.gpio import base_gpiopin
@@ -98,7 +107,7 @@ class GPIOPin(base_gpiopin.GPIOPinBase):
         for x in range(0, repeat):
             for bit in data:
                 GPIO.output(self.pin, bit[0])
-                time.sleep(bit[1]/1000000.0)
+                time.sleep(old_div(bit[1],1000000.0))
 
     def close(self):
         GPIO.cleanup(self.pin)

@@ -16,17 +16,20 @@
 
 
 # Parsers
-from calvin.runtime.south.plugins.storage import dht, securedht, sql
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import *
+from calvin.runtime.south.plugins.storage import sql
 from calvin.runtime.north.plugins.storage.proxy import StorageProxy
 from calvin.runtime.north.plugins.storage.storage_dict_local import StorageLocal
 
 def get(type_, node=None):
     if type_ == "sql":
         return sql.SqlClient()
-    if type_ == "dht":
-        return dht.AutoDHTServer(node.id, node.control_uri)
-    elif type_ == "securedht":
-        return securedht.AutoDHTServer(node.id, node.control_uri, node.runtime_credentials)
     elif type_ == "proxy":
         return StorageProxy(node)
     elif type_ == "local":

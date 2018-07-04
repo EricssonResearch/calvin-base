@@ -14,6 +14,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import range
+from builtins import *
 from calvin.runtime.north.plugins.port.queue.common import QueueEmpty
 from calvin.runtime.north.plugins.port.queue.collect_base import CollectBase
 from calvin.utilities import calvinlogger
@@ -52,7 +60,7 @@ class CollectUnordered(CollectBase):
         return False
 
     def peek(self, metadata):
-        for i in xrange(self.turn_pos, self.turn_pos + len(self.writers)):
+        for i in range(self.turn_pos, self.turn_pos + len(self.writers)):
             writer = self.writers[i % len(self.writers)]
             if self.write_pos[writer] - self.tentative_read_pos[writer] >= 1:
                 read_pos = self.tentative_read_pos[writer]

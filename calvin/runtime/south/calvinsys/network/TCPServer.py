@@ -14,6 +14,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from builtins import *
 from calvin.runtime.south.plugins.async import server_connection
 from calvin.runtime.south.calvinsys import base_calvinsys_object
 from calvin.utilities.calvinlogger import get_logger
@@ -107,7 +115,7 @@ class TCPServer(base_calvinsys_object.BaseCalvinsysObject):
         if self._server.pending_connections:
             addr, conn = self._server.accept()
             self._connections[str(addr)] = conn
-        for h, c in self._connections.items():
+        for h, c in list(self._connections.items()):
             if c.connection_lost:
                 del self._connections[h]
             if c.data_available:
@@ -115,7 +123,7 @@ class TCPServer(base_calvinsys_object.BaseCalvinsysObject):
         return False
 
     def read(self):
-        for h, c in self._connections.items():
+        for h, c in list(self._connections.items()):
             if c.data_available:
                 return {"handle": h, "data": c.data_get()}
 

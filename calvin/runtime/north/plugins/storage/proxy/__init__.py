@@ -14,6 +14,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from builtins import *
 from calvin.runtime.north.plugins.storage.storage_base import StorageBase
 from calvin.runtime.south.plugins.async import async
 from calvin.utilities import calvinlogger
@@ -43,7 +51,7 @@ class StorageProxy(StorageBase):
             Starts the service if its needed for the storage service
             cb  is the callback called when the start is finished
         """
-        from urlparse import urlparse
+        from urllib.parse import urlparse
         import socket
         _log.info("PROXY start")
         o=urlparse(self.master_uri)

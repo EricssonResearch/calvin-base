@@ -15,6 +15,16 @@
 # limitations under the License.
 
 # Queues
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import *
+import importlib
+from calvin.utilities.calvinlogger import get_logger
+
 _MODULES = {'fanout_fifo': 'FanoutFIFO',
             'collect_unordered': 'CollectUnordered',
             'collect_tagged': "CollectTagged",
@@ -26,13 +36,12 @@ _MODULES = {'fanout_fifo': 'FanoutFIFO',
             'fanout_balanced_fifo': "FanoutBalancedFIFO",
             'fanout_mapped_fifo': 'FanoutMappedFIFO'}
 
-from calvin.utilities.calvinlogger import get_logger
 
 _log = get_logger(__name__)
 
 
-for module in _MODULES.keys():
-    module_obj = __import__(module, globals=globals())
+for module in list(_MODULES.keys()):
+    module_obj = importlib.import_module(name=".{}".format(module), package="calvin.runtime.north.plugins.port.queue")
     globals()[module] = module_obj
 
 def get(port, peer_port=None, peer_port_meta=None):
@@ -42,7 +51,7 @@ def get(port, peer_port=None, peer_port_meta=None):
         routing_prop = port.properties['routing']
         if isinstance(routing_prop, (tuple, list)):
             routing_prop = routing_prop[0]
-        
+
         if 'round-robin' == routing_prop:
             selected_queue = "fanout_round_robin_fifo"
         elif 'random' == routing_prop:
@@ -56,7 +65,7 @@ def get(port, peer_port=None, peer_port_meta=None):
         elif routing_prop == 'collect-unordered':
             selected_queue = "collect_unordered"
         elif routing_prop == 'collect-tagged':
-            selected_queue = 'collect_tagged' 
+            selected_queue = 'collect_tagged'
         elif routing_prop == 'collect-all-tagged':
             selected_queue = "collect_synced"
         elif routing_prop == 'collect-any-tagged':

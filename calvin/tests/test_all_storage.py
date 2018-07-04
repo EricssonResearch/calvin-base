@@ -15,6 +15,17 @@
 # limitations under the License.
 
 from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import zip
+from builtins import map
+from builtins import str
+from builtins import range
+from builtins import *
+from builtins import object
 import pytest
 import os
 import copy
@@ -48,7 +59,7 @@ calvin.utilities.certificate.verify_certificate_chain = chain_dummy
 _log = calvinlogger.get_logger(__name__)
 _conf = calvin.utilities.calvinconfig.get()
 
-storage_types = ["notstarted", "dht", "securedht", "proxy"]
+storage_types = ["notstarted", "proxy"]
 # Removing the SQL-tests temporarily
 # storage_types = ["notstarted", "dht", "securedht", "proxy", "sql"]
 
@@ -114,7 +125,7 @@ def setup(request):
         if stype == "dht":
             try:
                 _conf.set('global', 'storage_type', 'dht')
-                all_started.extend(map(partial(prep_node, stype), nodes[stype]))
+                all_started.extend(list(map(partial(prep_node, stype), nodes[stype])))
             except:
                 traceback.print_exc()
         elif stype == "securedht":
@@ -152,17 +163,17 @@ def setup(request):
                 _conf.add_section("security")
                 _conf.set('security', 'security_dir', credentials_testdir)
                 _conf.set('global','storage_type','securedht')
-                all_started.extend(map(partial(prep_node, stype), nodes[stype]))
+                all_started.extend(list(map(partial(prep_node, stype), nodes[stype])))
                 _conf.remove_section("security")
             except:
                 traceback.print_exc()
         elif stype == "notstarted":
             _conf.set('global', 'storage_type', 'dht')
-            map(partial(prep_node, stype), nodes[stype])
+            list(map(partial(prep_node, stype), nodes[stype]))
         elif stype == "sql":
             _conf.set('global', 'storage_type', 'sql')
             _conf.set('global', 'storage_sql', {})  # Use the default, i.e. local passwd-less root mysql DB
-            all_started.extend(map(partial(prep_node, stype), nodes[stype]))
+            all_started.extend(list(map(partial(prep_node, stype), nodes[stype])))
         elif stype == "proxy":
             # Setting up proxy storage for testing is a bit complicated
             # We short circuit so that fake tunnels' send directly calls peer's receive-method
@@ -182,7 +193,7 @@ def setup(request):
                                         'storage',
                                         None,
                                         rt_id=n2.id,
-                                        id=calvinuuid.uuid("TUNNEL")) 
+                                        id=calvinuuid.uuid("TUNNEL"))
                 tunnels[n2.id] = tt
                 n2.tunnels = tunnels
             # Give a tunnel its peers tunnel
@@ -194,11 +205,11 @@ def setup(request):
             _conf.set('global', 'storage_type', 'local')
             prep_node(stype, nodes[stype][0])
             # Inform master it has 2 proxy storage clients
-            [nodes[stype][0].storage.tunnel_request_handles(t) for t in tunnels[nodes[stype][0].id].values()]
+            [nodes[stype][0].storage.tunnel_request_handles(t) for t in list(tunnels[nodes[stype][0].id].values())]
             # Start proxies
             _conf.set('global', 'storage_type', 'proxy')
             _conf.set('global', 'storage_proxy', nodes[stype][0].uris[0])
-            all_started.extend(map(partial(prep_node, stype), nodes[stype][1:]))
+            all_started.extend(list(map(partial(prep_node, stype), nodes[stype][1:])))
             # Inform proxy that it is connected, first wait until up_handler set
             count = 0
             while (tunnels[nodes[stype][1].id][nodes[stype][0].id].up_handler is None or
@@ -218,7 +229,7 @@ def setup(request):
     def teardown():
         print("#####TEARDOWN")
         all_stopped = []
-        for ntypes in nodes.values():
+        for ntypes in list(nodes.values()):
             for n in ntypes:
                 cb, d = create_callback(timeout=10)
                 n.storage.stop(cb=cb)
@@ -546,7 +557,7 @@ class TestAllStorage(object):
                         yield wait_for(self._test_done, timeout=10)
                         print("get_index response", self.get_ans, stype, index, x)
                         # Verify we read what is written if too short prefix or not existing we should get [].
-                        assert set(self.get_ans) == set(i[1]) 
+                        assert set(self.get_ans) == set(i[1])
 
     @pytest.inlineCallbacks
     def test_add_remove_get_index(self, setup):
@@ -598,7 +609,7 @@ class TestAllStorage(object):
                         yield wait_for(self._test_done, timeout=10)
                         print("get_index response", self.get_ans, stype, index, x)
                         # Verify we read what is written if too short prefix or not existing we should get [].
-                        assert set(self.get_ans) == set(i[1]) 
+                        assert set(self.get_ans) == set(i[1])
 
     def test_all_started(self, setup):
         self.nodes = setup.get("nodes")

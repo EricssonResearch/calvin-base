@@ -15,6 +15,12 @@
 # limitations under the License.
 
 from __future__ import absolute_import
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from future import standard_library
+standard_library.install_aliases()
+from builtins import *
 import json
 import re
 from calvin.requests import calvinresponse
@@ -159,7 +165,7 @@ def handle_dump_storage(self, handle, connection, match, data, hdr):
 def handle_post_node_attribute_indexed_public_cb(self, key, value, handle, connection, attributes):
     try:
         indexed_public = []
-        for attr in attributes.items():
+        for attr in list(attributes.items()):
             indexed_string = format_index_string(attr)
             indexed_public.append(indexed_string)
             self.node.storage.add_index(indexed_string, key)

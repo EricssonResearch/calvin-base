@@ -15,6 +15,13 @@
 # limitations under the License.
 
 from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import range
+from builtins import *
 from calvin.runtime.north.plugins.port.queue.common import QueueEmpty
 from calvin.runtime.north.plugins.port.queue.collect_unordered import CollectUnordered
 from calvin.utilities import calvinlogger
@@ -37,7 +44,7 @@ class CollectTagged(CollectUnordered):
         self._type = "collect:tagged"
 
     def peek(self, metadata):
-        for i in xrange(self.turn_pos, self.turn_pos + len(self.writers)):
+        for i in range(self.turn_pos, self.turn_pos + len(self.writers)):
             writer = self.writers[i % len(self.writers)]
             if self.write_pos[writer] - self.tentative_read_pos[writer] >= 1:
                 read_pos = self.tentative_read_pos[writer]
@@ -58,4 +65,4 @@ class CollectTagged(CollectUnordered):
         if not set(mapping.values()) == set(self.writers):
             print(mapping, self.writers)
             raise Exception("Illegal port mapping dictionary")
-        self.tags = { v: k for k,v in mapping.items() }
+        self.tags = { v: k for k,v in list(mapping.items()) }

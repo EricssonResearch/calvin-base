@@ -1,3 +1,10 @@
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import *
 import pytest
 import unittest
 import types
@@ -59,7 +66,7 @@ class ActorCompletionTests(TestBase):
 
     def test_completion_actor(self):
         d = self.completion.complete(6, 8)
-        expected = self.completion.metadata['std'].keys()
+        expected = list(self.completion.metadata['std'].keys())
         self.assertEqual(set(d['suggestions']), set(expected))
         self.assertEqual(set(d['completions']), set(expected))
         self.assertEqual('actor', d['type'])
@@ -67,7 +74,7 @@ class ActorCompletionTests(TestBase):
 
     def test_completion_actor_partial(self):
         d = self.completion.complete(6, 10)
-        expected = [x for x in self.completion.metadata['std'].keys() if x.startswith('Co')]
+        expected = [x for x in list(self.completion.metadata['std'].keys()) if x.startswith('Co')]
         self.assertEqual(set(d['suggestions']), set(expected))
         self.assertEqual(set(d['completions']), set([x[2:] for x in expected]))
         self.assertEqual(len(d['completions']), len(d['arg_dicts']))

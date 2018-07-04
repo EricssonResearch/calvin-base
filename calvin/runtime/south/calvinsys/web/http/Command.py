@@ -14,6 +14,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import *
 import requests
 from requests.auth import HTTPBasicAuth, HTTPDigestAuth
 
@@ -197,7 +204,7 @@ class Command(base_calvinsys_object.BaseCalvinsysObject):
             else:
                 # return everything
                 # Headers are case-insensitive, so we downcase everything
-                headers = { k.lower():v for k, v in dict(response.headers).items()}
+                headers = { k.lower():v for k, v in list(dict(response.headers).items())}
                 self.result = {"body": response.text, "status": response.status_code, "headers": headers }
             
         def done(*args, **kwargs):

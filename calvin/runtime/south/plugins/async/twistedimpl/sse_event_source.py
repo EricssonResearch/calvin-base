@@ -1,4 +1,11 @@
 from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import *
+from builtins import object
 from twisted.web import server, resource
 from twisted.internet import reactor
 import json
@@ -10,7 +17,7 @@ class SimpleSSE(resource.Resource):
 
     def responseCallback(self, err, connection):
         connection.finish
-        keylist = [k for k,v in connections.iteritems() if v == connection]
+        keylist = [k for k,v in connections.items() if v == connection]
         for key in keylist:
             connections.pop(key)
 
@@ -43,7 +50,7 @@ class SimpleSSE(resource.Resource):
             self._send(connections[client_id], data)
 
     def broadcast(self, data):
-        for connection in self.connections.values():
+        for connection in list(self.connections.values()):
             self._send(connection, data)
 
 class EventSource(object):

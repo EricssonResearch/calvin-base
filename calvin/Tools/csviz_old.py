@@ -17,6 +17,15 @@
 
 
 from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import zip
+from builtins import str
+from builtins import *
+from builtins import object
 import sys
 import textwrap
 import argparse
@@ -128,9 +137,9 @@ class AppViz(Viz):
     """docstring for AppViz"""
     def __init__(self, deployable):
         super(AppViz, self).__init__()
-        self.actors = [ActorViz(name, **args) for name, args in deployable['actors'].iteritems()]
+        self.actors = [ActorViz(name, **args) for name, args in deployable['actors'].items()]
         self.links = []
-        for src, dstlist in deployable['connections'].iteritems():
+        for src, dstlist in deployable['connections'].items():
             _src, _src_port = src.split('.')
             for dst in dstlist:
                 _dst, _dst_port = dst.split('.')
@@ -150,9 +159,9 @@ class ScriptViz(AppViz):
     """docstring for ScriptViz"""
     def __init__(self, ir):
         comp_defs = ir['components'] if 'components' in ir else {}
-        self.actors = [ActorViz(name, **args) for name, args in ir['structure']['actors'].iteritems() if '.' in args['actor_type']]
+        self.actors = [ActorViz(name, **args) for name, args in ir['structure']['actors'].items() if '.' in args['actor_type']]
         self.links = [LinkViz(link) for link in ir['structure']['connections'] if link['src'] and link['dst']]
-        self.components = [CompViz(name, args['actor_type'], comp_defs[args['actor_type']]) for name, args in ir['structure']['actors'].iteritems() if args['actor_type'] in comp_defs]
+        self.components = [CompViz(name, args['actor_type'], comp_defs[args['actor_type']]) for name, args in ir['structure']['actors'].items() if args['actor_type'] in comp_defs]
 
 
 class CompInternalsViz(ScriptViz):

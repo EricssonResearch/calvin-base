@@ -15,6 +15,14 @@
 # limitations under the License.
 
 from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import range
+from builtins import *
+from past.utils import old_div
 import unittest
 import time
 import multiprocessing
@@ -75,7 +83,7 @@ class TestIndex(CalvinTestBase):
         lindex['Per'] = [calvinuuid.uuid("NODE") for i in range(1,5)]
         common = calvinuuid.uuid("NODE")
 
-        for n, node_ids in lindex.items():
+        for n, node_ids in list(lindex.items()):
             for id_ in node_ids:
                 #print "ADD", n, id_
                 request_handler.add_index(self.rt1, "node/affiliation/owner/com.ericsson/" + n, id_)
@@ -90,7 +98,7 @@ class TestIndex(CalvinTestBase):
         assert(set(p['result']) == set(lindex["Per"]))
         assert(set(e['result']) == set(lindex["Per"] + lindex["Harald"]))
 
-        for n, node_ids in lindex.items():
+        for n, node_ids in list(lindex.items()):
             request_handler.remove_index(self.rt1, "node/affiliation/owner/com.ericsson/" + n, node_ids[0])
 
         h = request_handler.get_index(self.rt1, "node/affiliation/owner/com.ericsson/Harald")
@@ -144,7 +152,7 @@ class TestIndex(CalvinTestBase):
         lindex['Per'] = [calvinuuid.uuid("NODE") for i in range(1,5)]
         common = calvinuuid.uuid("NODE")
 
-        for n, node_ids in lindex.items():
+        for n, node_ids in list(lindex.items()):
             for id_ in node_ids:
                 #print "ADD", n, id_
                 request_handler.add_index(self.rt1, "node/affiliation/owner/com.ericsson/" + n, id_)
@@ -157,7 +165,7 @@ class TestIndex(CalvinTestBase):
         assert(set(p['result']) == set(lindex["Per"]))
         assert(set(e['result']) == set(lindex["Per"] + lindex["Harald"]))
 
-        for n, node_ids in lindex.items():
+        for n, node_ids in list(lindex.items()):
             request_handler.remove_index(self.rt1, "node/affiliation/owner/com.ericsson/" + n, node_ids[0])
 
         h = request_handler.get_index(self.rt2, "node/affiliation/owner/com.ericsson/Harald")
@@ -269,7 +277,7 @@ class CalvinNodeTestIndexAll(unittest.TestCase):
             this test is quite loose on its asserts but shows some warnings when
             inconsistent. It is also extremly slow.
         """
-        self.hosts = [("calvinip://%s:%d" % (ip_addr, d), "http://%s:%d" % (ip_addr, d+1), "owner%d" % ((d-5000)/2)) for d in range(5000, 5041, 2)]
+        self.hosts = [("calvinip://%s:%d" % (ip_addr, d), "http://%s:%d" % (ip_addr, d+1), "owner%d" % (old_div((d-5000),2))) for d in range(5000, 5041, 2)]
         self.rt = [dispatch_node([h[0]], h[1], attributes={'indexed_public': {'owner':{'personOrGroup': h[2]}}})[0] for h in self.hosts]
         time.sleep(3)
         owner = []

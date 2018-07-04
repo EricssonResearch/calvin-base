@@ -16,6 +16,9 @@
 
 # Coders
 from __future__ import absolute_import
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
 # -*- coding: utf-8 -*-
 
 # Copyright (c) 2015 Ericsson AB
@@ -33,6 +36,9 @@ from __future__ import absolute_import
 # limitations under the License.
 
 # Coders
+from future import standard_library
+standard_library.install_aliases()
+from builtins import *
 from . import json_coder
 from . import msgpack_coder
 from . import cbor_coder

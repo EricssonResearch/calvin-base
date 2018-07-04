@@ -15,6 +15,14 @@
 # limitations under the License.
 
 from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from builtins import *
+from builtins import object
 import pytest
 import sys
 import os
@@ -22,7 +30,7 @@ import random
 import time
 import json
 import uuid
-import Queue
+import queue
 import multiprocessing
 import traceback
 
@@ -324,7 +332,7 @@ class TestTransportServer(object):
                     if not mess[0]:
                         for a in mess[1]:
                             print(a, end=' ')
-                        for k,v in mess[2].items():
+                        for k,v in list(mess[2].items()):
                             print("%s = %s" % (k, repr(v)))
                         raise Exception("\n".join(mess[1][11:]))
         except Exception as e:
@@ -414,7 +422,7 @@ class TestTransportClient(object):
                         if not mess[0]:
                             for a in mess[1][11:-1]:
                                 print(a, end=' ')
-                            for k,v in mess[2].items():
+                            for k,v in list(mess[2].items()):
                                 print("%s = %s" % (k, repr(v)))
                             raise Exception("\n".join(mess[1][11:]))
         except Exception as e:
@@ -492,7 +500,7 @@ class TestTransportClient(object):
                         if not mess[0]:
                             for a in mess[1][11:-1]:
                                 print(a, end=' ')
-                            for k,v in mess[2].items():
+                            for k,v in list(mess[2].items()):
                                 print("%s = %s" % (k, repr(v)))
                             raise Exception("\n".join(mess[1][11:]))
         except Exception as e:
@@ -575,7 +583,7 @@ class TestTransportClient(object):
                         if not mess[0]:
                             for a in mess[1][11:-1]:
                                 print(a, end=' ')
-                            for k,v in mess[2].items():
+                            for k,v in list(mess[2].items()):
                                 print("%s = %s" % (k, repr(v)))
                             raise Exception("\n".join(mess[1][11:]))
         except Exception as e:
@@ -657,7 +665,7 @@ class TestTransportClient(object):
                         if not mess[0]:
                             for a in mess[1][11:-1]:
                                 print(a, end=' ')
-                            for k,v in mess[2].items():
+                            for k,v in list(mess[2].items()):
                                 print("%s = %s" % (k, repr(v)))
                             raise Exception("\n".join(mess[1][11:]))
         except Exception as e:

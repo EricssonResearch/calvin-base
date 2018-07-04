@@ -1,4 +1,7 @@
 from __future__ import absolute_import
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,6 +15,9 @@ from __future__ import absolute_import
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from future import standard_library
+standard_library.install_aliases()
+from builtins import *
 from calvin.utilities import calvinlogger
 from calvin.runtime.south.plugins.transports import base_transport
 from .twisted.twisted_transport import TwistedCalvinTransport, TwistedCalvinTransportClient

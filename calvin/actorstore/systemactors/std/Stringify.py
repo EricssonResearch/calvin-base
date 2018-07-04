@@ -14,6 +14,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from builtins import *
 from calvin.actor.actor import Actor, manage, condition
 from calvin.runtime.north.calvin_token import EOSToken, ExceptionToken
 from calvin.utilities.calvinlogger import get_logger
@@ -40,9 +48,9 @@ class Stringify(Actor):
         try:
             # Always unicode
             if self.encoding:
-                new_token = unicode(input, self.encoding)
+                new_token = str(input, self.encoding)
             else:
-                new_token = unicode(input)
+                new_token = str(input)
 
             return (new_token, )
         except Exception as exc:

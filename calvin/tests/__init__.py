@@ -1,4 +1,12 @@
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
 
+from future import standard_library
+standard_library.install_aliases()
+from builtins import *
+from builtins import object
 from mock import Mock
 
 from calvin.utilities import calvinuuid
@@ -14,7 +22,7 @@ class SerMock(Mock):
     def str(self):
         return self.__dict__
 
-class DummyNode:
+class DummyNode(object):
 
     def __init__(self):
         self.id = calvinuuid.uuid("NODE")
@@ -27,7 +35,7 @@ class DummyNode:
     def calvinsys(self):
         return None
 
-class _DummyRepSet:
+class _DummyRepSet(object):
     def __init__(self):
         self.id = None  # calvinuuid.uuid("")
         self.original_actor_id = None
@@ -36,7 +44,7 @@ class _DummyRepSet:
     def store(self):
         pass
 
-class TestNode:
+class TestNode(object):
 
     def __init__(self, uris, node_name=None, control_uri=None):
         self.id = calvinuuid.uuid("NODE")
@@ -49,7 +57,7 @@ class TestNode:
         self.control = Mock()
         self.attributes = attribute_resolver.AttributeResolver({})
 
-class TestActor:
+class TestActor(object):
 
     def __init__(self, name, type, inports, outports):
         self.id = calvinuuid.uuid("ACTOR")
@@ -59,7 +67,7 @@ class TestActor:
         self.outports = outports
         self._replication_id = _DummyRepSet()
 
-class TestPort:
+class TestPort(object):
 
     def __init__(self, name, direction):
         self.id = calvinuuid.uuid("PORT")

@@ -14,6 +14,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from builtins import *
+from builtins import object
 import time
 from calvin.utilities import calvinuuid
 from calvin.utilities.utils import enum
@@ -409,7 +418,7 @@ class CalvinProto(CalvinCBClass):
 
     def _get_tunnel(self, peer_node_id, tunnel_type=None):
         try:
-            return [t for t in self.tunnels[peer_node_id].itervalues() if t.tunnel_type == tunnel_type][0]
+            return [t for t in self.tunnels[peer_node_id].values() if t.tunnel_type == tunnel_type][0]
         except:
             return None
 

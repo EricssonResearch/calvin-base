@@ -15,6 +15,15 @@
 # limitations under the License.
 
 from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import zip
+from builtins import str
+from builtins import range
+from builtins import *
 import unittest
 import tempfile
 import os
@@ -73,21 +82,21 @@ class CalvinConfigTests(TestBase):
             self.assertEqual(_conf.get("test", "BANAN%d" % a), a)
 
         for a in range(10):
-            _conf.set("test", "BANAN%d" % a, range(10))
-            self.assertEqual(_conf.get("test", "BANAN%d" % a), range(10))
+            _conf.set("test", "BANAN%d" % a, list(range(10)))
+            self.assertEqual(_conf.get("test", "BANAN%d" % a), list(range(10)))
 
         # Should this two become the same ? No.
         for a in range(10):
-            _conf.set("test", "BANAN%d" % a, dict(zip(range(10), range(10))))
-            self.assertNotEqual(_conf.get("test", "BANAN%d" % a), dict(zip([str(x) for x in range(10)], range(10))))
+            _conf.set("test", "BANAN%d" % a, dict(list(zip(list(range(10)), list(range(10))))))
+            self.assertNotEqual(_conf.get("test", "BANAN%d" % a), dict(list(zip([str(x) for x in range(10)], list(range(10))))))
 
         for a in range(10):
-            _conf.set("test", "BANAN%d" % a, dict(zip([str(x) for x in range(10)], range(10))))
-            self.assertEqual(_conf.get("test", "BANAN%d" % a), dict(zip([str(x) for x in range(10)], range(10))))
+            _conf.set("test", "BANAN%d" % a, dict(list(zip([str(x) for x in range(10)], list(range(10))))))
+            self.assertEqual(_conf.get("test", "BANAN%d" % a), dict(list(zip([str(x) for x in range(10)], list(range(10))))))
 
         for a in range(10):
-            _conf.set("test", "BANAN%d" % a, dict(zip([str(x) for x in range(10)], [range(10)])))
-            self.assertEqual(_conf.get("test", "BANAN%d" % a), dict(zip([str(x) for x in range(10)], [range(10)])))
+            _conf.set("test", "BANAN%d" % a, dict(list(zip([str(x) for x in range(10)], [list(range(10))]))))
+            self.assertEqual(_conf.get("test", "BANAN%d" % a), dict(list(zip([str(x) for x in range(10)], [list(range(10))]))))
 
     def test_env_override(self):
         # Env override is only allowed for known sections: GLOBAL, TESTING, DEVELOPER
@@ -126,7 +135,7 @@ class CalvinConfigTests(TestBase):
         os.environ['CALVIN_KAKA'] = "HEJ"
         self.assertEqual(_conf.get("test", "KAKA"), "HEJ")
 
-        test_item = range(10)
+        test_item = list(range(10))
         test_item2 = ["HEJ", "hej", "HEJ"]
         _conf.set("test", "KAKA", test_item)
         os.environ['CALVIN_KAKA'] = os.pathsep.join(test_item2)

@@ -14,9 +14,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import *
+from builtins import object
 import Adafruit_PCA9685
 
-class Servo():
+class Servo(object):
     
     def __init__(self):
 	self.pwm = Adafruit_PCA9685.PCA9685()

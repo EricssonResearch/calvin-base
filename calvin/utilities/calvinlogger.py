@@ -14,6 +14,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from past.builtins import basestring
+from builtins import *
 import logging
 import json
 import inspect
@@ -38,12 +47,12 @@ class JSONEncoderIters(json.JSONEncoder):
             pass
         else:
             return list(iterable)
-        if isinstance(o, (dict, list, basestring, int, long, float, bool, type(None))):
+        if isinstance(o, (dict, list, basestring, int, int, float, bool, type(None))):
             # Let the base class handle it
             return json.JSONEncoder.default(self, o)
         else:
             # Convert it to a string
-            return unicode(str(o))
+            return str(str(o))
 
 def analyze(self, node_id, func, param, peer_node_id=None, tb=False, mute=False, *args, **kws):
     if not mute and self.isEnabledFor(5):

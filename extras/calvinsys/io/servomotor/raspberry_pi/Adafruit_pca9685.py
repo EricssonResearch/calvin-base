@@ -15,6 +15,13 @@
 # limitations under the License.
 
 from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
+from __future__ import print_function
+from future import standard_library
+standard_library.install_aliases()
+from builtins import *
+from past.utils import old_div
 from calvin.runtime.south.calvinsys.io.servomotor import BaseServo
 from . import Adafruit_PCA9685
 
@@ -39,8 +46,8 @@ class Adafruit_pca9685(BaseServo.BaseServo):
 
         scaling = (1.0 / self._frequency / 4096 * 10**6)
         
-        self._servo_min = int(round(self._minimum_pulse / scaling))
-        self._servo_max = int(round(self._maximum_pulse / scaling))
+        self._servo_min = int(round(old_div(self._minimum_pulse, scaling)))
+        self._servo_max = int(round(old_div(self._maximum_pulse, scaling)))
                 
     def can_write(self):
         return self._pwm is not None
@@ -57,7 +64,7 @@ class Adafruit_pca9685(BaseServo.BaseServo):
         elif angle > 180:
             angle = 180
 
-        self._set_pwm(int(round(((self._servo_max - self._servo_min) / 180.) * angle)))
+        self._set_pwm(int(round((old_div((self._servo_max - self._servo_min), 180.)) * angle)))
 
     def _set_pwm(self, pulse):
         # Force with in range

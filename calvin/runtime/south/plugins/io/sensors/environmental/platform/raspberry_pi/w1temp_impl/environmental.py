@@ -14,6 +14,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import division
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import *
+from past.utils import old_div
 import glob
 from calvin.runtime.south.plugins.io.sensors.environmental import base_environmental
 
@@ -58,9 +66,9 @@ class Environmental(base_environmental.EnvironmentalBase):
 
         if equals_pos != -1:
             temp_string = lines[1][equals_pos + 2:]
-            self._temperature = float(temp_string) / 1000.0
+            self._temperature = old_div(float(temp_string), 1000.0)
             # Round to nearest half-degree
-            self._temperature = round(2*self._temperature, 0)/2.0
+            self._temperature = old_div(round(2*self._temperature, 0),2.0)
 
     def get_temperature(self):
         self._read_temp()

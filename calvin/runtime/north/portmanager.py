@@ -14,6 +14,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from past.builtins import basestring
+from builtins import *
+from builtins import object
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.runtime.north.plugins.port.connection import ConnectionFactory, PURPOSE
 from calvin.actor.actorport import PortMeta
@@ -60,7 +70,7 @@ class PortManager(object):
             try:
                 port = self._get_local_port(actor_id=actor_id, port_name=p['port'], port_dir=p['direction'],
                                             port_id=None)
-                for port_property, value in p['properties'].items():
+                for port_property, value in list(p['properties'].items()):
                     success.append(self._set_port_property(port, port_property, value))
             except:
                 success.append(False)
@@ -72,7 +82,7 @@ class PortManager(object):
         _log.analyze(self.node.id, "+", port_properties)
         port = self._get_local_port(actor_id=actor_id, port_name=port_name, port_dir=port_dir, port_id=port_id)
         success = []
-        for port_property, value in port_properties.items():
+        for port_property, value in list(port_properties.items()):
             success.append(self._set_port_property(port, port_property, value))
         ok = all(success)
         return response.CalvinResponse(True) if ok else response.CalvinResponse(response.BAD_REQUEST)
@@ -217,9 +227,9 @@ class PortManager(object):
 
             # It is possible to select only in or out ports
             if port_dir is None or port_dir == "in":
-                port_ids.extend([p.id for p in actor.inports.itervalues()])
+                port_ids.extend([p.id for p in actor.inports.values()])
             if port_dir is None or port_dir == "out":
-                port_ids.extend([p.id for p in actor.outports.itervalues()])
+                port_ids.extend([p.id for p in actor.outports.values()])
             # Need to collect all callbacks into one
             if callback:
                 callback = CalvinCB(self._disconnecting_actor_cb, _callback=callback,
@@ -254,7 +264,7 @@ class PortManager(object):
             connections = ConnectionFactory(self.node, PURPOSE.DISCONNECT).get_existing(
                             port_id, callback=callback)
             _log.analyze(self.node.id, "+ POST FACTORY", {'port_id': port_id,
-                            'connections': map(lambda x: str(x), connections)})
+                            'connections': [str(x) for x in connections]})
             # Run over copy since connections modified (tricky!) in loop
             for c in connections[:]:
                 c.disconnect(terminate=terminate)
@@ -318,15 +328,15 @@ class PortManager(object):
 
     def add_ports_of_actor(self, actor):
         """ Add an actor's ports to the dictionary, used by actor manager """
-        for port in actor.inports.values():
+        for port in list(actor.inports.values()):
             self.ports[port.id] = port
-        for port in actor.outports.values():
+        for port in list(actor.outports.values()):
             self.ports[port.id] = port
 
     def remove_ports_of_actor(self, actor):
         """ Remove an actor's ports in the dictionary, used by actor manager """
         port_ids = []
-        for port in actor.inports.values():
+        for port in list(actor.inports.values()):
             port_ids.append(port.id)
             self.ports.pop(port.id)
             # Also unregister any left over endpoints (during app destroy we don't disconnect)
@@ -335,7 +345,7 @@ class PortManager(object):
                     self.node.sched.unregister_endpoint(e)
                 except:
                     pass
-        for port in actor.outports.values():
+        for port in list(actor.outports.values()):
             port_ids.append(port.id)
             self.ports.pop(port.id)
             # Also unregister any left over endpoints (during app destroy we don't disconnect)
@@ -351,7 +361,7 @@ class PortManager(object):
         if port_id and port_id in self.ports:
             return self.ports[port_id]
         if port_name and actor_id and port_dir in ['in', 'out']:
-            for port in self.ports.itervalues():
+            for port in self.ports.values():
                 if port.name == port_name and port.owner and port.owner.id == actor_id and port.direction == port_dir:
                     return port
             # For new shadow actors we create the port
@@ -369,7 +379,7 @@ class PortManager(object):
                     self.ports[port.id] = port
                     return port
         elif port_name and actor_id and port_dir == 'unknown':
-            for port in self.ports.itervalues():
+            for port in self.ports.values():
                 if port.name == port_name and port.owner and port.owner.id == actor_id:
                     return port
         raise KeyError("Port '%s' not found locally" % (port_id if port_id else str(actor_id) +

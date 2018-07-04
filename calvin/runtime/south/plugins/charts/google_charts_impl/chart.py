@@ -15,6 +15,16 @@
 # limitations under the License.
 
 from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import next
+from builtins import str
+from past.builtins import basestring
+from builtins import *
+from builtins import object
 from calvin.runtime.south.plugins.async import threads
 from calvin.utilities.calvinlogger import get_logger
 from GChartWrapper import Line, VerticalBarStack, HorizontalBarStack, Meter
@@ -22,7 +32,7 @@ from GChartWrapper import Line, VerticalBarStack, HorizontalBarStack, Meter
 _log = get_logger(__name__)
 
 
-class Chart():
+class Chart(object):
 
     """
       This is a calvin wrapper around the google-chartwrapper for the Google Chart API.

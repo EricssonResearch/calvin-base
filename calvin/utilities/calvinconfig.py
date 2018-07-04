@@ -15,6 +15,13 @@
 # limitations under the License.
 
 from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import *
+from builtins import object
 import os
 import json
 from calvin.utilities.calvinlogger import get_logger
@@ -90,7 +97,7 @@ class CalvinConfig(object):
                 'comment': 'User definable section',
                 'actor_paths': ['systemactors'],
                 'framework': 'twistedimpl',
-                'storage_type': 'dht', # supports dht, securedht, sql, local, and proxy
+                'storage_type': 'local', # supports dht, securedht, sql, local, and proxy
                 'storage_proxy': None,
                 'storage_sql': {},  # For SQL, should have the kwargs to connect + db-name. Defaults to insecure local
                 'capabilities_blacklist': [],
@@ -245,7 +252,7 @@ class CalvinConfig(object):
         return default
 
     def sections(self):
-        return self.config.keys()
+        return list(self.config.keys())
 
     def has_section(self, section):
         return section in self.config
@@ -320,7 +327,7 @@ class CalvinConfig(object):
         for section in config:
             _section = section.lower()
             self.add_section(_section)
-            for option, value in config[section].iteritems():
+            for option, value in config[section].items():
                 _option = option.lower()
                 self.set(_section, _option, value)
 
@@ -379,7 +386,7 @@ class CalvinConfig(object):
         if not delta_config:
             return
         for section in delta_config:
-            for option, value in delta_config[section].iteritems():
+            for option, value in delta_config[section].items():
                 if option.lower() == 'comment':
                     continue
                 operation = {
@@ -439,7 +446,7 @@ class CalvinConfig(object):
                 _log.warning("Value {} of environment variable {} is malformed, skipping.".format(repr(value), wildcard))
 
     def save(self, path, skip_arguments=True):
-        json.dump({k: v for k, v in self.config.iteritems() if k != "arguments" or not skip_arguments}, open(path, 'w'))
+        json.dump({k: v for k, v in self.config.items() if k != "arguments" or not skip_arguments}, open(path, 'w'))
 
     def __str__(self):
         d = {}

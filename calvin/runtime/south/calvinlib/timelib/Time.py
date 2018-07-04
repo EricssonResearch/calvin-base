@@ -15,6 +15,13 @@
 # limitations under the License.
 
 from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
+from __future__ import print_function
+from future import standard_library
+standard_library.install_aliases()
+from builtins import *
+from past.utils import old_div
 import time
 import datetime
 from calvin.runtime.south.calvinlib import base_calvinlib_object
@@ -63,7 +70,7 @@ class Time(base_calvinlib_object.BaseCalvinlibObject):
         return int(time.time())
 
     def timestampms_to_timestring(self, timestampms):
-        timestamp = timestampms/1000.0
+        timestamp = old_div(timestampms,1000.0)
         dt = datetime.fromtimestamp(timestamp)
         res = dt.strftime("%Y-%m-%d %H:%M:%S.%f")
         return res

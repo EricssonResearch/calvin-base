@@ -14,6 +14,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import *
 from calvin.utilities.replication_defs import PRE_CHECK
 import random
 import time
@@ -69,7 +76,7 @@ def pre_check(node, **kwargs):
     replicate = False
     dereplicate = False
     t = time.time() + replication_data.pressure_event_diff
-    for p in replication_data.pressure.values():
+    for p in list(replication_data.pressure.values()):
         if len(p['pressure']) < 2:
             continue
         if ((p['pressure'][-1][1] - p['pressure'][-2][1]) < 10 and

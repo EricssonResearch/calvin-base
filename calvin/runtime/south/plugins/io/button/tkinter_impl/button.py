@@ -14,8 +14,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import Tkinter
-import Queue
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import *
+from builtins import object
+import tkinter
+import queue
 from twisted.internet import tksupport
 
 def close_callback():
@@ -24,13 +32,13 @@ def close_callback():
 active_buttons = 0
 root = None
 
-class Button():
+class Button(object):
     
     def __init__(self):
         self.text = "Button"
         self.button = None
         self.button_showing = False
-        self.button_presses = Queue.Queue()
+        self.button_presses = queue.Queue()
 
     def set_text(self, text):
         self.text = text
@@ -61,11 +69,11 @@ class Button():
         global root
         
         if not root:
-            root = Tkinter.Tk() 
+            root = tkinter.Tk() 
             root.protocol("WM_DELETE_WINDOW", close_callback)
         if active_buttons is 0:
             tksupport.install(root)
 
-        self.button = Tkinter.Button(root, text=self.text, command=self.tkinter_button_callback)
+        self.button = tkinter.Button(root, text=self.text, command=self.tkinter_button_callback)
         self.button.pack()
         active_buttons += 1
