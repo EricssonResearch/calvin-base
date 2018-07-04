@@ -1360,7 +1360,7 @@ class TestAppLifeCycle(CalvinTestBase):
             try :
                 app = request_handler.get_application(runtime, d.app_id)
             except Exception as e:
-                msg = str(e.message)
+                msg = str(e)
                 if msg.startswith("404"):
                     return True
             return app is None
@@ -1425,7 +1425,7 @@ class TestAppLifeCycle(CalvinTestBase):
             try :
                 app = request_handler.get_application(runtime, d.app_id)
             except Exception as e:
-                msg = str(e.message)
+                msg = str(e)
                 if msg.startswith("404"):
                     return True
             return app is None

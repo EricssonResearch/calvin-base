@@ -134,7 +134,7 @@ class TestSecurity(unittest.TestCase):
         actor_store_path, application_store_path = helpers.sign_files_for_security_tests(credentials_testdir)
         runtimes = helpers.create_CA_and_generate_runtime_certs(domain_name, credentials_testdir, NBR_OF_RUNTIMES)
         #Initiate Requesthandler with trusted CA cert
-        truststore_dir = certificate.get_truststore_path(type=certificate.TRUSTSTORE_TRANSPORT, 
+        truststore_dir = certificate.get_truststore_path(type=certificate.TRUSTSTORE_TRANSPORT,
                                                          security_dir=credentials_testdir)
         request_handler = RequestHandler(verify=truststore_dir)
 
@@ -188,7 +188,7 @@ class TestSecurity(unittest.TestCase):
         try:
             result = request_handler.deploy_application(rt, "test_script", script)
         except Exception as e:
-            if e.message.startswith("401"):
+            if str(e).startswith("401"):
                 raise Exception("Failed to deploy script")
             _log.exception("Test deploy failed")
             raise Exception("Failed deployment of script, no use to verify if requirements fulfilled")

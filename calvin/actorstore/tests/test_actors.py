@@ -516,7 +516,7 @@ class ActorTester(object):
                 try:
                     self.instantiate_actor(actorclass, a)
                 except AssertionError as e:
-                    test_fail[a] = e.message
+                    test_fail[a] = str(e)
                 except Exception as e:
                     raise e
             elif found and not primitive:
@@ -533,7 +533,7 @@ class ActorTester(object):
             try:
                 self.instantiate_actor(actorclass, path)
             except AssertionError as e:
-                test_fail[path] = e.message
+                test_fail[path] = str(e)
             except Exception as e:
                 raise e
         else:
@@ -553,7 +553,7 @@ class ActorTester(object):
                 try:
                     f(aut)
                 except Exception as e:
-                    print("Actor %s failed during setup of test %d: %s" % (actor, test_index, e.message))
+                    print("Actor %s failed during setup of test %d: %s" % (actor, test_index, str(e)))
                     raise Exception("Failed during setup of test %d" % (test_index, ))
 
             for port, values in inputs.items():
@@ -596,7 +596,7 @@ class ActorTester(object):
                 self.test_actor(actor, aut)
                 test_pass.append(actor)
             except AssertionError as e:
-                test_fail[actor] = e.message
+                test_fail[actor] = str(e)
             except Exception as e:
                 self.illegal_actors[actor] = str(e) + '\n' + ''.join(
                     traceback.format_exception(sys.exc_info()[0], sys.exc_info()[1], sys.exc_info()[2]))

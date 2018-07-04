@@ -149,7 +149,7 @@ def deploy_signed_application_that_should_fail(request_handler, runtimes, name, 
             result = request_handler.deploy_application(runtimes, name, script=content['file'], content=content, check=True)
         except Exception as e:
             try:
-                if e.message.startswith("401"):
+                if str(e).startswith("401"):
                     return
             except Exception as e:
                 _log.error("Failed for other reasons, continue, e={}".format(e))
@@ -184,7 +184,7 @@ def delete_app(request_handler, runtime, app_id, check_actor_ids=None, retries=1
                 if response is not None:
                     gone = False
             except Exception as e:
-                msg = str(e.message)
+                msg = str(str(e))
                 if not msg.startswith(str(calvinresponse.NOT_FOUND)):
                     gone = False
                 _log.exception("verify_actors_gone %s %s" % (gone, msg))
@@ -193,7 +193,7 @@ def delete_app(request_handler, runtime, app_id, check_actor_ids=None, retries=1
     try:
         request_handler.delete_application(runtime, app_id)
     except Exception as e:
-        msg = str(e.message)
+        msg = str(str(e))
         if msg.startswith("500"):
             _log.error("Delete App got 500")
         elif msg.startswith("404"):
@@ -299,7 +299,7 @@ def setup_local(ip_addr, request_handler, nbr, proxy_storage):
                 peers = request_handler.get_index(rt, index_string, timeout=60)
             except Exception as e:
                 try:
-                    notfound = e.message.startswith("404")
+                    notfound = str(e).startswith("404")
                 except:
                     notfound = False
                 if notfound:
@@ -346,7 +346,7 @@ def setup_local(ip_addr, request_handler, nbr, proxy_storage):
 
     if True:
         import calvin.runtime.north.storage
-        calvin.runtime.north.storage._conf.update('calvinsys', 'capabilities', 
+        calvin.runtime.north.storage._conf.update('calvinsys', 'capabilities',
                     {"mock.shadow": {
                         "module": "mock.MockInputOutput",
                         "attributes": {"data": []}
@@ -393,7 +393,7 @@ def setup_extra_local(ip_addr, request_handler, nbr, proxy_storage):
 
     if True:
         import calvin.runtime.north.storage
-        calvin.runtime.north.storage._conf.update('calvinsys', 'capabilities', 
+        calvin.runtime.north.storage._conf.update('calvinsys', 'capabilities',
                     {"mock.shadow": {
                         "module": "mock.MockInputOutput",
                         "attributes": {"data": []}

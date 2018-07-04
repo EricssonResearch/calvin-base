@@ -175,7 +175,7 @@ def setup_persistant_data():
     if USE_TLS:
         runtimes = helpers.create_CA(domain_name, credentials_testdir, NBR_OF_RUNTIMES)
         #Initiate Requesthandler with trusted CA cert
-        truststore_dir = certificate.get_truststore_path(type=certificate.TRUSTSTORE_TRANSPORT, 
+        truststore_dir = certificate.get_truststore_path(type=certificate.TRUSTSTORE_TRANSPORT,
                                                          security_dir=credentials_testdir)
         request_handler = RequestHandler(verify=truststore_dir)
     else:
@@ -183,7 +183,7 @@ def setup_persistant_data():
         runtimes = helpers.create_CA_and_generate_runtime_certs(domain_name, credentials_testdir, NBR_OF_RUNTIMES)
 
         request_handler = RequestHandler()
-    #Let's use the admin user0 for request_handler 
+    #Let's use the admin user0 for request_handler
     request_handler.set_credentials({"user": "user0", "password": "pass0"})
 
     rt_conf = copy.deepcopy(_conf)
@@ -201,7 +201,7 @@ def setup_persistant_data():
         rt0_conf.set('global','storage_type','securedht')
     else:
         #Default storage is DHT
-        rt0_conf.set('global','storage_type','dht')
+        rt0_conf.set('global','storage_type','local')
     rt0_conf.set('security','certificate_authority',{
                     'domain_name':domain_name,
                     'is_ca':True
@@ -406,9 +406,9 @@ class TestSignedCode(CalvinSecureTestBase):
             result = helpers.deploy_signed_application(request_handler,
                                                        runtimes[1]["RT"],
                                                        "correctly_signed",
-                                                       os.path.join(application_store_path, "correctly_signed.calvin")) 
+                                                       os.path.join(application_store_path, "correctly_signed.calvin"))
         except Exception as e:
-            if e.message.startswith("401"):
+            if str(e).startswith("401"):
                 raise Exception("Failed security verification of app correctly_signed")
             _log.error("Test deploy failed, err={}".format(e))
             raise Exception("Failed deployment of app correctly_signed, no use to verify if requirements fulfilled")
@@ -419,7 +419,7 @@ class TestSignedCode(CalvinSecureTestBase):
         actual = helpers.actual_tokens(request_handler, runtimes[1]["RT"], snk, size=5, retries=20)
         assert len(actual) > 4
 
-        helpers.delete_app(request_handler, runtimes[1]["RT"], result['application_id']) 
+        helpers.delete_app(request_handler, runtimes[1]["RT"], result['application_id'])
 
 #    def testPositive_CorrectlySignedAppInfo_CorrectlySignedActors(self):
 #        _log.analyze("TESTRUN", "+", {})
@@ -438,9 +438,9 @@ class TestSignedCode(CalvinSecureTestBase):
 #            request_handler.set_credentials({"user": "user1", "password": "pass1"})
 #            result = helpers.deploy_signed_application(request_handler, runtimes[1]["RT"],
 #                                                       "correctly_signed",
-#                                                       os.path.join(application_store_path, "correctly_signed.calvin")) 
+#                                                       os.path.join(application_store_path, "correctly_signed.calvin"))
 #        except Exception as e:
-#            if e.message.startswith("401"):
+#            if str(e).startswith("401"):
 #                raise Exception("Failed security verification of app correctly_signed")
 #            _log.error("Test deploy failed, err={}".format(e))
 #            raise Exception("Failed deployment of app correctly_signed, no use to verify if requirements fulfilled")
@@ -451,7 +451,7 @@ class TestSignedCode(CalvinSecureTestBase):
 #        actual = helpers.actual_tokens(request_handler, runtimes[1]["RT"], snk, size=5, retries=20)
 #        assert len(actual) > 4
 #
-#        helpers.delete_app(request_handler, runtimes[1]["RT"], result['application_id']) 
+#        helpers.delete_app(request_handler, runtimes[1]["RT"], result['application_id'])
 
 
     def testNegative_IncorrectlySignedApp(self):
@@ -461,7 +461,7 @@ class TestSignedCode(CalvinSecureTestBase):
             request_handler.set_credentials({"user": "user1", "password": "pass1"})
             result = helpers.deploy_signed_application_that_should_fail(request_handler, runtimes[1]["RT"],
                                                                         "incorrectly_signed",
-                                                                        os.path.join(application_store_path, "incorrectly_signed.calvin")) 
+                                                                        os.path.join(application_store_path, "incorrectly_signed.calvin"))
         except Exception as e:
             _log.error("Test deploy failed for non security reasons, e={}".format(e))
         return
@@ -474,10 +474,10 @@ class TestSignedCode(CalvinSecureTestBase):
             result = helpers.deploy_signed_application(request_handler,
                                                        runtimes[1]["RT"],
                                                        "correctlySignedApp_incorrectlySignedActor",
-                                                       os.path.join(application_store_path, "correctlySignedApp_incorrectlySignedActor.calvin")) 
+                                                       os.path.join(application_store_path, "correctlySignedApp_incorrectlySignedActor.calvin"))
         except Exception as e:
             _log.debug(str(e))
-            if e.message.startswith("401"):
+            if str(e).startswith("401"):
                 raise Exception("Failed security verification of app correctlySignedApp_incorrectlySignedActor")
             _log.error("Test deploy failed for non security reasons, e={}".format(e))
             raise Exception("Failed deployment of app correctlySignedApp_incorrectlySignedActor, no use to verify if requirements fulfilled")
@@ -488,9 +488,9 @@ class TestSignedCode(CalvinSecureTestBase):
         try:
             helpers.actual_tokens(request_handler, runtimes[1]["RT"], snk, size=5, retries=2)
         except Exception as e:
-            if e.message.startswith("Not enough tokens"):
+            if str(e).startswith("Not enough tokens"):
                 # We were blocked, as we should
-                helpers.delete_app(request_handler, runtimes[1]["RT"], result['application_id']) 
+                helpers.delete_app(request_handler, runtimes[1]["RT"], result['application_id'])
                 return
             _log.error("Test deploy failed for non security reasons, e={}".format(e))
         raise Exception("Incorrectly signed actor was not stopped as it should have been")
@@ -513,9 +513,9 @@ class TestAuthorization(CalvinSecureTestBase):
             result = helpers.deploy_signed_application(request_handler,
                                                        runtimes[1]["RT"],
                                                        "unsignedApp_signedActors",
-                                                       os.path.join(application_store_path, "unsignedApp_signedActors.calvin")) 
+                                                       os.path.join(application_store_path, "unsignedApp_signedActors.calvin"))
         except Exception as e:
-            if e.message.startswith("401"):
+            if str(e).startswith("401"):
                 raise Exception("Failed security verification of app unsignedApp_signedActors")
             _log.exception("Test deploy failed")
             raise Exception("Failed deployment of app unsignedApp_signedActors, no use to verify if requirements fulfilled")
@@ -526,7 +526,7 @@ class TestAuthorization(CalvinSecureTestBase):
         actual = helpers.actual_tokens(request_handler, runtimes[1]["RT"], snk, size=5, retries=20)
         assert len(actual) > 4
 
-        helpers.delete_app(request_handler, runtimes[1]["RT"], result['application_id']) 
+        helpers.delete_app(request_handler, runtimes[1]["RT"], result['application_id'])
 
     def testPositive_Permit_UnsignedApp_UnsignedActor(self):
         _log.analyze("TESTRUN", "+", {})
@@ -543,10 +543,10 @@ class TestAuthorization(CalvinSecureTestBase):
             request_handler.set_credentials({"user": "user3", "password": "pass3"})
             result = helpers.deploy_signed_application(request_handler,
                                                        runtimes[1]["RT"],
-                                                       "unsignedApp_unsignedActors", 
-                                                       os.path.join(application_store_path, "unsignedApp_unsignedActors.calvin")) 
+                                                       "unsignedApp_unsignedActors",
+                                                       os.path.join(application_store_path, "unsignedApp_unsignedActors.calvin"))
         except Exception as e:
-            if e.message.startswith("401"):
+            if str(e).startswith("401"):
                 raise Exception("Failed security verification of app unsignedApp_unsignedActors")
             _log.exception("Test deploy failed")
             raise Exception("Failed deployment of app unsignedApp_unsignedActors, no use to verify if requirements fulfilled")
@@ -557,7 +557,7 @@ class TestAuthorization(CalvinSecureTestBase):
         actual = helpers.actual_tokens(request_handler, runtimes[1]["RT"], snk, size=5, retries=20)
         assert len(actual) > 4
 
-        helpers.delete_app(request_handler, runtimes[1]["RT"], result['application_id']) 
+        helpers.delete_app(request_handler, runtimes[1]["RT"], result['application_id'])
 
     def testNegative_Deny_SignedApp_SignedActor_UnallowedRequirement(self):
         _log.analyze("TESTRUN", "+", {})
@@ -567,10 +567,10 @@ class TestAuthorization(CalvinSecureTestBase):
             result = helpers.deploy_signed_application(request_handler,
                                                        runtimes[2]["RT"],
                                                        "correctly_signed",
-                                                       os.path.join(application_store_path, "correctly_signed.calvin")) 
+                                                       os.path.join(application_store_path, "correctly_signed.calvin"))
         except Exception as e:
             _log.debug(str(e))
-            if e.message.startswith("401"):
+            if str(e).startswith("401"):
                 raise Exception("Failed security verification of app correctly_signed")
             _log.exception("Test deploy failed")
             raise Exception("Failed deployment of app correctly_signed, no use to verify if requirements fulfilled")
@@ -582,9 +582,9 @@ class TestAuthorization(CalvinSecureTestBase):
         try:
             helpers.actual_tokens(request_handler, runtimes[2]["RT"], snk, size=5, retries=2)
         except Exception as e:
-            if e.message.startswith("Not enough tokens"):
+            if str(e).startswith("Not enough tokens"):
                 # We were blocked, as we should
-                helpers.delete_app(request_handler, runtimes[2]["RT"], result['application_id']) 
+                helpers.delete_app(request_handler, runtimes[2]["RT"], result['application_id'])
                 return
             _log.error("Test deploy failed for non security reasons, e={}".format(e))
         raise Exception("Actor with unallowed requirements was not stopped as it should have been")
@@ -598,9 +598,9 @@ class TestAuthorization(CalvinSecureTestBase):
             result = helpers.deploy_signed_application(request_handler,
                                                        runtimes[0]["RT"],
                                                        "unsignedApp_signedActors",
-                                                       os.path.join(application_store_path, "unsignedApp_signedActors.calvin")) 
+                                                       os.path.join(application_store_path, "unsignedApp_signedActors.calvin"))
         except Exception as e:
-            if e.message.startswith("401"):
+            if str(e).startswith("401"):
                 raise Exception("Failed security verification of app unsignedApp_signedActors")
             _log.exception("Test deploy failed")
             raise Exception("Failed deployment of app unsignedApp_signedActors, no use to verify if requirements fulfilled")
@@ -611,7 +611,7 @@ class TestAuthorization(CalvinSecureTestBase):
         actual = helpers.actual_tokens(request_handler, runtimes[0]["RT"], snk, size=5, retries=20)
         assert len(actual) > 4
 
-        helpers.delete_app(request_handler, runtimes[0]["RT"], result['application_id']) 
+        helpers.delete_app(request_handler, runtimes[0]["RT"], result['application_id'])
 
     def testPositive_External_Authorization(self):
         _log.analyze("TESTRUN", "+", {})
@@ -621,9 +621,9 @@ class TestAuthorization(CalvinSecureTestBase):
             result = helpers.deploy_signed_application(request_handler,
                                                        runtimes[1]["RT"],
                                                        "unsignedApp_signedActors",
-                                                       os.path.join(application_store_path, "unsignedApp_signedActors.calvin")) 
+                                                       os.path.join(application_store_path, "unsignedApp_signedActors.calvin"))
         except Exception as e:
-            if e.message.startswith("401"):
+            if str(e).startswith("401"):
                 raise Exception("Failed security verification of app unsignedApp_signedActors")
             _log.exception("Test deploy failed")
             raise Exception("Failed deployment of app unsignedApp_signedActors, no use to verify if requirements fulfilled")
@@ -634,7 +634,7 @@ class TestAuthorization(CalvinSecureTestBase):
         actual = helpers.actual_tokens(request_handler, runtimes[1]["RT"], snk, size=5, retries=20)
         assert len(actual) > 4
 
-        helpers.delete_app(request_handler, runtimes[1]["RT"], result['application_id']) 
+        helpers.delete_app(request_handler, runtimes[1]["RT"], result['application_id'])
 
     def testPositive_Migration_When_Denied(self):
         _log.analyze("TESTRUN", "+", {})
@@ -644,9 +644,9 @@ class TestAuthorization(CalvinSecureTestBase):
             result = helpers.deploy_signed_application(request_handler,
                                                        runtimes[1]["RT"],
                                                        "correctly_signed",
-                                                       os.path.join(application_store_path, "correctly_signed.calvin")) 
+                                                       os.path.join(application_store_path, "correctly_signed.calvin"))
         except Exception as e:
-            if e.message.startswith("401"):
+            if str(e).startswith("401"):
                 raise Exception("Failed security verification of app correctly_signed")
             _log.exception("Test deploy failed")
             raise Exception("Failed deployment of app correctly_signed, no use to verify if requirements fulfilled")
@@ -667,10 +667,10 @@ class TestAuthorization(CalvinSecureTestBase):
         actual = helpers.actual_tokens(request_handler, runtimes[2]["RT"], snk, size=5, retries=20)
         assert len(actual) > 4
 
-        helpers.delete_app(request_handler, runtimes[1]["RT"], result['application_id']) 
+        helpers.delete_app(request_handler, runtimes[1]["RT"], result['application_id'])
 
 ###################################
-#   Control interface authorization 
+#   Control interface authorization
 #   as well as user db management
 ###################################
 @pytest.mark.skipif(USE_AUTHZ!=True, reason="Makes no sense without authorization enabled")
@@ -685,7 +685,7 @@ class TestControlInterfaceAuthorization(CalvinSecureTestBase):
             result = helpers.deploy_signed_application_that_should_fail(request_handler,
                                                                         runtimes[1]["RT"],
                                                                         "correctly_signed",
-                                                                        os.path.join(application_store_path, "correctly_signed.calvin")) 
+                                                                        os.path.join(application_store_path, "correctly_signed.calvin"))
         except Exception as e:
             _log.error("Test deploy failed for non security reasons, e={}".format(e))
             raise Exception("Deployment of app correctly_signed, did not fail for security reasons")
@@ -700,11 +700,11 @@ class TestControlInterfaceAuthorization(CalvinSecureTestBase):
         if users_db:
             users_db['user7']={"username": "user7",
                                         "attributes": {
-                                                        "age": "77", 
+                                                        "age": "77",
                                                         "last_name": "Gretasdottir",
                                                         "first_name": "Greta",
                                                         "address": "Mobilvagen 1"
-                                                    }, 
+                                                    },
                                         "password": "pass7"}
         else:
             raise Exception("users_db not in result or users_db not in result[users_db]")
@@ -730,7 +730,7 @@ class TestAuthentication(CalvinSecureTestBase):
             result = helpers.deploy_signed_application_that_should_fail(request_handler,
                                                                         runtimes[1]["RT"],
                                                                         "correctly_signed",
-                                                                        os.path.join(application_store_path, "correctly_signed.calvin")) 
+                                                                        os.path.join(application_store_path, "correctly_signed.calvin"))
         except Exception as e:
             _log.error("Test deploy failed for non security reasons, e={}".format(e))
             raise Exception("Deployment of app correctly_signed did not fail for security reasons")
@@ -744,10 +744,10 @@ class TestAuthentication(CalvinSecureTestBase):
             result = helpers.deploy_signed_application_that_should_fail(request_handler,
                                                                         runtimes[1]["RT"],
                                                                         "incorrectly_signed",
-                                                                        os.path.join(application_store_path, "correctly_signed.calvin")) 
+                                                                        os.path.join(application_store_path, "correctly_signed.calvin"))
         except Exception as e:
             _log.error("Test deploy failed for non security reasons, e={}".format(e))
-            raise Exception("Deployment of app correctly_signed, did not fail for security reasons")  
+            raise Exception("Deployment of app correctly_signed, did not fail for security reasons")
         return
 
     def testPositive_Local_Authentication(self):
@@ -758,11 +758,11 @@ class TestAuthentication(CalvinSecureTestBase):
             result = helpers.deploy_signed_application(request_handler,
                                                        runtimes[0]["RT"],
                                                        "correctly_signed",
-                                                       os.path.join(application_store_path, "correctly_signed.calvin")) 
+                                                       os.path.join(application_store_path, "correctly_signed.calvin"))
         except Exception as e:
             if isinstance(e, Timeout):
                 raise Exception("Can't connect to runtime 0.\n\te={}".format(e))
-            elif e.message.startswith("401"):
+            elif str(e).startswith("401"):
                 raise Exception("Failed security verification of app correctly_signed")
             _log.exception("Test deploy failed")
             raise Exception("Failed deployment of app correctly_signed, no use to verify if requirements fulfilled")
@@ -773,7 +773,7 @@ class TestAuthentication(CalvinSecureTestBase):
         actual = helpers.actual_tokens(request_handler, runtimes[0]["RT"], snk, size=5, retries=20)
         assert len(actual) > 4
 
-        helpers.delete_app(request_handler, runtimes[0]["RT"], result['application_id']) 
+        helpers.delete_app(request_handler, runtimes[0]["RT"], result['application_id'])
 
     def testPositive_External_Authentication(self):
         _log.analyze("TESTRUN", "+", {})
@@ -783,11 +783,11 @@ class TestAuthentication(CalvinSecureTestBase):
             result = helpers.deploy_signed_application(request_handler,
                                                        runtimes[1]["RT"],
                                                        "correctly_signed",
-                                                       os.path.join(application_store_path, "correctly_signed.calvin")) 
+                                                       os.path.join(application_store_path, "correctly_signed.calvin"))
         except Exception as e:
             if isinstance(e, Timeout):
                 raise Exception("Can't connect to runtime.\n\te={}".format(e))
-            elif e.message.startswith("401"):
+            elif str(e).startswith("401"):
                 raise Exception("Failed security verification of app correctly_signed")
             _log.exception("Test deploy failed")
             raise Exception("Failed deployment of app correctly_signed, no use to verify if requirements fulfilled")
@@ -798,7 +798,7 @@ class TestAuthentication(CalvinSecureTestBase):
         actual = helpers.actual_tokens(request_handler, runtimes[1]["RT"], snk, size=5, retries=20)
         assert len(actual) > 4
 
-        helpers.delete_app(request_handler, runtimes[1]["RT"], result['application_id']) 
+        helpers.delete_app(request_handler, runtimes[1]["RT"], result['application_id'])
 
 #    @pytest.mark.xfail
 #    @pytest.mark.slow
@@ -813,13 +813,13 @@ class TestAuthentication(CalvinSecureTestBase):
 #            if not content:
 #                raise Exception("Failed finding script, signature and cert, stopping here")
 #            request_handler.set_credentials({"user": "user5", "password": "pass5"})
-#            result = request_handler.deploy_application(runtimes[3]["RT"], "correctly_signed", content['file'], 
+#            result = request_handler.deploy_application(runtimes[3]["RT"], "correctly_signed", content['file'],
 #                        content=content,
 #                        check=True)
 #        except Exception as e:
 #            if isinstance(e, Timeout):
 #                raise Exception("Can't connect to RADIUS server. Have you started a RADIUS server?")
-#            elif e.message.startswith("401"):
+#            elif str(e).startswith("401"):
 #                raise Exception("Failed security verification of app correctly_signed")
 #            _log.exception("Test deploy failed")
 #            raise Exception("Failed deployment of app correctly_signed, no use to verify if requirements fulfilled")
@@ -838,7 +838,7 @@ class TestAuthentication(CalvinSecureTestBase):
 #        actual = request_handler.report(runtimes[3]["RT"], result['actor_map']['correctly_signed:snk'])
 #        assert len(actual) > 2
 #
-#        helpers.delete_app(request_handler, runtimes[3]["RT"], result['application_id']) 
+#        helpers.delete_app(request_handler, runtimes[3]["RT"], result['application_id'])
 
 
 
@@ -1562,7 +1562,7 @@ class TestAppLifeCycle(CalvinSecureTestBase):
             try :
                 app = request_handler.get_application(runtime, d.app_id)
             except Exception as e:
-                msg = str(e.message)
+                msg = str(str(e))
                 if msg.startswith("404"):
                     return True
             return app is None
@@ -1627,7 +1627,7 @@ class TestAppLifeCycle(CalvinSecureTestBase):
             try :
                 app = request_handler.get_application(runtime, d.app_id)
             except Exception as e:
-                msg = str(e.message)
+                msg = str(str(e))
                 if msg.startswith("404"):
                     return True
             return app is None
@@ -4382,7 +4382,7 @@ def migrate(source, dest, actor):
     wait_for_migration(dest, [actor])
 
 @pytest.mark.skipif(
-    calvinconfig.get().get("testing","proxy_storage") != 1 and 
+    calvinconfig.get().get("testing","proxy_storage") != 1 and
     calvinconfig.get().get("testing","force_replication") != 1,
     reason="Will fail on some systems with DHT")
 #@pytest.mark.essential
