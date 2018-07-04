@@ -62,6 +62,7 @@ class LineJoin(Actor):
     @stateguard(lambda self: self.text is None)
     @condition(['line'], [])
     def append(self, token):
+        token = token.decode('UTF-8')
         self.lines.append(token)
 
     action_priority = (produce, append, )
