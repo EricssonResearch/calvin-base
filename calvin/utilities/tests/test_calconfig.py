@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import print_function
 import unittest
 import tempfile
 import os
@@ -29,12 +30,12 @@ class TestBase(unittest.TestCase):
         f, self.filepath = tempfile.mkstemp()
         os.unlink(self.filepath)
         self._env = os.environ
-        print "hej"
+        print("hej")
 
     def tearDown(self):
         if self.filepath and os.path.exists(self.filepath):
             os.unlink(self.filepath)
-        print "da"
+        print("da")
         os.environ = self._env
 
 

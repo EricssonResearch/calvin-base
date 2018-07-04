@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import print_function
 import pytest
 import sys
 import os
@@ -191,7 +192,7 @@ class TestCalvinNetwork(object):
         net1_port = self._get_port(1)
         self._get_network(0).join(["calvinip://127.0.0.1:%s" % net1_port], cb)
         b = yield d
-        print b[1]
+        print(b[1])
         assert b[1]['status']
 
         yield self._stop_servers()
@@ -204,7 +205,7 @@ class TestCalvinNetwork(object):
         net1_port = self._get_port(1)
         self._get_network(0).join(["calvinip://127.0.0.1:%s" % net1_port], cb)
         b = yield d
-        print b[1]
+        print(b[1])
         assert b[1]['status']
 
         self._get_network(0).link_get(b[1]['peer_node_id']).close()
@@ -225,7 +226,7 @@ class TestCalvinNetwork(object):
         net1_port = self._get_port(1)
         self._get_network(0).join(["calvinip://127.0.0.1:%s" % net1_port], cb)
         b = yield d
-        print b[1]
+        print(b[1])
         assert b[1]['status']
 
         self._get_network(0).link_get(b[1]['peer_node_id']).transport._transport._proto.transport.abortConnection()
@@ -246,7 +247,7 @@ class TestCalvinNetwork(object):
         #network1.join(["calvinip://127.0.0.1:%s" % net2_port], cb)
         self._get_network(0).join(["calvinip://127.0.0.1:12345"], cb)
         b = yield d
-        print b[1]
+        print(b[1])
         assert not b[1]['status']
 
         yield self._stop_servers()
@@ -334,10 +335,10 @@ class TestCalvinNetwork(object):
         self._get_network(0).link_request(node_id, callback=cb)
         self._get_network(0).link_request(node_id, callback=cb2)
         b = yield d
-        print b
+        print(b)
         assert b[1]['status']
         b2 = yield d2
-        print b2
+        print(b2)
         assert b2[1]['status']
 
         assert self._get_network(0).link_get(b[0][0])
@@ -360,14 +361,14 @@ class TestCalvinNetwork(object):
         node_id = self._get_node_id(1)
         self._get_network(0).link_request(node_id, callback=cb)
         b = yield d
-        print b
+        print(b)
         assert b[1]['status']
 
         # All done, just a get from cache
         cb, d = create_callback()
         self._get_network(0).link_request(node_id, callback=cb)
         b = yield d
-        print b
+        print(b)
         assert b[1]['status']
 
         assert self._get_network(0).link_get(b[0][0])
@@ -390,7 +391,7 @@ class TestCalvinNetwork(object):
         node_id = self._get_node_id(1)
         self._get_network(0).link_request(node_id, callback=cb)
         b = yield d
-        print b
+        print(b)
         assert b[1]['status']
 
         self._get_network(0).link_get(b[0][0]).close()
@@ -404,7 +405,7 @@ class TestCalvinNetwork(object):
         cb, d = create_callback()
         self._get_network(0).link_request(node_id, callback=cb)
         b = yield d
-        print b
+        print(b)
         assert b[1]['status']
 
         assert self._get_network(0).link_get(b[0][0])
@@ -427,7 +428,7 @@ class TestCalvinNetwork(object):
         node_id = self._get_node_id(1)
         self._get_network(0).link_request(node_id, callback=cb)
         b = yield d
-        print b
+        print(b)
         assert b[1]['status']
 
         assert self._get_network(0).link_get(b[0][0])
@@ -446,7 +447,7 @@ class TestCalvinNetwork(object):
         self._get_network(0)._peer_cache[b[0][0]]['timestamp'] = time.time() - 30*60
         self._get_network(0).link_request(node_id, callback=cb)
         b = yield d
-        print b
+        print(b)
         assert b[1]['status']
 
         assert self._get_network(0).link_get(b[0][0])
@@ -469,7 +470,7 @@ class TestCalvinNetwork(object):
         node_id = self._get_node_id(1)
         self._get_network(0).link_request(node_id, callback=cb)
         b = yield d
-        print b
+        print(b)
         assert b[1]['status']
 
         assert self._get_network(0).link_get(b[0][0])
@@ -490,10 +491,10 @@ class TestCalvinNetwork(object):
         self._get_network(0).link_request(node_id, callback=cb)
         self._get_network(0).link_request(node_id, callback=cb2)
         b = yield d
-        print b
+        print(b)
         assert b[1]['status']
         b = yield d2
-        print b
+        print(b)
         assert b[1]['status']
 
         assert self._get_network(0).link_get(b[0][0])
@@ -516,7 +517,7 @@ class TestCalvinNetwork(object):
         node_id = self._get_node_id(1)
         self._get_network(0).link_request(node_id, callback=cb)
         b = yield d
-        print b
+        print(b)
         assert b[1]['status']
 
         assert self._get_network(0).link_get(b[0][0])
@@ -542,10 +543,10 @@ class TestCalvinNetwork(object):
 
         # Should fail cache is new but addr is wrong
         b = yield d
-        print b
+        print(b)
         assert not b[1]['status']
         b = yield d2
-        print b
+        print(b)
         assert not b[1]['status']
 
         yield self._stop_servers()
@@ -559,7 +560,7 @@ class TestCalvinNetwork(object):
         node_id = self._get_node_id(1)
         self._get_network(0).link_request(node_id, callback=cb)
         b = yield d
-        print b
+        print(b)
         assert b[1]['status']
 
         assert self._get_network(0).link_get(b[0][0])
@@ -587,10 +588,10 @@ class TestCalvinNetwork(object):
 
         # Should fail cache is new but addr is wrong
         b = yield d
-        print b
+        print(b)
         assert not b[1]['status']
         b = yield d2
-        print b
+        print(b)
         assert not b[1]['status']
 
         yield self._stop_servers()
@@ -604,7 +605,7 @@ class TestCalvinNetwork(object):
         node_id = self._get_node_id(1)
         self._get_network(0).link_request(node_id, callback=cb)
         b = yield d
-        print b
+        print(b)
         assert b[1]['status']
 
         assert self._get_network(0).link_get(b[0][0])
@@ -633,10 +634,10 @@ class TestCalvinNetwork(object):
 
         # Should fail cache is new but addr is wrong
         b = yield d
-        print b[1]
+        print(b[1])
         assert b[1]['status']
         b = yield d2
-        print b[1]
+        print(b[1])
         assert b[1]['status']
 
         yield self._stop_servers()
@@ -652,10 +653,10 @@ class TestCalvinNetwork(object):
         self._get_network(0).link_request(node_id, callback=cb)
         self._get_network(0).link_request(node_id, callback=cb2)
         b = yield d
-        print b[1]
+        print(b[1])
         assert b[1]['status']
         b2 = yield d2
-        print b2[1]
+        print(b2[1])
         assert b2[1]['status']
 
         assert self._get_network(0).link_get(b[0][0])

@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import print_function
 from calvin.Tools.cscompiler import compile_file
 import unittest
 import json
@@ -33,7 +34,7 @@ def _read_file(file):
             text = str(source.read())
             # print type(text), type(unicode(text))
     except Exception as e:
-        print "Error: Could not read file: '%s'" % file
+        print("Error: Could not read file: '%s'" % file)
         raise e
     return text
 

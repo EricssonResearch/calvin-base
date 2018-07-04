@@ -14,8 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.runtime.south.calvinlib import base_calvinlib_object
+from __future__ import absolute_import
 import json
+from calvin.runtime.south.calvinlib import base_calvinlib_object
 
 class Json(base_calvinlib_object.BaseCalvinlibObject):
     """
@@ -25,13 +26,13 @@ class Json(base_calvinlib_object.BaseCalvinlibObject):
     init_schema = {
             "description": "setup json manipulation functions"
     }
-    
+
     tostring_schema = {
         "description": "convert json structure into string",
         "type": "object"
-        
+
     }
-    
+
     fromstring_schema = {
         "description": "convert string representation of json structure into structure",
         "type": "string"
@@ -39,7 +40,7 @@ class Json(base_calvinlib_object.BaseCalvinlibObject):
 
     def init(self):
         pass
-    
+
     def tostring(self, structure):
         return json.dumps(structure)
 

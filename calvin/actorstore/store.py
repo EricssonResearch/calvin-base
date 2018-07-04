@@ -14,6 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import print_function
+from __future__ import absolute_import
 import os
 import glob
 import imp
@@ -530,7 +532,7 @@ class GlobalStore(ActorStore):
                 desc['component'] = json.loads(mess)
             self.node.storage.set('actor_type-', hash, desc, None)
         else:
-            print "global store index %s -> %s" %(signature, hash)
+            print("global store index %s -> %s" %(signature, hash))
 
     def export(self):
         self.qualified_actor_list = []
@@ -637,7 +639,7 @@ class GlobalStore(ActorStore):
         filtered_actor_type_iter.set_name("global_lookup")
         return filtered_actor_type_iter
 
-from docobject import ErrorDoc, ModuleDoc, ComponentDoc, ActorDoc
+from .docobject import ErrorDoc, ModuleDoc, ComponentDoc, ActorDoc
 
 class DocumentationStore(ActorStore):
     """Interface to documentation"""
@@ -773,18 +775,18 @@ if __name__ == '__main__':
         return l + actors
 
     def list_actors():
-        print "Actors:"
+        print("Actors:")
         l = gather_actors('')
         for a in l:
-            print "  ", a
+            print("  ", a)
 
     def list_actors_with_default_args():
         l = gather_actors('')
         # bad_args = [x for x in l if not 'args' in d.metadata(x)]
         with_defaults = [x for x in l if 'args' in d.metadata(x) and d.metadata(x)['args']['optional']]
-        print "With default params:"
+        print("With default params:")
         for a in with_defaults:
-            print "  ", a, ":", d.metadata(a)['args']['optional'].keys()
+            print("  ", a, ":", d.metadata(a)['args']['optional'].keys())
 
     list_actors()
     list_actors_with_default_args()

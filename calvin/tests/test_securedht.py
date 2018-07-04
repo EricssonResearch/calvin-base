@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import print_function
 import unittest
 import time
 import shutil
@@ -87,7 +88,7 @@ class TestSecurity(unittest.TestCase):
         try:
             shutil.rmtree(credentials_testdir)
         except Exception as err:
-            print "Failed to remove old tesdir, err={}".format(err)
+            print("Failed to remove old tesdir, err={}".format(err))
             pass
         helpers.sign_files_for_security_tests(credentials_testdir)
         runtimes = helpers.create_CA_and_generate_runtime_certs(domain_name, credentials_testdir, NBR_OF_RUNTIMES)

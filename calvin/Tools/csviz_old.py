@@ -16,6 +16,7 @@
 # limitations under the License.
 
 
+from __future__ import print_function
 import sys
 import textwrap
 import argparse
@@ -236,7 +237,7 @@ def main():
             res = visualize_script(args.script)
         print(res)
     except Exception as e:
-        print e
+        print(e)
         exit_val = 1
 
 if __name__ == '__main__':

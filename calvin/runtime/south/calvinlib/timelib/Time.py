@@ -14,10 +14,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.runtime.south.calvinlib import base_calvinlib_object
-from calvin.utilities.calvinlogger import get_logger
+from __future__ import absolute_import
 import time
 import datetime
+from calvin.runtime.south.calvinlib import base_calvinlib_object
+from calvin.utilities.calvinlogger import get_logger
 
 
 _log = get_logger(__name__)
@@ -54,20 +55,20 @@ class Time(base_calvinlib_object.BaseCalvinlibObject):
 
     def init(self):
         pass
-    
+
     def timestampms(self):
         return int(time.time()*1000)
-        
+
     def timestamp(self):
         return int(time.time())
-    
+
     def timestampms_to_timestring(self, timestampms):
         timestamp = timestampms/1000.0
         dt = datetime.fromtimestamp(timestamp)
         res = dt.strftime("%Y-%m-%d %H:%M:%S.%f")
         return res
-        
-        
+
+
     def timestring_to_timestampms(self, timestr):
         """
             Convert time of the form "2017-12-05 11:07:23[.000000]" to epoch timestamp (in ms)
@@ -75,7 +76,7 @@ class Time(base_calvinlib_object.BaseCalvinlibObject):
         try:
             if "." in timestr:
                 t = time.strptime(timestr, "%Y-%m-%d %H:%M:%S.%f")
-                
+
             else :
                 t = time.strptime(timestr, "%Y-%m-%d %H:%M:%S")
             timestampms = 1000*time.mktime(t)

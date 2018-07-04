@@ -14,9 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import absolute_import
 from calvin.runtime.north.plugins.coders.messages import message_coder_factory
 from calvin.utilities import calvinconfig
-import negotiator_base
+from . import negotiator_base
 
 _conf = calvinconfig.get()
 

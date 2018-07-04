@@ -1,3 +1,4 @@
+from __future__ import print_function
 from twisted.web import server, resource
 from twisted.internet import reactor
 import json
@@ -53,7 +54,7 @@ class EventSource(object):
         self._tcp_port = reactor.listenTCP(port, server.Site(self._eventsource))
 
     def stop(self):
-        print "FIXME: Implement STOP"
+        print("FIXME: Implement STOP")
 
     def broadcast(self, data):
         self._eventsource.broadcast(data)

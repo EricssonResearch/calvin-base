@@ -14,9 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import absolute_import
 import json
 from calvin.requests import calvinresponse
-from routes import handler
+from .routes import handler
 from calvin.runtime.north.proxyhandler import ProxyHandler
 from calvin.utilities.calvinlogger import get_logger
 

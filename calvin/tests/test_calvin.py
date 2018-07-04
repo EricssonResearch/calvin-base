@@ -15,6 +15,7 @@
 # limitations under the License.
 
 
+from __future__ import print_function
 import unittest
 import time
 import pytest
@@ -28,6 +29,7 @@ from calvin.Tools import deployer
 from calvin.utilities import calvinlogger
 from calvin.requests.request_handler import RequestHandler
 from . import helpers
+from functools import reduce
 
 _log = calvinlogger.get_logger(__name__)
 
@@ -346,8 +348,8 @@ class TestAdvancedConnectDisconnect(object):
                 break
             time.sleep(0.5)
 
-        print src_port_meta, snk_port_meta
-        print src_port_meta_dc, snk_port_meta_dc
+        print(src_port_meta, snk_port_meta)
+        print(src_port_meta_dc, snk_port_meta_dc)
 
         assert not src_port_meta_dc['peers']
         assert not snk_port_meta_dc['peers']
@@ -356,7 +358,7 @@ class TestAdvancedConnectDisconnect(object):
         request_handler.report(rt2, snk, kwargs={'active': True})
         # Wait for it to arrive
         actual = actual_tokens(rt2, snk, len(expected))
-        print actual
+        print(actual)
 
         port_state_dc = request_handler.report(rt2, snk, kwargs={'port': None})
 
@@ -404,15 +406,15 @@ class TestAdvancedConnectDisconnect(object):
                 break
             time.sleep(0.5)
 
-        print src_port_meta
-        print src_port_meta_dc
+        print(src_port_meta)
+        print(src_port_meta_dc)
 
         assert not src_port_meta_dc['peers']
 
         # Accept tokens and wait for tokens to arrive
         request_handler.report(rt2, snk, kwargs={'active': True})
         actual = actual_tokens(rt2, snk, len(expected))
-        print actual
+        print(actual)
 
         for i in range(10):
             snk_port_meta_dc = request_handler.get_port(rt2, snk, snk_port)
@@ -422,10 +424,10 @@ class TestAdvancedConnectDisconnect(object):
 
         port_state_dc = request_handler.report(rt2, snk, kwargs={'port': None})
 
-        print port_state
-        print port_state_dc
-        print snk_port_meta
-        print snk_port_meta_dc
+        print(port_state)
+        print(port_state_dc)
+        print(snk_port_meta)
+        print(snk_port_meta_dc)
 
         assert not port_state_dc['queue']['writers']
         assert not snk_port_meta_dc['peers']
@@ -1688,7 +1690,7 @@ class TestNullPorts(CalvinTestBase):
             join.token > snk.token
         """
         app_info, errors, warnings = self.compile_script(script, "testVoidActor")
-        print errors
+        print(errors)
         d = deployer.Deployer(self.rt1, app_info)
         deploy_app(d)
 
@@ -1711,7 +1713,7 @@ class TestNullPorts(CalvinTestBase):
             src.integer > snk.token
         """
         app_info, errors, warnings = self.compile_script(script, "testTerminatorActor")
-        print errors
+        print(errors)
         d = deployer.Deployer(self.rt1, app_info)
         deploy_app(d)
 
@@ -1739,7 +1741,7 @@ class TestCompare(CalvinTestBase):
             pred.result > snk.token
         """
         app_info, errors, warnings = self.compile_script(script, "testBadOp")
-        print errors
+        print(errors)
         d = deployer.Deployer(self.rt1, app_info)
         deploy_app(d)
 
@@ -1763,7 +1765,7 @@ class TestCompare(CalvinTestBase):
             pred.result > snk.token
         """
         app_info, errors, warnings = self.compile_script(script, "testEqual")
-        print errors
+        print(errors)
         d = deployer.Deployer(self.rt1, app_info)
         deploy_app(d)
 
@@ -1789,7 +1791,7 @@ class TestCompare(CalvinTestBase):
             pred.result > snk.token
         """
         app_info, errors, warnings = self.compile_script(script, "testGreaterThanOrEqual")
-        print errors
+        print(errors)
         d = deployer.Deployer(self.rt1, app_info)
         deploy_app(d)
 
@@ -1820,7 +1822,7 @@ class TestSelect(CalvinTestBase):
             route.case_false > term.void
         """
         app_info, errors, warnings = self.compile_script(script, "testTrue")
-        print errors
+        print(errors)
         d = deployer.Deployer(self.rt1, app_info)
         deploy_app(d)
 
@@ -1846,7 +1848,7 @@ class TestSelect(CalvinTestBase):
             route.case_false > snk.token
         """
         app_info, errors, warnings = self.compile_script(script, "testFalse")
-        print errors
+        print(errors)
         d = deployer.Deployer(self.rt1, app_info)
         deploy_app(d)
 
@@ -1874,7 +1876,7 @@ class TestSelect(CalvinTestBase):
             route.case_false > snk.token
         """
         app_info, errors, warnings = self.compile_script(script, "testBadSelect")
-        print errors
+        print(errors)
         d = deployer.Deployer(self.rt1, app_info)
         deploy_app(d)
 
@@ -1910,7 +1912,7 @@ class TestDeselect(CalvinTestBase):
             ds.data > snk.token
         """
         app_info, errors, warnings = self.compile_script(script, "testDeselectTrue")
-        print errors
+        print(errors)
         d = deployer.Deployer(self.rt1, app_info)
         deploy_app(d)
 
@@ -1942,7 +1944,7 @@ class TestDeselect(CalvinTestBase):
             ds.data > snk.token
         """
         app_info, errors, warnings = self.compile_script(script, "testDeselectFalse")
-        print errors
+        print(errors)
         d = deployer.Deployer(self.rt1, app_info)
         deploy_app(d)
 
@@ -1972,7 +1974,7 @@ class TestDeselect(CalvinTestBase):
             ds.data > snk.token
         """
         app_info, errors, warnings = self.compile_script(script, "testDeselectBadSelect")
-        print errors
+        print(errors)
         d = deployer.Deployer(self.rt1, app_info)
         deploy_app(d)
 
@@ -2004,7 +2006,7 @@ class TestLineJoin(CalvinTestBase):
         """ % (datafile, )
 
         app_info, errors, warnings = self.compile_script(script, "testBasicJoin")
-        print errors
+        print(errors)
 
         d = deployer.Deployer(self.rt1, app_info)
         deploy_app(d)
@@ -2037,7 +2039,7 @@ class TestRegex(CalvinTestBase):
             regex.no_match > term.void
         """
         app_info, errors, warnings = self.compile_script(script, "testRegexMatch")
-        print errors
+        print(errors)
         d = deployer.Deployer(self.rt1, app_info)
         deploy_app(d)
 
@@ -2065,7 +2067,7 @@ class TestRegex(CalvinTestBase):
             regex.match    > term.void
         """
         app_info, errors, warnings = self.compile_script(script, "testRegexNoMatch")
-        print errors
+        print(errors)
         d = deployer.Deployer(self.rt1, app_info)
         deploy_app(d)
 
@@ -2091,7 +2093,7 @@ class TestRegex(CalvinTestBase):
             regex.no_match > term.void
         """
         app_info, errors, warnings = self.compile_script(script, "testRegexCapture")
-        print errors
+        print(errors)
         d = deployer.Deployer(self.rt1, app_info)
         deploy_app(d)
 
@@ -2118,7 +2120,7 @@ class TestRegex(CalvinTestBase):
             regex.no_match > term.void
         """
         app_info, errors, warnings = self.compile_script(script, "testRegexMultiCapture")
-        print errors
+        print(errors)
         d = deployer.Deployer(self.rt1, app_info)
         deploy_app(d)
 
@@ -2145,7 +2147,7 @@ class TestRegex(CalvinTestBase):
             regex.match    > term.void
         """
         app_info, errors, warnings = self.compile_script(script, "testRegexCaptureNoMatch")
-        print errors
+        print(errors)
         d = deployer.Deployer(self.rt1, app_info)
         deploy_app(d)
 
@@ -2170,7 +2172,7 @@ class TestConstantAsArguments(CalvinTestBase):
             src.token > snk.token
         """
         app_info, errors, warnings = self.compile_script(script, "testConstant")
-        print errors
+        print(errors)
         d = deployer.Deployer(self.rt1, app_info)
         deploy_app(d)
 
@@ -2193,7 +2195,7 @@ class TestConstantAsArguments(CalvinTestBase):
             src.token > snk.token
         """
         app_info, errors, warnings = self.compile_script(script, "testConstantRecursive")
-        print errors
+        print(errors)
         d = deployer.Deployer(self.rt1, app_info)
         deploy_app(d)
 
@@ -2217,7 +2219,7 @@ class TestConstantOnPort(CalvinTestBase):
             42 > snk.token
         """
         app_info, errors, warnings = self.compile_script(script, "testLiteralOnPort")
-        print errors
+        print(errors)
         d = deployer.Deployer(self.rt1, app_info)
         deploy_app(d)
         time.sleep(.1)
@@ -2239,7 +2241,7 @@ class TestConstantOnPort(CalvinTestBase):
             FOO > snk.token
         """
         app_info, errors, warnings = self.compile_script(script, "testConstantOnPort")
-        print errors
+        print(errors)
         d = deployer.Deployer(self.rt1, app_info)
         deploy_app(d)
 
@@ -2261,7 +2263,7 @@ class TestConstantOnPort(CalvinTestBase):
             FOO > snk.token
         """
         app_info, errors, warnings = self.compile_script(script, "testConstantRecursiveOnPort")
-        print errors
+        print(errors)
         d = deployer.Deployer(self.rt1, app_info)
         deploy_app(d)
 
@@ -2291,7 +2293,7 @@ class TestConstantAndComponents(CalvinTestBase):
             src.out > snk.token
         """
         app_info, errors, warnings = self.compile_script(script, "testLiteralOnCompPort")
-        print errors
+        print(errors)
         d = deployer.Deployer(self.rt1, app_info)
         deploy_app(d)
 
@@ -2318,7 +2320,7 @@ class TestConstantAndComponents(CalvinTestBase):
             src.out > snk.token
         """
         app_info, errors, warnings = self.compile_script(script, "testConstantOnCompPort")
-        print errors
+        print(errors)
         d = deployer.Deployer(self.rt1, app_info)
         deploy_app(d)
 
@@ -2345,7 +2347,7 @@ class TestConstantAndComponents(CalvinTestBase):
             src.out > snk.token
         """
         app_info, errors, warnings = self.compile_script(script, "testStringConstantOnCompPort")
-        print errors
+        print(errors)
         d = deployer.Deployer(self.rt1, app_info)
         deploy_app(d)
 
@@ -2637,7 +2639,7 @@ class TestPortProperties(CalvinTestBase):
             src.integer > snk2.token
         """
         app_info, errors, warnings = self.compile_script(script, "testScript")
-        print errors
+        print(errors)
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
 
@@ -2675,8 +2677,8 @@ class TestPortProperties(CalvinTestBase):
             src.seq > snk2.token
         """
         app_info, errors, warnings = self.compile_script(script, "testScript")
-        print errors
-        print app_info
+        print(errors)
+        print(app_info)
         assert 'testScript:src:compsrc' in app_info['port_properties']
         assert 'port' in app_info['port_properties']['testScript:src:compsrc'][0]
         assert (app_info['port_properties']['testScript:src:compsrc'][0]['port'] ==
@@ -2721,8 +2723,8 @@ class TestPortProperties(CalvinTestBase):
             src.integer > snk2.seq
         """
         app_info, errors, warnings = self.compile_script(script, "testScript")
-        print errors
-        print app_info
+        print(errors)
+        print(app_info)
         assert 'testScript:src' in app_info['port_properties']
         assert 'port' in app_info['port_properties']['testScript:src'][0]
         assert (app_info['port_properties']['testScript:src'][0]['port'] ==
@@ -2775,8 +2777,8 @@ class TestPortProperties(CalvinTestBase):
             src.seq > snk2.token
         """
         app_info, errors, warnings = self.compile_script(script, "testScript")
-        print errors
-        print app_info
+        print(errors)
+        print(app_info)
         assert 'testScript:src:compsrc' in app_info['port_properties']
         assert 'port' in app_info['port_properties']['testScript:src:compsrc'][0]
         assert (app_info['port_properties']['testScript:src:compsrc'][0]['port'] ==
@@ -2820,8 +2822,8 @@ class TestPortProperties(CalvinTestBase):
             src.integer > snk2.seq
         """
         app_info, errors, warnings = self.compile_script(script, "testScript")
-        print errors
-        print app_info
+        print(errors)
+        print(app_info)
         assert 'testScript:src' in app_info['port_properties']
         assert 'port' in app_info['port_properties']['testScript:src'][0]
         assert (app_info['port_properties']['testScript:src'][0]['port'] ==
@@ -2875,8 +2877,8 @@ class TestPortProperties(CalvinTestBase):
             src.seq > snk2.token
         """
         app_info, errors, warnings = self.compile_script(script, "testScript")
-        print errors
-        print app_info
+        print(errors)
+        print(app_info)
         assert 'testScript:src:compsrc' in app_info['port_properties']
         assert 'port' in app_info['port_properties']['testScript:src:compsrc'][0]
         assert (app_info['port_properties']['testScript:src:compsrc'][0]['port'] ==
@@ -2929,8 +2931,8 @@ class TestPortProperties(CalvinTestBase):
             src.integer > snk2.seq
         """
         app_info, errors, warnings = self.compile_script(script, "testScript")
-        print errors
-        print app_info
+        print(errors)
+        print(app_info)
         assert 'testScript:src' in app_info['port_properties']
         assert 'port' in app_info['port_properties']['testScript:src'][0]
         assert (app_info['port_properties']['testScript:src'][0]['port'] ==
@@ -2974,8 +2976,8 @@ class TestPortProperties(CalvinTestBase):
             src.seq > snk2.token
         """
         app_info, errors, warnings = self.compile_script(script, "testScript")
-        print errors
-        print app_info
+        print(errors)
+        print(app_info)
         assert 'testScript:src:compsrc' in app_info['port_properties']
         assert 'port' in app_info['port_properties']['testScript:src:compsrc'][0]
         assert (app_info['port_properties']['testScript:src:compsrc'][0]['port'] ==
@@ -3021,8 +3023,8 @@ class TestPortProperties(CalvinTestBase):
             src.seq > snk2.token
         """
         app_info, errors, warnings = self.compile_script(script, "testScript")
-        print errors
-        print app_info
+        print(errors)
+        print(app_info)
         assert len(errors) == 0
         assert 'testScript:src:compsrc' in app_info['port_properties']
         assert 'port' in app_info['port_properties']['testScript:src:compsrc'][0]
@@ -3070,8 +3072,8 @@ class TestPortProperties(CalvinTestBase):
             src.seq > snk2.token
         """
         app_info, errors, warnings = self.compile_script(script, "testScript")
-        print errors
-        print app_info
+        print(errors)
+        print(app_info)
         assert len(errors) == 2
         assert all([e['reason'] == "Can't handle conflicting properties without common alternatives" for e in errors])
         assert all([e['line'] in [5, 11] for e in errors])
@@ -3093,8 +3095,8 @@ class TestPortProperties(CalvinTestBase):
             src.integer > snk2.seq
         """
         app_info, errors, warnings = self.compile_script(script, "testScript")
-        print errors
-        print app_info
+        print(errors)
+        print(app_info)
         assert 'testScript:src' in app_info['port_properties']
         assert 'port' in app_info['port_properties']['testScript:src'][0]
         assert (app_info['port_properties']['testScript:src'][0]['port'] ==
@@ -3142,8 +3144,8 @@ class TestPortProperties(CalvinTestBase):
             src.seq > snk2.token
         """
         app_info, errors, warnings = self.compile_script(script, "testScript")
-        print errors
-        print app_info
+        print(errors)
+        print(app_info)
         assert 'testScript:src:compsrc' in app_info['port_properties']
         assert 'port' in app_info['port_properties']['testScript:src:compsrc'][0]
         assert (app_info['port_properties']['testScript:src:compsrc'][0]['port'] ==
@@ -3200,8 +3202,8 @@ class TestCollectPort(CalvinTestBase):
         """
 
         app_info, errors, warnings = self.compile_script(script, "testCollectPort")
-        print errors
-        print app_info
+        print(errors)
+        print(app_info)
         assert len(errors) == 0
         assert 'testCollectPort:snk' in app_info['port_properties']
         assert 'port' in app_info['port_properties']['testCollectPort:snk'][0]
@@ -3247,8 +3249,8 @@ class TestCollectPort(CalvinTestBase):
         """
 
         app_info, errors, warnings = self.compile_script(script, "testCollectPort")
-        print errors
-        print app_info
+        print(errors)
+        print(app_info)
         assert len(errors) == 0
         assert (app_info['port_properties']['testCollectPort:duo:id1'][0]['port'] ==
                 'token')
@@ -3295,8 +3297,8 @@ class TestCollectPort(CalvinTestBase):
         """
 
         app_info, errors, warnings = self.compile_script(script, "testCollectPort")
-        print errors
-        print app_info
+        print(errors)
+        print(app_info)
         assert len(errors) == 0
         assert (app_info['port_properties']['testCollectPort:snk1'][0]['port'] ==
                 'token')
@@ -3330,8 +3332,8 @@ class TestCollectPort(CalvinTestBase):
         """
 
         app_info, errors, warnings = self.compile_script(script, "testCollectPort")
-        print errors
-        print app_info
+        print(errors)
+        print(app_info)
         assert len(errors) == 0
         assert (app_info['port_properties']['testCollectPort:snk'][0]['port'] ==
                 'token')
@@ -3364,8 +3366,8 @@ class TestPortRouting(CalvinTestBase):
         """
 
         app_info, errors, warnings = self.compile_script(script, "testCollectPort")
-        print errors
-        print app_info
+        print(errors)
+        print(app_info)
         assert len(errors) == 0
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
@@ -3378,7 +3380,7 @@ class TestPortRouting(CalvinTestBase):
             actuals.append(wait_for_tokens(fr, snk, len(actuals[i]) + 10))
             self.migrate(fr, to, snk)
 
-        print actuals
+        print(actuals)
 
         high = [x for x in actuals[-1] if x > 999]
         low = [x for x in actuals[-1] if x < 999]
@@ -3398,8 +3400,8 @@ class TestPortRouting(CalvinTestBase):
         """
 
         app_info, errors, warnings = self.compile_script(script, "testCollectPort")
-        print errors
-        print app_info
+        print(errors)
+        print(app_info)
         assert len(errors) == 0
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
@@ -3414,7 +3416,7 @@ class TestPortRouting(CalvinTestBase):
             actuals.append(wait_for_tokens(fr, snk, len(actuals[i]) + 10))
             self.migrate(fr, to, snk)
 
-        print actuals
+        print(actuals)
 
         high = [x for x in actuals[-1] if x > 999]
         low = [x for x in actuals[-1] if x < 999]
@@ -3434,8 +3436,8 @@ class TestPortRouting(CalvinTestBase):
         """
 
         app_info, errors, warnings = self.compile_script(script, "testCollectPort")
-        print errors
-        print app_info
+        print(errors)
+        print(app_info)
         assert len(errors) == 0
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
@@ -3452,7 +3454,7 @@ class TestPortRouting(CalvinTestBase):
             actuals.append(wait_for_tokens(fr, snk, len(actuals[i]) + 10))
             self.migrate(fr, to, snk)
 
-        print actuals
+        print(actuals)
 
         high = [x for x in actuals[-1] if x > 999]
         low = [x for x in actuals[-1] if x < 999]
@@ -3473,8 +3475,8 @@ class TestPortRouting(CalvinTestBase):
         """
 
         app_info, errors, warnings = self.compile_script(script, "testCollectPort")
-        print errors
-        print app_info
+        print(errors)
+        print(app_info)
         assert len(errors) == 0
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
@@ -3487,7 +3489,7 @@ class TestPortRouting(CalvinTestBase):
             actuals.append(wait_for_tokens(fr, snk, len(actuals[i]) + 10))
             self.migrate(fr, to, snk)
 
-        print actuals
+        print(actuals)
 
         assert all([len(t)==1 for t in actuals[-1]])
         # Check that src_one tag is there also after last migration
@@ -3515,8 +3517,8 @@ class TestPortRouting(CalvinTestBase):
         """
 
         app_info, errors, warnings = self.compile_script(script, "testCollectPort")
-        print errors
-        print app_info
+        print(errors)
+        print(app_info)
         assert len(errors) == 0
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
@@ -3532,7 +3534,7 @@ class TestPortRouting(CalvinTestBase):
             assert len(actuals[i]) < len(actuals[i+1])
             self.migrate(fr, to, snk)
 
-        print actuals
+        print(actuals)
 
         assert all([len(t)==1 for t in actuals[-1]])
         # Check that src_one tag is there also after last migration
@@ -3560,8 +3562,8 @@ class TestPortRouting(CalvinTestBase):
         """
 
         app_info, errors, warnings = self.compile_script(script, "testCollectPort")
-        print errors
-        print app_info
+        print(errors)
+        print(app_info)
         assert len(errors) == 0
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
@@ -3578,7 +3580,7 @@ class TestPortRouting(CalvinTestBase):
             actuals.append(wait_for_tokens(fr, snk, len(actuals[i]) + 10))
             self.migrate(fr, to, snk)
 
-        print actuals
+        print(actuals)
 
         assert all([len(t)==1 for t in actuals[-1]])
         # Check that src_one tag is there also after last migration
@@ -3607,8 +3609,8 @@ class TestPortRouting(CalvinTestBase):
         """
 
         app_info, errors, warnings = self.compile_script(script, "testCollectPort")
-        print errors
-        print app_info
+        print(errors)
+        print(app_info)
         assert len(errors) == 0
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
@@ -3621,7 +3623,7 @@ class TestPortRouting(CalvinTestBase):
             actuals.append(wait_for_tokens(fr, snk, len(actuals[i]) + 10))
             self.migrate(fr, to, snk)
 
-        print actuals
+        print(actuals)
 
         assert all([len(t)==2 for t in actuals[-1]])
         # Check that src_one tag is there also after last migration
@@ -3649,8 +3651,8 @@ class TestPortRouting(CalvinTestBase):
         """
 
         app_info, errors, warnings = self.compile_script(script, "testCollectPort")
-        print errors
-        print app_info
+        print(errors)
+        print(app_info)
         assert len(errors) == 0
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
@@ -3663,7 +3665,7 @@ class TestPortRouting(CalvinTestBase):
             actuals.append(wait_for_tokens(fr, snk, len(actuals[i]) + 10))
             self.migrate(fr, to, snk)
 
-        print actuals
+        print(actuals)
 
         assert all([len(t) in [1, 2] for t in actuals[-1]])
         # Check that src_one tag is there also after last migration
@@ -3695,8 +3697,8 @@ class TestPortRouting(CalvinTestBase):
         """
 
         app_info, errors, warnings = self.compile_script(script, "testCollectPort")
-        print errors
-        print app_info
+        print(errors)
+        print(app_info)
         assert len(errors) == 0
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
@@ -3705,7 +3707,7 @@ class TestPortRouting(CalvinTestBase):
         exceptions = wait_for_tokens(self.rt1, exptsnk, 10)
         actual = request_handler.report(self.rt1, snk)
         assert len(actual) >= 3 * 10
-        print actual, exceptions
+        print(actual, exceptions)
 
         self.assert_lists_equal(exceptions, [{u'src_one': u'End of stream'}]*10)
         high = [x['src_two'] for x in actual if isinstance(x, dict) and 'src_two' in x]
@@ -3733,8 +3735,8 @@ class TestPortRouting(CalvinTestBase):
         """
 
         app_info, errors, warnings = self.compile_script(script, "testCollectPort")
-        print errors
-        print app_info
+        print(errors)
+        print(app_info)
         assert len(errors) == 0
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
@@ -3743,7 +3745,7 @@ class TestPortRouting(CalvinTestBase):
         exceptions = wait_for_tokens(self.rt1, exptsnk, 10)
         actual = request_handler.report(self.rt1, snk)
         assert len(actual) >= 3 * 10
-        print actual, exceptions
+        print(actual, exceptions)
 
         self.assert_lists_equal(exceptions, [{u'src_one': u'End of stream'}]*10)
         high = [x['src_two'] for x in actual if isinstance(x, dict) and 'src_two' in x]
@@ -3771,8 +3773,8 @@ class TestPortRouting(CalvinTestBase):
         """
 
         app_info, errors, warnings = self.compile_script(script, "testCollectPort")
-        print errors
-        print app_info
+        print(errors)
+        print(app_info)
         assert len(errors) == 0
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
@@ -3781,7 +3783,7 @@ class TestPortRouting(CalvinTestBase):
         exceptions = wait_for_tokens(self.rt1, exptsnk, 10)
         actual = request_handler.report(self.rt1, snk)
         assert len(actual) >= 3 * 10
-        print actual, exceptions
+        print(actual, exceptions)
 
         self.assert_lists_equal(exceptions, [{u'src_one': u'End of stream'}]*10)
         high = [x['src_two'] for x in actual if isinstance(x, dict) and 'src_two' in x]
@@ -3808,8 +3810,8 @@ class TestPortRouting(CalvinTestBase):
         """
 
         app_info, errors, warnings = self.compile_script(script, "testRRPort")
-        print errors
-        print app_info
+        print(errors)
+        print(app_info)
         assert len(errors) == 0
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
@@ -3832,7 +3834,7 @@ class TestPortRouting(CalvinTestBase):
             self.migrate(fr, to, snk1)
             self.migrate(fr, to, snk2)
 
-        print actuals1, actuals2
+        print(actuals1, actuals2)
 
         # Round robin lowest peer id get first token
         start = 1 if snk1_token_id < snk2_token_id else 2
@@ -3854,8 +3856,8 @@ class TestPortRouting(CalvinTestBase):
         """
 
         app_info, errors, warnings = self.compile_script(script, "testRRPort")
-        print errors
-        print app_info
+        print(errors)
+        print(app_info)
         assert len(errors) == 0
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
@@ -3879,7 +3881,7 @@ class TestPortRouting(CalvinTestBase):
             self.migrate(fr, to, snk1)
             self.migrate(to, fr, snk2)
 
-        print actuals1, actuals2
+        print(actuals1, actuals2)
 
         # Round robin lowest peer id get first token
         start = 1 if snk1_token_id < snk2_token_id else 2
@@ -3901,8 +3903,8 @@ class TestPortRouting(CalvinTestBase):
         """
 
         app_info, errors, warnings = self.compile_script(script, "testRRPort")
-        print errors
-        print app_info
+        print(errors)
+        print(app_info)
         assert len(errors) == 0
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
@@ -3927,7 +3929,7 @@ class TestPortRouting(CalvinTestBase):
             self.migrate(fr, to, snk1)
             self.migrate(to, fr, snk2)
 
-        print actuals1, actuals2
+        print(actuals1, actuals2)
 
         # Round robin lowest peer id get first token
         start = 1 if snk1_token_id < snk2_token_id else 2
@@ -3949,8 +3951,8 @@ class TestPortRouting(CalvinTestBase):
         """
 
         app_info, errors, warnings = self.compile_script(script, "testRRPort")
-        print errors
-        print app_info
+        print(errors)
+        print(app_info)
         assert len(errors) == 0
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
@@ -3969,7 +3971,7 @@ class TestPortRouting(CalvinTestBase):
             self.migrate(fr, to, snk1)
             self.migrate(fr, to, snk2)
 
-        print actuals1, actuals2
+        print(actuals1, actuals2)
 
         self.assert_lists_equal(list(range(1, 200)), sorted(actuals1[-1] + actuals2[-1])[:-4], min_length=40)
 
@@ -3987,8 +3989,8 @@ class TestPortRouting(CalvinTestBase):
         """
 
         app_info, errors, warnings = self.compile_script(script, "testRRPort")
-        print errors
-        print app_info
+        print(errors)
+        print(app_info)
         assert len(errors) == 0
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
@@ -4008,7 +4010,7 @@ class TestPortRouting(CalvinTestBase):
             self.migrate(fr, to, snk1)
             self.migrate(to, fr, snk2)
 
-        print actuals1, actuals2
+        print(actuals1, actuals2)
 
         self.assert_lists_equal(list(range(1, 200)), sorted(actuals1[-1] + actuals2[-1])[:-4], min_length=40)
 
@@ -4026,8 +4028,8 @@ class TestPortRouting(CalvinTestBase):
         """
 
         app_info, errors, warnings = self.compile_script(script, "testRRPort")
-        print errors
-        print app_info
+        print(errors)
+        print(app_info)
         assert len(errors) == 0
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
@@ -4048,7 +4050,7 @@ class TestPortRouting(CalvinTestBase):
             self.migrate(fr, to, snk1)
             self.migrate(to, fr, snk2)
 
-        print actuals1, actuals2
+        print(actuals1, actuals2)
 
         self.assert_lists_equal(list(range(1, 200)), sorted(actuals1[-1] + actuals2[-1])[:-4], min_length=40)
 
@@ -4072,8 +4074,8 @@ class TestPortRouting(CalvinTestBase):
         """
 
         app_info, errors, warnings = self.compile_script(script, "testActorPortProperty")
-        print errors
-        print app_info
+        print(errors)
+        print(app_info)
         assert len(errors) == 0
         d = deployer.Deployer(self.rt1, app_info)
         d.deploy()
@@ -4086,7 +4088,7 @@ class TestPortRouting(CalvinTestBase):
             actuals.append(wait_for_tokens(fr, snk, i*10))
             self.migrate(fr, to, snk)
 
-        print actuals
+        print(actuals)
 
         high = [x for x in actuals[-1] if x > 999]
         low = [x for x in actuals[-1] if x < 999]
@@ -4111,7 +4113,7 @@ class TestDeployScript(CalvinTestBase):
         rt = self.rt1
         response = helpers.deploy_script(request_handler, "simple", script, rt)
 
-        print response
+        print(response)
 
         src = response['actor_map']['simple:src']
         snk = response['actor_map']['simple:snk']
@@ -4245,7 +4247,7 @@ class TestPortmappingScript(CalvinTestBase):
         tags = [p[0] for p in pairs]
         values = [int(p[1]) for p in pairs]
         assert (set(values) == set(range(1, len(actual)+1)))
-        print tags
+        print(tags)
         assert set(tags) == set(["tag1", "tag2", "tag3"])
 
     def testMapDispatchDict(self):

@@ -15,11 +15,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import absolute_import
 import os
 import sys
 import json
 import argparse
-from cspreprocess import Preprocessor
+from .cspreprocess import Preprocessor
 from calvin.csparser.cscompile import compile_script, appname_from_filename
 from calvin.csparser.dscodegen import calvin_dscodegen
 from calvin.csparser.parser import printable_ir

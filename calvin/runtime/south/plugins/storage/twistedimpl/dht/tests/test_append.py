@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import print_function
 import pytest
 import sys
 import os
@@ -41,7 +42,7 @@ class KNet(object):
         self.boot_strap = None
 
         if not reactor.running:
-            print "Starting reactor only once"
+            print("Starting reactor only once")
             self.reactor_thread = Thread(target=reactor.run, args=(False,)).start()
 
         for a in xrange(number):
@@ -79,7 +80,7 @@ class ServerApp(object):
         self.kserver.bootstrap(boot_strap)
 
         self.port = threads.blockingCallFromThread(reactor, reactor.listenUDP, port, self.kserver.protocol)
-        print "Starting server:", self.port
+        print("Starting server:", self.port)
 
         time.sleep(.2)
 
@@ -167,7 +168,7 @@ def cleanup(request):
     def fin():
         reactor.callFromThread(reactor.stop)
     request.addfinalizer(fin)
-    print "hejsan"
+    print("hejsan")
 
 @pytest.mark.slow
 class TestKAppend(object):

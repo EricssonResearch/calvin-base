@@ -15,6 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import print_function
 import sys
 import argparse
 import os
@@ -414,7 +415,7 @@ def manage_ca_export(args):
         raise Exception("No out path supplied")
     ca = certificate_authority.CA(domain=args.domain, security_dir=args.dir, readonly=True)
     out_file = ca.export_ca_cert(args.path)
-    print "exported to:" + out_file
+    print("exported to:" + out_file)
 
 def manage_ca_get_enrollment_password(args):
     if args.domain and args.node_name:
@@ -424,7 +425,7 @@ def manage_ca_get_enrollment_password(args):
             raise Exception("supply node name")
         ca = certificate_authority.CA(domain=args.domain, security_dir=args.dir, force=args.force)
         enrollment_password = ca.cert_enrollment_add_new_runtime(args.node_name)
-        print "enrollment_password_start<{}>enrollment_password_stop".format(enrollment_password)
+        print("enrollment_password_start<{}>enrollment_password_stop".format(enrollment_password))
 
 def manage_ca_sign_csr(args):
     if not args.domain:
@@ -436,7 +437,7 @@ def manage_ca_sign_csr(args):
         raise Exception("The CSR path supplied is not an existing file")
     ca = certificate_authority.CA(domain=args.domain, security_dir=args.dir, force=args.force)
     cert_path = ca.sign_csr(args.CSR)
-    print "signed_cert_path_start<{}>signed_cert_path_stop".format(cert_path)
+    print("signed_cert_path_start<{}>signed_cert_path_stop".format(cert_path))
 
 ######################
 # manage Code Signer
@@ -459,7 +460,7 @@ def manage_cs_export(args):
         raise Exception("No out path supplied")
     cs = code_signer.CS(organization=args.name, commonName=args.name+"CS", security_dir=args.dir, force=args.force)
     out_file = cs.export_cs_cert(args.path)
-    print "exported to:" + out_file
+    print("exported to:" + out_file)
 
 def manage_cs_sign(args):
     if not args.name:
@@ -490,7 +491,7 @@ def manage_cs_sign(args):
         except Exception as e:
             exceptions.append(e)
     for e in exceptions:
-        print "Error {}".format(e)
+        print("Error {}".format(e))
 
 
 
@@ -512,7 +513,7 @@ def manage_runtime_create(args):
     node_name=attributes.get_node_name_as_str()
     nodeid = calvinuuid.uuid("NODE")
     rt_cred = runtime_credentials.RuntimeCredentials(node_name, domain=args.domain, security_dir=args.dir, nodeid=nodeid, hostnames=args.hostnames)
-    print "node_name_start<{}>node_name_stop".format(rt_cred.get_node_name())
+    print("node_name_start<{}>node_name_stop".format(rt_cred.get_node_name()))
 
 def manage_runtime_export(args):
     raise Exception("manage_runtime_export is not yet implemented")
@@ -531,7 +532,7 @@ def manage_runtime_import(args):
         raise Exception("No certificate supplied")
     runtime = runtime_credentials.RuntimeCredentials(args.node_name, security_dir=args.dir)
     cert_path = runtime.store_own_cert(certpath=args.certificate)
-    print "cert_path_start<{}>cert_path_stop".format(cert_path)
+    print("cert_path_start<{}>cert_path_stop".format(cert_path))
 
 def manage_runtime_trust(args):
     if not args.cacert:
@@ -549,7 +550,7 @@ def manage_runtime_c_rehash(args):
     elif args.type=="CS":
         certificate.c_rehash(type=certificate.TRUSTSTORE_SIGN, security_dir=args.dir)
     else:
-        print "Error, only type={CA, CS} are suppored"
+        print("Error, only type={CA, CS} are suppored")
 
 def manage_runtime_get_name(args):
     from calvin.utilities.attribute_resolver import AttributeResolver
@@ -560,20 +561,20 @@ def manage_runtime_get_name(args):
         try:
             runtime_attr = json.load(open(args.attr_file))
         except Exception as e:
-            print "Attribute file not JSON:\n", e
+            print("Attribute file not JSON:\n", e)
             return -1
     elif args.attr:
         try:
             runtime_attr = json.loads(args.attr)
         except Exception as e:
-            print "Attributes not JSON:\n", e
+            print("Attributes not JSON:\n", e)
             return -1
     else:
-        print "Error, either supply the attributes of the runtime, or the path to the file containg the attributes"
+        print("Error, either supply the attributes of the runtime, or the path to the file containg the attributes")
         return -1
 
     attributes = AttributeResolver(runtime_attr)
-    print "node_name_start<{}>node_name_stop\n".format(attributes.get_node_name_as_str())
+    print("node_name_start<{}>node_name_stop\n".format(attributes.get_node_name_as_str()))
 
 
 
@@ -583,7 +584,7 @@ def main():
     try:
         args.func(args)
     except Exception as e:
-        print "Error {}".format(e)
+        print("Error {}".format(e))
 
 if __name__ == '__main__':
     sys.exit(main())

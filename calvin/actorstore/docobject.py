@@ -1,3 +1,4 @@
+from __future__ import print_function
 import json
 import inspect
 import pystache
@@ -409,10 +410,10 @@ class ComponentDoc(ActorDoc):
 if __name__ == '__main__':
 
     def test_all_formatters(d):
-        print "\n%s\n=======================" % (d.__class__.__name__,)
+        print("\n%s\n=======================" % (d.__class__.__name__,))
         for formatter in [d.compact, d.detailed, d.markdown, d.markdown_links]:
-            print "%s:\n-----------------------" % (formatter.__name__,)
-            print formatter()
+            print("%s:\n-----------------------" % (formatter.__name__,))
+            print(formatter())
 
     # d = DocObject('yadda')
     # test_all_formatters(d)

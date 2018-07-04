@@ -183,7 +183,7 @@ class ServerBase(DatagramProtocol):
                 self.transport.write(response, destination)
             else:
                 _log.debug("No transport yet!")
-        except (AttributeError, socket.error), msg:
+        except (AttributeError, socket.error) as msg:
             _log.exception("Error in send %s" % repr(msg))
 
     def stop(self):

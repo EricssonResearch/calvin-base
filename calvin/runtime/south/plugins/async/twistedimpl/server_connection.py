@@ -64,7 +64,8 @@ class UDPServerProtocol(DatagramProtocol):
         self._port = None
         self._data = []
 
-    def datagramReceived(self, data, (host, port)):
+    def datagramReceived(self, data, xxx_todo_changeme):
+        (host, port) = xxx_todo_changeme
         message = {"host": host, "port": port, "data": data}
         self._data.append(message)
         self._trigger(self._actor_id)

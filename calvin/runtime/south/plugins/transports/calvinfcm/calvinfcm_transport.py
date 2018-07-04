@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,7 +14,7 @@
 
 from calvin.utilities import calvinlogger
 from calvin.runtime.south.plugins.transports import base_transport
-from twisted.twisted_transport import TwistedCalvinTransport, TwistedCalvinTransportClient
+from .twisted.twisted_transport import TwistedCalvinTransport, TwistedCalvinTransportClient
 from calvin.runtime.south.plugins.transports.lib.twisted import twisted_transport
 
 _log = calvinlogger.get_logger(__name__)

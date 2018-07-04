@@ -1,3 +1,4 @@
+from __future__ import print_function
 from calvin.utilities.nodecontrol import dispatch_node
 from calvin.utilities.attribute_resolver import format_index_string
 from calvin.utilities import calvinconfig
@@ -561,15 +562,15 @@ def sign_files_for_security_tests(credentials_testdir):
     actor_store_path = os.path.join(credentials_testdir, "store")
     orig_application_store_path = os.path.join(orig_testdir, "scripts")
     application_store_path = os.path.join(credentials_testdir, "scripts")
-    print "Create test folders"
+    print("Create test folders")
     try:
         shutil.copytree(orig_application_store_path, application_store_path)
     except Exception as err:
         _log.error("Failed to create test folder structure, err={}".format(err))
-        print "Failed to create test folder structure, err={}".format(err)
+        print("Failed to create test folder structure, err={}".format(err))
         raise
 
-    print "Trying to create a new test application/actor signer."
+    print("Trying to create a new test application/actor signer.")
     cs = code_signer.CS(organization="com.ericsson", commonName="signer", security_dir=credentials_testdir)
 
     _copy_and_sign_actor("flow", "Alternate.py")
@@ -642,7 +643,7 @@ def sign_files_for_security_tests(credentials_testdir):
     with open(os.path.join(application_store_path, "incorrectly_signed.calvin"), "a") as fd:
         fd.write(" ")
 
-    print "Export Code Signers certificate to the truststore for code signing"
+    print("Export Code Signers certificate to the truststore for code signing")
     out_file = cs.export_cs_cert(runtimes_truststore_signing_path)
     certificate.c_rehash(type=certificate.TRUSTSTORE_SIGN, security_dir=credentials_testdir)
     return actor_store_path, application_store_path
@@ -713,10 +714,10 @@ def _create_CA_and_rehash(domain_name, credentials_testdir, NBR_OF_RUNTIMES):
     from calvin.utilities import certificate_authority
     runtimesdir = os.path.join(credentials_testdir,"runtimes")
     runtimes_truststore = os.path.join(runtimesdir,"truststore_for_transport")
-    print "Trying to create a new test domain configuration."
+    print("Trying to create a new test domain configuration.")
     ca = certificate_authority.CA(domain=domain_name, commonName="testdomain CA", security_dir=credentials_testdir)
 
-    print "Copy CA cert into truststore of runtimes folder"
+    print("Copy CA cert into truststore of runtimes folder")
     ca.export_ca_cert(runtimes_truststore)
     certificate.c_rehash(type=certificate.TRUSTSTORE_TRANSPORT, security_dir=credentials_testdir)
     runtimes=[]
@@ -787,12 +788,12 @@ def _runtime_attributes(domain_name, runtimes):
     org_name='com.ericsson'
     domain_name="com.ericsson"
     for i in range(len(runtimes)):
-        print i," "
+        print(i," ")
         purpose = 'CA-authserver-authzserver' if i==0 else ""
         node_name ={'organization': org_name,
                      'purpose':purpose,
                      'name': 'testNode{}'.format(i)}
-        print node_name
+        print(node_name)
         owner = {'organization': domain_name, 'personOrGroup': 'testOwner'}
         address = {'country': 'SE', 'locality': 'testCity', 'street': 'testStreet', 'streetNumber': 1}
         runtimes[i]["attributes"] = {

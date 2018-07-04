@@ -73,7 +73,7 @@ class PolicyInformationPoint(object):
     def _set_actor_desc(self, desc_iter, callback):
         while True:
             try:
-                desc = desc_iter.next()
+                desc = next(desc_iter)
             except StopIteration:
                 callback(pip=self)
                 return

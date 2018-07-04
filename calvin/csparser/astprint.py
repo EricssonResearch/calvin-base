@@ -1,5 +1,7 @@
-import visitor
-import astnode as ast
+from __future__ import print_function
+from __future__ import absolute_import
+from . import visitor
+from . import astnode as ast
 
 class DotPrinter(object):
     """docstring for DotPrinter"""
@@ -42,7 +44,7 @@ class DotPrinter(object):
         self.add('digraph TMP {')
         self.visit(node)
         self.add('}')
-        print "\n".join(self.statements)
+        print("\n".join(self.statements))
 
 
 class DotDebugPrinter(DotPrinter):
@@ -251,7 +253,7 @@ class BracePrinter(BraceFormatter):
 
     def process(self, node):
         text = super(BracePrinter, self).process(node)
-        print text
+        print(text)
 
 if __name__ == '__main__':
     ast.Node._verbose_desc = True

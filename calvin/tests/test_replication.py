@@ -15,6 +15,7 @@
 # limitations under the License.
 
 
+from __future__ import print_function
 import time
 import pytest
 import os
@@ -106,7 +107,7 @@ def setup_module(module):
     request_handler = RequestHandler()
     test_type, runtimes = helpers.setup_test_type(request_handler, NBR_RUNTIMES, proxy_storage=True)
     rt1, rt2, rt3 = runtimes[:3]
-    print "CREATED", len(runtimes), "RUNTIMES"
+    print("CREATED", len(runtimes), "RUNTIMES")
 
 def teardown_module(module):
     global runtimes
@@ -163,7 +164,7 @@ class TestReplication(object):
         rt_by_id = {r.id: r for r in runtimes}
 
         response = helpers.deploy_script(request_handler, "testScript", script, rt1)
-        print response
+        print(response)
         self.app_id = response['application_id']
 
         src = response['actor_map']['testScript:src']
@@ -183,7 +184,7 @@ class TestReplication(object):
         time.sleep(0.3)
 
         replication_data = request_handler.get_storage(rt1, key="replicationdata-" + response['replication_map']['testScript:sum'])['result']
-        print replication_data
+        print(replication_data)
         leader_id = replication_data['leader_node_id']
         leader_rt = rt_by_id[leader_id]
 
@@ -197,7 +198,7 @@ class TestReplication(object):
             except:
                 fails += 1
                 time.sleep(0.1)
-        print "REPLICATED", counter, fails
+        print("REPLICATED", counter, fails)
         assert counter == 4
         replicas = []
         fails = 0
@@ -206,30 +207,30 @@ class TestReplication(object):
             fails += 1
             time.sleep(0.1)
         assert len(replicas) == counter
-        print "REPLICAS", replicas
-        print "ORIGINAL:", request_handler.get_actor(rt1, asum)
+        print("REPLICAS", replicas)
+        print("ORIGINAL:", request_handler.get_actor(rt1, asum))
         for r in replicas:
-            print "REPLICA:", request_handler.get_actor(rt1, r)
+            print("REPLICA:", request_handler.get_actor(rt1, r))
         actor_place = [request_handler.get_actors(r) for r in runtimes]
         snk_place = map(lambda x: snk in x, actor_place).index(True)
         time.sleep(0.4)
         actual = sorted(request_handler.report(runtimes[snk_place], snk))
         keys = set([k.keys()[0] for k in actual])
-        print keys
-        print [k.values()[0] for k in actual]
+        print(keys)
+        print([k.values()[0] for k in actual])
         result = request_handler.replicate(leader_rt, replication_id=response['replication_map']['testScript:sum'], dereplicate=True)
-        print "DEREPLICATION RESULT:", result
+        print("DEREPLICATION RESULT:", result)
         time.sleep(0.3)
         actual = sorted(request_handler.report(runtimes[snk_place], snk))
-        print [k.values()[0] for k in actual]
+        print([k.values()[0] for k in actual])
         replicas = request_handler.get_index(rt1, "replicas/actors/"+response['replication_map']['testScript:sum'], root_prefix_level=3)['result']
-        print "REPLICAS", replicas
+        print("REPLICAS", replicas)
         self.app_id = None
         helpers.delete_app(request_handler, rt1, response['application_id'])
         actors_left = []
         for r in runtimes:
             actors_left.extend(request_handler.get_actors(r))
-        print actors_left
+        print(actors_left)
         assert src not in actors_left
         assert asum not in actors_left
         assert snk not in actors_left
@@ -253,7 +254,7 @@ class TestReplication(object):
         rt_by_id = {r.id: r for r in runtimes}
 
         response = helpers.deploy_script(request_handler, "testScript", script, rt1)
-        print response
+        print(response)
         self.app_id = response['application_id']
 
         src = response['actor_map']['testScript:src']
@@ -270,7 +271,7 @@ class TestReplication(object):
         time.sleep(0.3)
 
         replication_data = request_handler.get_storage(rt1, key="replicationdata-" + response['replication_map']['testScript:src'])['result']
-        print replication_data
+        print(replication_data)
         leader_id = replication_data['leader_node_id']
         leader_rt = rt_by_id[leader_id]
 
@@ -284,7 +285,7 @@ class TestReplication(object):
             except:
                 fails += 1
                 time.sleep(0.2)
-        print "REPLICATED", counter, fails
+        print("REPLICATED", counter, fails)
         assert counter == 4
         replicas = []
         fails = 0
@@ -293,19 +294,19 @@ class TestReplication(object):
             fails += 1
             time.sleep(0.1)
         assert len(replicas) == counter
-        print "REPLICAS", replicas
-        print "ORIGINAL:", request_handler.get_actor(rt1, src)
+        print("REPLICAS", replicas)
+        print("ORIGINAL:", request_handler.get_actor(rt1, src))
         for r in replicas:
-            print "REPLICA:", request_handler.get_actor(rt1, r)
+            print("REPLICA:", request_handler.get_actor(rt1, r))
         actor_place = [request_handler.get_actors(r) for r in runtimes]
         snk_place = map(lambda x: snk in x, actor_place).index(True)
         time.sleep(0.4)
         actual = sorted(request_handler.report(runtimes[snk_place], snk))
         keys = set([k.keys()[0] for k in actual])
-        print keys
+        print(keys)
         #print [k.values()[0] for k in actual]
         result = request_handler.replicate(leader_rt, replication_id=response['replication_map']['testScript:src'], dereplicate=True)
-        print "DEREPLICATION RESULT:", result
+        print("DEREPLICATION RESULT:", result)
         time.sleep(0.3)
         actual = sorted(request_handler.report(runtimes[snk_place], snk))
         #print [k.values()[0] for k in actual]
@@ -318,15 +319,15 @@ class TestReplication(object):
         assert all([v[0]/100000 == v[1]/100000 for v in countersmm.values()])
         # All 5 10000 ranges included
         assert len(set([v[0]/100000 for v in countersmm.values()])) == 5
-        print "MAX MIN", countersmm
+        print("MAX MIN", countersmm)
         replicas = request_handler.get_index(rt1, "replicas/actors/"+response['replication_map']['testScript:src'], root_prefix_level=3)['result']
-        print "REPLICAS", replicas
+        print("REPLICAS", replicas)
         self.app_id = None
         helpers.delete_app(request_handler, rt1, response['application_id'])
         actors_left = []
         for r in runtimes:
             actors_left.extend(request_handler.get_actors(r))
-        print actors_left
+        print(actors_left)
         assert src not in actors_left
         assert snk not in actors_left
         for r in replicas:
@@ -367,7 +368,7 @@ class TestReplication(object):
         #print "DEPLOY_INFO", deploy_info
 
         response = request_handler.deploy_app_info(rt1, "testScript", app_info, deploy_info)
-        print response
+        print(response)
         self.app_id = response['application_id']
 
         src = response['actor_map']['testScript:src']
@@ -387,7 +388,7 @@ class TestReplication(object):
         time.sleep(0.3)
 
         replication_data = request_handler.get_storage(rt1, key="replicationdata-" + response['replication_map']['testScript:shadow'])['result']
-        print replication_data
+        print(replication_data)
         leader_id = replication_data['leader_node_id']
         leader_rt = rt_by_id[leader_id]
 
@@ -401,7 +402,7 @@ class TestReplication(object):
             except:
                 fails += 1
                 time.sleep(0.2)
-        print "REPLICATED", counter, fails
+        print("REPLICATED", counter, fails)
         assert counter == 4
         replicas = []
         fails = 0
@@ -410,30 +411,30 @@ class TestReplication(object):
             fails += 1
             time.sleep(0.2)
         assert len(replicas) == counter
-        print "REPLICAS", replicas
-        print "ORIGINAL:", request_handler.get_actor(rt1, shadow)
+        print("REPLICAS", replicas)
+        print("ORIGINAL:", request_handler.get_actor(rt1, shadow))
         for r in replicas:
-            print "REPLICA:", request_handler.get_actor(rt1, r)
+            print("REPLICA:", request_handler.get_actor(rt1, r))
         actor_place = [request_handler.get_actors(r) for r in runtimes]
         snk_place = map(lambda x: snk in x, actor_place).index(True)
         time.sleep(0.4)
         actual = sorted(request_handler.report(runtimes[snk_place], snk))
         keys = set([k.keys()[0] for k in actual])
-        print keys
-        print [k.values()[0] for k in actual]
+        print(keys)
+        print([k.values()[0] for k in actual])
         result = request_handler.replicate(leader_rt, replication_id=response['replication_map']['testScript:shadow'], dereplicate=True)
-        print "DEREPLICATION RESULT:", result
+        print("DEREPLICATION RESULT:", result)
         time.sleep(0.3)
         actual = sorted(request_handler.report(runtimes[snk_place], snk))
-        print [k.values()[0] for k in actual]
+        print([k.values()[0] for k in actual])
         replicas = request_handler.get_index(rt1, "replicas/actors/"+response['replication_map']['testScript:shadow'], root_prefix_level=3)['result']
-        print "REPLICAS", replicas
+        print("REPLICAS", replicas)
         self.app_id = None
         helpers.delete_app(request_handler, rt1, response['application_id'])
         actors_left = []
         for r in runtimes:
             actors_left.extend(request_handler.get_actors(r))
-        print actors_left
+        print(actors_left)
         assert src not in actors_left
         assert shadow not in actors_left
         assert snk not in actors_left
@@ -457,7 +458,7 @@ class TestReplication(object):
         #print "APP_INFO", app_info
 
         response = request_handler.deploy_app_info(rt1, "testScript", app_info)
-        print response
+        print(response)
         self.app_id = response['application_id']
 
         src = response['actor_map']['testScript:src']
@@ -471,13 +472,13 @@ class TestReplication(object):
         migrate(rt1, rt2, shadow)
         time.sleep(0.3)
         actual = request_handler.report(rt1, snk)
-        print actual
+        print(actual)
         self.app_id = None
         helpers.delete_app(request_handler, rt1, response['application_id'])
         actors_left = []
         for r in runtimes:
             actors_left.extend(request_handler.get_actors(r))
-        print actors_left
+        print(actors_left)
         assert src not in actors_left
         assert shadow not in actors_left
         assert snk not in actors_left
@@ -512,7 +513,7 @@ class TestReplication(object):
         #print "DEPLOY_INFO", deploy_info
 
         response = request_handler.deploy_app_info(rt1, "testScript", app_info, deploy_info)
-        print response
+        print(response)
         self.app_id = response['application_id']
 
         src = response['actor_map']['testScript:src']
@@ -539,13 +540,13 @@ class TestReplication(object):
         wait_for_tokens(snk_rt, snk, nbr_tokens+5)
 
         actual = request_handler.report(snk_rt, snk)
-        print actual
+        print(actual)
         self.app_id = None
         helpers.delete_app(request_handler, rt1, response['application_id'])
         actors_left = []
         for r in runtimes:
             actors_left.extend(request_handler.get_actors(r))
-        print actors_left
+        print(actors_left)
         assert src not in actors_left
         assert shadow not in actors_left
         assert snk not in actors_left
@@ -573,7 +574,7 @@ class TestReplication(object):
         rt_by_id = {r.id: r for r in runtimes}
 
         response = helpers.deploy_script(request_handler, "testScript", script, rt1)
-        print response
+        print(response)
         self.app_id = response['application_id']
 
         src = response['actor_map']['testScript:src']
@@ -593,7 +594,7 @@ class TestReplication(object):
         time.sleep(0.3)
 
         replication_data = request_handler.get_storage(rt1, key="replicationdata-" + response['replication_map']['testScript:sum'])['result']
-        print replication_data
+        print(replication_data)
         leader_id = replication_data['leader_node_id']
         leader_rt = rt_by_id[leader_id]
 
@@ -604,27 +605,27 @@ class TestReplication(object):
             fails += 1
             time.sleep(0.2)
         assert len(replicas) == nbr_possible
-        print "REPLICAS", replicas
-        print "ORIGINAL:", request_handler.get_actor(rt1, asum)
+        print("REPLICAS", replicas)
+        print("ORIGINAL:", request_handler.get_actor(rt1, asum))
         for r in replicas:
-            print "REPLICA:", request_handler.get_actor(rt1, r)
+            print("REPLICA:", request_handler.get_actor(rt1, r))
         actor_place = [request_handler.get_actors(r) for r in runtimes]
         snk_place = map(lambda x: snk in x, actor_place).index(True)
         time.sleep(0.4)
         actual = sorted(request_handler.report(runtimes[snk_place], snk))
         keys = set([k.keys()[0] for k in actual])
-        print keys
-        print [k.values()[0] for k in actual]
+        print(keys)
+        print([k.values()[0] for k in actual])
         actual = sorted(request_handler.report(runtimes[snk_place], snk))
-        print [k.values()[0] for k in actual]
+        print([k.values()[0] for k in actual])
         replicas = request_handler.get_index(rt1, "replicas/actors/"+response['replication_map']['testScript:sum'], root_prefix_level=3)['result']
-        print "REPLICAS", replicas
+        print("REPLICAS", replicas)
         self.app_id = None
         helpers.delete_app(request_handler, rt1, response['application_id'])
         actors_left = []
         for r in runtimes:
             actors_left.extend(request_handler.get_actors(r))
-        print actors_left
+        print(actors_left)
         assert src not in actors_left
         assert asum not in actors_left
         assert snk not in actors_left
@@ -657,7 +658,7 @@ class TestReplication(object):
         rt_by_id = {r.id: r for r in runtimes}
 
         response = helpers.deploy_script(request_handler, "testScript", script, rt1)
-        print response
+        print(response)
         self.app_id = response['application_id']
 
         src = response['actor_map']['testScript:src']
@@ -677,7 +678,7 @@ class TestReplication(object):
         time.sleep(0.3)
 
         replication_data = request_handler.get_storage(rt1, key="replicationdata-" + response['replication_map']['testScript:burn'])['result']
-        print replication_data
+        print(replication_data)
         leader_id = replication_data['leader_node_id']
         leader_rt = rt_by_id[leader_id]
 
@@ -688,30 +689,30 @@ class TestReplication(object):
             fails += 1
             time.sleep(0.2)
         assert len(replicas) == nbr_possible
-        print "REPLICAS", replicas
+        print("REPLICAS", replicas)
         placed_burn = {burn: rt2.id}
-        print "ORIGINAL:", request_handler.get_actor(rt1, burn)
+        print("ORIGINAL:", request_handler.get_actor(rt1, burn))
         for r in replicas:
             d = request_handler.get_actor(rt1, r)
             placed_burn[r] = d['node_id']
-            print "REPLICA:", d
+            print("REPLICA:", d)
         actor_place = [request_handler.get_actors(r) for r in runtimes]
         snk_place = map(lambda x: snk in x, actor_place).index(True)
         time.sleep(0.4)
         actual = sorted(request_handler.report(runtimes[snk_place], snk))
         keys = set([k.keys()[0] for k in actual])
-        print keys
-        print [k.values()[0] for k in actual]
+        print(keys)
+        print([k.values()[0] for k in actual])
         actual = sorted(request_handler.report(runtimes[snk_place], snk))
-        print [k.values()[0] for k in actual]
+        print([k.values()[0] for k in actual])
 
         # Make them dereplicate
-        print "DEREPLICATE"
+        print("DEREPLICATE")
         for aid, nid in placed_burn.items():
             try:
                 request_handler.report(rt_by_id[nid], aid, kwargs={'duration':0.01})
             except:
-                print "FAILED DURATION CHANGE", aid
+                print("FAILED DURATION CHANGE", aid)
         fails = 0
         # This takes forever ..., but dereplication is slow
         monotonic_decrease = len(replicas)
@@ -728,13 +729,13 @@ class TestReplication(object):
             time.sleep(1)
         assert len(replicas) == 0
         replicas = request_handler.get_index(rt1, "replicas/actors/"+response['replication_map']['testScript:burn'], root_prefix_level=3)['result']
-        print "REPLICAS", replicas
+        print("REPLICAS", replicas)
         self.app_id = None
         helpers.delete_app(request_handler, rt1, response['application_id'])
         actors_left = []
         for r in runtimes:
             actors_left.extend(request_handler.get_actors(r))
-        print actors_left
+        print(actors_left)
         assert src not in actors_left
         assert burn not in actors_left
         assert snk not in actors_left
@@ -767,7 +768,7 @@ class TestReplication(object):
         rt_by_id = {r.id: r for r in runtimes}
 
         response = helpers.deploy_script(request_handler, "testScript", script, rt1)
-        print response
+        print(response)
         self.app_id = response['application_id']
 
         src = response['actor_map']['testScript:src']
@@ -785,7 +786,7 @@ class TestReplication(object):
         time.sleep(0.3)
 
         replication_data = request_handler.get_storage(rt1, key="replicationdata-" + response['replication_map']['testScript:burn'])['result']
-        print replication_data
+        print(replication_data)
         leader_id = replication_data['leader_node_id']
         leader_rt = rt_by_id[leader_id]
 
@@ -801,13 +802,13 @@ class TestReplication(object):
                 try:
                     request_handler.report(rt_by_id[nid], aid, kwargs={'duration':duration})
                 except:
-                    print "FAILED DURATION CHANGE", aid
+                    print("FAILED DURATION CHANGE", aid)
             duration_str = str(duration)
             for i in range(40):
                 replicas = request_handler.get_index(rt1, "replicas/actors/"+response['replication_map']['testScript:burn'], root_prefix_level=3)['result']
                 nbr_replicas.setdefault(duration_str, []).append(replicas)
                 time.sleep(1)
-            print "NBR REPLICAS", duration_str, ":", map(len, nbr_replicas[duration_str])
+            print("NBR REPLICAS", duration_str, ":", map(len, nbr_replicas[duration_str]))
 
         def mean(array):
             a = map(len, array)
@@ -820,13 +821,13 @@ class TestReplication(object):
         if nbr_possible > 2:
             assert mean(nbr_replicas[str(0.035)]) > 2.5 and mean(nbr_replicas[str(0.035)]) < 3.9
         replicas = request_handler.get_index(rt1, "replicas/actors/"+response['replication_map']['testScript:burn'], root_prefix_level=3)['result']
-        print "REPLICAS", replicas
+        print("REPLICAS", replicas)
         self.app_id = None
         helpers.delete_app(request_handler, rt1, response['application_id'])
         actors_left = []
         for r in runtimes:
             actors_left.extend(request_handler.get_actors(r))
-        print actors_left
+        print(actors_left)
         assert src not in actors_left
         assert burn not in actors_left
         assert snk not in actors_left
@@ -857,7 +858,7 @@ class TestReplication(object):
         rt_by_id = {r.id: r for r in runtimes}
 
         response = helpers.deploy_script(request_handler, "testScript", script, rt1)
-        print response
+        print(response)
         self.app_id = response['application_id']
 
         src = response['actor_map']['testScript:src']
@@ -880,12 +881,12 @@ class TestReplication(object):
         time.sleep(0.3)
 
         replication_data = request_handler.get_storage(rt1, key="replicationdata-" + response['replication_map']['testScript:sum'])['result']
-        print replication_data
+        print(replication_data)
         sum_leader_id = replication_data['leader_node_id']
         sum_leader_rt = rt_by_id[sum_leader_id]
 
         replication_data = request_handler.get_storage(rt1, key="replicationdata-" + response['replication_map']['testScript:ident'])['result']
-        print replication_data
+        print(replication_data)
         ident_leader_id = replication_data['leader_node_id']
         ident_leader_rt = rt_by_id[ident_leader_id]
 
@@ -915,7 +916,7 @@ class TestReplication(object):
             if failed:
                 fails += 1
                 time.sleep(0.1)
-        print "REPLICATED", sum_counter, ident_counter, fails
+        print("REPLICATED", sum_counter, ident_counter, fails)
         assert sum_counter == 4 and ident_counter == 4
         sum_replicas = []
         fails = 0
@@ -931,11 +932,11 @@ class TestReplication(object):
             fails += 1
             time.sleep(0.1)
         assert len(ident_replicas) == ident_counter
-        print "REPLICAS SUM:", sum_replicas
-        print "REPLICAS ident:", ident_replicas
-        print "ORIGINAL:", request_handler.get_actor(rt1, asum)
+        print("REPLICAS SUM:", sum_replicas)
+        print("REPLICAS ident:", ident_replicas)
+        print("ORIGINAL:", request_handler.get_actor(rt1, asum))
         for r in sum_replicas + ident_replicas:
-            print "REPLICA:", request_handler.get_actor(rt1, r)
+            print("REPLICA:", request_handler.get_actor(rt1, r))
         actor_place = [request_handler.get_actors(r) for r in runtimes]
         snk_place = map(lambda x: snk in x, actor_place).index(True)
         tagtag = []
@@ -946,7 +947,7 @@ class TestReplication(object):
             actual = request_handler.report(runtimes[snk_place], snk)
             tagtag = set([k.keys()[0] + "+" + k.values()[0].keys()[0] for k in actual])
             fails += 1
-        print "TAG-TAG combinations", len(tagtag), tagtag
+        print("TAG-TAG combinations", len(tagtag), tagtag)
         assert len(tagtag) == 25
         #keys = set([k.keys()[0] for k in actual])
         #print keys
@@ -955,13 +956,13 @@ class TestReplication(object):
         sum_replicas = request_handler.get_index(rt1, "replicas/actors/"+response['replication_map']['testScript:sum'], root_prefix_level=3)['result']
         ident_replicas = request_handler.get_index(rt1, "replicas/actors/"+response['replication_map']['testScript:ident'], root_prefix_level=3)['result']
         replicas = sum_replicas + ident_replicas
-        print "REPLICAS", replicas
+        print("REPLICAS", replicas)
         self.app_id = None
         helpers.delete_app(request_handler, rt1, response['application_id'])
         actors_left = []
         for r in runtimes:
             actors_left.extend(request_handler.get_actors(r))
-        print actors_left
+        print(actors_left)
         assert src not in actors_left
         assert asum not in actors_left
         assert snk not in actors_left
@@ -997,10 +998,10 @@ class TestReplication(object):
         rt_extra = helpers.setup_extra_local(first_ip_addr, request_handler, NBR_RUNTIMES + 1, proxy_storage=True)
         rt_by_id[rt_extra.id] = rt_extra
         self.rt_extra = rt_extra
-        print "Extra runtime", rt_extra.id
+        print("Extra runtime", rt_extra.id)
 
         response = helpers.deploy_script(request_handler, "testScript", script, rt1)
-        print response
+        print(response)
         self.app_id = response['application_id']
 
         src = response['actor_map']['testScript:src']
@@ -1020,7 +1021,7 @@ class TestReplication(object):
         time.sleep(0.3)
 
         replication_data = request_handler.get_storage(rt1, key="replicationdata-" + response['replication_map']['testScript:sum'])['result']
-        print replication_data
+        print(replication_data)
         leader_id = replication_data['leader_node_id']
         leader_rt = rt_by_id[leader_id]
 
@@ -1031,10 +1032,10 @@ class TestReplication(object):
             fails += 1
             time.sleep(0.2)
         assert len(replicas) == nbr_possible
-        print "REPLICAS", replicas
-        print "ORIGINAL:", request_handler.get_actor(rt1, asum)
+        print("REPLICAS", replicas)
+        print("ORIGINAL:", request_handler.get_actor(rt1, asum))
         for r in replicas:
-            print "REPLICA:", request_handler.get_actor(rt1, r)
+            print("REPLICA:", request_handler.get_actor(rt1, r))
         actor_place = [request_handler.get_actors(r) for r in runtimes]
         snk_place = map(lambda x: snk in x, actor_place).index(True)
         time.sleep(0.4)
@@ -1077,13 +1078,13 @@ class TestReplication(object):
                     time.sleep(0.2)
         assert fails != 20
         replicas = request_handler.get_index(rt1, "replicas/actors/"+response['replication_map']['testScript:sum'], root_prefix_level=3)['result']
-        print "REPLICAS", replicas
+        print("REPLICAS", replicas)
         self.app_id = None
         helpers.delete_app(request_handler, rt1, response['application_id'])
         actors_left = []
         for r in runtimes:
             actors_left.extend(request_handler.get_actors(r))
-        print actors_left
+        print(actors_left)
         assert src not in actors_left
         assert asum not in actors_left
         assert snk not in actors_left
@@ -1114,7 +1115,7 @@ class TestReplication(object):
         rt_by_id = {r.id: r for r in runtimes}
 
         response = helpers.deploy_script(request_handler, "testScript", script, rt1)
-        print response
+        print(response)
         self.app_id = response['application_id']
 
         src = response['actor_map']['testScript:src']
@@ -1131,7 +1132,7 @@ class TestReplication(object):
         time.sleep(0.3)
 
         replication_data = request_handler.get_storage(rt1, key="replicationdata-" + response['replication_map']['testScript:ident'])['result']
-        print replication_data
+        print(replication_data)
         leader_id = replication_data['leader_node_id']
         leader_rt = rt_by_id[leader_id]
 
@@ -1146,7 +1147,7 @@ class TestReplication(object):
             except:
                 fails += 1
                 time.sleep(0.2)
-        print "REPLICATED", counter, fails
+        print("REPLICATED", counter, fails)
         assert counter == 2
         replicas = []
         fails = 0
@@ -1178,7 +1179,7 @@ class TestReplication(object):
             except:
                 fails += 1
                 time.sleep(0.2)
-        print "DEREPLICATED", counter, fails
+        print("DEREPLICATED", counter, fails)
         assert counter == 0
         fails = 0
         while len(replicas) > 0 and fails < 20:
@@ -1189,7 +1190,7 @@ class TestReplication(object):
 
         # Stop the flood of tokens, to make sure all are passed
         src_counter = request_handler.report(src_rt, src, kwargs={'stopped': True})
-        print "STOPPED Counter", src_counter
+        print("STOPPED Counter", src_counter)
 
         # Make sure we have all tokens produced
         time.sleep((src_counter - len(tokens1)) * 0.1)  # wait at least for the new tokens
@@ -1199,7 +1200,7 @@ class TestReplication(object):
             tokens2 = request_handler.report(snk_rt, snk)
             fails += 1
             time.sleep(0.5)
-        print tokens2
+        print(tokens2)
         assert len(tokens2) == src_counter
 
         self.app_id = None
@@ -1244,7 +1245,7 @@ class TestConstrainedReplication(object):
         try:
             import re
             first_ip_addr = re.match("http://([0-9\.]*):.*", rt1.control_uri).group(1)
-            print "IP_ADDR", first_ip_addr
+            print("IP_ADDR", first_ip_addr)
         except:
             raise Exception("Failed to get ip address from %s" % rt1.control_uri)
         try:
@@ -1273,12 +1274,12 @@ class TestConstrainedReplication(object):
                 except:
                     fails += 1
                     time.sleep(0.1)
-            print "CONSTRAINED DATA", constrained_data[i]
+            print("CONSTRAINED DATA", constrained_data[i])
 
         rt_by_id = {r.id: r for r in runtimes}
 
         response = helpers.deploy_script(request_handler, "testScript", script, rt1)
-        print response
+        print(response)
         self.app_id = response['application_id']
 
         src = response['actor_map']['testScript:src']
@@ -1294,7 +1295,7 @@ class TestConstrainedReplication(object):
         time.sleep(0.3)
 
         replication_data = request_handler.get_storage(rt1, key="replicationdata-" + response['replication_map']['testScript:ident'])['result']
-        print replication_data
+        print(replication_data)
         leader_id = replication_data['leader_node_id']
         leader_rt = rt_by_id[leader_id]
 
@@ -1306,10 +1307,10 @@ class TestConstrainedReplication(object):
             fails += 1
             time.sleep(0.3)
         assert len(replicas) == 4
-        print "REPLICAS", replicas
-        print "ORIGINAL:", request_handler.get_actor(rt1, ident)
+        print("REPLICAS", replicas)
+        print("ORIGINAL:", request_handler.get_actor(rt1, ident))
         for r in replicas:
-            print "REPLICA:", request_handler.get_actor(rt1, r)
+            print("REPLICA:", request_handler.get_actor(rt1, r))
         # Make sure that all paths thru replicas are used
         actor_place = [request_handler.get_actors(r) for r in runtimes]
         snk_place = map(lambda x: snk in x, actor_place).index(True)
@@ -1320,17 +1321,17 @@ class TestConstrainedReplication(object):
             actual = request_handler.report(runtimes[snk_place], snk)
             keys = set([k.keys()[0] for k in actual])
             fails += 1
-        print keys
-        print sorted([k.values()[0] for k in actual])
+        print(keys)
+        print(sorted([k.values()[0] for k in actual]))
         assert len(keys) == 5
 
         # abolish a constrained runtime not having the original actor
         c_id = constrained_id[:]
         try:
             c_id.remove(ident_rt_id)
-            print "original actor on constrained"
+            print("original actor on constrained")
         except:
-            print "original actor not on constrained"
+            print("original actor not on constrained")
         request_handler.abolish_proxy_peer(rt_by_id[constrained_data[0]['proxy']], c_id[0])
 
         # Make sure that the replica is gone
@@ -1339,7 +1340,7 @@ class TestConstrainedReplication(object):
             replicas = request_handler.get_index(rt1, "replicas/actors/"+response['replication_map']['testScript:ident'], root_prefix_level=3)['result']
             fails += 1
             time.sleep(0.3)
-        print replicas
+        print(replicas)
         assert len(replicas) == 3
 
         self.app_id = None
@@ -1351,7 +1352,7 @@ class TestConstrainedReplication(object):
             replicas = request_handler.get_index(rt1, "replicas/actors/"+response['replication_map']['testScript:ident'], root_prefix_level=3)['result']
             fails += 1
             time.sleep(0.1)
-        print replicas
+        print(replicas)
         assert not replicas
 
         # Delete the remaining constrained runtimes
@@ -1380,7 +1381,7 @@ class TestConstrainedReplication(object):
         try:
             import re
             first_ip_addr = re.match("http://([0-9\.]*):.*", rt1.control_uri).group(1)
-            print "IP_ADDR", first_ip_addr
+            print("IP_ADDR", first_ip_addr)
         except:
             raise Exception("Failed to get ip address from %s" % rt1.control_uri)
         try:
@@ -1409,12 +1410,12 @@ class TestConstrainedReplication(object):
                 except:
                     fails += 1
                     time.sleep(0.1)
-            print "CONSTRAINED DATA", constrained_data[i]
+            print("CONSTRAINED DATA", constrained_data[i])
 
         rt_by_id = {r.id: r for r in runtimes}
 
         response = helpers.deploy_script(request_handler, "testScript", script, rt1)
-        print response
+        print(response)
         self.app_id = response['application_id']
 
         src = response['actor_map']['testScript:src']
@@ -1430,7 +1431,7 @@ class TestConstrainedReplication(object):
         time.sleep(0.3)
 
         replication_data = request_handler.get_storage(rt1, key="replicationdata-" + response['replication_map']['testScript:ident'])['result']
-        print replication_data
+        print(replication_data)
         leader_id = replication_data['leader_node_id']
         leader_rt = rt_by_id[leader_id]
 
@@ -1442,10 +1443,10 @@ class TestConstrainedReplication(object):
             fails += 1
             time.sleep(0.3)
         assert len(replicas) == 4
-        print "REPLICAS", replicas
-        print "ORIGINAL:", request_handler.get_actor(rt1, ident)
+        print("REPLICAS", replicas)
+        print("ORIGINAL:", request_handler.get_actor(rt1, ident))
         for r in replicas:
-            print "REPLICA:", request_handler.get_actor(rt1, r)
+            print("REPLICA:", request_handler.get_actor(rt1, r))
         # Make sure that all paths thru replicas are used
         actor_place = [request_handler.get_actors(r) for r in runtimes]
         snk_place = map(lambda x: snk in x, actor_place).index(True)
@@ -1456,17 +1457,17 @@ class TestConstrainedReplication(object):
             actual = request_handler.report(runtimes[snk_place], snk)
             keys = set([k.keys()[0] for k in actual])
             fails += 1
-        print keys
-        print sorted([k.values()[0] for k in actual])
+        print(keys)
+        print(sorted([k.values()[0] for k in actual]))
         assert len(keys) == 5
 
         # abolish a constrained runtime not having the original actor
         c_id = constrained_id[:]
         try:
             c_id.remove(ident_rt_id)
-            print "original actor on constrained"
+            print("original actor on constrained")
         except:
-            print "original actor not on constrained"
+            print("original actor not on constrained")
         request_handler.abolish_proxy_peer(rt_by_id[constrained_data[0]['proxy']], c_id[0])
 
         # Make sure that the replica is gone
@@ -1475,7 +1476,7 @@ class TestConstrainedReplication(object):
             replicas = request_handler.get_index(rt1, "replicas/actors/"+response['replication_map']['testScript:ident'], root_prefix_level=3)['result']
             fails += 1
             time.sleep(0.3)
-        print replicas
+        print(replicas)
         assert len(replicas) == 3
 
         self.app_id = None
@@ -1487,7 +1488,7 @@ class TestConstrainedReplication(object):
             replicas = request_handler.get_index(rt1, "replicas/actors/"+response['replication_map']['testScript:ident'], root_prefix_level=3)['result']
             fails += 1
             time.sleep(0.1)
-        print replicas
+        print(replicas)
         assert not replicas
 
         # Delete the remaining constrained runtimes
@@ -1516,7 +1517,7 @@ class TestConstrainedReplication(object):
         try:
             import re
             first_ip_addr = re.match("http://([0-9\.]*):.*", rt1.control_uri).group(1)
-            print "IP_ADDR", first_ip_addr
+            print("IP_ADDR", first_ip_addr)
         except:
             raise Exception("Failed to get ip address from %s" % rt1.control_uri)
         try:
@@ -1545,12 +1546,12 @@ class TestConstrainedReplication(object):
                 except:
                     fails += 1
                     time.sleep(0.1)
-            print "CONSTRAINED DATA", constrained_data[i]
+            print("CONSTRAINED DATA", constrained_data[i])
 
         rt_by_id = {r.id: r for r in runtimes}
 
         response = helpers.deploy_script(request_handler, "testScript", script, rt1)
-        print response
+        print(response)
         self.app_id = response['application_id']
 
         src = response['actor_map']['testScript:src']
@@ -1566,7 +1567,7 @@ class TestConstrainedReplication(object):
         time.sleep(0.3)
 
         replication_data = request_handler.get_storage(rt1, key="replicationdata-" + response['replication_map']['testScript:ident'])['result']
-        print replication_data
+        print(replication_data)
         leader_id = replication_data['leader_node_id']
         leader_rt = rt_by_id[leader_id]
 
@@ -1578,10 +1579,10 @@ class TestConstrainedReplication(object):
             fails += 1
             time.sleep(0.3)
         assert len(replicas) == 4
-        print "REPLICAS", replicas
-        print "ORIGINAL:", request_handler.get_actor(rt1, ident)
+        print("REPLICAS", replicas)
+        print("ORIGINAL:", request_handler.get_actor(rt1, ident))
         for r in replicas:
-            print "REPLICA:", request_handler.get_actor(rt1, r)
+            print("REPLICA:", request_handler.get_actor(rt1, r))
         # Make sure that all paths thru replicas are used
         actor_place = [request_handler.get_actors(r) for r in runtimes]
         snk_place = map(lambda x: snk in x, actor_place).index(True)
@@ -1592,11 +1593,11 @@ class TestConstrainedReplication(object):
             actual = request_handler.report(runtimes[snk_place], snk)
             keys = set([k.keys()[0] for k in actual])
             fails += 1
-        print keys
+        print(keys)
         assert len(keys) == 5
 
         tag_index = set([k.keys()[0] + ":" + k.values()[0].split(':', 1)[0] for k in actual])
-        print tag_index
+        print(tag_index)
         assert len(tag_index) == 5
 
         self.app_id = None

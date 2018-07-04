@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import print_function
 import pytest
 import sys
 import os
@@ -51,11 +52,11 @@ def slay(plist):
             p.terminate()
             p.join(timeout=.2)
             if p.is_alive():
-                print "Warning: process %s still alive slay!!" % p._name
+                print("Warning: process %s still alive slay!!" % p._name)
                 os.kill(p.pid, signal.SIGKILL)
     time.sleep(.1)
     if len(multiprocessing.active_children()) > 1:
-        print "Error: children is still alive", multiprocessing.active_children()
+        print("Error: children is still alive", multiprocessing.active_children())
         for a in multiprocessing.active_children():
             a.terminate()
 
@@ -115,7 +116,7 @@ class BaseTHandler(multiprocessing.Process):
     def _base_run(self):
         # make it work with twisted py.test plugin also
         reactor._started = False
-        print "timeout %s", self._timeout
+        print("timeout %s", self._timeout)
         reactor.callLater(self._timeout, self._stop_reactor, timeout=True)
         reactor.callInThread(self._read_thread)
         reactor.run()
@@ -322,9 +323,9 @@ class TestTransportServer(object):
                     # print mess
                     if not mess[0]:
                         for a in mess[1]:
-                            print a,
+                            print(a, end=' ')
                         for k,v in mess[2].items():
-                            print "%s = %s" % (k, repr(v))
+                            print("%s = %s" % (k, repr(v)))
                         raise Exception("\n".join(mess[1][11:]))
         except Exception as e:
             import traceback
@@ -389,7 +390,7 @@ class TestTransportClient(object):
                         # TODO: terminate
                         raise Exception("Timeout: %s" % "\n".join(mess[1][11:]))
                     elif mess[0] == 'server_stopped':
-                        print "Hej hej"
+                        print("Hej hej")
                         sstop = True
                         stop = (sstop and cstop)
                     elif mess[0] == 'server_started':
@@ -412,9 +413,9 @@ class TestTransportClient(object):
                         # print mess
                         if not mess[0]:
                             for a in mess[1][11:-1]:
-                                print a,
+                                print(a, end=' ')
                             for k,v in mess[2].items():
-                                print "%s = %s" % (k, repr(v))
+                                print("%s = %s" % (k, repr(v)))
                             raise Exception("\n".join(mess[1][11:]))
         except Exception as e:
             error = e
@@ -469,7 +470,7 @@ class TestTransportClient(object):
                         # TODO: terminate
                         raise Exception("Timeout: %s" % "\n".join(mess[1][11:]))
                     elif mess[0] == 'server_stopped':
-                        print "Hej hej"
+                        print("Hej hej")
                         sstop = True
                         stop = (sstop and cstop)
                     elif mess[0] == 'server_started':
@@ -490,9 +491,9 @@ class TestTransportClient(object):
                         # print mess
                         if not mess[0]:
                             for a in mess[1][11:-1]:
-                                print a,
+                                print(a, end=' ')
                             for k,v in mess[2].items():
-                                print "%s = %s" % (k, repr(v))
+                                print("%s = %s" % (k, repr(v)))
                             raise Exception("\n".join(mess[1][11:]))
         except Exception as e:
             error = e
@@ -552,7 +553,7 @@ class TestTransportClient(object):
                         # TODO: terminate
                         raise Exception("Timeout: %s" % "\n".join(mess[1][11:]))
                     elif mess[0] == 'server_stopped':
-                        print "Hej hej"
+                        print("Hej hej")
                         sstop = True
                         stop = (sstop and cstop)
                     elif mess[0] == 'server_started':
@@ -573,9 +574,9 @@ class TestTransportClient(object):
                         # print mess
                         if not mess[0]:
                             for a in mess[1][11:-1]:
-                                print a,
+                                print(a, end=' ')
                             for k,v in mess[2].items():
-                                print "%s = %s" % (k, repr(v))
+                                print("%s = %s" % (k, repr(v)))
                             raise Exception("\n".join(mess[1][11:]))
         except Exception as e:
             error = e
@@ -634,7 +635,7 @@ class TestTransportClient(object):
                         # TODO: terminate
                         raise Exception("Timeout: %s" % "\n".join(mess[1][11:]))
                     elif mess[0] == 'server_stopped':
-                        print "Hej hej"
+                        print("Hej hej")
                         sstop = True
                         stop = (sstop and cstop)
                     elif mess[0] == 'server_started':
@@ -655,18 +656,18 @@ class TestTransportClient(object):
                         # print mess
                         if not mess[0]:
                             for a in mess[1][11:-1]:
-                                print a,
+                                print(a, end=' ')
                             for k,v in mess[2].items():
-                                print "%s = %s" % (k, repr(v))
+                                print("%s = %s" % (k, repr(v)))
                             raise Exception("\n".join(mess[1][11:]))
         except Exception as e:
             error = e
 
         for tq in queues:
-            print "hej", repr(tq)
+            print("hej", repr(tq))
             tq[1].put(['stop', [], {}])
 
-        print sh, ch
+        print(sh, ch)
         slay([sh, ch])
 
         if error:

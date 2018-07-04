@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import print_function
 import unittest
 import time
 import copy
@@ -120,7 +121,7 @@ class TestDeployScript(unittest.TestCase):
         assert rt1_id
         assert rt2_id
         assert rt3_id
-        print "RUNTIMES:", rt1_id, rt2_id, rt3_id
+        print("RUNTIMES:", rt1_id, rt2_id, rt3_id)
         _log.analyze("TESTRUN", "+ IDS", {'waited': 0.1*i})
         failed = True
         # Try 30 times waiting for storage to be connected
@@ -296,7 +297,7 @@ class TestDeployShadow(unittest.TestCase):
         assert not failed
         assert rt1_id
         assert rt2_id
-        print "RUNTIMES:", rt1_id, rt2_id
+        print("RUNTIMES:", rt1_id, rt2_id)
         _log.analyze("TESTRUN", "+ IDS", {'waited': 0.1*i})
         failed = True
         # Try 30 times waiting for storage to be connected
@@ -608,7 +609,7 @@ class TestSepDeployShadow(unittest.TestCase):
         assert rt1_id
         assert rt2_id
         assert rt3_id
-        print "RUNTIMES:", rt1_id, rt2_id, rt3_id
+        print("RUNTIMES:", rt1_id, rt2_id, rt3_id)
         _log.analyze("TESTRUN", "+ IDS", {'waited': 0.1*i})
         failed = True
         # Try 30 times waiting for storage to be connected
@@ -879,7 +880,7 @@ class TestDeployment3NodesProxyStorage(unittest.TestCase):
         assert rt1_id
         assert rt2_id
         assert rt3_id
-        print "RUNTIMES:", rt1_id, rt2_id, rt3_id
+        print("RUNTIMES:", rt1_id, rt2_id, rt3_id)
         _log.analyze("TESTRUN", "+ IDS", {'waited': 0.1*i})
         failed = True
         # Try 30 times waiting for storage to be connected
@@ -1161,7 +1162,7 @@ class TestDeployment3NodesProxyStorage(unittest.TestCase):
             result = deploy_app(args)
         except:
             raise Exception("Failed deployment of app %s, no use to verify if requirements fulfilled" % args.script.name)
-        print "RESULT:", result
+        print("RESULT:", result)
         time.sleep(2)
 
         assert result['requirements_fulfilled']

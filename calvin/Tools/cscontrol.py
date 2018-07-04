@@ -15,6 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import print_function
 import argparse
 import json
 from calvin.utilities.calvinlogger import get_logger
@@ -81,7 +82,7 @@ def handle_security_arguments(args):
             credentials_ = json.loads(args.credentials)
             req_handler.set_credentials(credentials_)
         except Exception as e:
-            print "Credentials not JSON:\n", e
+            print("Credentials not JSON:\n", e)
     return req_handler
 
 def control_deploy(args):
@@ -102,7 +103,7 @@ def control_deploy(args):
         response = req_handler.deploy_application(args.node, args.script.name, source_text, reqs,
                                             content=content, check=args.check)
     except Exception as e:
-        print e
+        print(e)
     return response
 
 
@@ -268,8 +269,8 @@ def main():
     args = parse_args()
     try:
         r =  args.func(args)
-        print "OK" if r is None else json.dumps(r, indent=2)
+        print("OK" if r is None else json.dumps(r, indent=2))
     except Exception as e:
-        print "Error {}".format(e)
+        print("Error {}".format(e))
 if __name__ == '__main__':
     main()

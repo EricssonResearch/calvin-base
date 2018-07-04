@@ -61,6 +61,7 @@ class SetDefault(Actor):
                 self._check_type_mismatch(res, key)
                 res = res[key]
             self._check_type_mismatch(res, keylist[-1])
+            # if keylist[-1] not in res:
             if not res.has_key(keylist[-1]):
                 res[keylist[-1]] = value
         except:

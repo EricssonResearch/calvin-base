@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import print_function
 import pytest
 import os
 import copy
@@ -87,7 +88,7 @@ if not hasattr(pytest, 'inlineCallbacks'):
 @pytest.fixture(autouse=True, scope="class")
 def setup(request):
     # Create 3 test nodes per storage type
-    print "###SETUP"
+    print("###SETUP")
 
     tunnels = {}
     nodes = {}
@@ -130,7 +131,7 @@ def setup(request):
                 try:
                     shutil.rmtree(credentials_testdir)
                 except Exception as err:
-                    print "Failed to remove old tesdir, err={}".format(err)
+                    print("Failed to remove old tesdir, err={}".format(err))
                     pass
                 try:
                     shutil.copytree(orig_identity_provider_path, identity_provider_path)
@@ -207,15 +208,15 @@ def setup(request):
             tunnels[nodes[stype][1].id][nodes[stype][0].id].up_handler()
             tunnels[nodes[stype][2].id][nodes[stype][0].id].up_handler()
     dl = defer.DeferredList(all_started)
-    print time.time()
+    print(time.time())
     try:
         pytest.blockon(dl)
     except:
-        print "### Some storage plugins might have failed to start! ###"
+        print("### Some storage plugins might have failed to start! ###")
         traceback.print_exc()
-    print time.time()
+    print(time.time())
     def teardown():
-        print "#####TEARDOWN"
+        print("#####TEARDOWN")
         all_stopped = []
         for ntypes in nodes.values():
             for n in ntypes:
@@ -226,7 +227,7 @@ def setup(request):
         try:
             pytest.blockon(dl)
         except:
-            print "### Some storage plugins might have failed to stopp ###"
+            print("### Some storage plugins might have failed to stopp ###")
             traceback.print_exc()
     request.addfinalizer(teardown)
     return {"nodes": nodes}
@@ -281,7 +282,7 @@ class TestAllStorage(object):
                     self.nodes[stype][y].storage.set("test1-", key + str(y), i, CalvinCB(self.cb))
                     yield wait_for(self._test_done, timeout=10)
                     # Verify response is CalvinResponse object with OK status
-                    print "set response", self.get_ans, stype, key, y
+                    print("set response", self.get_ans, stype, key, y)
                     assert isinstance(self.get_ans, calvinresponse.CalvinResponse) and self.get_ans == calvinresponse.OK
                     for x in range(3):
                         if stype == "notstarted" and x != y:
@@ -291,7 +292,7 @@ class TestAllStorage(object):
                         self.get_ans = None
                         self.nodes[stype][x].storage.get("test1-", key + str(y), CalvinCB(self.cb))
                         yield wait_for(self._test_done, timeout=10)
-                        print "get response", self.get_ans, stype, key, x
+                        print("get response", self.get_ans, stype, key, x)
                         # Verify we read what is written
                         assert self.get_ans == i
 
@@ -312,14 +313,14 @@ class TestAllStorage(object):
                         yield wait_for(self._test_done, timeout=10)
                         # Verify response is CalvinResponse object with OK status
                         assert isinstance(self.get_ans, calvinresponse.CalvinResponse) and self.get_ans == calvinresponse.OK
-                        print "set response", self.get_ans, stype, i, y
+                        print("set response", self.get_ans, stype, i, y)
                         self.done = False
                         self.get_ans = None
                         self.nodes[stype][y].storage.delete("test2-", key + str(y), CalvinCB(self.cb))
                         yield wait_for(self._test_done, timeout=10)
                         # Verify response is CalvinResponse object with OK status
                         assert isinstance(self.get_ans, calvinresponse.CalvinResponse) and self.get_ans == calvinresponse.OK
-                        print "delete response", self.get_ans, stype, i, y
+                        print("delete response", self.get_ans, stype, i, y)
                     for x in range(3):
                         if stype == "notstarted" and x != y:
                             # Not started storage is never connected to other nodes storage
@@ -328,7 +329,7 @@ class TestAllStorage(object):
                         self.get_ans = None
                         self.nodes[stype][x].storage.get("test2-", key + str(y), CalvinCB(self.cb))
                         yield wait_for(self._test_done, timeout=10)
-                        print "get response", self.get_ans, stype, i, x
+                        print("get response", self.get_ans, stype, i, x)
                         # Verify the response is 404
                         assert isinstance(self.get_ans, calvinresponse.CalvinResponse) and self.get_ans == calvinresponse.NOT_FOUND
 
@@ -346,7 +347,7 @@ class TestAllStorage(object):
                     self.nodes[stype][y].storage.append("test3-", key + str(y), [i], CalvinCB(self.cb))
                     yield wait_for(self._test_done, timeout=10)
                     # Verify response is CalvinResponse object with OK status
-                    print "append response", self.get_ans, stype, key, y
+                    print("append response", self.get_ans, stype, key, y)
                     assert isinstance(self.get_ans, calvinresponse.CalvinResponse) and self.get_ans == calvinresponse.OK
                     for x in range(3):
                         if stype == "notstarted" and x != y:
@@ -356,7 +357,7 @@ class TestAllStorage(object):
                         self.get_ans = None
                         self.nodes[stype][x].storage.get_concat("test3-", key + str(y), CalvinCB(self.cb))
                         yield wait_for(self._test_done, timeout=10)
-                        print "get_concat response", self.get_ans, stype, key, x
+                        print("get_concat response", self.get_ans, stype, key, x)
                         # Verify we read what is written
                         assert self.get_ans == [i]
 
@@ -374,7 +375,7 @@ class TestAllStorage(object):
                     self.nodes[stype][y].storage.append("test4-", key + str(y), i, CalvinCB(self.cb))
                     yield wait_for(self._test_done, timeout=10)
                     # Verify response is CalvinResponse object with OK status
-                    print "append response", self.get_ans, stype, key, y
+                    print("append response", self.get_ans, stype, key, y)
                     assert isinstance(self.get_ans, calvinresponse.CalvinResponse) and self.get_ans == calvinresponse.OK
                     for x in range(3):
                         if stype == "notstarted" and x != y:
@@ -384,7 +385,7 @@ class TestAllStorage(object):
                         self.get_ans = None
                         self.nodes[stype][x].storage.get_concat("test4-", key + str(y), CalvinCB(self.cb))
                         yield wait_for(self._test_done, timeout=10)
-                        print "get_concat response", self.get_ans, stype, key, x
+                        print("get_concat response", self.get_ans, stype, key, x)
                         # Verify we read what is written
                         assert set(self.get_ans) == set(i)
 
@@ -403,14 +404,14 @@ class TestAllStorage(object):
                     self.nodes[stype][y].storage.append("test5-", key + str(y), i, CalvinCB(self.cb))
                     yield wait_for(self._test_done, timeout=10)
                     # Verify response is CalvinResponse object with OK status
-                    print "append response", self.get_ans, stype, key, y
+                    print("append response", self.get_ans, stype, key, y)
                     assert isinstance(self.get_ans, calvinresponse.CalvinResponse) and self.get_ans == calvinresponse.OK
                     self.done = False
                     self.get_ans = None
                     self.nodes[stype][y].storage.remove("test5-", key + str(y), i[1:], CalvinCB(self.cb))
                     yield wait_for(self._test_done, timeout=10)
                     # Verify response is CalvinResponse object with OK status
-                    print "append response", self.get_ans, stype, key, y
+                    print("append response", self.get_ans, stype, key, y)
                     assert isinstance(self.get_ans, calvinresponse.CalvinResponse) and self.get_ans == calvinresponse.OK
                     for x in range(3):
                         if stype == "notstarted" and x != y:
@@ -420,7 +421,7 @@ class TestAllStorage(object):
                         self.get_ans = None
                         self.nodes[stype][x].storage.get_concat("test5-", key + str(y), CalvinCB(self.cb))
                         yield wait_for(self._test_done, timeout=10)
-                        print "get_concat response", self.get_ans, stype, key, x
+                        print("get_concat response", self.get_ans, stype, key, x)
                         # Verify we read what is written
                         answer = set(i) - set(i[1:])
                         assert set(self.get_ans) == answer
@@ -442,14 +443,14 @@ class TestAllStorage(object):
                         yield wait_for(self._test_done, timeout=10, test_part="append"+key+str(y))
                         # Verify response is CalvinResponse object with OK status
                         assert isinstance(self.get_ans, calvinresponse.CalvinResponse) and self.get_ans == calvinresponse.OK
-                        print "append response", self.get_ans, stype, i, y
+                        print("append response", self.get_ans, stype, i, y)
                         self.done = False
                         self.get_ans = None
                         self.nodes[stype][y].storage.delete("test6-", key + str(y), CalvinCB(self.cb))
                         yield wait_for(self._test_done, timeout=10, test_part="delete"+key+str(y))
                         # Verify response is CalvinResponse object with OK status
                         assert isinstance(self.get_ans, calvinresponse.CalvinResponse) and self.get_ans == calvinresponse.OK
-                        print "delete response", self.get_ans, stype, i, y
+                        print("delete response", self.get_ans, stype, i, y)
                     for x in range(3):
                         if stype == "notstarted" and x != y:
                             # Not started storage is never connected to other nodes storage
@@ -458,7 +459,7 @@ class TestAllStorage(object):
                         self.get_ans = None
                         self.nodes[stype][x].storage.get_concat("test6-", key + str(y), CalvinCB(self.cb))
                         yield wait_for(self._test_done, timeout=10, test_part="get_concat"+key+str(y))
-                        print "get_concat response", self.get_ans, stype, i, x
+                        print("get_concat response", self.get_ans, stype, i, x)
                         # Verify the response is empty list (no difference between emptied or deleted)
                         assert self.get_ans == []
 
@@ -477,21 +478,21 @@ class TestAllStorage(object):
                     yield wait_for(self._test_done, timeout=10, test_part="append"+key+str(y))
                     # Verify response is CalvinResponse object with OK status
                     assert isinstance(self.get_ans, calvinresponse.CalvinResponse) and self.get_ans == calvinresponse.OK
-                    print "append response", self.get_ans, stype, i, y
+                    print("append response", self.get_ans, stype, i, y)
                     self.done = False
                     self.get_ans = None
                     self.nodes[stype][y].storage.delete("test7-", key + str(y), CalvinCB(self.cb))
                     yield wait_for(self._test_done, timeout=10, test_part="delete"+key+str(y))
                     # Verify response is CalvinResponse object with OK status
                     assert isinstance(self.get_ans, calvinresponse.CalvinResponse) and self.get_ans == calvinresponse.OK
-                    print "delete response", self.get_ans, stype, i, y
+                    print("delete response", self.get_ans, stype, i, y)
                     self.done = False
                     self.get_ans = None
                     self.nodes[stype][y].storage.append("test7-", key + str(y), [i+"2"], CalvinCB(self.cb))
                     yield wait_for(self._test_done, timeout=10, test_part="append2"+key+str(y))
                     # Verify response is CalvinResponse object with OK status
                     assert isinstance(self.get_ans, calvinresponse.CalvinResponse) and self.get_ans == calvinresponse.OK
-                    print "append2 response", self.get_ans, stype, i, y
+                    print("append2 response", self.get_ans, stype, i, y)
                     for x in range(3):
                         if stype == "notstarted" and x != y:
                             # Not started storage is never connected to other nodes storage
@@ -500,7 +501,7 @@ class TestAllStorage(object):
                         self.get_ans = None
                         self.nodes[stype][x].storage.get_concat("test7-", key + str(y), CalvinCB(self.cb))
                         yield wait_for(self._test_done, timeout=10, test_part="get_concat"+key+str(y))
-                        print "get_concat response", self.get_ans, stype, i, x
+                        print("get_concat response", self.get_ans, stype, i, x)
                         # Verify the response is second appended value
                         assert self.get_ans == [i+"2"]
 
@@ -523,7 +524,7 @@ class TestAllStorage(object):
                     self.nodes[stype][y].storage.add_index(index, [i[1]], cb=CalvinCB(self.cb2))
                     yield wait_for(self._test_done, timeout=10)
                     # Verify response is CalvinResponse object with OK status
-                    print "add response", self.get_ans, stype, index, y
+                    print("add response", self.get_ans, stype, index, y)
                     assert isinstance(self.get_ans, calvinresponse.CalvinResponse) and self.get_ans == calvinresponse.OK
                 for x in range(3):
                     if stype == "notstarted" and x != y:
@@ -543,7 +544,7 @@ class TestAllStorage(object):
                         index[0] = "test1" + index[0] + str(y)
                         self.nodes[stype][x].storage.get_index(index, cb=CalvinCB(self.cb2))
                         yield wait_for(self._test_done, timeout=10)
-                        print "get_index response", self.get_ans, stype, index, x
+                        print("get_index response", self.get_ans, stype, index, x)
                         # Verify we read what is written if too short prefix or not existing we should get [].
                         assert set(self.get_ans) == set(i[1]) 
 
@@ -574,7 +575,7 @@ class TestAllStorage(object):
                         self.nodes[stype][y].storage.remove_index(index, i[1], cb=CalvinCB(self.cb2))
                     yield wait_for(self._test_done, timeout=10)
                     # Verify response is CalvinResponse object with OK status
-                    print "add" if i[2] == "+" else "remove", " response", self.get_ans, stype, index, y
+                    print("add" if i[2] == "+" else "remove", " response", self.get_ans, stype, index, y)
                     assert isinstance(self.get_ans, calvinresponse.CalvinResponse) and self.get_ans == calvinresponse.OK
                 for x in range(3):
                     if stype == "notstarted" and x != y:
@@ -595,7 +596,7 @@ class TestAllStorage(object):
                         index[0] = "test2" + index[0] + str(y)
                         self.nodes[stype][x].storage.get_index(index, cb=CalvinCB(self.cb2))
                         yield wait_for(self._test_done, timeout=10)
-                        print "get_index response", self.get_ans, stype, index, x
+                        print("get_index response", self.get_ans, stype, index, x)
                         # Verify we read what is written if too short prefix or not existing we should get [].
                         assert set(self.get_ans) == set(i[1]) 
 

@@ -14,10 +14,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import absolute_import
 import json
 from calvin.requests import calvinresponse
 import calvin.runtime.south.plugins.ui.uicalvinsys as ui
-from routes import handler
+from .routes import handler
 
 @handler(method="GET", path="/uicalvinsys/{uuid}")
 def handle_get_uicalvinsys(self, handle, connection, match, data, hdr):

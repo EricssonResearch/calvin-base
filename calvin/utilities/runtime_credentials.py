@@ -144,7 +144,7 @@ class RuntimeCredentials():
         self.config=ConfigParser.SafeConfigParser()
         self.configuration=None
         self.config.optionxform = str
-        os.umask(0077)
+        os.umask(0o077)
         self.domain = None
         self.ip="127.0.1.1"
         self.hostnames = hostnames if hostnames!=None else [socket.gethostname(),  socket.getfqdn(socket.gethostname())]
@@ -176,12 +176,12 @@ class RuntimeCredentials():
         self.runtime_dir = self.get_credentials_path()
         if not os.path.isdir(self.runtime_dir):
             try:
-                os.makedirs(self.runtime_dir, 0755)
+                os.makedirs(self.runtime_dir, 0o755)
             except OSError:
                 pass
         if not os.path.isdir(os.path.join(self.runtime_dir, "mine")):
             try:
-                os.makedirs(os.path.join(self.runtime_dir, "mine"), 0755)
+                os.makedirs(os.path.join(self.runtime_dir, "mine"), 0o755)
             except OSError:
                 pass
         if not os.path.isdir(os.path.join(self.runtime_dir, "others")):
@@ -191,7 +191,7 @@ class RuntimeCredentials():
                 pass
         if not os.path.isdir(os.path.join(self.runtime_dir, "private")):
             try:
-                os.makedirs(os.path.join(self.runtime_dir, "private"), 0700)
+                os.makedirs(os.path.join(self.runtime_dir, "private"), 0o700)
             except OSError:
                 pass
 
@@ -732,7 +732,7 @@ class RuntimeCredentials():
             try:
                 with open(storepath, 'w') as cert_fd:
                     cert_fd.write(certstring)
-            except (Exception), err:
+            except (Exception) as err:
                 _log.exception("Storing signed cert failed")
                 raise Exception("Storing signed cert failed")
         else:

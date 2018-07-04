@@ -14,8 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import absolute_import
 import json
-from message_coder import MessageCoderBase
+from .message_coder import MessageCoderBase
 
 # set of functions to encode/decode data tokens to/from a json description
 class MessageCoder(MessageCoderBase):

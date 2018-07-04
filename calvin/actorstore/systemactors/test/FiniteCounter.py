@@ -30,7 +30,7 @@ class FiniteCounter(Actor):
     """
 
     @manage(['count', 'ends', 'restart', 'start', 'replicate_mult', 'stopped'])
-    def init(self, start=0, steps=sys.maxint, repeat=False, replicate_mult=False, stopped=False):
+    def init(self, start=0, steps=sys.maxsize, repeat=False, replicate_mult=False, stopped=False):
         self.count = start
         self.ends = start + steps
         self.restart = start if repeat else self.ends + 1

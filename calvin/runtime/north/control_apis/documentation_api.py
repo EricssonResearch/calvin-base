@@ -14,10 +14,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import print_function
+from __future__ import absolute_import
 import json
 from calvin.actorstore.store import DocumentationStore
-from routes import docs, handler
-from authentication import authentication_decorator
+from .routes import docs, handler
+from .authentication import authentication_decorator
 
 @handler(method="GET", path="/")
 @authentication_decorator
@@ -47,7 +49,7 @@ def handle_get_base_doc(self, handle, connection, match, data, hdr):
                     data += '- __' + block.pop(1).strip().replace('_', '\_') + '__' + "\n"
                     data += "```\n" + "\n".join(s for s in block) + "\n```\n"
                 except:
-                    print "Error", line, block
+                    print("Error", line, block)
                 finally:
                     block =  []
             elif line:

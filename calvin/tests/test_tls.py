@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import print_function
 import unittest
 import time
 import shutil
@@ -99,7 +100,7 @@ class TestSecurity(unittest.TestCase):
         try:
             shutil.rmtree(credentials_testdir)
         except Exception as err:
-            print "Failed to remove old tesdir, err={}".format(err)
+            print("Failed to remove old tesdir, err={}".format(err))
             pass
         try:
             os.makedirs(credentials_testdir)
@@ -107,7 +108,7 @@ class TestSecurity(unittest.TestCase):
             os.makedirs(runtimes_truststore)
         except Exception as err:
             _log.error("Failed to create test folder structure, err={}".format(err))
-            print "Failed to create test folder structure, err={}".format(err)
+            print("Failed to create test folder structure, err={}".format(err))
             raise
 
         _log.info("Trying to create a new test domain configuration. Create many CAs to ensure runtime can handle several CA certificates")

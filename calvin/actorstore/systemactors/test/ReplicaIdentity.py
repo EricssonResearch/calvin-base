@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import print_function
 from calvin.actor.actor import Actor, manage, condition
 
 
@@ -31,7 +32,7 @@ class ReplicaIdentity(Actor):
         self.index = 0
 
     def log(self, data):
-        print "%s<%s,%s>: %s" % (self.__class__.__name__, self.name, self.id, data)
+        print("%s<%s,%s>: %s" % (self.__class__.__name__, self.name, self.id, data))
 
     @condition(['token'], ['token'])
     def prepend(self, input):

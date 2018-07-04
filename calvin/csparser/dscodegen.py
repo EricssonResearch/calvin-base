@@ -1,8 +1,10 @@
-import astnode as ast
-import visitor
-import astprint
-from parser import calvin_parse
-from codegen import query, ReplaceConstants
+from __future__ import print_function
+from __future__ import absolute_import
+from . import astnode as ast
+from . import visitor
+from . import astprint
+from .parser import calvin_parse
+from .codegen import query, ReplaceConstants
 
 
 class ExpandRules(object):
@@ -162,7 +164,7 @@ class Backport(object):
                 right = self.mangle(rule['operands'][1])
                 new_rule = (left if type(left) is list else [left]) + (right if type(right) is list else [right])
             except Exception as e:
-                print "REASON:", e
+                print("REASON:", e)
                 raise Exception("EXCEPTION (&)\n{}\n{}".format(left, right))
             return new_rule
 
@@ -224,7 +226,7 @@ class DSCodeGen(object):
             return
         ast.Node._verbose_desc = self.verbose_nodes
         printer = astprint.BracePrinter()
-        print "========\n{}\n========".format(heading)
+        print("========\n{}\n========".format(heading))
         printer.process(self.root)
 
 
@@ -287,13 +289,13 @@ if __name__ == '__main__':
 
     """
     source_text = cleandoc(source_text)
-    print source_text
-    print
+    print(source_text)
+    print()
     ai, it = calvin_dscodegen(source_text, script)
     if it.issue_count == 0:
-        print "No issues"
+        print("No issues")
     for i in it.formatted_issues(custom_format="{type!c}: {reason} {filename}:{line}:{col}", filename=script):
-        print i
-    print "-------------"
-    print json.dumps(ai, indent=4)
+        print(i)
+    print("-------------")
+    print(json.dumps(ai, indent=4))
 

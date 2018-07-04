@@ -1,3 +1,4 @@
+from __future__ import print_function
 import os
 import re
 from calvin.utilities.issuetracker import IssueTracker
@@ -63,8 +64,8 @@ if __name__ == '__main__':
     FILE = "~/Source/calvin-base/calvin/examples/sample-scripts/fibo_main.calvin"
     pp = Preprocessor()
     source_text, it = pp.process(FILE)
-    print source_text
-    print "Errors:", it.error_count
+    print(source_text)
+    print("Errors:", it.error_count)
     for err in it.formatted_errors():
-        print err
+        print(err)
 

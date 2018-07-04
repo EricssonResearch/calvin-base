@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import print_function
 from calvin.runtime.south.plugins.io.stdout import base_stdout
 from calvin.runtime.south.plugins.async import http_client
 from calvin.utilities.calvin_callback import CalvinCB
@@ -51,7 +52,7 @@ class StandardOut(base_stdout.BaseStandardOut):
         if self.destination:
             self._client.request("POST", self.destination, {}, {}, text)
         else :
-            print text,
+            print(text, end=' ')
     
     def writeln(self, text):
         self.write(text +  "\n")

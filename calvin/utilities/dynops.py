@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import print_function
 import random
 
 from calvin.utilities.calvinlogger import get_logger
@@ -117,7 +118,7 @@ class DynOps(object):
         return self.op()
 
     def __next__(self):
-        return self.next()
+        return next(self)
 
     def __repr__(self):
         # Force to use the str, good e.g. when adding tuple elements for Collect.
@@ -150,7 +151,7 @@ class Union(DynOps):
             try:
                 while True:
                     _log.debug("%s:next TRY iter:%s" % (self.__str__(), str(v)))
-                    n = v.next()
+                    n = next(v)
                     if n not in self.set:
                         _log.debug("%s:next GOT NEW value:%s iter:%s" % (self.__str__(), str(n), str(v)))
                         self.set.append(n)
@@ -212,7 +213,7 @@ class Intersection(DynOps):
             for v in self.iters:
                 if not self.final[id(v)]:
                     try:
-                        n = v.next()
+                        n = next(v)
                         if isinstance(n, InfiniteElement):
                             self.infs[id(v)] = True
                             self.final[id(v)] = True
@@ -297,7 +298,7 @@ class Difference(DynOps):
             # All remove values obtained just filter first
             # The first's exception are exposed
             while True:
-                n = self.first.next()
+                n = next(self.first)
                 _log.debug("%s.next() = %s" % (self.__str__(), str(n)))
                 if n not in self.remove:
                     self.remove.add(n)  # Enforce set behaviour 
@@ -307,7 +308,7 @@ class Difference(DynOps):
         for v in self.iters:
             try:
                 while True:
-                    self.remove.add(v.next())
+                    self.remove.add(next(v))
             except PauseIteration:
                 paused = True
             except StopIteration:
@@ -398,7 +399,7 @@ class Map(DynOps):
                 if not self.final[id(v)]:
                     try:
                         _log.debug("Map%s(func=%s) Next iter: %s" % (("<" + self.name + ">") if self.name else "", self.func.__name__, str(v)))
-                        e = v.next()
+                        e = next(v)
                         _log.debug("Map%s(func=%s) Next in: %s" % (("<" + self.name + ">") if self.name else "", self.func.__name__, e))
                         self.drawn[id(v)].append(e)
                         active = True
@@ -443,7 +444,7 @@ class Map(DynOps):
                 _log.debug("Map%s(func=%s) TRY OUT %s" % (("<" + self.name + ">") if self.name else "", 
                                                          self.func.__name__, self.out_iter))
                 try:
-                    e = self.out_iter.next()
+                    e = next(self.out_iter)
                 except StopIteration:
                     _log.debug("Map%s(func=%s) GOT STOP" % (("<" + self.name + ">") if self.name else "", 
                                                          self.func.__name__))
@@ -467,7 +468,7 @@ class Map(DynOps):
         self.during_next = True
         try:
             # Deliver any already mapped results
-            n = self.out_iter.next()
+            n = next(self.out_iter)
             self.during_next = False
             return n
         except PauseIteration:
@@ -502,13 +503,13 @@ class Chain(DynOps):
     def op(self):
         try:
             _log.debug("Chain%s.next() Try %s" % (("<" + self.name + ">") if self.name else "", str(self.elem_it)))
-            e = self.elem_it.next()
+            e = next(self.elem_it)
             _log.debug("Chain%s.next()=%s" % ((("<" + self.name + ">") if self.name else "", str(e))))
             return e
         except StopIteration:
             _log.debug("Chain%s.next() ELEM ITER STOP %s" % (("<" + self.name + ">") if self.name else "", str(self.elem_it)))
             try:
-                self.elem_it = self.it.next()
+                self.elem_it = next(self.it)
             except StopIteration:
                 _log.debug("Chain%s.next() ITER STOP %s" % (("<" + self.name + ">") if self.name else "", str(self.it)))
                 raise StopIteration
@@ -550,7 +551,7 @@ class Collect(DynOps):
             return
         while True:
             try:
-                self.iters.append(self.it.next())
+                self.iters.append(next(self.it))
             except StopIteration:
                 self.it_final = True
                 break
@@ -569,7 +570,7 @@ class Collect(DynOps):
         for elem in iters_copy:
             key, it = elem if self.keyed else (None, elem)
             try:
-                e = it.next()
+                e = next(it)
                 return (key, e) if self.keyed else e
             except PauseIteration:
                 continue
@@ -688,20 +689,20 @@ class Infinite(DynOps):
 import pprint
 if __name__ == '__main__':
     def gotit():
-        print "Triggered"
+        print("Triggered")
         try:
             # print "INFINITE", d.infinite_set
             for i in d:
-                print i
+                print(i)
         except PauseIteration:
-            print "Paused"
+            print("Paused")
 
     l1 = List()
     def map_func(it, kwargs, final, *iters):
         if all(final):
             it.final()
         else:
-            print kwargs, iters
+            print(kwargs, iters)
             it.append(sum([0 if i is None else i for i in iters]) + kwargs['bias'])
             kwargs['bias'] += 10
 

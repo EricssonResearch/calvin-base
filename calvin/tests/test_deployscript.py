@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import print_function
 from calvin.csparser.dscodegen import calvin_dscodegen
 import unittest
 import json
@@ -39,7 +40,7 @@ class CalvinTestBase(unittest.TestCase):
             with open(file, 'r') as source:
                 text = source.read()
         except Exception as e:
-            print "Error: Could not read file: '%s'" % file
+            print("Error: Could not read file: '%s'" % file)
             raise e
         return text
 

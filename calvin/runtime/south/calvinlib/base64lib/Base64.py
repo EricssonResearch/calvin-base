@@ -14,8 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.runtime.south.calvinlib import base_calvinlib_object
+from __future__ import absolute_import
 import base64
+from calvin.runtime.south.calvinlib import base_calvinlib_object
 
 class Base64(base_calvinlib_object.BaseCalvinlibObject):
     """
@@ -25,13 +26,13 @@ class Base64(base_calvinlib_object.BaseCalvinlibObject):
     init_schema = {
             "description": "base64 encoding/decoding of data"
     }
-    
+
     encode_schema = {
         "description": "base64 encode binary string",
         "type": "string"
-        
+
     }
-    
+
     decode_schema = {
         "description": "decode base64 encoded string",
         "type": "string"
@@ -39,7 +40,7 @@ class Base64(base_calvinlib_object.BaseCalvinlibObject):
 
     def init(self):
         pass
-        
+
     def encode(self, string):
         return base64.b64encode(string)
 

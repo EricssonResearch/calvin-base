@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import print_function
 import logging
 
 from calvin.utilities import calvinuuid
@@ -204,12 +205,12 @@ class CalvinCBClass(object):
 if __name__ == '__main__':
     def fname(arg1, arg2, kwarg1):
         """docstring for fname"""
-        print "Jippie", arg1, "/", arg2, "/", kwarg1
+        print("Jippie", arg1, "/", arg2, "/", kwarg1)
         return True
 
     def fname2(arg2, kwarg1):
         """docstring for fname"""
-        print "Jippie2", arg2, "/", kwarg1
+        print("Jippie2", arg2, "/", kwarg1)
         return True
 
     def fname3(arg2, kwarg1):
@@ -221,7 +222,7 @@ if __name__ == '__main__':
     a(10, kwarg1=2)
     a(20, kwarg1=3)
 
-    print "------------------"
+    print("------------------")
 
     b = CalvinCBGroup([CalvinCB(fname, 2000)])
     b.func_append(CalvinCB(fname, 2))
@@ -237,13 +238,13 @@ if __name__ == '__main__':
 
         def internal(self):
             """docstring for fname"""
-            print "------------------"
-            print ">>>", self._callback_execute("test1", 100, kwarg1=12)
-            print "------------------"
-            print ">>>", self._callback_execute("test2", 500, kwarg1=13)
+            print("------------------")
+            print(">>>", self._callback_execute("test1", 100, kwarg1=12))
+            print("------------------")
+            print(">>>", self._callback_execute("test2", 500, kwarg1=13))
 
     t = TestingCB(1, callbacks={'test1': [a], 'test2': [b]})
     t.callback_register('test1', CalvinCB(fname2))
     t.callback_unregister(a._id)
-    print t.callback_valid_names()
+    print(t.callback_valid_names())
     t.internal()

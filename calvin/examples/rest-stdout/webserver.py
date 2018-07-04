@@ -1,3 +1,4 @@
+from __future__ import print_function
 from flask import Flask, request, abort
 
 app = Flask(__name__)
@@ -12,13 +13,13 @@ def welcome():
 def add_message():
     if request.method == 'POST':
         if request.data:
-            print "received:", request.data
+            print("received:", request.data)
             return request.data
         else:
-            print "No data received"
+            print("No data received")
             abort(204)
     else:
-        print "Method not supported!"
+        print("Method not supported!")
         abort(405)
 
 if __name__ == "__main__":

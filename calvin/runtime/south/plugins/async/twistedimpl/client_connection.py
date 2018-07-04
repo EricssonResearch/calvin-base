@@ -50,7 +50,8 @@ class UDPRawProtocol(CalvinCBClass, DatagramProtocol):
         "Called after all transport is teared down"
         self.factory.clientConnectionLost(None, DummyError("disconnected"))
 
-    def datagramReceived(self, data, (host, port)):
+    def datagramReceived(self, data, xxx_todo_changeme):
+        (host, port) = xxx_todo_changeme
         self._callback_execute('data_received', data)
 
     def send(self, data):

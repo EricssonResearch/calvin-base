@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import print_function
 from calvin.runtime.south.plugins.async import threads
 from calvin.utilities.calvinlogger import get_logger
 from GChartWrapper import Line, VerticalBarStack, HorizontalBarStack, Meter
@@ -363,7 +364,7 @@ class Chart():
     ##########################
     def _request_image(self, handle):
         result = self._chart.image()
-        request = (item for item in self._requests if item["handle"] == handle).next()
+        request = next((item for item in self._requests if item["handle"] == handle))
         import time
         time.sleep(3)
         request["image"] = result
@@ -374,7 +375,7 @@ class Chart():
 
     # Call to collect an image when image is available
     def receive_image(self, handle):
-        request = (item for item in self._requests if item["handle"] == handle).next()
+        request = next((item for item in self._requests if item["handle"] == handle))
         self._requests.remove(request)
         return request["image"]
 
@@ -399,7 +400,7 @@ class Chart():
         try:
             return (self._requests[0]["image"] is not None)
         except IndexError as e:
-            print "ERROR, no image available: ", e
+            print("ERROR, no image available: ", e)
             return False
 
     # Any image is ready, in no particular order, use together with get_any_available_image()
@@ -411,12 +412,12 @@ class Chart():
 
     # Use together with image_available()
     def get_any_available_image(self):
-        request = (item for item in self._requests if item["image"] is not None).next()
+        request = next((item for item in self._requests if item["image"] is not None))
         self._requests.remove(request)
         return request["image"]
 
     def start(self):
-        print "start"
+        print("start")
 
     def stop(self):
-        print "stop"
+        print("stop")

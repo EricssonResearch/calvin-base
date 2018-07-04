@@ -17,6 +17,7 @@
 Openssl wrapper used to generate and sign certificates.
 This module depends on openssl.
 """
+from __future__ import print_function
 
 import os
 import subprocess
@@ -57,12 +58,12 @@ class CS():
         self.certificate = os.path.join(self.cs_dir, "cscert.pem")
 
         _log.debug("CS init, organization={}, commonName={}".format(organization, commonName))
-        print"CS init, organization="+ organization+", commonName="+commonName
+        print("CS init, organization="+ organization+", commonName="+commonName)
         exist = os.path.isdir(self.cs_dir)
         if not exist and readonly:
             raise Exception("CS dir does not exist, create Code Signer first")
         elif exist and not force:
-            print "CS already exist, let's use it"
+            print("CS already exist, let's use it")
         else:
             _log.debug("Code signer dir does not exist, let's create CS")
             #Generate keys and CA certiticate
@@ -74,7 +75,7 @@ class CS():
                                         readonly=False)
             except:
                 _log.error("creation of new CS credentials failed")
-            print "Made new code signer"
+            print("Made new code signer")
 
     def new_cs_credentials(self, organization, commonName, security_dir=None, force=False, readonly=False):
         """
@@ -84,25 +85,25 @@ class CS():
         _log.debug("new_cs_credentials")
 
 
-        os.umask(0077)
+        os.umask(0o077)
         code_signers_dir = self.get_code_signers_credentials_path(security_dir) 
         if not os.path.isdir(code_signers_dir):
             try:
-                os.mkdir(code_signers_dir, 0700)
+                os.mkdir(code_signers_dir, 0o700)
             except OSError:
                 pass
         try:
-            os.mkdir(self.cs_dir, 0700)
+            os.mkdir(self.cs_dir, 0o700)
         except OSError:
             pass
 
         try:
-            os.mkdir(self.outpath, 0700)
+            os.mkdir(self.outpath, 0o700)
         except OSError:
             pass
 
         try:
-            os.mkdir(self.private, 0700)
+            os.mkdir(self.private, 0o700)
         except OSError:
             pass
 
@@ -197,7 +198,7 @@ class CS():
             sign_file = os.path.join(dir, sign_file_name)
         else:
             sign_file = sign_file_name
-        print "signed file name="+sign_file
+        print("signed file name="+sign_file)
         log = subprocess.Popen(["openssl", "dgst", "-sha256",
                                 "-sign", self.private_key,
                                 "-passin", "file:" + self.password_file,

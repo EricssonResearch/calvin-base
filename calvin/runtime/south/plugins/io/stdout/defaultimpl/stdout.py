@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import print_function
 from calvin.runtime.south.plugins.io.stdout import base_stdout
 
 
@@ -24,7 +25,7 @@ class StandardOut(base_stdout.BaseStandardOut):
     """
 
     def write(self, text):
-        print text,
+        print(text, end=' ')
     
     def writeln(self, text):
-        print text
+        print(text)

@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import print_function
 from calvin.csparser.codegen import calvin_codegen
 import unittest
 import json
@@ -38,7 +39,7 @@ class CalvinTestBase(unittest.TestCase):
             with open(file, 'r') as source:
                 text = source.read()
         except Exception as e:
-            print "Error: Could not read file: '%s'" % file
+            print("Error: Could not read file: '%s'" % file)
             raise e
         return text
 
@@ -216,7 +217,7 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         }
         """
         result, errors, warnings = self.parse('inline', script)
-        print errors
+        print(errors)
         self.assertEqual(len(errors), 1)
         self.assertEqual(errors[0]['reason'], "Component inport connected directly to outport.")
 
@@ -380,7 +381,7 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         1 > foo.in
         """
         result, errors, warnings = self.parse('inline', script)
-        print errors
+        print(errors)
         self.assertEqual(len(errors), 2)
         self.assertEqual(errors[0]['reason'], "Component Foo is missing connection to outport 'out'")
         self.assertEqual(errors[1]['reason'], "Component foo (local.Foo) is missing connection to outport 'out'")
@@ -852,7 +853,7 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         """
         result, errors, warnings = self.parse('inline', script)
         for e in errors:
-            print e['reason']
+            print(e['reason'])
         self.assertEqual(len(errors), 0)
 
     def testCompToCompWithFanoutFromInternalInport(self):
@@ -872,7 +873,7 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         """
         result, errors, warnings = self.parse('inline', script)
         for e in errors:
-            print e['reason']
+            print(e['reason'])
         self.assertEqual(len(errors), 0)
 
 

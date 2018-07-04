@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import print_function
 import pytest
 import unittest
 import time
@@ -36,53 +37,53 @@ class TestLocalEndpoint(unittest.TestCase):
         self.rm.leaders_cache = {"RM1": self.rm.node.id, "RM2": self.rm.node.id}
 
     def test_lock1(self):
-        print "Test: local"
+        print("Test: local")
         self.rm.lock_peer_replication("RM1", self._response1)
-        print "lock"
+        print("lock")
         self._print_lock_lists()
         self.rm.release_peer_replication("RM1")
-        print "released 1"
+        print("released 1")
         self._print_lock_lists()
         assert "RM1" not in self.rm.managed_replications["RM2"].given_lock_replication_ids
         assert "RM2" not in self.rm.managed_replications["RM1"].aquired_lock_replication_ids
         self.rm.lock_peer_replication("RM1", self._response2)
         self.rm.lock_peer_replication("RM2", self._response3)
-        print "queued"
+        print("queued")
         self._print_lock_lists()
         assert "RM1" in self.rm.managed_replications["RM2"].queued_lock_replication_ids
         self.rm.release_peer_replication("RM1")
-        print "release 1 -> lock"
+        print("release 1 -> lock")
         self._print_lock_lists()
         assert "RM2" in self.rm.managed_replications["RM1"].given_lock_replication_ids
         assert "RM1" in self.rm.managed_replications["RM2"].aquired_lock_replication_ids
         self.rm.release_peer_replication("RM2")
-        print "released 2"
+        print("released 2")
         self._print_lock_lists()
         assert "RM2" not in self.rm.managed_replications["RM1"].given_lock_replication_ids
         assert "RM1" not in self.rm.managed_replications["RM2"].aquired_lock_replication_ids
 
     def _print_lock_lists(self):
-        print "RM1 given  ", self.rm.managed_replications["RM1"].given_lock_replication_ids
-        print "RM1 aquired", self.rm.managed_replications["RM1"].aquired_lock_replication_ids
-        print "RM1 queued ", self.rm.managed_replications["RM1"].queued_lock_replication_ids
-        print "RM2 given  ", self.rm.managed_replications["RM2"].given_lock_replication_ids
-        print "RM2 aquired", self.rm.managed_replications["RM2"].aquired_lock_replication_ids
-        print "RM2 queued ", self.rm.managed_replications["RM2"].queued_lock_replication_ids
+        print("RM1 given  ", self.rm.managed_replications["RM1"].given_lock_replication_ids)
+        print("RM1 aquired", self.rm.managed_replications["RM1"].aquired_lock_replication_ids)
+        print("RM1 queued ", self.rm.managed_replications["RM1"].queued_lock_replication_ids)
+        print("RM2 given  ", self.rm.managed_replications["RM2"].given_lock_replication_ids)
+        print("RM2 aquired", self.rm.managed_replications["RM2"].aquired_lock_replication_ids)
+        print("RM2 queued ", self.rm.managed_replications["RM2"].queued_lock_replication_ids)
 
     def _response1(self, status):
-        print "response1", status
+        print("response1", status)
         self._print_lock_lists()
         assert "RM1" in self.rm.managed_replications["RM2"].given_lock_replication_ids
         assert "RM2" in self.rm.managed_replications["RM1"].aquired_lock_replication_ids
 
     def _response2(self, status):
-        print "response2", status
+        print("response2", status)
         self._print_lock_lists()
         assert "RM1" in self.rm.managed_replications["RM2"].given_lock_replication_ids
         assert "RM2" in self.rm.managed_replications["RM1"].aquired_lock_replication_ids
 
     def _response3(self, status):
-        print "response3", status
+        print("response3", status)
         self._print_lock_lists()
         assert "RM2" in self.rm.managed_replications["RM1"].given_lock_replication_ids
         assert "RM1" in self.rm.managed_replications["RM2"].aquired_lock_replication_ids

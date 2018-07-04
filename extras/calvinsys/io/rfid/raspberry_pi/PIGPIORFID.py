@@ -14,11 +14,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import absolute_import
 from calvin.runtime.south.calvinsys.io.rfid.BaseRFID import BaseRFID
 from calvin.utilities.calvinlogger import get_logger
 from calvin.runtime.south.plugins.async import async
 
-import MFRC522
+from . import MFRC522
 
 _log = get_logger(__name__)
 

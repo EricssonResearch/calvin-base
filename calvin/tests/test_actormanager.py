@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import print_function
 import unittest
 import pytest
 from mock import Mock, patch
@@ -184,7 +185,7 @@ class ActorManagerTests(unittest.TestCase):
                           ("get_port_state", (None, ))]
         for func, args in test_functions:
             with pytest.raises(Exception) as excinfo:
-                print func
+                print(func)
                 getattr(self.am, func)('123', *args)
             assert "Actor '123' not found" in str(excinfo.value)
 

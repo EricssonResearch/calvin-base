@@ -14,8 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.runtime.south.calvinlib import base_calvinlib_object
+from __future__ import absolute_import
 import random
+from calvin.runtime.south.calvinlib import base_calvinlib_object
 
 class Random(base_calvinlib_object.BaseCalvinlibObject):
     """
@@ -37,9 +38,9 @@ class Random(base_calvinlib_object.BaseCalvinlibObject):
             "lower": { "type": "integer" },
             "upper": { "type": "integer" }
         }
-        
+
     }
-    
+
     random_number_schema = {
         "description": "return random number in range [lower, upper) (rounding may cause upper to be included)",
         "type": "object",
@@ -53,7 +54,7 @@ class Random(base_calvinlib_object.BaseCalvinlibObject):
         self.rand = random.Random()
         if seed:
             self.rand.seed(seed)
-    
+
     def random_integer(self, lower, upper):
         return self.rand.randrange(lower, upper)
 

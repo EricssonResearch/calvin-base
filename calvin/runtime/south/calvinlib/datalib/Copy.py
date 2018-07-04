@@ -14,8 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.runtime.south.calvinlib import base_calvinlib_object
+from __future__ import absolute_import
 import copy
+from calvin.runtime.south.calvinlib import base_calvinlib_object
 
 class Copy(base_calvinlib_object.BaseCalvinlibObject):
     """
@@ -25,19 +26,19 @@ class Copy(base_calvinlib_object.BaseCalvinlibObject):
     init_schema = {
         "description": "setup copy functions",
     }
-    
+
     copy_schema = {
         "description": "create a copy given data",
         "type": "object"
-        
+
     }
 
     def init(self):
         pass
-        
+
     def copy(self, data):
         return copy.copy(data)
-        
+
     def deepcopy(self, data):
         return copy.deepcopy(data)
 

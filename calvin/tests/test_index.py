@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import print_function
 import unittest
 import time
 import multiprocessing
@@ -228,7 +229,7 @@ class TestNodeIndex(CalvinNodeTestBase):
     def testNodeIndexThree(self):
         time.sleep(4)
 
-        print self.rt1.id, self.rt2.id, self.rt3.id
+        print(self.rt1.id, self.rt2.id, self.rt3.id)
 
         owner1 = request_handler.get_index(self.rt1, format_index_string({'owner':{'organization': 'org.testexample', 'personOrGroup': 'testOwner1'}}))
         assert(set(owner1['result']) == set([self.rt1.id, self.rt2.id]))

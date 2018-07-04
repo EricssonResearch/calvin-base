@@ -1,3 +1,4 @@
+from __future__ import print_function
 
 # -*- coding: utf-8 -*-
 
@@ -100,7 +101,8 @@ class MongoDB(base_calvinsys_object.BaseCalvinsysObject):
                 _log.error("Failed to open database connection: {}".format(e))
                 return None, None
 
-        def done((client, collection)):
+        def done(xxx_todo_changeme):
+            (client, collection) = xxx_todo_changeme
             if client and collection:
                 self.client = client
                 self.collection = collection

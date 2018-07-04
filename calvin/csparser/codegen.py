@@ -1,8 +1,10 @@
-import astnode as ast
-import visitor
-import astprint
+from __future__ import print_function
+from __future__ import absolute_import
+from . import astnode as ast
+from . import visitor
+from . import astprint
 import numbers
-from parser import calvin_parse
+from .parser import calvin_parse
 from calvin.actorstore.store import DocumentationStore, GlobalStore
 from calvin.requests import calvinresponse
 from calvin.csparser.port_property_syntax import port_property_data
@@ -1156,7 +1158,7 @@ class CodeGen(object):
             return
         ast.Node._verbose_desc = self.verbose_nodes
         printer = astprint.BracePrinter()
-        print "========\n{}\n========".format(heading)
+        print("========\n{}\n========".format(heading))
         printer.process(self.root)
 
 
@@ -1335,17 +1337,17 @@ if __name__ == '__main__':
     """
 
     source_text = cleandoc(source_text)
-    print source_text
-    print
+    print(source_text)
+    print()
     ai, it = calvin_codegen(source_text, script)
-    print
-    print json.dumps(ai, indent = 4)
-    print
+    print()
+    print(json.dumps(ai, indent = 4))
+    print()
     if it.issue_count == 0:
-        print "No issues"
-        print ai
+        print("No issues")
+        print(ai)
     for i in it.formatted_issues(custom_format="{type!c}: {reason} {filename}:{line}:{col}", filename=script):
-        print i
+        print(i)
 
 
 

@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import print_function
 import pytest
 import sys
 import argparse
@@ -542,7 +543,7 @@ class ActorTester(object):
                 try:
                     f(aut)
                 except Exception as e:
-                    print "Actor %s failed during setup of test %d: %s" % (actor, test_index, e.message)
+                    print("Actor %s failed during setup of test %d: %s" % (actor, test_index, e.message))
                     raise Exception("Failed during setup of test %d" % (test_index, ))
 
             for port, values in inputs.iteritems():
@@ -563,7 +564,7 @@ class ActorTester(object):
                     else:
                         assert vals == values, "Expected output '%s' does not match '%s'" % (vals, values)
                 except AssertionError as e:
-                    print "Error:", str(e)
+                    print("Error:", str(e))
                     raise AssertionError("Failed test %d" % (test_index,))
 
             if not all(f(aut) for f in postconds):
@@ -588,7 +589,7 @@ class ActorTester(object):
                 test_fail[actor] = e.message
             except Exception as e:
                 self.illegal_actors[actor] = str(e) + '\n' + ''.join(
-                    traceback.format_exception(sys.exc_type, sys.exc_value, sys.exc_traceback))
+                    traceback.format_exception(sys.exc_info()[0], sys.exc_info()[1], sys.exc_info()[2]))
 
         return {'pass': test_pass, 'fail': test_fail, 'skipped': no_test,
                 'errors': self.illegal_actors, 'components': self.components}
@@ -606,15 +607,15 @@ def merge_results(result1, result2):
 
 
 def show_result(header, result):
-    print header
+    print(header)
     for actor in result:
-        print "  %s" % (actor, )
+        print("  %s" % (actor, ))
 
 
 def show_issue(header, result):
-    print header
+    print(header)
     for actor, reason in result.iteritems():
-        print "  %s: %s" % (actor, reason)
+        print("  %s: %s" % (actor, reason))
 
 
 def show_issues(results):
@@ -649,7 +650,7 @@ def test_actors(actor="", show=False, path=None):
 
     if not any(results.values()):
         if actor:
-            print "No actors matching '%s' found" % (actor,)
+            print("No actors matching '%s' found" % (actor,))
         else:
             raise Exception("No actors found")
 

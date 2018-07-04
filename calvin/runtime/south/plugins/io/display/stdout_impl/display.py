@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import print_function
 from calvin.runtime.south.plugins.io.display import base_display
 
 
@@ -24,7 +25,7 @@ class Display(base_display.DisplayBase):
     """
 
     def show_text(self, text):
-        print text
+        print(text)
 
     def show(self, text, *args, **kwargs):
-        print text
+        print(text)

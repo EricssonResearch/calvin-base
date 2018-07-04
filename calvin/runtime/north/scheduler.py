@@ -14,12 +14,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import absolute_import
 import sys
 import time
 import random
 import logging
 
-from monitor import Event_Monitor, VisualizingMonitor
+from .monitor import Event_Monitor, VisualizingMonitor
 from calvin.runtime.south.plugins.async import async
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.utilities.calvinlogger import get_logger

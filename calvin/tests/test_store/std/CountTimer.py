@@ -27,7 +27,7 @@ class CountTimer(Actor):
     """
 
     @manage()
-    def init(self, sleep=0.1, start=1, steps=sys.maxint):
+    def init(self, sleep=0.1, start=1, steps=sys.maxsize):
         self.start = start
         self.count = start
         self.sleep = sleep

@@ -15,6 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import print_function
 import argparse
 import time
 import json
@@ -120,7 +121,7 @@ def runtime(uris, control_uri, attributes=None, dispatch=False):
         else:
             start_node(uris, control_uri, **kwargs)
     except Exception as e:
-        print "Starting runtime failed:", e
+        print("Starting runtime failed:", e)
         raise
 
 def storage_runtime(uri, control_uri, attributes=None, dispatch=False):
@@ -194,7 +195,7 @@ def dispatch_and_deploy(app_info, wait, uris, control_uri, attr, credentials):
     rt, process = runtime(uris, control_uri, attr, dispatch=True)
     app_id = None
     app_id = deploy(rt, app_info, credentials)
-    print "Deployed application", app_id
+    print("Deployed application", app_id)
 
     timeout = wait if wait else None
     if timeout:
@@ -374,13 +375,13 @@ def main():
         try:
             credentials_ = json.loads(args.credentials)
         except Exception as e:
-            print "Credentials not JSON:\n", e
+            print("Credentials not JSON:\n", e)
             return 1
 
     if args.file:
         app_info = compile_script(args.file, credentials_)
         if not app_info:
-            print "Compilation failed."
+            print("Compilation failed.")
             return 1
 
     uris = args.uris
@@ -395,7 +396,7 @@ def main():
         uris.append("calvinip://%s:%d" % (args.host, args.port))
 
     if not uris:
-        print "At least one listening interface is needed"
+        print("At least one listening interface is needed")
         return -1
 
     # Attributes
@@ -405,14 +406,14 @@ def main():
         try:
             runtime_attr = json.load(open(args.attr_file))
         except Exception as e:
-            print "Attribute file not JSON:\n", e
+            print("Attribute file not JSON:\n", e)
             return -1
 
     if args.attr:
         try:
             runtime_attr = json.loads(args.attr)
         except Exception as e:
-            print "Attributes not JSON:\n", e
+            print("Attributes not JSON:\n", e)
             return -1
 
     if args.ext:

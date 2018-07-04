@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import absolute_import
 import traceback
 from calvin.utilities import calvinlogger
 
@@ -24,7 +25,7 @@ def register(_id, node_name, callbacks, schemas, formats):
     ret = {}
     if 'calvinfcm' in schemas:
         try:
-            import calvinfcm_transport
+            from . import calvinfcm_transport
             f = calvinfcm_transport.CalvinTransportFactory(_id, node_name, callbacks)
             factories[_id] = f
             ret['calvinfcm'] = f

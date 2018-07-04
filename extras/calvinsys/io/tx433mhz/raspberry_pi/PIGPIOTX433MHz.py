@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import print_function
 from calvin.runtime.south.calvinsys.io.tx433mhz import BaseTX433MHz
 from calvin.utilities.calvinlogger import get_logger
 
@@ -49,7 +50,7 @@ except:
             return self.wf
             
         def wave_send_once(self, seq):
-            print ", ".join(seq)
+            print(", ".join(seq))
 
         def wave_chain(self, control):
             while control:
@@ -59,11 +60,11 @@ except:
                     continue
                 cmd = control.pop(0)
                 if cmd==0 or cmd==3:
-                    print "CMD", cmd
+                    print("CMD", cmd)
                     continue
                 if cmd==1 or cmd==2:
                     arg = control.pop(0) + 256 * control.pop(0)
-                    print "CMD", cmd, arg
+                    print("CMD", cmd, arg)
                     continue
                 raise Exception("Bad command")
 
@@ -114,7 +115,7 @@ class PIGPIOTX433MHz(BaseTX433MHz.BaseTX433MHz):
 if __name__ == '__main__':
    d = PIGPIOTX433MHz(None, None, None)
    d.init(18)
-   print d
-   print d.can_write()
+   print(d)
+   print(d.can_write())
    d.write([(1, 1), (0, 10), (1, 1), (0, 1), (1, 1), (0, 5)])
    

@@ -135,7 +135,8 @@ class BtPort(tcp.Port):
             s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         return s
 
-    def _buildAddr(self, (host, port)):
+    def _buildAddr(self, xxx_todo_changeme):
+        (host, port) = xxx_todo_changeme
         return (host, port)
 
     def getHost(self):

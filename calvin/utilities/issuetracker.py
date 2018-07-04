@@ -1,3 +1,4 @@
+from __future__ import print_function
 import sys
 import string
 
@@ -213,8 +214,8 @@ class IssueTracker(object):
 if __name__ == '__main__':
 
     myfmt = IssueFormatter()
-    print myfmt.format("{foo!u} {foo!c}", foo="hello")
-    print myfmt.format("{0!u} {0!c}", "hello")
+    print(myfmt.format("{foo!u} {foo!c}", foo="hello"))
+    print(myfmt.format("{0!u} {0!c}", "hello"))
 
 
 
@@ -222,10 +223,10 @@ if __name__ == '__main__':
     t.add_error("Foo")
     t.add_warning("Bar")
 
-    print t.issues()
-    print t.error_count, t.errors()
-    print t.warning_count, t.warnings()
-    print t.issue_count, t.issues()
+    print(t.issues())
+    print(t.error_count, t.errors())
+    print(t.warning_count, t.warnings())
+    print(t.issue_count, t.issues())
     t.add_warning("Bar")
     assert t.warning_count == 1
     t.allow_duplicates = True
@@ -233,49 +234,49 @@ if __name__ == '__main__':
     assert t.warning_count == 2
 
     for f in t.formatted_issues():
-        print f
+        print(f)
 
     for f in t.formatted_warnings():
-        print f
+        print(f)
 
     for f in t.formatted_errors():
-        print f
+        print(f)
 
     for f in t.formatted_issues(custom_format="{reason}"):
-        print f
+        print(f)
 
     for f in t.formatted_warnings(custom_format="{type!u} - {reason}"):
-        print f
+        print(f)
 
     for f in t.formatted_errors(custom_format="{type} - {reason!u}"):
-        print f
+        print(f)
 
     for f in t.formatted_issues(custom_format="{no_reason}"):
-        print f
+        print(f)
 
     t.add_error("Line", {'line':0, 'col':0, 'extra':42})
 
     for f in t.formatted_issues(custom_format="{no_reason}"):
-        print f
+        print(f)
 
     t.add_error("Apa")
     t.add_error("Ara")
-    print "--- Sorted (type) ---"
+    print("--- Sorted (type) ---")
     for f in t.formatted_issues(custom_format="{no_reason}", sort_key="type"):
-        print f
-    print "--- Sorted (reason) ---"
+        print(f)
+    print("--- Sorted (reason) ---")
     for f in t.formatted_issues(custom_format="{no_reason}", sort_key="reason"):
-        print f
-    print "--- Sorted (BAD: no_reason) ---"
+        print(f)
+    print("--- Sorted (BAD: no_reason) ---")
     for f in t.formatted_issues(sort_key="no_reason"):
-        print f
-    print "--- Sorted (line) ---"
+        print(f)
+    print("--- Sorted (line) ---")
     for f in t.formatted_errors(custom_format="{type!c}: {reason} {line}:{col}", sort_key="line"):
-        print f
+        print(f)
 
-    print "--- Sorted (extras) ---"
+    print("--- Sorted (extras) ---")
     for f in t.formatted_errors(custom_format="{type!c}: {reason} {filename}, line: {line}", sort_key="line", filename="baz.calvin", line="bogus"):
-        print f
+        print(f)
 
 
 

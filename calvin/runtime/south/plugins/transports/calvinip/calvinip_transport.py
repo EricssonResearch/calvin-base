@@ -14,8 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import absolute_import
 from calvin.utilities import calvinlogger
-from twisted.twisted_transport import TwistedCalvinServer, TwistedCalvinTransport
+from .twisted.twisted_transport import TwistedCalvinServer, TwistedCalvinTransport
 from calvin.runtime.south.plugins.transports import base_transport
 from calvin.runtime.south.plugins.transports.lib.twisted import twisted_transport
 

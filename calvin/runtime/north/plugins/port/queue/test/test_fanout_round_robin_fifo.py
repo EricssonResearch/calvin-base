@@ -1,3 +1,4 @@
+from __future__ import print_function
 import unittest
 import pytest
 
@@ -128,7 +129,7 @@ class TestFanoutRoundRobinFIFO(unittest.TestCase):
         self.outport.add_reader("reader", {})
         with self.assertRaises(QueueEmpty) as context:
             self.outport.peek("reader")
-            print context
+            print(context)
         # unknown reader
         self.outport.write("data", None)
         with self.assertRaises(Exception):

@@ -292,7 +292,8 @@ class Source(base_calvinsys_object.BaseCalvinsysObject):
                     _log.error("Error occured - disconnecting")
                     client.disconnect()
 
-        def setup_done((client, parameter, subscription)):
+        def setup_done(xxx_todo_changeme):
+            (client, parameter, subscription) = xxx_todo_changeme
             self.client = client
             self.subscription = subscription
             self.running = True

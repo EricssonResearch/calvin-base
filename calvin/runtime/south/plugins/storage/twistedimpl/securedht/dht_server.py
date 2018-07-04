@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import print_function
 import sys
 import traceback
 import time
@@ -326,10 +327,10 @@ def main(iface):
 
         time.sleep(4)
 
-        print a.set(key="APA", value="banan")
+        print(a.set(key="APA", value="banan"))
 
-        print a.get(key="APA")
-        print b.get(key="APA")
+        print(a.get(key="APA"))
+        print(b.get(key="APA"))
 
         a.stop()
         b.stop()
@@ -345,9 +346,9 @@ def main(iface):
     return ret
 
 if __name__ == "__main__":
-    print sys.argv
+    print(sys.argv)
     if len(sys.argv) != 2:
-        print "Usage: %s <server|client> <IP of interface>" % (sys.argv[0], )
+        print("Usage: %s <server|client> <IP of interface>" % (sys.argv[0], ))
         # sys.exit(1)
         interface = ''
     else:

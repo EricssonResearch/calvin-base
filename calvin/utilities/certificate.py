@@ -17,6 +17,7 @@
 Openssl wrapper used to generate and sign certificates.
 This module depends on openssl.
 """
+from __future__ import print_function
 
 import ConfigParser
 import os
@@ -242,7 +243,7 @@ def store_trusted_root_cert(cert_file, type, security_dir=None):
     i=0
     filename_exist=True
     while filename_exist:
-        out_file = os.path.join(store_dir, certificate_hash+"."+`i`)
+        out_file = os.path.join(store_dir, certificate_hash+"."+repr(i))
         if os.path.isfile(out_file):
             i += 1
         else:
@@ -457,7 +458,7 @@ def c_rehash(type, security_dir=None):
             try:
                 certificate_hash = cert_hash(certpath=os.path.join(path, filename))
             except Exception as err:
-                print "Failed to get certificate hash, err={}".format(err)
+                print("Failed to get certificate hash, err={}".format(err))
                 _log.error("Failed to get certificate hash, err={}".format(err))
                 raise Exception("Failed to get certificate hash")
         i=0
@@ -466,7 +467,7 @@ def c_rehash(type, security_dir=None):
         #E.g., if two certificates get same has, the first file is name <cert_hash>.0
         # and the second <cert_hash>.1
         while filename_exist:
-            out_file = os.path.join(path, certificate_hash+"."+`i`)
+            out_file = os.path.join(path, certificate_hash+"."+repr(i))
             if os.path.isfile(out_file):
                 i += 1
             else:
@@ -736,7 +737,7 @@ class TrustStore():
             try:
                 certificate_hash = cert_hash(path)
             except Exception as err:
-                print "Failed to get certificate hash, err={}".format(err)
+                print("Failed to get certificate hash, err={}".format(err))
                 _log.error("Failed to get certificate hash, err={}".format(err))
                 raise Exception("Failed to get certificate hash")
             i=0
@@ -745,7 +746,7 @@ class TrustStore():
             #E.g., if two certificates get same has, the first file is name <cert_hash>.0
             # and the second <cert_hash>.1
             while filename_exist:
-                out_file = os.path.join(path, certificate_hash+"."+`i`)
+                out_file = os.path.join(path, certificate_hash+"."+repr(i))
                 if os.path.isfile(out_file):
                     i += 1
                 else:

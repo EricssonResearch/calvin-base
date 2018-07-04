@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import print_function
 import unittest
 import time
 import shutil
@@ -87,13 +88,13 @@ class TestSecurity(unittest.TestCase):
         try:
             shutil.rmtree(credentials_testdir)
         except Exception as err:
-            print "Failed to remove old testdir, err={}".format(err)
+            print("Failed to remove old testdir, err={}".format(err))
             pass
         try:
             shutil.copytree(orig_identity_provider_path, identity_provider_path)
         except Exception as err:
             _log.error("Failed to create test folder structure, err={}".format(err))
-            print "Failed to create test folder structure, err={}".format(err)
+            print("Failed to create test folder structure, err={}".format(err))
             raise
         helpers.sign_files_for_security_tests(credentials_testdir)
         runtimes = helpers.create_CA_and_generate_runtime_certs(domain_name, credentials_testdir, NBR_OF_RUNTIMES)
@@ -175,7 +176,7 @@ class TestSecurity(unittest.TestCase):
         assert result['actor_map']['test_script:snk'] in actors[1]
         request_handler.set_credentials({"user": "user0", "password": "pass0"})
         actual = request_handler.report(runtimes[1]["RT"], result['actor_map']['test_script:snk'])
-        print "actual=", actual
+        print("actual=", actual)
         assert len(actual) > 2
 
         request_handler.delete_application(runtimes[1]["RT"], result['application_id'])

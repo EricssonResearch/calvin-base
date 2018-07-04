@@ -14,13 +14,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import print_function
+from __future__ import absolute_import
 import os
 import ply.lex as lex
 import ply.yacc as yacc
-import calvin_rules
-from calvin_rules import tokens as calvin_tokens
-import astnode as ast
-from astprint import BraceFormatter
+from . import calvin_rules
+from .calvin_rules import tokens as calvin_tokens
+from . import astnode as ast
+from .astprint import BraceFormatter
 from calvin.utilities.issuetracker import IssueTracker
 
 _parser_instance = None
@@ -528,7 +530,7 @@ if __name__ == '__main__':
     import os
     import sys
     import json
-    import astprint
+    from . import astprint
     import logging
 
     logging.basicConfig(
@@ -565,17 +567,17 @@ apply src, snk : simple
             with open(script, 'r') as source:
                 source_text = source.read()
         except:
-            print "Error: Could not read file: '%s'" % script
+            print("Error: Could not read file: '%s'" % script)
             sys.exit(1)
 
     parser = get_parser()
     ir, it = parser.parse(source_text, logger=log)
     if it.issue_count == 0:
-        print "No issues"
+        print("No issues")
     for i in it.formatted_issues(custom_format="{type!c}: {reason} {filename}:{line}:{col}", filename=script):
-        print i
+        print(i)
 
-    print "CalvinScript:"
+    print("CalvinScript:")
     bp = astprint.BracePrinter()
     bp.process(ir)
     # print

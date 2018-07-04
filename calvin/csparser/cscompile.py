@@ -1,6 +1,7 @@
+from __future__ import absolute_import
 
 import os
-from codegen import calvin_codegen
+from .codegen import calvin_codegen
 from calvin.utilities.security import Security, security_enabled
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.utilities.calvinlogger import get_logger

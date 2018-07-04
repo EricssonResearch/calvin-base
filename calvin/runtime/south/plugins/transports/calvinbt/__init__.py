@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import absolute_import
 import traceback
 
 factories = {}
@@ -23,7 +24,7 @@ def register(_id, node_name, callbacks, schemas, formats):
     ret = {}
     if 'calvinbt' in schemas:
         try:
-            import calvinbt_transport
+            from . import calvinbt_transport
             f = calvinbt_transport.CalvinTransportFactory(_id, callbacks)
             factories[_id] = f
             ret['calvinbt'] = f

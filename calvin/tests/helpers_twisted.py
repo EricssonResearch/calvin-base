@@ -1,3 +1,4 @@
+from __future__ import print_function
 from twisted.internet import defer, reactor
 from calvin.runtime.south.plugins.async import threads
 from calvin.utilities.calvin_callback import CalvinCB
@@ -30,7 +31,7 @@ def timeout(secs):
 
             try:
                 rawResult, timeoutResult = yield defer.DeferredList([rawD, timeoutD], fireOnOneCallback=True, fireOnOneErrback=True, consumeErrors=True)
-            except defer.FirstError, e:
+            except defer.FirstError as e:
                 #Only rawD should raise an exception
                 assert e.index == 0
                 timesUp.cancel()
@@ -50,11 +51,11 @@ def timeout(secs):
 import traceback, sys
 
 def dump_stack(stack, exc):
-    print exc
+    print(exc)
     part_stack = stack[-3:-1]
     #for entry in traceback.format_list(stack):
     for entry in traceback.format_list(part_stack):
-        print entry,
+        print(entry, end=' ')
 
 def create_callback(timeout=.5, test_part=None):
     def dummy_callback(d, *args, **kwargs):
