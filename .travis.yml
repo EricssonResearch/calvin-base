@@ -1,9 +1,12 @@
 language: python
 python:
   - "3.6"
-# command to install dependencies
+
+    # command to install dependencies
 install:
   - "pip install tox"
+  - "pip install future"
+
 # command to run tests
 script:
   - tox
