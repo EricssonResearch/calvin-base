@@ -194,7 +194,7 @@ class TCPClientProtocolFactory(BaseClientProtocolFactory):
             except Exception as err:
                 _log.error("Failed to fetch client credentials, err={}".format(err))
                 raise
- 
+
             try:
                 endpoint = endpoints.SSL4ClientEndpoint(reactor,
                                                         self._host_ip,
@@ -215,7 +215,7 @@ class TCPClientProtocolFactory(BaseClientProtocolFactory):
         if self._protocol_type == "raw":
             self.protocol.send(data)
         elif self._protocol_type == "string":
-            self.protocol.sendString(data)
+            self.protocol.sendString(data.encode('ascii'))
         elif self._protocol_type == "delimiter":
             self.protocol.sendLine(data)
         else:

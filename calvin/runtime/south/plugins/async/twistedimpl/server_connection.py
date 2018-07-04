@@ -186,7 +186,7 @@ class LineProtocol(LineReceiver):
 class HTTPProtocol(LineReceiver):
 
     def __init__(self, factory, actor_id):
-        self.delimiter = '\r\n\r\n'
+        self.delimiter = b'\r\n\r\n'
         self.data_available = False
         self.connection_lost = False
         self._header = None
@@ -214,6 +214,7 @@ class HTTPProtocol(LineReceiver):
             self.factory.trigger()
 
     def lineReceived(self, line):
+        line = line.decode("UTF-8")
         header = [h.strip() for h in line.split("\r\n")]
         self._command = header.pop(0)
         self._header = {}
@@ -229,6 +230,8 @@ class HTTPProtocol(LineReceiver):
 
     def send(self, data):
         # Do not add newlines - data may be binary
+        if isinstance(data, str):
+            data = data.encode('ascii')
         self.transport.write(data)
 
     def close(self):
