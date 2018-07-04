@@ -183,11 +183,9 @@ class AttributeResolverHelper(object):
     @staticmethod
     def _to_unicode(value):
         if isinstance(value, str):
-            return value.decode("UTF-8")
-        elif isinstance(value, str):
             return value
         else:
-            return str(value).decode("UTF-8")
+            return value.decode("UTF-8")
 
     @classmethod
     def owner_resolver(cls, attr):
@@ -385,7 +383,7 @@ class AttributeResolver(object):
             return value
         else:
             return self._get_attribute_helper(indices[1:], value[indices[0]])
-    
+
     def _get_attribute(self, index, which):
         indices = [idx for idx in index.split("/") if idx] # remove extra /'s
         try:
@@ -404,17 +402,17 @@ class AttributeResolver(object):
             return False
         except:
             _log.error("Error: Invalid attribute '%r'" % (index,))
-        
+
     def has_private_attribute(self, index):
         return self._has_attribute(index, "private")
-        
+
     def has_public_attribute(self, index):
         return self._has_attribute(index, "public")
-        
+
     def get_private(self, index=None):
         if not index:
             return self.attr["private"]
-        return self._get_attribute(index, "private")            
+        return self._get_attribute(index, "private")
 
     def get_public(self, index=None):
         if not index:
@@ -443,8 +441,8 @@ class AttributeResolver(object):
         The attribute type (e.g. "owner") and the attribute name (e.g. "organization")
         are concatenated using "." to form the key (e.g. "owner.organization").
         """
-        return {attr_type + "." + keys[attr_type][i]: value 
-                for attr_type, value_list in self.attr["indexed_public"].items() 
+        return {attr_type + "." + keys[attr_type][i]: value
+                for attr_type, value_list in self.attr["indexed_public"].items()
                 for i, value in enumerate(value_list) if value is not None}
 
 if __name__ == "__main__":
@@ -480,4 +478,4 @@ if __name__ == "__main__":
     s = AttributeResolverHelper.encode_index(['cpuAvail', '0', '25', '50'])
     print(s)
     print(AttributeResolverHelper.decode_index(s))
-    
+
