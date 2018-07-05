@@ -23,7 +23,7 @@ def read_description(fname):
         return fp.read()
 
 
-setup(name='calvin',
+setup(name='er-calvin',
       version='1.0.1',
       url="http://github.com/EricssonResearch/calvin-base",
       license="Apache Software License",
