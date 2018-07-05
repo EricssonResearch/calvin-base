@@ -24,7 +24,7 @@ def read_description(fname):
 
 
 setup(name='calvin',
-      version='1.0',
+      version='1.0.1',
       url="http://github.com/EricssonResearch/calvin-base",
       license="Apache Software License",
       author="Team Calvin @ Ericsson Research",
@@ -59,6 +59,7 @@ setup(name='calvin',
       description="Calvin is a distributed runtime and development framework for an actor based dataflow"
                   "programming methodology",
       long_description=read_description('README.md'),
+      long_description_content_type="text/markdown",
       packages=["calvin"],
       include_package_data=True,
       platforms='any',
