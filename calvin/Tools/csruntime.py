@@ -362,18 +362,17 @@ def runtime_certificate(rt_attributes):
                 _log.debug("Runtime certificate available")
 
 def start_gui(interface4, port):
-  import extras
+  import calvinextras
   import inspect
   import os.path
   from twisted.web.server import Site
   from twisted.web.static import File
   from twisted.internet import endpoints, reactor
 
-  # find installation path of calvin extras package
-  extras_path = os.path.dirname(inspect.getfile(extras))
-
+  # find installation path of calvinextras package
+  extras_path = os.path.dirname(inspect.getfile(calvinextras))
   # build path to gui files
-  gui_path = os.path.join(extras_path, "CalvinGUI", "Build", "Release", "EACalvin")
+  gui_path = os.path.join(extras_path, "CalvinGUI", "Build", "GUI")
 
   # Add endpoint to twisted reactor
   resource = File(gui_path)
