@@ -58,7 +58,7 @@ except:
 
 def security_modules_check():
     if _conf.get("security","security_conf"):
-        _sec_conf =_conf.get("security","security_conf") 
+        _sec_conf =_conf.get("security","security_conf")
         # Want security
         if not HAS_OPENSSL:
             # Miss OpenSSL
@@ -156,7 +156,7 @@ class Security(object):
             callback(authentication_decision=True)
             return
         request['subject'] = credentials
-        if ('authentication' in self.sec_conf) and ('procedure' in self.sec_conf['authentication']): 
+        if ('authentication' in self.sec_conf) and ('procedure' in self.sec_conf['authentication']):
             if self.sec_conf['authentication']['procedure'] == "external":
                 if not HAS_JWT:
                     _log.error("Security: Install JWT to use external server as authentication method.\n" +
@@ -187,8 +187,8 @@ class Security(object):
             root_dir = os.path.abspath(os.path.join(_conf.install_location(), '..'))
             client = Client(server=self.sec_conf['authentication']['server_ip'],
                             secret=bytes(self.sec_conf['authentication']['secret']),
-                            dict=Dictionary(os.path.join(root_dir, "extras", "pyrad_dicts", "dictionary"),
-                                        os.path.join(root_dir, "extras", "pyrad_dicts", "dictionary.acc")))
+                            dict=Dictionary(os.path.join(root_dir, "calvinextras", "pyrad_dicts", "dictionary"),
+                                        os.path.join(root_dir, "calvinextras", "pyrad_dicts", "dictionary.acc")))
             req = client.CreateAuthPacket(code=pyrad.packet.AccessRequest,
                                           User_Name=request['subject']['user'],
                                           NAS_Identifier=self.node.id)
@@ -249,7 +249,7 @@ class Security(object):
             # Decode JSON Web Token, which contains the authentication response.
             decode_jwt(reply.data["jwt"],
                        reply.data["cert_name"],
-                       self.node, 
+                       self.node,
                        callback=CalvinCB(self._handle_authentication_response_jwt_decoded_cb,
                                         callback=callback)
                       )
@@ -313,7 +313,7 @@ class Security(object):
                 _log.debug("Authorization decision from migration")
                 # Decode JSON Web Token, which contains the authorization response.
                 decode_jwt(decision_from_migration["jwt"], decision_from_migration["cert_name"],
-                            self.node, actor_id, 
+                            self.node, actor_id,
                             CalvinCB(self._get_authorization_decision_jwt_decoded_cb,
                                 callback=callback))
                 return
@@ -414,7 +414,7 @@ class Security(object):
         try:
             # Decode JSON Web Token, which contains the authorization response.
             decode_jwt(reply.data["jwt"], reply.data["cert_name"],
-                                self.node, actor_id, 
+                                self.node, actor_id,
                                 CalvinCB(self._handle_authorization_response_jwt_decoded_cb,
                                     callback=callback))
         except Exception as e:
