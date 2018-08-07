@@ -9,7 +9,7 @@ wrapt==1.10.2
 pyserial==3.0.1
 netifaces==0.10.4
 pyOpenSSL==17.1.0
-cryptography==1.9.0
+cryptography>==2.3, ==2.*
 passlib==1.7.0
 PyJWT==1.4.0
 service-identity==17.0.0
