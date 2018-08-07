@@ -368,12 +368,17 @@ def start_gui(interface4, port):
   from twisted.web.server import Site
   from twisted.web.static import File
   from twisted.internet import endpoints, reactor
+  from calvin.utilities import calvinconfig
 
   # find installation path of calvinextras package
   extras_path = os.path.dirname(inspect.getfile(calvinextras))
   # build path to gui files
   gui_path = os.path.join(extras_path, "CalvinGUI", "Build", "GUI")
-
+  gui_config_path =  os.path.join(extras_path, "CalvinGUI", "calvin.conf") 
+  # Patch config
+  _conf = calvinconfig.get()
+  delta_config = _conf.config_at_path(gui_config_path)
+  _conf.update_config(delta_config)    
   # Add endpoint to twisted reactor
   resource = File(gui_path)
   factory = Site(resource)
