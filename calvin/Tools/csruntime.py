@@ -36,6 +36,12 @@ Start runtime, compile calvinscript and deploy application.
 
     argparser = argparse.ArgumentParser(description=long_description)
 
+    argparser.add_argument('--gui', dest="gui", action="store_true", help="start Calvin GUI")
+    argparser.add_argument('--gui-port', metavar='<gui port>', type=int, dest="guiport",
+                           default=8000, help="use port <gui port> for gui server")
+    argparser.add_argument('--gui-if', metavar='<gui interface>', type=str, dest="guiif",
+                           default="localhost", help="use ipv4 interface <gui interface> for gui server")
+
     argparser.add_argument('--name', metavar='<name>', type=str,
                             help="shortcut for attribute indexed_public/node_name/name",
                             dest='name')
@@ -355,6 +361,27 @@ def runtime_certificate(rt_attributes):
             else:
                 _log.debug("Runtime certificate available")
 
+def start_gui(interface4, port):
+  import extras
+  import inspect
+  import os.path
+  from twisted.web.server import Site
+  from twisted.web.static import File
+  from twisted.internet import endpoints, reactor
+
+  # find installation path of calvin extras package
+  extras_path = os.path.dirname(inspect.getfile(extras))
+
+  # build path to gui files
+  gui_path = os.path.join(extras_path, "CalvinGUI", "Build", "Release", "EACalvin")
+
+  # Add endpoint to twisted reactor
+  resource = File(gui_path)
+  factory = Site(resource)
+  endpoint = endpoints.TCP4ServerEndpoint(reactor, interface=interface4, port=port)
+  endpoint.listen(factory)
+  _log.info("Calvin GUI server listening on http://{}:{}".format(interface4, port))
+
 
 def main():
     args = parse_arguments()
@@ -366,6 +393,10 @@ def main():
     # Need to be before other calvin calls to set the common log file
     set_loglevel(args.loglevel, args.logfile)
     set_config_from_args(args)
+
+    # Start gui (if applicaple)
+    if args.gui:
+        start_gui(args.guiif, args.guiport)
 
     app_info = None
 
