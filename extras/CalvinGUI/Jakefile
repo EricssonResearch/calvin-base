@@ -41,6 +41,7 @@ app (projectName, function(task)
         task.setCompilerFlags("-DDEBUG -g");
     else
         task.setCompilerFlags("-O2");
+    print("Objj flags:" + task.compilerFlags())
 });
 
 function get_commit_hash()
@@ -124,13 +125,6 @@ function printResults(configuration)
     print("----------------------------");
 }
 
-task ("deploy", ["release"], function()
-{
-    FILE.mkdirs(FILE.join("Build", "Deployment", projectName));
-    OS.system(["press", "-f", FILE.join("Build", "Release", projectName), FILE.join("Build", "Deployment", projectName)]);
-    printResults("Deployment")
-});
-
 task ("push", [], function()
 {
     keypath = ENV["JAKE_KEYPATH"]
@@ -146,6 +140,22 @@ task ("push-release", ["deploy", "push"], function()
 {
     print("----------------------------");
     print("Push-Release completed");
+    print("----------------------------");
+});
+
+task ("calvin", [], function()
+{
+    OS.system(["rm", "-rf", FILE.join("Build", "Deployment", projectName, "Frameworks", "Debug")]);
+    OS.system(["rm", "-rf", FILE.join("Build", "Deployment", projectName, "Frameworks", "AppKit", "Resources", "Aristo.blend")]);
+    OS.system(["rm", "-rf", FILE.join("Build", "GUI")]);
+    OS.system(["mkdir", "-p", FILE.join("Build", "GUI")]);
+    OS.system(["cp", "-a", FILE.join("Build", "Deployment", projectName, ""), FILE.join("Build", "GUI", "")]);
+});
+
+task ("calvin-release", ["deploy", "calvin"], function()
+{
+    print("----------------------------");
+    print("calvin-release completed");
     print("----------------------------");
 });
 

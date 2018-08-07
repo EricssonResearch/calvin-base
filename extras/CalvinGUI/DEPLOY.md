@@ -1,4 +1,4 @@
-# Deploying Web GUI to server
+## Deploying Web GUI to server
 
 The jake-file `Jakefile` contains a command `push-release` that will do the heavy lifting:
 
@@ -16,7 +16,16 @@ The environment `JAKE_KEYPATH` and `JAKE_DEPLOYPATH` variables must be set.
 
 The process will take a couple of minutes (rebuilding and optimizing the code, pushing the cappuccino framework, etc.).
 
-## Release numbers
+## Creating a stand-alone version for Calvin distro
+
+The jake-file `Jakefile` contains a command `calvin-release` that will do the heavy lifting:
+
+    # Example invocation
+    CONFIG=Release jake calvin-release
+
+The output will be in the GUI directory in the Build directory. If CONFIG is not given, the Objj compiler will default to debug.
+
+## Release versions
 
 If deploying for use with a Master release of Calvin, define `CALVIN_VERSION` when issuing the above command. If `CALVIN_VERSION` is not specified the required version will be set to the latest commit hash.
 
