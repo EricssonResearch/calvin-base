@@ -10,3 +10,7 @@ include calvin/tests/data.txt
 recursive-include calvin/Tools/www *.html *.js *.css *.png
 include setup.cfg
 include tox.ini
+include calvinextras/__init__.py
+recursive-include calvinextras/calvinsys *.py
+graft calvinextras/CalvinGUI
+graft calvinextras/pyrad_dicts
