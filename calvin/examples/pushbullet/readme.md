@@ -2,7 +2,6 @@
 
 Here we use the [Pushbullet](http://www.pushbullet.com) API to push a message to a channel:
 
-
 ## Setup
 
 ### Hardware
@@ -44,13 +43,5 @@ Update the calvin.conf file with the api key and channel tag (not channel name!)
 
 Run the following command from within the directory the `calvin.conf`
 file is placed:
-
-    $ CALVIN_GLOBAL_STORAGE_TYPE=\"local\" csruntime --host localhost pushbullet.calvin
-
-## DHT
-
-Calvin's internal registry is not strictly needed when running this small example,
-it has therefor been turned off. To turn it on and run the application with DHT
-instead, remove `CALVIN_GLOBAL_STORAGE_TYPE=\"local\"` from the command. I.e:
 
     $ csruntime --host localhost pushbullet.calvin

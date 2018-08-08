@@ -31,7 +31,7 @@ class Pushbullet(Actor):
 
     @manage(["title"])
     def init(self, title):
-        self._title = title
+        self.title = title
         self.setup()
 
     def did_migrate(self):
@@ -52,7 +52,7 @@ class Pushbullet(Actor):
     @stateguard(lambda self: self._pb and calvinsys.can_write(self._pb))
     @condition(action_input=['message'])
     def post_update(self, message):
-        calvinsys.write(self._pb, {"message": message, "title": self._title})
+        calvinsys.write(self._pb, {"message": message, "title": self.title})
 
     action_priority = (post_update,)
     requires = ['web.pushbullet.channel.post']
