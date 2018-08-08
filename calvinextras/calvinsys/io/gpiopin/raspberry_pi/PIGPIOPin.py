@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.runtime.south.calvinsys.io.gpiopin import BaseGPIOPin
+from calvinextras.calvinsys.io.gpiopin import BaseGPIOPin
 from calvin.utilities.calvinlogger import get_logger
 import pigpio
 
