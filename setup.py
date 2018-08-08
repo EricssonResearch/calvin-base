@@ -24,7 +24,7 @@ def read_description(fname):
 
 
 setup(name='er-calvin',
-      version='1.0.1',
+      version='1.1.0',
       url="http://github.com/EricssonResearch/calvin-base",
       license="Apache Software License",
       author="Team Calvin @ Ericsson Research",
@@ -76,7 +76,7 @@ setup(name='er-calvin',
           "Topic :: Software Development",
       ],
       python_requires=">=2.7",
-      keywords= "iot dataflow actors distributed internet-of-things cloud-computing programming",
+      keywords="iot dataflow actors distributed internet-of-things cloud-computing programming",
       entry_points={
           'console_scripts': [
               'csruntime=calvin.Tools.csruntime:main',
