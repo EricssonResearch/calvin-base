@@ -1,1 +1,0 @@
-"""Actors related to charts"""
