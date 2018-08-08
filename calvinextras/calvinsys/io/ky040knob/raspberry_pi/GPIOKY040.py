@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.runtime.south.calvinsys.io.ky040knob import BaseKY040
+from calvinextras.calvinsys.io.ky040knob import BaseKY040
 from calvin.utilities.calvinlogger import get_logger
 import RPi.GPIO as gpio
 
