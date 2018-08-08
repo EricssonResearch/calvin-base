@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.runtime.south.calvinsys.io.servomotor import BaseServo
+from calvinextras.calvinsys.io.servomotor import BaseServo
 import Adafruit_PCA9685
 
 
