@@ -1,4 +1,0 @@
-https://pypi.python.org/packages/36/61/404b5148298f23f2458bdbb81d82735ba55d7036bfe5d30b20657430e1ad/ak-gchartwrapper-0.9.1.tar.gz
-pygame==1.9.3
-opencv-python==3.2.0.7
-pillow==4.1.1
