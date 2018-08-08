@@ -3,7 +3,7 @@ rpcudp==1.0
 kademlia==0.5
 ply==3.8
 Twisted==15.5.0
-requests==2.9.1
+requests>=2.9.1
 infi.traceback==0.3.12
 wrapt==1.10.2
 pyserial==3.0.1
