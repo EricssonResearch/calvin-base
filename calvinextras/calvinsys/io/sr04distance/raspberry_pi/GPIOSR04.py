@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.runtime.south.calvinsys.io.sr04distance import BaseSR04
+from calvinextras.calvinsys.io.sr04distance import BaseSR04
 from calvin.utilities.calvinlogger import get_logger
 from calvin.runtime.south.plugins.async import async
 
