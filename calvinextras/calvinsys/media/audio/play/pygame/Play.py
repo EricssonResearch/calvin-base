@@ -16,9 +16,9 @@
 
 import pygame
 
-from calvin.runtime.south.calvinsys.media.audio.play import BasePlay
 from calvin.runtime.south.plugins.async import threads
 from calvin.utilities.calvinlogger import get_logger
+from calvinextras.calvinsys.media.audio.play import BasePlay
 
 _log = get_logger(__name__)
 
@@ -53,26 +53,26 @@ class Play(BasePlay.BasePlay):
                 return player if self.audiofile else None # keep player if audio is given in init
             except Exception as e:
                 _log.info("Error playing file: {}".format(e))
-            
+
         def finished(player):
             if player:
                 self.player = player
-                
+
         def done(*args, **kwargs):
             self.is_playing = False
             self.scheduler_wakeup()
 
         self.is_playing = True
-    
+
         if self.audiofile:
             audiofile = self.audiofile
-    
+
         defered = threads.defer_to_thread(play_it, player=self.player, audiofile=audiofile)
         defered.addCallback(finished)
         defered.addBoth(done)
         _log.info("Done")
- 
+
     def close(self):
         if self.player:
             self.mixer.quit()
-        
+
