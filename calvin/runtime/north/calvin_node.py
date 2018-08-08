@@ -24,7 +24,6 @@ import logging
 from calvin.runtime.north.calvinsys import get_calvinsys
 from calvin.runtime.north.calvinlib import get_calvinlib
 
-import calvin.runtime.south.plugins.ui.uicalvinsys
 from calvin.runtime.north import actormanager
 from calvin.runtime.north import replicationmanager
 from calvin.runtime.north import appmanager

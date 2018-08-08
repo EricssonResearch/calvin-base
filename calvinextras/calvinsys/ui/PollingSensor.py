@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import calvin.runtime.south.plugins.ui.uicalvinsys as ui
+import calvin.runtime.south.calvinsys.ui.uicalvinsys as ui
 from calvin.runtime.south.calvinsys import base_calvinsys_object
 
 
