@@ -309,12 +309,6 @@ def setup_calvinsys():
             "module": "mock.MockOutput",
             "attributes": {}
         },
-        "web.websocket.broadcast": {
-            "module": "mock.MockOutput",
-            "attributes": {}
-       },
-
-
         "sys.schedule": {
             "module": "mock.MockInputOutput",
             "attributes": {'data': ["dummy"]}
@@ -404,30 +398,6 @@ def setup_calvinsys():
             "attributes": {"data": ["dummy"]}
         },
         "weather.local": {
-            "module": "mock.MockInputOutput",
-            "attributes": {"data": ["dummy"]}
-        },
-        "chart.dynamic.meter": {
-            "module": "mock.MockInputOutput",
-            "attributes": {"data": ["dummy"]}
-        },
-        "chart.static.vbar": {
-            "module": "mock.MockInputOutput",
-            "attributes": {"data": ["dummy"]}
-        },
-        "chart.dynamic.vbar": {
-            "module": "mock.MockInputOutput",
-            "attributes": {"data": ["dummy"]}
-        },
-        "chart.static.hbar": {
-            "module": "mock.MockInputOutput",
-            "attributes": {"data": ["dummy"]}
-        },
-        "chart.dynamic.hbar": {
-            "module": "mock.MockInputOutput",
-            "attributes": {"data": ["dummy"]}
-        },
-        "chart.dynamic.line": {
             "module": "mock.MockInputOutput",
             "attributes": {"data": ["dummy"]}
         }
