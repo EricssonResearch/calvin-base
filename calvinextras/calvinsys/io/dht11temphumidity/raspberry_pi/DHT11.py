@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.runtime.south.calvinsys.io.dht11temphumidity.BaseDHT11 import BaseDHT11
+from calvinextras.calvinsys.io.dht11temphumidity.BaseDHT11 import BaseDHT11
 from calvin.utilities.calvinlogger import get_logger
 from calvin.runtime.south.plugins.async import async
 import pigpio
