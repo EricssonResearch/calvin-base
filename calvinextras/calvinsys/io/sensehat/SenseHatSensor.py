@@ -16,7 +16,7 @@
 # limitations under the License.
 
 from calvin.runtime.south.calvinsys import base_calvinsys_object
-from calvin.runtime.south.plugins.io.sensehat import sensehat
+import sensehat
 from calvin.utilities.calvinlogger import get_logger
 
 _log = get_logger(__name__)
