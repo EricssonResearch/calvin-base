@@ -14,60 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.runtime.south.calvinsys.io.tx433mhz import BaseTX433MHz
+from calvinextras.calvinsys.io.tx433mhz import BaseTX433MHz
 from calvin.utilities.calvinlogger import get_logger
-
-try:
-    import pigpio
-except:
-    class GuineaPigpio(object):
-        """docstring for GuineaPigpio"""
-        OUTPUT = 42
-        
-        def __init__(self):
-            super(GuineaPigpio, self).__init__()
-        
-        def pi(self):
-            return self
-            
-        def pulse(self, on, off, delay):
-            return "{:x}/{:x}/{}".format(on, off, delay)    
-        
-        def set_mode(self, *args):
-            pass
-        
-        def wave_tx_busy(self):
-            return False
-            
-        def wave_clear(self):
-            pass
-            
-        def wave_add_generic(self, wf):
-            self.wf = wf
-            
-        def wave_create(self):
-            return self.wf
-            
-        def wave_send_once(self, seq):
-            print ", ".join(seq)
-
-        def wave_chain(self, control):
-            while control:
-                x = control.pop(0)
-                if x != 255:
-                    self.wave_send_once(x)
-                    continue
-                cmd = control.pop(0)
-                if cmd==0 or cmd==3:
-                    print "CMD", cmd
-                    continue
-                if cmd==1 or cmd==2:
-                    arg = control.pop(0) + 256 * control.pop(0)
-                    print "CMD", cmd, arg
-                    continue
-                raise Exception("Bad command")
-
-    pigpio = GuineaPigpio()
+import pigpio
 
 
 _log = get_logger(__name__)
@@ -110,11 +59,4 @@ class PIGPIOTX433MHz(BaseTX433MHz.BaseTX433MHz):
     def close(self):
         del self._gpio
         self._gpio = None
-
-if __name__ == '__main__':
-   d = PIGPIOTX433MHz(None, None, None)
-   d.init(18)
-   print d
-   print d.can_write()
-   d.write([(1, 1), (0, 10), (1, 1), (0, 1), (1, 1), (0, 5)])
    
