@@ -36,7 +36,9 @@ Start runtime, compile calvinscript and deploy application.
 
     argparser = argparse.ArgumentParser(description=long_description)
 
-    argparser.add_argument('--gui', dest="gui", action="store_true", help="start Calvin GUI")
+    group = argparser.add_mutually_exclusive_group()
+    group.add_argument('--gui', dest="gui", action="store_true", help="start Calvin GUI")
+    group.add_argument('--gui-mock-devices', dest="guimockdevices", action="store_true", help="start Calvin GUI with default set of mock devices")
     argparser.add_argument('--gui-port', metavar='<gui port>', type=int, dest="guiport",
                            default=8000, help="use port <gui port> for gui server")
     argparser.add_argument('--gui-if', metavar='<gui interface>', type=str, dest="guiif",
@@ -361,7 +363,7 @@ def runtime_certificate(rt_attributes):
             else:
                 _log.debug("Runtime certificate available")
 
-def start_gui(interface4, port):
+def start_gui(interface4, port, mockdevices):
   import calvinextras
   import inspect
   import os.path
@@ -375,10 +377,11 @@ def start_gui(interface4, port):
   # build path to gui files
   gui_path = os.path.join(extras_path, "CalvinGUI", "Build", "GUI")
   gui_config_path =  os.path.join(extras_path, "CalvinGUI", "calvin.conf")
-  # Patch config
-  _conf = calvinconfig.get()
-  delta_config = _conf.config_at_path(gui_config_path)
-  _conf.update_config(delta_config)
+  if mockdevices:
+      # Patch config
+      _conf = calvinconfig.get()
+      delta_config = _conf.config_at_path(gui_config_path)
+      _conf.update_config(delta_config)
   # Add endpoint to twisted reactor
   resource = File(gui_path)
   factory = Site(resource)
@@ -399,8 +402,8 @@ def main():
     set_config_from_args(args)
 
     # Start gui (if applicaple)
-    if args.gui:
-        start_gui(args.guiif, args.guiport)
+    if args.gui or args.guimockdevices:
+        start_gui(args.guiif, args.guiport, args.guimockdevices)
 
     app_info = None
 
