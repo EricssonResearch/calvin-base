@@ -15,7 +15,7 @@
 # limitations under the License.
 
 from calvinextras.calvinsys.io.adafruit16x2lcd.BaseDisplay import BaseDisplay
-from calvin.runtime.south.plugins.async import async
+from calvin.runtime.south.async import async
 from Adafruit_CharLCD import Adafruit_CharLCD as LCD
 import Adafruit_GPIO as aGPIO
 

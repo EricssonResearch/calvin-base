@@ -16,7 +16,7 @@
 
 from calvinextras.calvinsys.io.ds18b20thermometer.BaseDS18B20 import BaseDS18B20
 from calvin.utilities.calvinlogger import get_logger
-from calvin.runtime.south.plugins.async import async
+from calvin.runtime.south.async import async
 import glob
 
 _log = get_logger(__name__)

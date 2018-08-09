@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.runtime.south.plugins.async import server_connection
+from calvin.runtime.south.async import server_connection
 from calvin.runtime.south.calvinsys import base_calvinsys_object
 from calvin.utilities.calvinlogger import get_logger
 

@@ -18,7 +18,7 @@ from calvin.utilities import dynops
 from calvin.utilities import calvinlogger
 from calvin.runtime.north.plugins.requirements import req_operations
 import calvin.requests.calvinresponse as response
-from calvin.runtime.south.plugins.async import async
+from calvin.runtime.south.async import async
 
 _log = calvinlogger.get_logger(__name__)
 
@@ -73,7 +73,7 @@ class ReqMatch(object):
             callback is called with the possible placement set and status,
             i.e. callback(status=CalvinResponse(), possible_placments=set([...]))
             status can be OK, BAD_REQUEST, SERVER_ERROR
-            
+
             actor_id and component_ids are used when calling the requirement operations only,
             they are required by some of the req operations.
         """
@@ -97,7 +97,7 @@ class ReqMatch(object):
         # Must call it since the triggers might already have released before cb set
         self._collect_placements()
         _log.analyze(self.node.id, "+ END", {'actor_id': self.actor_id, 'node_iter': str(self.node_iter)})
-        
+
     def _build_match(self):
         intersection_iters = []
         difference_iters = []

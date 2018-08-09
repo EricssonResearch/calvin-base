@@ -16,7 +16,7 @@
 
 from calvinextras.calvinsys.io.sr04distance import BaseSR04
 from calvin.utilities.calvinlogger import get_logger
-from calvin.runtime.south.plugins.async import async
+from calvin.runtime.south.async import async
 
 import time
 import RPi.GPIO as gpio
@@ -30,11 +30,11 @@ class GPIOSR04(BaseSR04.BaseSR04):
     def init(self, echo_pin, trigger_pin, **kwargs):
         self._echo_pin = echo_pin
         self._trigger_pin = trigger_pin
-        
+
         gpio.setmode(gpio.BCM)
         gpio.setup(self._echo_pin, gpio.IN, gpio.PUD_UP)
         gpio.setup(self._trigger_pin, gpio.OUT)
-        
+
         self._elapsed = None
         self._detection = None
 
@@ -50,17 +50,17 @@ class GPIOSR04(BaseSR04.BaseSR04):
             gpio.output(self._trigger_pin, gpio.LOW)
             pin = gpio.wait_for_edge(self._echo_pin, gpio.FALLING, timeout=1000)
             self._elapsed = time.time() - self._t0
-            
+
             if pin is None:
-                _log.debug("echo timeout exceeded") # 
-                
+                _log.debug("echo timeout exceeded") #
+
             self._detection = None
             async.call_from_thread(self.scheduler_wakeup)
-            
-            
+
+
         except Exception as e:
             _log.warning("Failed sonar triggering: {}".format(e))
-            
+
     def write(self, _):
         # trigger measurement
         async.call_from_thread(self._trigger)
@@ -68,7 +68,7 @@ class GPIOSR04(BaseSR04.BaseSR04):
     def can_read(self):
         # measurement done
         return self._elapsed is not None
-        
+
     def read(self):
         # elapsed in secs
         # distance = (elapsed s) * (speed of sound in mm/s) / 2

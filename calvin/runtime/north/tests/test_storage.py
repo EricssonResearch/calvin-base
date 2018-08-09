@@ -18,7 +18,7 @@ from calvin.requests import calvinresponse
 from calvin.utilities import calvinuuid
 from calvin.runtime.north import storage
 from calvin.runtime.north import appmanager
-from calvin.runtime.south.plugins.async import threads
+from calvin.runtime.south.async import threads
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.tests import DummyNode
 from calvin.tests.helpers_twisted import create_callback, wait_for

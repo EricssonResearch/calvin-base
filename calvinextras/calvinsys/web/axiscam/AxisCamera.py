@@ -18,7 +18,7 @@ import requests
 import requests.auth
 import base64
 
-from calvin.runtime.south.plugins.async import threads
+from calvin.runtime.south.async import threads
 from calvin.utilities.calvinlogger import get_logger
 from calvin.runtime.south.calvinsys import base_calvinsys_object
 
@@ -68,7 +68,7 @@ class AxisCamera(base_calvinsys_object.BaseCalvinsysObject):
         "required": ["username", "password", "address"],
         "description": "Set username, password and address of Camera"
     }
-    
+
     can_write_schema = {
         "description": "True iff no image fetching is in progress",
         "type": "boolean"
@@ -83,7 +83,7 @@ class AxisCamera(base_calvinsys_object.BaseCalvinsysObject):
         "description": "True iff image is available for reading",
         "type": "boolean"
     }
-    
+
     read_schema = {
         "description": "Read image data, returns base64 encoded string",
         "type" : "string"
@@ -95,9 +95,9 @@ class AxisCamera(base_calvinsys_object.BaseCalvinsysObject):
         self._address = address
         self._in_progress = None
         self._image = None
-        
+
         self._params = "resolution={resolution}&colorlevel={colorlevel}&rotation={rotation}".format(
-            resolution=resolution, 
+            resolution=resolution,
             colorlevel=colorlevel,
             rotation=rotation
         )
@@ -111,7 +111,7 @@ class AxisCamera(base_calvinsys_object.BaseCalvinsysObject):
             self._image = None
             self._in_progress = None
             self.scheduler_wakeup()
-            
+
         def _new_data(req, **kwargs):
             data = req.content
             try:
@@ -120,7 +120,7 @@ class AxisCamera(base_calvinsys_object.BaseCalvinsysObject):
                 print("Image encode error: {}".format(e))
             self._in_progress = None
             self.scheduler_wakeup()
-            
+
         url = "http://{address}/axis-cgi/jpg/image.cgi?{params}".format(address=self._address, params=self._params)
         self._in_progress = threads.defer_to_thread(requests.get, url, auth=requests.auth.HTTPBasicAuth(self._username, self._password))
         self._in_progress.addCallback(_new_data)
@@ -133,7 +133,7 @@ class AxisCamera(base_calvinsys_object.BaseCalvinsysObject):
         image = self._image
         self._image = None
         return image
-        
+
     def close(self):
         self._username = None
         self._password = None

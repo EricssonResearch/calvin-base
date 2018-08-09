@@ -15,7 +15,7 @@
 # limitations under the License.
 
 import pushbullet
-from calvin.runtime.south.plugins.async import threads, async
+from calvin.runtime.south.async import threads, async
 from calvin.utilities.calvinlogger import get_logger
 from calvin.runtime.south.calvinsys import base_calvinsys_object
 

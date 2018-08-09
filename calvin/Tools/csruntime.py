@@ -224,7 +224,7 @@ def set_config_from_args(args):
 
 def discover(timeout=2, retries=5):
     import struct
-    from calvin.runtime.south.plugins.storage.twistedimpl.dht.service_discovery_ssdp import SSDPServiceDiscovery,\
+    from calvin.runtime.south.storage.twistedimpl.dht.service_discovery_ssdp import SSDPServiceDiscovery,\
                                                                                             SERVICE_UUID,\
                                                                                             CA_SERVICE_UUID,\
                                                                                             SSDP_ADDR,\
@@ -266,7 +266,7 @@ def runtime_certificate(rt_attributes):
     from calvin.utilities import runtime_credentials
     from calvin.utilities import certificate
     from calvin.utilities import certificate_authority
-    from calvin.runtime.south.plugins.storage.twistedimpl.dht.service_discovery_ssdp import parse_http_response
+    from calvin.runtime.south.storage.twistedimpl.dht.service_discovery_ssdp import parse_http_response
     global _conf
     global _log
     _conf = calvinconfig.get()
@@ -374,11 +374,11 @@ def start_gui(interface4, port):
   extras_path = os.path.dirname(inspect.getfile(calvinextras))
   # build path to gui files
   gui_path = os.path.join(extras_path, "CalvinGUI", "Build", "GUI")
-  gui_config_path =  os.path.join(extras_path, "CalvinGUI", "calvin.conf") 
+  gui_config_path =  os.path.join(extras_path, "CalvinGUI", "calvin.conf")
   # Patch config
   _conf = calvinconfig.get()
   delta_config = _conf.config_at_path(gui_config_path)
-  _conf.update_config(delta_config)    
+  _conf.update_config(delta_config)
   # Add endpoint to twisted reactor
   resource = File(gui_path)
   factory = Site(resource)

@@ -22,15 +22,15 @@ import importlib
 from calvin.utilities import calvinuuid
 from calvin.utilities.calvin_callback import CalvinCB
 import calvin.requests.calvinresponse as response
-from calvin.runtime.south.plugins.async import async
+from calvin.runtime.south.async import async
 from calvin.utilities import calvinlogger
 from calvin.utilities import calvinconfig
 _log = calvinlogger.get_logger(__name__)
 _conf = calvinconfig.get()
 
 # FIXME should be read from calvin config
-TRANSPORT_PLUGIN_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), *['south', 'plugins', 'transports'])
-TRANSPORT_PLUGIN_NS = "calvin.runtime.south.plugins.transports"
+TRANSPORT_PLUGIN_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), *['south', 'transports'])
+TRANSPORT_PLUGIN_NS = "calvin.runtime.south.transports"
 
 
 class CalvinBaseLink(object):

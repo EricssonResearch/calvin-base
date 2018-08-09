@@ -16,7 +16,7 @@
 
 from calvinextras.calvinsys.io.dht11temphumidity.BaseDHT11 import BaseDHT11
 from calvin.utilities.calvinlogger import get_logger
-from calvin.runtime.south.plugins.async import async
+from calvin.runtime.south.async import async
 import pigpio
 
 # FIXME: Allow faster operation by queing results and don't wait for readout

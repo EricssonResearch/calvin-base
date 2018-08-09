@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.runtime.south.plugins.async import async
+from calvin.runtime.south.async import async
 from calvin.requests import calvinresponse
 import itertools
 

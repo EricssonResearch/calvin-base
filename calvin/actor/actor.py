@@ -26,7 +26,7 @@ from calvin.runtime.north.calvin_token import Token, ExceptionToken
 # from calvin.runtime.north import calvincontrol
 from calvin.runtime.north.replicationmanager import ReplicationId
 import calvin.requests.calvinresponse as response
-from calvin.runtime.south.plugins.async import async
+from calvin.runtime.south.async import async
 from calvin.runtime.north.plugins.authorization_checks import check_authorization_plugin_list
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.csparser.port_property_syntax import get_port_property_capabilities, get_port_property_runtime
@@ -778,7 +778,7 @@ class Actor(object):
         else:
             capability_require = []
 
-        return (self._deployment_requirements + capability_require + 
+        return (self._deployment_requirements + capability_require +
                 capability_port + self._replication_id._placement_req)
 
     def _derive_port_property_capabilities(self):
