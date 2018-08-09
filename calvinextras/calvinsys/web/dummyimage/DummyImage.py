@@ -18,7 +18,7 @@ import requests
 import requests.auth
 import base64
 
-from calvin.runtime.south.plugins.async import threads
+from calvin.runtime.south.async import threads
 from calvin.utilities.calvinlogger import get_logger
 from calvin.runtime.south.calvinsys import base_calvinsys_object
 
@@ -56,7 +56,7 @@ class DummyImage(base_calvinsys_object.BaseCalvinsysObject):
         "description": "Set resolution, colors and text to display on test image",
         "required": ["text"]
     }
-    
+
     can_write_schema = {
         "description": "True iff no image fetching is in progress",
         "type": "boolean"
@@ -71,7 +71,7 @@ class DummyImage(base_calvinsys_object.BaseCalvinsysObject):
         "description": "True iff image is available for reading",
         "type": "boolean"
     }
-    
+
     read_schema = {
         "description": "Read image data, returns base64 encoded string",
         "type" : "string"
@@ -99,7 +99,7 @@ class DummyImage(base_calvinsys_object.BaseCalvinsysObject):
             self._image = None
             self._in_progress = None
             self.scheduler_wakeup()
-            
+
         def _new_data(req, **kwargs):
             data = req.content
             try:
@@ -108,7 +108,7 @@ class DummyImage(base_calvinsys_object.BaseCalvinsysObject):
                 print("Image encode error: {}".format(e))
             self._in_progress = None
             self.scheduler_wakeup()
-            
+
         self._in_progress = threads.defer_to_thread(requests.get, self._url + "-%s" % (self._ctr,))
         self._in_progress.addCallback(_new_data)
         self._in_progress.addErrback(_no_data)
@@ -121,7 +121,7 @@ class DummyImage(base_calvinsys_object.BaseCalvinsysObject):
         image = self._image
         self._image = None
         return image
-        
+
     def close(self):
         self._username = None
         self._password = None

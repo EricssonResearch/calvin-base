@@ -18,7 +18,7 @@ import time
 from collections import deque
 from socket import error as socket_error
 import opcua
-from calvin.runtime.south.plugins.async import async, threads
+from calvin.runtime.south.async import async, threads
 from calvin.runtime.south.calvinsys import base_calvinsys_object
 from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities.calvinlogger import add_logging_handler

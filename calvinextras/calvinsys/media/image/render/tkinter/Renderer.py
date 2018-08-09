@@ -19,7 +19,7 @@ from PIL import ImageTk, Image
 import Tkinter as tkinter
 import StringIO
 import base64
-from calvin.runtime.south.plugins.async import async
+from calvin.runtime.south.async import async
 from calvin.utilities.calvinlogger import get_logger
 from calvinextras.calvinsys.media.image.render import BaseRenderer
 

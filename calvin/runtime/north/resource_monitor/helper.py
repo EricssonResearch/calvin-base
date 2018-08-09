@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from calvin.runtime.south.plugins.async import async
+from calvin.runtime.south.async import async
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.utilities.attribute_resolver import AttributeResolver
 from calvin.utilities.calvinlogger import get_logger
@@ -44,7 +44,7 @@ class ResourceMonitorHelper(object):
         prefix: String used in storage for attribute, e.g. nodeCpuAvail.
         prefix_index: String used in indexed_public structure for this field, e.g. cpuAvail.
         value: new value to set.
-        cb: callback to receive response. Signature: cb(value, True/False) 
+        cb: callback to receive response. Signature: cb(value, True/False)
         """
 
         # get old value to cleanup indexes

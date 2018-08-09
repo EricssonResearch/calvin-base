@@ -17,7 +17,7 @@
 import requests
 from requests.auth import HTTPBasicAuth, HTTPDigestAuth
 
-from calvin.runtime.south.plugins.async import threads
+from calvin.runtime.south.async import threads
 from calvin.utilities.calvinlogger import get_logger
 from calvin.runtime.south.calvinsys import base_calvinsys_object
 
@@ -84,7 +84,7 @@ class Command(base_calvinsys_object.BaseCalvinsysObject):
         "description": "Setup HTTP command",
         "required": ["cmd"]
     }
-    
+
     can_write_schema = {
         "description": "Returns True if HTTP command is ready to be executed",
         "type": "boolean"
@@ -127,7 +127,7 @@ class Command(base_calvinsys_object.BaseCalvinsysObject):
         "description": "Returns True iff request has finished and data can be read",
         "type": "boolean"
     }
-    
+
     read_schema = {
         "description": "Get result from request; default dictionary with headers, body, and status, otherwise of type as given in onlydata",
         "type" : ["object", "number", "integer", "string"],
@@ -154,13 +154,13 @@ class Command(base_calvinsys_object.BaseCalvinsysObject):
         else:
             _log.warning("Ignoring unknown authentication method {}".format(auth.get("authtype")))
             auth = None
-            
+
         return auth
-        
+
     def init(self, cmd, url=None, data=None, timeout=5.0, auth=None, headers=None, params=None, onlydata=None, nodata=False):
         if auth:
             auth = Command.get_auth_method(auth)
-                
+
         self.settings = {
             "headers": headers or {},
             "params": params or {},
@@ -172,7 +172,7 @@ class Command(base_calvinsys_object.BaseCalvinsysObject):
         self.command = {"POST": requests.post, "PUT": requests.put, "DELETE": requests.delete, "GET": requests.get}.get(cmd, None)
         self.url = url
         self.data = data
-        
+
         self.result = None
         self.busy = False
 
@@ -182,7 +182,7 @@ class Command(base_calvinsys_object.BaseCalvinsysObject):
     def write(self, data=None):
         def error(err):
             _log.warning("Request had errors: {}".format(err))
-        
+
         def success(response):
             if self.settings.get("nodata"):
                 #do nothing
@@ -199,19 +199,19 @@ class Command(base_calvinsys_object.BaseCalvinsysObject):
                 # Headers are case-insensitive, so we downcase everything
                 headers = { k.lower():v for k, v in dict(response.headers).items()}
                 self.result = {"body": response.text, "status": response.status_code, "headers": headers }
-            
+
         def done(*args, **kwargs):
             self.scheduler_wakeup()
-        
+
         http_data = None
         if not data or isinstance(data, bool):
             http_data = self.data
-        
+
         url = self.url
         headers = self.settings.get("headers")
         params = self.settings.get("params")
         auth = self.settings.get("auth")
-        
+
         if isinstance(data, dict):
             # User supplied headers, params, url
             if not headers:
@@ -227,21 +227,21 @@ class Command(base_calvinsys_object.BaseCalvinsysObject):
             if data.get("data"):
                 http_data = data.get("data")
 
-        defer = threads.defer_to_thread(self.command, url=url, data=http_data, 
+        defer = threads.defer_to_thread(self.command, url=url, data=http_data,
                                         timeout=self.settings.get("timeout"), headers=headers,
                                         params=params, auth=auth)
         defer.addCallback(success)
         defer.addErrback(error)
         defer.addBoth(done)
-            
+
     def can_read(self):
         return not self.busy and self.result is not None
-        
-        
+
+
     def read(self):
         result = self.result
         self.result = None
         return result
-        
+
     def close(self):
         pass

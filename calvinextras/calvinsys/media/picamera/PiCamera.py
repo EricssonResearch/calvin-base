@@ -17,7 +17,7 @@
 import picamera
 
 from calvin.runtime.south.calvinsys import base_calvinsys_object
-from calvin.runtime.south.plugins.async import threads
+from calvin.runtime.south.async import threads
 from calvin.utilities.calvinlogger import get_logger
 
 _log = get_logger(__name__)
@@ -47,7 +47,7 @@ class PiCamera(base_calvinsys_object.BaseCalvinsysObject):
                 "type": "integer",
                 "minimum": 1,
                 "maximum": 1920
-                
+
             },
             "label": {
                 "description": "Label to add to image",
@@ -64,7 +64,7 @@ class PiCamera(base_calvinsys_object.BaseCalvinsysObject):
         "required": ["mode"],
         "description": "Set up PiCamera"
     }
-    
+
     can_write_schema = {
         "description": "True if device is ready for new image request",
         "type": "boolean"
@@ -74,7 +74,7 @@ class PiCamera(base_calvinsys_object.BaseCalvinsysObject):
         "description": "Request new image",
         "type": ["null", "boolean", "string"]
     }
-    
+
     can_read_schema = {
         "description": "True if new image is available for reading",
         "type": "boolean"
@@ -101,7 +101,7 @@ class PiCamera(base_calvinsys_object.BaseCalvinsysObject):
         if self._label:
             self._camera.annotate_text = self._label
         self._camera.start_preview()
-        
+
 
     def can_write(self):
         return self._b64image is None and self._in_progress is None
@@ -116,8 +116,8 @@ class PiCamera(base_calvinsys_object.BaseCalvinsysObject):
             self._camera.capture(stream, format="jpeg")
         stream.seek(0)
         return base64.b64encode(stream.read())
-            
-        
+
+
     def _p_read_image(self):
         import base64
         import io
@@ -134,19 +134,19 @@ class PiCamera(base_calvinsys_object.BaseCalvinsysObject):
                 cam.capture(stream, format="jpeg", use_video_port=True)
         stream.seek(0)
         return base64.b64encode(stream.read())
-    
+
     def _read_image(self):
         try :
             return self._q_read_image()
         except Exception as e:
             _log.warning("Error reading image: {}".format(e))
         return ""
-        
+
     def _image_ready(self, image, *args, **kwargs):
         self._b64image = image
         self._in_progress = None
         self.scheduler_wakeup()
-        
+
     def _image_error(self, *args, **kwargs):
         self._in_progress = None
         self.scheduler_wakeup()

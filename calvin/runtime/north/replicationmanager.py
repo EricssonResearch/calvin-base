@@ -25,7 +25,7 @@ from calvin.utilities import dynops
 from calvin.utilities.requirement_matching import ReqMatch
 from calvin.utilities.replication_defs import REPLICATION_STATUS, PRE_CHECK
 from calvin.actorstore.store import GlobalStore
-from calvin.runtime.south.plugins.async import async
+from calvin.runtime.south.async import async
 from calvin.runtime.north.plugins.requirements import req_operations
 from calvin.actor.actorport import PortMeta
 from calvin.runtime.north.plugins.port import DISCONNECT
@@ -404,7 +404,7 @@ class ReplicationManager(object):
                 status = kwargs.get("status", args[0])
                 _log.debug("destroy_replication_leader log cb %s status=%s" % (replication_id, status))
             try:
-                self.node.proto.leader_elected(peer_node_id=value['leader_node_id'], leader_type="replication", cmd="destroy", 
+                self.node.proto.leader_elected(peer_node_id=value['leader_node_id'], leader_type="replication", cmd="destroy",
                                                 data=replication_id, callback=_silent if cb is None else cb)
             except:
                 _log.exception("fail destroy_replication_leader _leader_node_cb %s" % replication_id)
@@ -744,7 +744,7 @@ class ReplicationManager(object):
         if last_replica_id in self.node.am.actors:
             self.node.am.destroy_with_disconnect(last_replica_id, terminate=terminate,
                 callback=CalvinCB(self._dereplicated, replication_data=replication_data,
-                                    last_replica_id=last_replica_id, 
+                                    last_replica_id=last_replica_id,
                                     node_id=self.node.id, cb=cb_status))
         else:
             self.node.storage.get_actor(last_replica_id,
@@ -757,7 +757,7 @@ class ReplicationManager(object):
         if calvinresponse.isnotfailresponse(value) and 'node_id' in value:
             # Use app destroy since it can remotely destroy actors
             self.node.proto.app_destroy(value['node_id'],
-                CalvinCB(self._dereplicated, replication_data=replication_data, last_replica_id=key, 
+                CalvinCB(self._dereplicated, replication_data=replication_data, last_replica_id=key,
                             node_id=value['node_id'], cb=cb),
                 None, [key], disconnect=terminate, replication_id=replication_data.id)
         else:
@@ -831,12 +831,12 @@ class ReplicationManager(object):
                 pre_check = PRE_CHECK.NO_OPERATION
             if pre_check == PRE_CHECK.SCALE_OUT:
                 _log.info("Auto-replicate")
-                self.replicate_by_requirements(replication_data, 
+                self.replicate_by_requirements(replication_data,
                     CalvinCB(self._replication_loop_log_cb, replication_id=replication_data.id))
                 replication_data._missing_replica_time = time.time() + 10  # Don't check missing for a while
             if pre_check == PRE_CHECK.SCALE_OUT_KNOWN:
                 _log.info("Auto-replicate known")
-                self.replicate_by_known_placement(replication_data, 
+                self.replicate_by_known_placement(replication_data,
                     CalvinCB(self._replication_loop_log_cb, replication_id=replication_data.id))
                 replication_data._missing_replica_time = time.time() + 10  # Don't check missing for a while
             elif pre_check == PRE_CHECK.SCALE_IN:

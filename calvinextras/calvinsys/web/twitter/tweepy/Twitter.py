@@ -17,7 +17,7 @@
 import time
 import tweepy
 
-from calvin.runtime.south.plugins.async import threads, async
+from calvin.runtime.south.async import threads, async
 from calvin.runtime.south.calvinsys import base_calvinsys_object
 from calvin.utilities.calvinlogger import get_logger
 

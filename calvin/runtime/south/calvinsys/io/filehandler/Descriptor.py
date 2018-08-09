@@ -19,7 +19,7 @@ import os
 
 from calvin.utilities.calvinlogger import get_logger
 from calvin.runtime.south.calvinsys import base_calvinsys_object
-from calvin.runtime.south.plugins.async import filedescriptor
+from calvin.runtime.south.async import filedescriptor
 
 _log = get_logger(__name__)
 

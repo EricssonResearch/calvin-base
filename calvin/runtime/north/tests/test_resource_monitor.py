@@ -5,7 +5,7 @@ from calvin.requests import calvinresponse
 import calvin.utilities.calvinconfig
 from calvin.runtime.north.resource_monitor.cpu import CpuMonitor
 from calvin.runtime.north.resource_monitor.memory import MemMonitor
-from calvin.runtime.south.plugins.async import threads
+from calvin.runtime.south.async import threads
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.utilities.attribute_resolver import AttributeResolver
 from calvin.tests.helpers_twisted import create_callback, wait_for

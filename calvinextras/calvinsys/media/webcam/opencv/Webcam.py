@@ -17,7 +17,7 @@
 import cv2
 
 from calvinextras.calvinsys.media.webcam import BaseWebcam
-from calvin.runtime.south.plugins.async import threads
+from calvin.runtime.south.async import threads
 from calvin.utilities.calvinlogger import get_logger
 
 _log = get_logger(__name__)
@@ -46,12 +46,12 @@ class Webcam(BaseWebcam.BaseWebcam):
         if status :
             barr = image.tostring()
         return base64.b64encode(barr)
-        
+
     def _image_ready(self, image, *args, **kwargs):
         self._b64image = image
         self._in_progress = None
         self.scheduler_wakeup()
-        
+
     def _image_error(self, *args, **kwargs):
         self._in_progress = None
         self.scheduler_wakeup()
@@ -74,4 +74,4 @@ class Webcam(BaseWebcam.BaseWebcam):
             self._in_progress.cancel()
         self._webcam.release()
         self._webcam = None
-        
+

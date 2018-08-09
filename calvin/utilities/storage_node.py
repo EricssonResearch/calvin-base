@@ -24,7 +24,7 @@ import logging
 from calvin.runtime.north import scheduler
 from calvin.runtime.north import storage
 from calvin.runtime.north import calvincontrol
-from calvin.runtime.south.plugins.async import async
+from calvin.runtime.south.async import async
 from calvin.utilities import calvinuuid
 from calvin.utilities.calvinlogger import get_logger
 _log = get_logger(__name__)

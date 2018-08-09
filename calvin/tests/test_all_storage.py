@@ -30,7 +30,7 @@ from calvin.utilities import calvinlogger
 import calvin.utilities.calvinconfig
 from calvin.utilities.utils import get_home
 from calvin.utilities.calvin_callback import CalvinCB
-from calvin.runtime.south.plugins.async import threads, async
+from calvin.runtime.south.async import threads, async
 from calvin.runtime.north import storage, calvin_proto
 from calvin.requests import calvinresponse
 from calvin.tests.helpers_twisted import create_callback, wait_for
@@ -181,7 +181,7 @@ def setup(request):
                                         'storage',
                                         None,
                                         rt_id=n2.id,
-                                        id=calvinuuid.uuid("TUNNEL")) 
+                                        id=calvinuuid.uuid("TUNNEL"))
                 tunnels[n2.id] = tt
                 n2.tunnels = tunnels
             # Give a tunnel its peers tunnel
@@ -545,7 +545,7 @@ class TestAllStorage(object):
                         yield wait_for(self._test_done, timeout=10)
                         print "get_index response", self.get_ans, stype, index, x
                         # Verify we read what is written if too short prefix or not existing we should get [].
-                        assert set(self.get_ans) == set(i[1]) 
+                        assert set(self.get_ans) == set(i[1])
 
     @pytest.inlineCallbacks
     def test_add_remove_get_index(self, setup):
@@ -597,7 +597,7 @@ class TestAllStorage(object):
                         yield wait_for(self._test_done, timeout=10)
                         print "get_index response", self.get_ans, stype, index, x
                         # Verify we read what is written if too short prefix or not existing we should get [].
-                        assert set(self.get_ans) == set(i[1]) 
+                        assert set(self.get_ans) == set(i[1])
 
     def test_all_started(self, setup):
         self.nodes = setup.get("nodes")

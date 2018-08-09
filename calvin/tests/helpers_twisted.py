@@ -1,5 +1,5 @@
 from twisted.internet import defer, reactor
-from calvin.runtime.south.plugins.async import threads
+from calvin.runtime.south.async import threads
 from calvin.utilities.calvin_callback import CalvinCB
 import pytest
 import time
@@ -86,6 +86,6 @@ def wait_for(function, condition=lambda x: x(), timeout=1, test_part=None):
         yield threads.defer_to_thread(time.sleep, .1)
 
     if not condition(function):
-        print("Timeout while waiting for %s function %s with condition %s" % 
+        print("Timeout while waiting for %s function %s with condition %s" %
                 ("" if test_part is None else test_part, function, condition))
 

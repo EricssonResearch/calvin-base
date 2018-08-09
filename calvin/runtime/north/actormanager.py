@@ -18,7 +18,7 @@ import random
 from calvin.actorstore.store import ActorStore
 from calvin.utilities import dynops
 from calvin.utilities.requirement_matching import ReqMatch
-from calvin.runtime.south.plugins.async import async
+from calvin.runtime.south.async import async
 from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities.calvin_callback import CalvinCB
 import calvin.requests.calvinresponse as response

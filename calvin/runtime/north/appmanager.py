@@ -23,7 +23,7 @@ from calvin.runtime.north.plugins.requirements import req_operations
 import calvin.requests.calvinresponse as response
 from calvin.utilities import calvinuuid
 from calvin.actorstore.store import ActorStore, GlobalStore
-from calvin.runtime.south.plugins.async import async
+from calvin.runtime.south.async import async
 from calvin.utilities.security import Security
 from calvin.utilities.requirement_matching import ReqMatch
 
@@ -221,7 +221,7 @@ class AppManager(object):
                     # Destroy the replicas
                     application.replication_ids.append(replication_id)
                     self._node.storage.get_replica(
-                        replication_id, 
+                        replication_id,
                         cb=CalvinCB(func=self._replicas_cb, replication_id=replication_id,
                                     master_id=self._node.am.actors[actor_id]._replication_id.original_actor_id,
                                     application=application))
@@ -686,11 +686,11 @@ class Deployer(object):
         """
         try:
             if not 'shadow_actor' in info:
-                self.node.am.check_requirements_and_sec_policy(info['requires'], 
-                                                               security=self.sec, 
+                self.node.am.check_requirements_and_sec_policy(info['requires'],
+                                                               security=self.sec,
                                                                signer=info['signer'],
-                                                               callback=CalvinCB(self.instantiate, 
-                                                                                 actor_name, info, 
+                                                               callback=CalvinCB(self.instantiate,
+                                                                                 actor_name, info,
                                                                                  actor_def, cb=cb))
                 return
             self.instantiate(actor_name, info, cb=cb)
@@ -722,8 +722,8 @@ class Deployer(object):
                 port_properties = None
             info['args']['name'] = actor_name
             # TODO add requirements should be part of actor_manager new
-            actor_id = self.node.am.new(actor_type=info['actor_type'], args=info['args'], signature=info['signature'], 
-                                        actor_def=actor_def, security=self.sec, access_decision=access_decision, 
+            actor_id = self.node.am.new(actor_type=info['actor_type'], args=info['args'], signature=info['signature'],
+                                        actor_def=actor_def, security=self.sec, access_decision=access_decision,
                                         shadow_actor='shadow_actor' in info, port_properties=port_properties)
             if not actor_id:
                 raise Exception("Could not instantiate actor %s" % actor_name)

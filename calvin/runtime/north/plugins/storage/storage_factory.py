@@ -16,7 +16,7 @@
 
 
 # Parsers
-from calvin.runtime.south.plugins.storage import dht, securedht, sql
+from calvin.runtime.south.storage import dht, securedht, sql
 from calvin.runtime.north.plugins.storage.proxy import StorageProxy
 from calvin.runtime.north.plugins.storage.storage_dict_local import StorageLocal
 

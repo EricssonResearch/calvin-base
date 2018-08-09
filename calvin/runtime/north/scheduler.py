@@ -20,7 +20,7 @@ import random
 import logging
 
 from monitor import Event_Monitor, VisualizingMonitor
-from calvin.runtime.south.plugins.async import async
+from calvin.runtime.south.async import async
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities import calvinconfig
@@ -139,7 +139,7 @@ class BaseScheduler(object):
         tt = time.time() + self._replication_interval
         if not any([t[0] < tt for t in self._tasks if t[1] == self._check_replication]):
             self.insert_task(self._check_replication, self._replication_interval)
-        _log.debug("Next replication loop in %s %d %d" % (str([t[0] - time.time() for t in self._tasks if t[1] == self._check_replication]), 
+        _log.debug("Next replication loop in %s %d %d" % (str([t[0] - time.time() for t in self._tasks if t[1] == self._check_replication]),
                     [t[1] == self._check_replication for t in self._tasks].index(True), len(self._tasks)))
         self.insert_task(self.strategy, 0)
 
@@ -317,7 +317,7 @@ class BaseScheduler(object):
 
         return actor_did_fire
 
-        
+
     def _fire_actor_once(self, actor):
         """
         Try to fire action on actor on this runtime.
@@ -418,7 +418,7 @@ class SimpleScheduler(BaseScheduler):
 # ROUND-ROBIN SCHEDULER
 ######################################################################
 class RoundRobinScheduler(SimpleScheduler):
-    
+
     def strategy(self):
         # Communicate
         list_of_endpoints = self.monitor.endpoints
@@ -436,7 +436,7 @@ class RoundRobinScheduler(SimpleScheduler):
 # NON-PREEMPTIVE SCHEDULER
 ######################################################################
 class NonPreemptiveScheduler(SimpleScheduler):
-    
+
     def strategy(self):
         # Communicate
         list_of_endpoints = self.monitor.endpoints

@@ -46,7 +46,7 @@ Options:
  Args:
   <ip:s>		Ip numbers to the host to start runtimes at.
 EOF
-} 
+}
 
 while [[ $# > 0 ]]
 do
@@ -66,7 +66,7 @@ case $key in
     GIT_COMMIT=$2
     shift # past argument
     shift # past argument
-    break 
+    break
     ;;
     --loglevel)
     LOG_LEVEL=$2
@@ -133,7 +133,7 @@ if [ "$MASTER" != "local" ]; then
 	pushgit $SSHKEY $MASTER $MRTEMPDIR
 	#pushfile $SSHKEY
 	# Execute us remote
-	[ ! -z "$RUN_TEST" ] && RUN_TEST="-t" 
+	[ ! -z "$RUN_TEST" ] && RUN_TEST="-t"
 	ssh -i $SSHKEY $MASTER "cd $MRTEMPDIR && bash $MRTEMPDIR/calvin/Tools/$SCRIPTNAME $RUN_TEST -s $(git_head) $IPS"
 	exit $?
 else
@@ -148,7 +148,7 @@ fi
 DEF_IF=$(netstat -nr | grep -E "^default|^0.0.0.0" | awk '{print $NF}' )
 [ -z "$MYIP" ] && MYIP=$(ifconfig $DEF_IF | grep 'inet ' | sed 's/addr://' | awk '{ print $2}')
 
-DEBUG_FLAGS="--loglevel=calvin.tests=DEBUG --loglevel=calvin.runtime.south.plugins.storage.twistedimpl.dht:DEBUG --loglevel=calvin.runtime.north.storage:DEBUG $LOG_LEVEL"
+DEBUG_FLAGS="--loglevel=calvin.tests=DEBUG --loglevel=calvin.runtime.south.storage.twistedimpl.dht:DEBUG --loglevel=calvin.runtime.north.storage:DEBUG $LOG_LEVEL"
 
 export CALVIN_TEST_UUID=$($UUID)
 export CALVIN_GLOBAL_DHT_NETWORK_FILTER=\"$($UUID)\"
@@ -163,7 +163,7 @@ for node in $IPS
 do
 	PORT=$(get_random_port)
 	PORT_DHT=$(get_random_port)
-	
+
 	# Do this in parallell and wait later
 	sh -c "$SCRIPTDIR/setup_node.sh $GIT_COMMIT $node $CALVIN_TEST_UUID $PORT $CALVIN_GLOBAL_DHT_NETWORK_FILTER $MYIP $SSHKEY $DEBUG_FLAGS 2>&1 | tee $node-log.txt > /dev/null" &
 	PID=$!
@@ -179,14 +179,14 @@ declare -a CALVIN_NODES
 for node in ${NODES[@]}
 do
 	IFS=';' read -a INFO <<< "$node"
-	
-	kill -0 ${INFO[2]} 2> /dev/null 
+
+	kill -0 ${INFO[2]} 2> /dev/null
 	if [ $? -ne 0 ]; then
 		echo "Calvin node at ${INFO[0]} did not start correctly"
 		RET=1
-		break 
+		break
 	fi
-	
+
 	# Wait for it to start
 	CALVIN_TEST_NODE=$(nc -l ${INFO[1]})
 	if [ "$CALVIN_TEST_NODE" == "FALSE" ]; then
@@ -204,7 +204,7 @@ if [ $RET -ne 0 ]; then
 	for node in ${NODES[@]}
 	do
 		IFS=';' read -a INFO <<< "$node"
-		kill ${INFO[2]} 2> /dev/null 
+		kill ${INFO[2]} 2> /dev/null
 	done
 	exit $RET
 

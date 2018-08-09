@@ -16,7 +16,7 @@
 
 from calvin.runtime.south.calvinsys import base_calvinsys_object
 from calvin.utilities.calvinlogger import get_logger
-from calvin.runtime.south.plugins.async import threads
+from calvin.runtime.south.async import threads
 import cv2
 import numpy
 import base64
@@ -28,7 +28,7 @@ _log = get_logger(__name__)
 class DetectObjects(base_calvinsys_object.BaseCalvinsysObject):
     """
     DetectObjects: Find (and optionally mark) preconfigured objects in image, (uses OpenCV)
-    
+
     See https://github.com/opencv/opencv/tree/master/data/haarcascades for some objects classifiers
     """
 
@@ -47,20 +47,20 @@ class DetectObjects(base_calvinsys_object.BaseCalvinsysObject):
         },
         "required": ["haarcascade_file"]
     }
-    
+
     can_write_schema = {
         "description": "True if ready for next analysis image"
     }
-    
+
     write_schema = {
         "description": "Count objects as defined by haarcascade file. Works on b64 encoded image",
         "type": "string"
     }
-    
+
     can_read_schema = {
         "description": "True iff prevoius image has finished processing"
     }
-    
+
     read_schema = {
         "description": "Mark objects as defined by haarcascade file. Input b64 encoded image, return b64 encoded image with found objects marked",
         "type": ["string", "integer"]
@@ -89,7 +89,7 @@ class DetectObjects(base_calvinsys_object.BaseCalvinsysObject):
                 return new_image
             else :
                 return objects
-        
+
         image = base64.b64decode(b64image)
         try:
             image = cv2.imdecode(numpy.fromstring(image, numpy.int8), 1)
@@ -112,7 +112,7 @@ class DetectObjects(base_calvinsys_object.BaseCalvinsysObject):
     def write(self, b64image):
         def success(result):
             self._result = result
-            
+
         def done(*args, **kwargs):
             self.scheduler_wakeup()
         defered = threads.defer_to_thread(self.detect_objects, b64image)
@@ -121,12 +121,11 @@ class DetectObjects(base_calvinsys_object.BaseCalvinsysObject):
 
     def can_read(self):
         return self._result is not None
-        
+
     def read(self):
         result = self._result
         self._result = None
-        return result 
+        return result
 
     def close(self):
         pass
-        

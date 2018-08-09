@@ -16,7 +16,7 @@
 
 import requests
 
-from calvin.runtime.south.plugins.async import threads
+from calvin.runtime.south.async import threads
 from calvin.utilities.calvinlogger import get_logger
 from calvin.runtime.south.calvinsys import base_calvinsys_object
 
@@ -59,7 +59,7 @@ class Post(base_calvinsys_object.BaseCalvinsysObject):
         "description": "Setup HTTP command",
         "required": ["url", "cmd"]
     }
-    
+
     can_write_schema = {
         "description": "Returns True if HTTP command is ready to be executed",
         "type": "boolean"
@@ -74,7 +74,7 @@ class Post(base_calvinsys_object.BaseCalvinsysObject):
         "description": "Returns True iff request has finished",
         "type": "boolean"
     }
-    
+
     read_schema = {
         "description": "Get result from request, always a string (no binary)",
         "type" : "string"
@@ -110,11 +110,11 @@ class Post(base_calvinsys_object.BaseCalvinsysObject):
         def reset(*args, **kwargs):
             self._in_progress = None
             self.scheduler_wakeup()
-            
+
         assert self._in_progress is None
         url = self._url
         data = self._data
-        
+
         if data is None:
             data = write_data
         elif url is None:
@@ -126,13 +126,13 @@ class Post(base_calvinsys_object.BaseCalvinsysObject):
 
     def can_read(self):
         return self._result is not None
-        
+
     def read(self):
         assert self._result is not None
         result = self._result
         self._result = None
         return result
-        
+
     def close(self):
         if self._in_progress:
             self._in_progress.cancel()

@@ -15,7 +15,7 @@
 # limitations under the License.
 
 from calvin.runtime.north.plugins.storage.storage_base import StorageBase
-from calvin.runtime.south.plugins.async import async
+from calvin.runtime.south.async import async
 from calvin.utilities import calvinlogger
 from calvin.utilities import calvinconfig
 from calvin.utilities.calvin_callback import CalvinCB
@@ -60,7 +60,7 @@ class StorageProxy(StorageBase):
         self.tunnel.register_tunnel_down(CalvinCB(self.tunnel_down, org_cb=org_cb))
         self.tunnel.register_tunnel_up(CalvinCB(self.tunnel_up, org_cb=org_cb))
         self.tunnel.register_recv(self.tunnel_recv_handler)
-        
+
     def _start_link_cb(self, status, uri, peer_node_id, org_cb):
         _log.analyze(self.node.id, "+", {'status': str(status)}, peer_node_id=peer_node_id)
 
@@ -68,7 +68,7 @@ class StorageProxy(StorageBase):
 
         if status != 200:
             self.retries += 1
-                
+
             if self.max_retries - self.retries != 0:
                 delay = 0.5 * self.retries if self.retries < 20 else 10
                 _log.info("Link to proxy failed, retrying in {}".format(delay))

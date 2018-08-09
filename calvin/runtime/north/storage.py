@@ -16,7 +16,7 @@
 
 from calvin.runtime.north.plugins.storage import storage_factory
 from calvin.csparser.port_property_syntax import list_port_property_capabilities
-from calvin.runtime.south.plugins.async import async
+from calvin.runtime.south.async import async
 from calvin.utilities import calvinlogger
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.actor import actorport
