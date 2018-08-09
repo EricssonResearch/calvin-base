@@ -1,3 +1,5 @@
+__NOTE__: This is mostly obsolete. Rather than running the installation script, follow the recommended [Installation](https://www.github.com/EricssonResearch/calvin-base/wiki/Installation) description, and then install extra requirements as needed by the `calvinsys`-plugins used.
+
 # Installation
 
 The following has been tested on Raspbian Jessie (2016-05-27) and Ubuntu 16.04. It is mainly aimed at simplifying the installation of Calvin on systems that will not be used for much else, such as Raspberry Pi's or in virtual machines. It is not the recommended way of installing Calvin on your production server. See [the installation descriptions](https://www.github.com/EricssonResearch/calvin-base/wiki/Installation) for the recommended way of installing Calvin.
@@ -98,7 +100,7 @@ and needs to be installed before continuing. After that, the python dependencies
 
     $ cd calvin-base
     $ pip install -r requirements.txt -r test-requirements.txt
-	$ pip install -e .
+    $ pip install -e .
 
 which should be executed in the top directory of the Calvin source tree. Again, it is likely that superuser priviledges are necessary.
 
