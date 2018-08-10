@@ -22,7 +22,7 @@ _log = get_logger(__name__)
 
 class SenseHatDisplay(base_calvinsys_object.BaseCalvinsysObject):
     """
-    Display text on SenseHat matrix on raspberry Pi 
+    Display text on SenseHat matrix on Raspberry Pi
     """
 
     init_schema = {
@@ -86,7 +86,7 @@ class SenseHatDisplay(base_calvinsys_object.BaseCalvinsysObject):
     def write(self, data=None):
         def done(*args, **kwargs):
             self._can_write = True
-            self.scheduler.wakeup()
+            self.scheduler_wakeup()
 
         self._can_write = False
         msg = ""
