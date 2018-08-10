@@ -31,7 +31,6 @@ class SimpleSSE(resource.Resource, object):
 
     def responseCallback(self, err, connection):
         try:
-            connection.finish()
             keylist = [k for k,v in self.connections.iteritems() if v == connection]
             for key in keylist:
                 self.connections.pop(key)
