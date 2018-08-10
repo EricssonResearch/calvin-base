@@ -1,17 +1,42 @@
+# -*- coding: utf-8 -*-
+
+# Copyright (c) 2018 Ericsson AB
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from twisted.web import server, resource
 from twisted.internet import reactor
 import json
 
+from calvin.utilities.calvinlogger import get_logger
 
-class SimpleSSE(resource.Resource):
+_log = get_logger(__name__)
+
+class SimpleSSE(resource.Resource, object):
     isLeaf = True
-    connections = {}
+
+    def __init__(self):
+        super(SimpleSSE, self).__init__()
+        self.connections = {}
 
     def responseCallback(self, err, connection):
-        connection.finish
-        keylist = [k for k,v in connections.iteritems() if v == connection]
-        for key in keylist:
-            connections.pop(key)
+        try:
+            connection.finish()
+            keylist = [k for k,v in self.connections.iteritems() if v == connection]
+            for key in keylist:
+                self.connections.pop(key)
+        except Exception as e:
+            _log.error("responseCallback failed: {}".format(str(e)))
 
     def _validate_connection(self, postpath):
         if len(postpath) is not 2:
@@ -39,7 +64,7 @@ class SimpleSSE(resource.Resource):
 
     def send(self, client_id, data):
         if client_id in self.connections:
-            self._send(connections[client_id], data)
+            self._send(self.connections[client_id], data)
 
     def broadcast(self, data):
         for connection in self.connections.values():
