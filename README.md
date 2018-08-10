@@ -8,6 +8,13 @@ Calvin is an application environment that lets things talk to things. It compris
 
 Go to the [Calvin Wiki](https://github.com/EricssonResearch/calvin-base/wiki) for instructions on how to install and configure Calvin, and how to write and deploy applications.
 
+For the really impatient, the following may work:
+
+1. At a prompt, execute: `pip install er-calvin`
+2. Start a Calvin runtime: `csruntime --host localhost --gui-mock-devices`
+3. Point your browser to [`http://localhost:8000`](http://localhost:8000)
+
+If you encounter problems have a look at the wiki. If all else fails, post an issue describing the problem.
 
 ## Contact
 This is a community project that was started by a team in Ericsson Research. If you have questions or problems, [report an issue](https://github.com/EricssonResearch/calvin-base/issues) and we will get back go you as soon as we can.
