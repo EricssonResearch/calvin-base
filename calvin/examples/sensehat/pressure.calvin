@@ -3,4 +3,4 @@ sensor : sensor.TriggeredPressure()
 out : io.Print()
 
 tick.data > sensor.trigger
-sensor.pressure > out.token
+sensor.mbar > out.token

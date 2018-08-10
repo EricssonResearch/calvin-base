@@ -357,6 +357,10 @@ def setup_calvinsys():
             "module": "mock.MockInputOutput",
             "attributes": {"data": ["dummy"]}
         },
+        "io.pressure": {
+            "module": "mock.MockInputOutput",
+            "attributes": {"data": ["dummy"]}
+        },
         "io.accelerometer": {
             "module": "mock.MockInputOutput",
             "attributes": {"data": ["dummy"]}
