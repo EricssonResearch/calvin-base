@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2015 Ericsson AB
+# Copyright (c) 2015-2018 Ericsson AB
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,6 +15,9 @@
 # limitations under the License.
 
 from twisted.internet import defer
+
+# Enable twisted's deferred debugging
+# defer.setDebugging(True)
 
 # Some callbacks functionallity
 # Defereds
