@@ -24,7 +24,7 @@ _log = get_logger(__name__)
 class SenseHatSensor(base_calvinsys_object.BaseCalvinsysObject):
     """
     Use Raspberry Pi SenseHat sensors.
-    
+
     Currently supports temperature (in centigrade), pressure (in millibars) and relative humidity (in %)
     """
     init_schema = {
@@ -45,7 +45,7 @@ class SenseHatSensor(base_calvinsys_object.BaseCalvinsysObject):
         },
         "required": ["sensor"]
     }
-    
+
     can_write_schema = {
         "description": "True iff SenseHat configured and ready",
         "type": "boolean"
@@ -60,7 +60,7 @@ class SenseHatSensor(base_calvinsys_object.BaseCalvinsysObject):
         "description": "True when value ready for reading",
         "type": "boolean"
     }
-    
+
     read_schema = {
         "description": "Latest reading for selected sensor",
         "type": "number"
@@ -79,7 +79,7 @@ class SenseHatSensor(base_calvinsys_object.BaseCalvinsysObject):
 
     def can_read(self):
         return self._can_read
-        
+
     def write(self, _=None):
         def set_value(value, *args, **kwargs):
             if isinstance(value, float) or isinstance(value, int):
@@ -88,20 +88,20 @@ class SenseHatSensor(base_calvinsys_object.BaseCalvinsysObject):
                 _log.warning("Failed reading '{}' from sensehat: {}".format(self._sensor, value))
                 self._value = None
             self._can_read = True
-            self.scheduler.wakeup()
+            self.scheduler_wakeup()
 
         {
             "temperature": self._sensehat.read_temperature,
             "pressure": self._sensehat.read_pressure,
             "humidity": self._sensehat.read_humidity
         }.get(self._sensor)(set_value)
-        
-    
+
+
     def read(self):
         self._can_read = False
         self._can_write = True
         return self._value
-        
+
     def close(self):
         self._can_read = False
         self._can_write = False
