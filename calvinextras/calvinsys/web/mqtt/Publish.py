@@ -24,7 +24,7 @@ _log = get_logger(__name__)
 
 class Publish(base_calvinsys_object.BaseCalvinsysObject):
     """
-    Publish data to given MQTT broker (using paho.mqtt implementation) 
+    Publish data to given MQTT broker (using paho.mqtt implementation)
     """
 
     init_schema = {
@@ -102,7 +102,7 @@ class Publish(base_calvinsys_object.BaseCalvinsysObject):
             "transport": {
                 "description": "transport to use",
                 "enum": ["tcp", "websocket"]
-                
+
             },
             "topic": {
                 "description": "topic to publish under - if given will be prefixed as topic for all messages",
@@ -135,7 +135,7 @@ class Publish(base_calvinsys_object.BaseCalvinsysObject):
         "required": ["topic"]
     }
 
-    def init(self, hostname, port=1883, qos=0, client_id='', will=None, auth=None, tls=None, transport='tcp', topic=None):
+    def init(self, hostname, port=1883, qos=0, client_id='', will=None, auth=None, tls=None, transport='tcp', topic=None, **kwargs):
         def expand_specials(topic):
             import re
             matches = re.findall(r"##(\w+)##", topic)
@@ -159,7 +159,7 @@ class Publish(base_calvinsys_object.BaseCalvinsysObject):
 
         def on_disconnect(client, userdata, rc):
             _log.warning("MQTT broker {}:{} disconnected".format(hostname, port))
-            
+
 
         # Config
         self.settings = {
@@ -176,7 +176,7 @@ class Publish(base_calvinsys_object.BaseCalvinsysObject):
         self.topic = expand_specials(topic) if topic else None
 
         self.data = []
-        
+
         self.client = paho.mqtt.client.Client(client_id=client_id, transport=transport)
         self.client.on_connect = on_connect
         self.client.on_publish = on_publish
@@ -189,9 +189,9 @@ class Publish(base_calvinsys_object.BaseCalvinsysObject):
             topic = will.get("topic")
             if isinstance(topic, basestring):
                 topic = topic.encode("ascii")
-            
+
             self.client.will_set(topic=topic, payload=payload)
-            
+
         if auth:
             self.client.username_pw_set(username=auth.get("username"), password=auth.get("password"))
 
@@ -209,11 +209,11 @@ class Publish(base_calvinsys_object.BaseCalvinsysObject):
     def write(self, data):
         topic = None
         payload = None
-        
+
         if isinstance(data, dict):
             payload = data.get("payload")
             topic = data.get("topic")
-           
+
             if self.topic and topic:
                 topic = "{}{}".format(self.topic, topic)
             elif self.topic :
