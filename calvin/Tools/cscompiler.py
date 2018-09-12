@@ -20,28 +20,21 @@ import sys
 import json
 import argparse
 from cspreprocess import Preprocessor
-from calvin.csparser.cscompile import compile_script, appname_from_filename
 from calvin.csparser.dscodegen import calvin_dscodegen
+from calvin.csparser.codegen import calvin_codegen
 from calvin.csparser.parser import printable_ir
 
-def compile_file(filename, ds, ir, credentials=None, include_paths=None):
+def appname_from_filename(filename):
+    appname = os.path.splitext(os.path.basename(filename))[0]
+    # Dot . is invalid in application names (interpreted as actor path separator),
+    # so replace any . with _
+    appname = appname.replace('.', '_')
+    return appname
+
+def preprocess(filename, include_paths):
     pp = Preprocessor(include_paths)
     sourceText, it = pp.process(filename)
-    if it.error_count > 0:
-        return ({}, it)
-    appname = appname_from_filename(filename)
-    if ds:
-        return calvin_dscodegen(sourceText, appname)
-    elif ir:
-        return printable_ir(sourceText)
-    else:
-        return compile_script(sourceText, appname, credentials=credentials)
-
-def compile_generator(files, ds, ir, credentials, include_paths):
-    for filename in files:
-        result, issuetracker = compile_file(filename, ds, ir, credentials, include_paths)
-        yield((result, issuetracker, filename))
-
+    return (sourceText, it)
 
 def main():
     long_description = """
@@ -49,13 +42,11 @@ def main():
   By default, the output will be written to file with the same name as the input file,
   but with the extension replaced by 'json'.
   """
-
+    # FIXME: Add credentials and verify arguments
     argparser = argparse.ArgumentParser(description=long_description)
 
-    argparser.add_argument('files', metavar='<filename>', type=str, nargs='+',
+    argparser.add_argument('file', metavar='<filename>', type=str,
                            help='source file to compile')
-    # argparser.add_argument('-d', '--debug', dest='debug', action='store_true', default=False,
-    #                        help='leave debugging information in output')
     argparser.add_argument('--compact', dest='indent', action='store_const', const=None, default=4,
                            help='use compact JSON format instead of readable (default)')
     argparser.add_argument('--sorted', dest='sorted', action='store_true', default=False,
@@ -80,31 +71,39 @@ def main():
                            help='Output file, default is filename.json')
 
 
-
     args = argparser.parse_args()
     exit_code = 0
-    for result, issuetracker, filename in compile_generator(args.files, args.deployscript, args.intermediate, None, args.include_paths):
-        if issuetracker.error_count:
-            for issue in issuetracker.formatted_errors(sort_key='line', custom_format=args.fmt, script=filename, line=0, col=0):
-                sys.stderr.write(issue + "\n")
-            exit_code = 1
-        if issuetracker.warning_count and args.verbose:
-            for issue in issuetracker.formatted_warnings(sort_key='line', custom_format=args.fmt, script=filename, line=0, col=0):
-                sys.stderr.write(issue + "\n")
-        if exit_code == 1:
-            # Don't produce output if there were errors
-            continue
-        if args.intermediate is True:
-            string_rep = result
+
+    source, issuetracker = preprocess(args.file, args.include_paths)
+    if issuetracker.error_count == 0:
+        appname = appname_from_filename(args.file)
+        if args.deployscript:
+            result, issuetracker = calvin_dscodegen(source, appname)
+        elif args.intermediate:
+            result, issuetracker = printable_ir(source)
         else:
-            string_rep = json.dumps(result, indent=args.indent, sort_keys=args.sorted)
-        if args.outfile:
-            dst = args.outfile
-        else:
-            path, ext = os.path.splitext(filename)
-            dst = path + ".json"
-        with open(dst, 'w') as f:
-            f.write(string_rep)
+            result, issuetracker = calvin_codegen(source, appname, verify=True)
+    if issuetracker.error_count:
+        for issue in issuetracker.formatted_errors(sort_key='line', custom_format=args.fmt, script=args.file, line=0, col=0):
+            sys.stderr.write(issue + "\n")
+        exit_code = 1
+    if issuetracker.warning_count and args.verbose:
+        for issue in issuetracker.formatted_warnings(sort_key='line', custom_format=args.fmt, script=args.file, line=0, col=0):
+            sys.stderr.write(issue + "\n")
+    if exit_code != 0:
+        # Don't produce output if there were errors
+        return exit_code
+    if args.intermediate is True:
+        string_rep = result
+    else:
+        string_rep = json.dumps(result, indent=args.indent, sort_keys=args.sorted)
+    if args.outfile:
+        dst = args.outfile
+    else:
+        path, ext = os.path.splitext(args.file)
+        dst = path + ".json"
+    with open(dst, 'w') as f:
+        f.write(string_rep)
 
     return exit_code
 
