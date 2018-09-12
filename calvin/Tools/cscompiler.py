@@ -23,6 +23,7 @@ from cspreprocess import Preprocessor
 from calvin.csparser.dscodegen import calvin_dscodegen
 from calvin.csparser.codegen import calvin_codegen
 from calvin.csparser.parser import printable_ir
+from calvin.utilities import code_signer
 
 def appname_from_filename(filename):
     appname = os.path.splitext(os.path.basename(filename))[0]
@@ -51,6 +52,8 @@ def main():
                            help='use compact JSON format instead of readable (default)')
     argparser.add_argument('--sorted', dest='sorted', action='store_true', default=False,
                            help='sort resulting JSON output by keys')
+    argparser.add_argument('--signed', dest='signed', action='store_true', default=False,
+                           help='sign deployable')
     argparser.add_argument('--issue-fmt', dest='fmt', type=str,
                            default='{type!c}: {reason} {script} {line}:{col}',
                            help='custom format for issue reporting.')
@@ -60,10 +63,6 @@ def main():
                            metavar='<include_path>',
                            help='add search paths for include statements. Use multiple times for multiple include paths.')
     output_type = argparser.add_mutually_exclusive_group()
-    output_type.add_argument('--deployscript', action='store_true', default=False,
-                           help='generate deployjson file')
-    output_type.add_argument('--intermediate', action='store_true', default=False,
-                           help='generate intermediate representation file')
     outgroup = argparser.add_mutually_exclusive_group()
     outgroup.add_argument('--stdout', dest='outfile', action='store_const', const="/dev/stdout",
                            help='send output to stdout instead of file (default)')
@@ -74,15 +73,15 @@ def main():
     args = argparser.parse_args()
     exit_code = 0
 
+    # Compile
     source, issuetracker = preprocess(args.file, args.include_paths)
     if issuetracker.error_count == 0:
         appname = appname_from_filename(args.file)
-        if args.deployscript:
-            result, issuetracker = calvin_dscodegen(source, appname)
-        elif args.intermediate:
-            result, issuetracker = printable_ir(source)
-        else:
-            result, issuetracker = calvin_codegen(source, appname, verify=True)
+        app_info, issuetracker = calvin_codegen(source, appname, verify=True)
+        deploy_info, issuetracker2 = calvin_dscodegen(source, appname)
+        issuetracker.merge(issuetracker2)
+
+    # Report errors and (optionally) warnings
     if issuetracker.error_count:
         for issue in issuetracker.formatted_errors(sort_key='line', custom_format=args.fmt, script=args.file, line=0, col=0):
             sys.stderr.write(issue + "\n")
@@ -93,10 +92,22 @@ def main():
     if exit_code != 0:
         # Don't produce output if there were errors
         return exit_code
-    if args.intermediate is True:
-        string_rep = result
+
+    # If compilation has no errors, generate output 
+    indent, sort = (None, True) if args.signed else (args.indent, args.sorted)
+    if args.signed:
+        signer = code_signer.CS(organization="com.ericsson", commonName="com.ericssonCS")
+        signature = signer.sign_deployable(app_info)
     else:
-        string_rep = json.dumps(result, indent=args.indent, sort_keys=args.sorted)
+        signature = None
+    deployable = {
+        'app_info': app_info,  
+        'app_info_signature': signature,
+        'deploy_info': deploy_info
+    }
+    string_rep = json.dumps(deployable, indent=args.indent, sort_keys=args.sorted)
+    
+    # Write to destination
     if args.outfile:
         dst = args.outfile
     else:

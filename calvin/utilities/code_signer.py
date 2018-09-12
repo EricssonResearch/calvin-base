@@ -25,6 +25,7 @@ import tempfile
 import time
 import random
 import shutil
+import json
 from calvin.utilities import confsort
 import OpenSSL
 from cryptography.x509 import load_pem_x509_certificate
@@ -174,6 +175,35 @@ class CS():
         """
         return certificate.export_cert(self.certificate, path)
 
+    def sign_deployable(self, data):
+        """
+        Compute signature of deployable data structure.
+        The data structure is turned in to a string containing a compacted JSON representation with 
+        sorted keys before computing the signature.
+        
+        Returns signature as HEX, i.e. b"signature".encode('hex')
+        
+        FIXME: Handle passphrase
+        """
+        
+        content = json.dumps(data, indent=None, sort_keys=True)
+        with open(self.certificate, 'rt') as f:
+            trusted_cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, f.read())        
+        with open(self.private_key, 'rt') as keyfile:
+            private_key_data = keyfile.read()
+        with open(self.password_file) as passfile:
+            passwd = passfile.read()
+        private_key = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM, private_key_data, passphrase=passwd)
+        signature = OpenSSL.crypto.sign(private_key, content, 'sha256')
+        try:
+            # Verify signature
+            OpenSSL.crypto.verify(trusted_cert, signature, content, 'sha256')
+        except Exception as e:
+            print "OpenSSL verification error"
+            signature = ""
+            
+        return signature.encode('hex')
+    
     def sign_file(self, file, dir=None):
         """
         Sign an actor, component or application.

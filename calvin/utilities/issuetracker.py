@@ -92,6 +92,10 @@ class IssueTracker(object):
         """
         self._add_issue('warning', reason, info)
 
+    def merge(self, tracker):
+        for issue in tracker._issues:
+            self._add_issue(issue["type"], issue["reason"], issue.get("info"))
+
     @property
     def error_count(self):
         """Number of errors tracked"""
@@ -277,6 +281,16 @@ if __name__ == '__main__':
     for f in t.formatted_errors(custom_format="{type!c}: {reason} {filename}, line: {line}", sort_key="line", filename="baz.calvin", line="bogus"):
         print f
 
+    print "--- Merging ---"
+    t2 = IssueTracker()
+    t2.add_error("Banan")
+    t2.add_warning("Apelsin", {"Kina?":False})
+    t.merge(t2)
+    for f in t.formatted_issues(sort_key="type"):
+        print f
+    
+    
+    
 
 
 
