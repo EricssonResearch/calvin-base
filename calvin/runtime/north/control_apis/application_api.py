@@ -494,10 +494,8 @@ def handle_deploy(self, handle, connection, match, data, hdr):
     try:
         # FIXME: Clean up deployer next
         d = Deployer(
-                deployable=data['app_info'],
-                deploy_info=data['deploy_info'],
+                deployable=data,
                 node=self.node,
-                name=data['app_info']['name'],
                 security=self.security,
                 verify=True,
                 cb=CalvinCB(self.handle_deploy_cb, handle, connection)

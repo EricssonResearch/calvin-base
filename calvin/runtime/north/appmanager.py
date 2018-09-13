@@ -589,10 +589,10 @@ class Deployer(object):
     produce a running calvin application.
     """
 
-    def __init__(self, deployable, node, name=None, deploy_info=None, security=None, verify=True, cb=None):
+    def __init__(self, deployable, node, security=None, verify=True, cb=None):
         super(Deployer, self).__init__()
-        self.deployable = deployable
-        self.deploy_info = deploy_info
+        self.app_info = deployable["app_info"]
+        self.deploy_info = deployable["deploy_info"]
         self.sec = security
         self.actorstore = ActorStore(security=self.sec)
         self.actor_map = {}
@@ -605,18 +605,9 @@ class Deployer(object):
         self._instantiate_counter = 0
         self._requires_counter = 0
         self._connection_count = None
-        if name:
-            self.name = name
-            self.app_id = self.node.app_manager.new(self.name)
-            self.ns = os.path.splitext(os.path.basename(self.name))[0]
-        elif "name" in self.deployable:
-            self.name = self.deployable["name"]
-            self.app_id = self.node.app_manager.new(self.name)
-            self.ns = os.path.splitext(os.path.basename(self.name))[0]
-        else:
-            self.app_id = self.node.app_manager.new(None)
-            self.name = self.app_id
-            self.ns = ""
+        self.name = self.app_info["name"]
+        self.app_id = self.node.app_manager.new(self.name)
+        self.ns = os.path.splitext(os.path.basename(self.name))[0]
         self.group_components()
         _log.analyze(self.node.id, "+ SECURITY", {'sec': str(self.sec)})
 
@@ -624,7 +615,7 @@ class Deployer(object):
     def group_components(self):
         self.components = {}
         l = (len(self.ns)+1) if self.ns else 0
-        for name in self.deployable['actors']:
+        for name in self.app_info['actors']:
              if name.find(':',l)> -1:
                 # This is part of a component
                 # component name including optional namespace
@@ -642,9 +633,9 @@ class Deployer(object):
         """
         # N.B. self.ns should always exist (= script name)
         # Check for existence of deploy info
-        if not self.deploy_info or 'requirements' not in self.deploy_info:
-            # print "Deployer::get_req({}) -> [] NO INFO".format(actor_name)
-            return []
+        # if not self.deploy_info or 'requirements' not in self.deploy_info:
+        #     # print "Deployer::get_req({}) -> [] NO INFO".format(actor_name)
+        #     return []
         # Trim of script name
         _, name = actor_name.split(':', 1)
         parts = name.split(':')
@@ -670,7 +661,7 @@ class Deployer(object):
             info['requires'] = actor_def.requires if hasattr(actor_def, "requires") else []
         except Exception:
             # Not found locally, must be made shadow actor
-            info = self.deployable['actors'][actor_name]
+            info = self.app_info['actors'][actor_name]
             info['shadow_actor'] = True
             actor_def = None
         self._verified_actors[actor_name] = (info, actor_def)
@@ -716,8 +707,8 @@ class Deployer(object):
         """
         #TODO component ns needs to be stored in registry /component/<app-id>/ns[0]/ns[1]/.../actor_name: actor_id
         try:
-            if 'port_properties' in self.deployable:
-                port_properties = self.deployable['port_properties'].get(actor_name, None)
+            if 'port_properties' in self.app_info:
+                port_properties = self.app_info['port_properties'].get(actor_name, None)
             else:
                 port_properties = None
             info['args']['name'] = actor_name
@@ -771,7 +762,7 @@ class Deployer(object):
                     actor.requires = requires
                     self.node.storage.add_actor_requirements(actor)
                 self._requires_counter += 1
-                if self._requires_counter >= len(self.deployable['actors']):
+                if self._requires_counter >= len(self.app_info['actors']):
                     self._wait_for_all_connections_and_requires()
             try:
                 GlobalStore(node=self.node).global_signature_lookup(actor._signature, cb=_desc_cb)
@@ -804,15 +795,15 @@ class Deployer(object):
     def deploy(self):
         """Verify actors, instantiate and link them together.
         """
-        if not self.deployable['valid']:
+        if not self.app_info['valid']:
             raise Exception("Deploy information is not valid")
 
-        for actor_name, info in self.deployable['actors'].iteritems():
+        for actor_name, info in self.app_info['actors'].iteritems():
             self.lookup_and_verify(actor_name, info, cb=CalvinCB(self._deploy_instantiate))
 
     def _deploy_instantiate(self):
         self._deploy_counter += 1
-        if self._deploy_counter < len(self.deployable['actors']):
+        if self._deploy_counter < len(self.app_info['actors']):
             return
         for actor_name, info in self._verified_actors.iteritems():
             self.check_requirements_and_sec_policy(actor_name, info[0], info[1], cb=CalvinCB(self._deploy_finalize))
@@ -826,7 +817,7 @@ class Deployer(object):
             for actor_id in actor_ids:
                 self.node.am.actors[actor_id].component_add(actor_ids)
 
-        for src, dst_list in self.deployable['connections'].iteritems():
+        for src, dst_list in self.app_info['connections'].iteritems():
             if len(dst_list) > 1:
                 src_name, src_port = src.split('.')
                 _log.debug("GET PROPERTIES for %s, %s.%s" % (src, src_name, src_port))
@@ -841,9 +832,9 @@ class Deployer(object):
                 self.node.pm.set_port_properties(actor_id=self.actor_map[src_name], port_dir='out', port_name=src_port,
                                                  **kwargs)
 
-        self._connection_count = sum(map(len, self.deployable['connections'].values()))
+        self._connection_count = sum(map(len, self.app_info['connections'].values()))
         self._connection_status = response.CalvinResponse(True)
-        for src, dst_list in self.deployable['connections'].iteritems():
+        for src, dst_list in self.app_info['connections'].iteritems():
             src_actor, src_port = src.split('.')
             for dst in dst_list:
                 dst_actor, dst_port = dst.split('.')
@@ -864,6 +855,6 @@ class Deployer(object):
             self._wait_for_all_connections_and_requires()
 
     def _wait_for_all_connections_and_requires(self):
-        if self._connection_count == 0 and self._requires_counter >= len(self.deployable['actors']):
+        if self._connection_count == 0 and self._requires_counter >= len(self.app_info['actors']):
             self.node.app_manager.finalize(self.app_id, migrate=True if self.deploy_info else False,
                                    cb=CalvinCB(self.cb, deployer=self))
