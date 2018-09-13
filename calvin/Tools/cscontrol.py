@@ -15,6 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 import argparse
 import json
 from calvin.utilities.calvinlogger import get_logger
@@ -64,18 +65,19 @@ def requirements_file(path):
         return {}
     return reqs
 
+
 def handle_security_arguments(args):
-    import os
     if args.security_dir:
-        security_dir=args.security_dir
+        security_dir = args.security_dir
     else:
-        security_dir=None
+        security_dir = None
     if "https" in args.node:
-        truststore_dir = certificate.get_truststore_path(type=certificate.TRUSTSTORE_TRANSPORT, 
-                                                         security_dir=security_dir)
+        truststore_dir = certificate.get_truststore_path(type=certificate.TRUSTSTORE_TRANSPORT, security_dir=security_dir)
     else:
         truststore_dir = None
-    req_handler = get_request_handler(verify=truststore_dir)
+    # Argument to verify is either a path to CA bundle OR True/False, where True is the default
+    verify = truststore_dir or True
+    req_handler = get_request_handler(verify=verify)
     if args.credentials:
         try:
             credentials_ = json.loads(args.credentials)
@@ -84,25 +86,12 @@ def handle_security_arguments(args):
             print "Credentials not JSON:\n", e
     return req_handler
 
+
 def control_deploy(args):
-    response = None
-    reqs = requirements_file(args.reqs) if args.reqs else None
-    if args.signer:
-        conf = certificate.Config(configfile=None, domain=args.signer, readonly=True)
-        certificate.sign_file(conf, args.script.name)
-    source_text = args.script.read()
-    credentials_ = None
-    content = None
-    if args.credentials:
-        content = Security.verify_signature_get_files(args.script.name, skip_file=True)
-        if content:
-            content['file'] = source_text
-    req_handler= handle_security_arguments(args)
-    try:
-        response = req_handler.deploy_application(args.node, args.script.name, source_text, reqs,
-                                            content=content, check=args.check)
-    except Exception as e:
-        print e
+    req_handler = handle_security_arguments(args)
+    with open(args.app, 'r') as fd:
+        deployable = json.load(fd, 'utf-8')
+    response = req_handler.deploy(args.node, deployable)
     return response
 
 
@@ -213,21 +202,13 @@ def parse_args():
                             help="list of peers of the form calvinip://<address>:<port>")
     cmd_nodes.set_defaults(func=control_nodes)
 
-    # parser for deploy
-    cmd_deploy = cmdparsers.add_parser('deploy', help="deploy script to node")
-    cmd_deploy.add_argument("script", metavar="<calvin script>", type=argparse.FileType('r'),
-                            help="script to be deployed")
-    cmd_deploy.add_argument('-c', '--no-check', dest='check', action='store_false', default=True,
-                           help='Don\'t verify if actors or components are correct, ' +
-                                'allows deployment of actors not known on the node')
-    cmd_deploy.add_argument('--sign-org', metavar='<signer>', type=str,
-                           help='Sign the app before deploy, using this code signing organization name supplied',
-                           dest='signer', default=None)
 
-    cmd_deploy.add_argument('--reqs', metavar='<reqs>', type=str,
-                            help='deploy script, currently JSON coded data file',
-                            dest='reqs')
+    # parser for deploy
+    cmd_deploy = cmdparsers.add_parser('deploy', help="deploy app to node")
+    cmd_deploy.add_argument("app", metavar="<calvin app>", type=str,
+                            help="compiled app to be deployed")
     cmd_deploy.set_defaults(func=control_deploy)
+
 
     # parsers for actor commands
     actor_commands = ['info', 'list', 'delete', 'migrate']

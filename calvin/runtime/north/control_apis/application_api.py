@@ -19,8 +19,8 @@ from calvin.requests import calvinresponse
 from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.utilities.issuetracker import IssueTracker
-from calvin.csparser import cscompile as compiler
-from calvin.csparser.dscodegen import calvin_dscodegen
+# from calvin.csparser import cscompile as compiler
+# from calvin.csparser.dscodegen import calvin_dscodegen
 from calvin.runtime.north.appmanager import Deployer
 from calvin.runtime.north.plugins.port import DISCONNECT
 from calvin.utilities.security import security_enabled
@@ -387,6 +387,85 @@ def handle_set_port_property(self, handle, connection, match, data, hdr):
         status = calvinresponse.CalvinResponse(calvinresponse.NOT_FOUND)
     self.send_response(handle, connection, None, status=status.status)
 
+
+
+# FIXME: This was compile_script_check_security but now we only get deployable 
+#        => we just need to check integrity according to policy
+def check_security(data, cb, security=None, content=None, verify=True, node=None, signature=None):
+    """
+    'credentials' are optional security credentials(?)
+    'verify' is deprecated and will be removed
+    'node' is the runtime performing security check(?)
+    'cb' is a CalvinCB callback
+
+    N.B. If callback 'cb' is given, this method calls cb(deployable, errors, warnings) and returns None
+    N.B. If callback 'cb' is given, and method runs to completion, cb is called with additional parameter 'security' (?)
+    """
+    def _exit_with_error(callback):
+        """Helper method to generate a proper error"""
+        it = IssueTracker()
+        it.add_error("UNAUTHORIZED", info={'status':401})
+        callback({}, it)
+        return
+
+    # FIXME: data -> deployable, and app_info mandatory
+    def _handle_policy_decision(data, appname, verify, access_decision, org_cb, security=None):
+        if not access_decision:
+            _log.error("Access denied")
+            # This error reason is detected in calvin control and gives proper REST response
+            _exit_with_error(org_cb)
+            return
+        if 'app_info' not in data and 'script' in data:
+            deployable, issuetracker = compile_script(data['script'], appname)
+        elif 'app_info' in data:
+            deployable = data['app_info']
+            issuetracker = IssueTracker()
+        else:
+            _log.error("Neither app_info or script supplied")
+            # This error reason is detected in calvin control and gives proper REST response
+            _exit_with_error(org_cb)
+            return
+        org_cb(deployable, issuetracker, security=security)
+
+    #
+    # Actual code for compile_script
+    #
+    # FIXME: if node is None we bypass security even if enabled. Is that the intention?
+    if security_enabled():
+        # FIXME: If cb is None, we will return from this method with None instead of a tuple, failing silently
+        if security:
+            sec = security
+        else:
+            sec = Security(node)
+
+
+        verified, signer = sec.verify_signature_content(content, "application")
+        if not verified:
+            # Verification not OK if sign or cert not OK.
+            _log.error("Failed application verification")
+            # This error reason is detected in calvin control and gives proper REST response
+            _exit_with_error(cb)
+            return
+        sec.check_security_policy(
+            CalvinCB(_handle_policy_decision, data, appname, verify, security=security, org_cb=cb),
+            element_type = "application",
+            element_value = signer
+        )
+        return
+
+    #
+    # We get here if node is None, or security is disabled
+    #
+    # This used to be
+    # _handle_policy_decision(data, filename, verify, access_decision=True, security=None, org_cb=cb)
+    # but since _handle_policy_decision is called with access_decision=True, security=None only compile_script would be called
+    if 'app_info' in data:
+        deployable = data['app_info']
+        issuetracker = IssueTracker()
+    cb(deployable, issuetracker, security=None)
+
+
+# FIXME: Check integrity according to policy
 @handler(method="POST", path="/deploy")
 @authentication_decorator
 def handle_deploy(self, handle, connection, match, data, hdr):
@@ -397,45 +476,11 @@ def handle_deploy(self, handle, connection, match, data, hdr):
     and initiate migration of actors accordingly
     Body:
     {
-        "name": <application name>,
-        "script": <calvin script>  # alternativly "app_info"
-        "app_info": <compiled script as app_info>  # alternativly "script"
-        "sec_sign": {<cert hash>: <security signature of script>, ...} # optional and only with "script"
-        "deploy_info":
-           {"groups": {"<group 1 name>": ["<actor instance 1 name>", ...]},  # TODO not yet implemented
-            "requirements": {
-                "<actor instance 1 name>": [ {"op": "<matching rule name>",
-                                              "kwargs": {<rule param key>: <rule param value>, ...},
-                                              "type": "+" or "-" for set intersection or set removal, respectively
-                                              }, ...
-                                           ],
-                ...
-                            }
-           }
+        "app_info": ...
+        "app_info_signature": <hex encoded signature based on app_info (JSON, compact, sorted)
+        "deploy_info": ...
     }
-    Note that either a script or app_info must be supplied.
 
-    The matching rules are implemented as plug-ins, intended to be extended.
-    The type "+" is "and"-ing rules together (actually the intersection of all
-    possible nodes returned by the rules.) The type "-" is explicitly removing
-    the nodes returned by this rule from the set of possible nodes. Note that
-    only negative rules will result in no possible nodes, i.e. there is no
-    implied "all but these."
-
-    A special matching rule exist, to first form a union between matching
-    rules, i.e. alternative matches. This is useful for e.g. alternative
-    namings, ownerships or specifying either of two specific nodes.
-        {"op": "union_group",
-         "requirements": [list as above of matching rules but without type key]
-         "type": "+"
-        }
-    Other matching rules available is current_node, all_nodes and
-    node_attr_match which takes an index param which is attribute formatted,
-    e.g.
-        {"op": "node_attr_match",
-         "kwargs": {"index": ["node_name", {"organization": "org.testexample", "name": "testNode1"}]}
-         "type": "+"
-        }
     Response status code: OK, CREATED, BAD_REQUEST, UNAUTHORIZED or INTERNAL_ERROR
     Response: {"application_id": <application-id>,
                "actor_map": {<actor name with namespace>: <actor id>, ...}
@@ -445,85 +490,27 @@ def handle_deploy(self, handle, connection, match, data, hdr):
                        'warnings': <compilation warnings>,
                        'exception': <exception string>}
     """
-    try:
-        _log.analyze(self.node.id, "+", data)
-        kwargs = {}
-        # Supply security verification data when available
-        content = {}
-        if not "sec_sign" in data:
-            data['sec_sign'] = {}
-        signed_data=data['app_info'] if 'app_info' in data else data['script']
-        content = {
-                'file': signed_data,
-                'sign': {h: s.decode('hex_codec') for h, s in data['sec_sign'].iteritems()}}
-        compiler.compile_script_check_security(
-            data,
-            filename=data["name"],
-            security=self.security,
-            content=content,
-            node=self.node,
-            verify=(data["check"] if "check" in data else True),
-            cb=CalvinCB(self.handle_deploy_cont, handle=handle, connection=connection, data=data),
-            **kwargs
-        )
-    except Exception as e:
-        _log.exception("Deployer failed, e={}".format(e))
-        self.send_response(handle, connection, json.dumps({'exception': str(e)}),
-                           status=calvinresponse.INTERNAL_ERROR)
 
-@register
-def handle_deploy_cont(self, app_info, issuetracker, handle, connection, data, security=None):
     try:
-        if issuetracker.error_count:
-            four_oh_ones = [e for e in issuetracker.errors(sort_key='reason')]
-            errors = issuetracker.errors(sort_key='reason')
-            for e in errors:
-                if 'status' in e and e['status'] == 401:
-                    _log.error("Security verification of script failed")
-                    status = calvinresponse.UNAUTHORIZED
-                    body = None
-                else:
-                    _log.exception("Compilation failed")
-                    body = json.dumps({'errors': issuetracker.errors(), 'warnings': issuetracker.warnings()})
-                    status=calvinresponse.BAD_REQUEST
-                self.send_response(handle, connection, body, status=status)
-                return
-        _log.analyze(
-            self.node.id,
-            "+ COMPILED",
-            {'app_info': app_info, 'errors': issuetracker.errors(), 'warnings': issuetracker.warnings()}
-        )
-        # TODO When deployscript codegen is less experimental do it as part of the cscompiler
-        # Now just run it here seperate if script is supplied and no seperate deploy_info
-        deploy_info = data.get("deploy_info", None)
-        if "script" in data and deploy_info is None:
-            deploy_info, ds_issuestracker = calvin_dscodegen(data["script"], data["name"])
-            if ds_issuestracker.error_count:
-                _log.warning("Deployscript contained errors:")
-                _log.warning(ds_issuestracker.formatted_issues())
-                deploy_info = None
-            elif not deploy_info['requirements']:
-                deploy_info = None
-
+        # FIXME: Clean up deployer next
         d = Deployer(
-                deployable=app_info,
-                deploy_info=deploy_info,
+                deployable=data['app_info'],
+                deploy_info=data['deploy_info'],
                 node=self.node,
-                name=data["name"] if "name" in data else None,
-                security=security,
-                verify=data["check"] if "check" in data else True,
+                name=data['app_info']['name'],
+                security=self.security,
+                verify=True,
                 cb=CalvinCB(self.handle_deploy_cb, handle, connection)
             )
-        _log.analyze(self.node.id, "+ Deployer instantiated", {})
+        print self.node.id, "Deployer instantiated"
         d.deploy()
-        _log.analyze(self.node.id, "+ DEPLOYING", {})
     except Exception as e:
-        _log.exception("Deployer failed")
+        print "Deployer failed"
         self.send_response(
             handle,
             connection,
-            json.dumps({'errors': issuetracker.errors(), 'warnings': issuetracker.warnings(), 'exception': str(e)}),
-            status=calvinresponse.BAD_REQUEST if issuetracker.error_count else calvinresponse.INTERNAL_ERROR
+            json.dumps({'exception': str(e)}),
+            status=calvinresponse.INTERNAL_ERROR
         )
 
 @register

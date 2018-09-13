@@ -80,9 +80,9 @@ class RT(object):
 
 class RequestHandler(object):
 
-    def __init__(self,verify=None):
+    def __init__(self, verify=True):
         self.future_responses = []
-        self.verify=verify
+        self.verify = verify
         self.credentials = None
 
     def set_credentials(self, credentials):
@@ -120,14 +120,10 @@ class RequestHandler(object):
     def _send(self, rt, timeout, send_func, path, data=None):
         rt = get_runtime(rt)
         _log.debug("Sending request %s, %s, %s", send_func, rt.control_uri + path, json.dumps(data))
-        if self.verify and data is not None:
-            return send_func(rt.control_uri + path, timeout=timeout, data=json.dumps(data), auth=self.credentials, verify=self.verify)
-        elif self.verify and data is None:
+        if data is None:
             return send_func(rt.control_uri + path, timeout=timeout, auth=self.credentials, verify=self.verify)
-        elif data is not None:
-            return send_func(rt.control_uri + path, timeout=timeout, data=json.dumps(data), auth=self.credentials)
-        else:
-            return send_func(rt.control_uri + path, timeout=timeout, auth=self.credentials)
+        # FIXME: Don't do data=json.dumps(data) since that is done implicitly by requests
+        return send_func(rt.control_uri + path, timeout=timeout, data=json.dumps(data), auth=self.credentials, verify=self.verify)
 
     def _get(self, rt, timeout, async, path, headers="", data=None):
         req = session if async else requests
@@ -318,30 +314,8 @@ class RequestHandler(object):
         r = self._delete(rt, timeout, async, APPLICATION_PATH.format(application_id))
         return self.check_response(r)
 
-    def deploy_application(self, rt, name, script, deploy_info=None, content=None,
-                           check=True, timeout=DEFAULT_TIMEOUT, async=False):
-        data = {
-            "name": name,
-            "script": script,
-            "deploy_info": deploy_info,
-            "check": check
-        }
-        if content and 'sign' in content:
-            data["sec_sign"] = {}
-            for cert_hash, signature in content['sign'].iteritems():
-                data["sec_sign"][cert_hash] = signature.encode('hex_codec')
-        r = self._post(rt, timeout, async, DEPLOY, data)
-        return self.check_response(r)
-
-    def deploy_app_info(self, rt, name, app_info, deploy_info=None, check=True,
-                        timeout=DEFAULT_TIMEOUT, async=False):
-        data = {
-            "name": name,
-            "app_info": app_info,
-            "deploy_info": deploy_info,
-            "check": check
-        }
-        r = self._post(rt, timeout, async, DEPLOY, data=data)
+    def deploy(self, rt, deployable, timeout=DEFAULT_TIMEOUT, async=False):
+        r = self._post(rt, timeout, False, DEPLOY, data=deployable)
         return self.check_response(r)
 
     def add_index(self, rt, index, value, root_prefix_level=None, timeout=DEFAULT_TIMEOUT, async=False):
