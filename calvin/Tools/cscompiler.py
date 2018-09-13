@@ -37,6 +37,29 @@ def preprocess(filename, include_paths):
     sourceText, it = pp.process(filename)
     return (sourceText, it)
 
+def compile_source(source, appname):
+    app_info, issuetracker = calvin_codegen(source, appname, verify=True)
+    deploy_info, issuetracker2 = calvin_dscodegen(source, appname)
+    issuetracker.merge(issuetracker2)
+    deployable = {
+        'app_info': app_info,
+        'app_info_signature': None,
+        'deploy_info': deploy_info
+    }
+    return (deployable, issuetracker)
+
+def compile_file(filepath, include_paths):
+    source, issuetracker = preprocess(filepath, include_paths)
+    if issuetracker.error_count > 0:
+        return ({}, issuetracker)
+    appname = appname_from_filename(filepath)
+    return compile_source(source, appname)
+
+def sign_deployable(deployable, organization, common_name):
+    signer = code_signer.CS(organization=organization, commonName=common_name)
+    deployable['app_info_signature'] = signer.sign_deployable(deployable['app_info'])
+
+
 def main():
     long_description = """
   Compile a CalvinScript source file, <filename> into a deployable JSON representation.
@@ -47,7 +70,7 @@ def main():
     argparser = argparse.ArgumentParser(description=long_description)
 
     argparser.add_argument('file', metavar='<filename>', type=str,
-                           help='source file to compile')
+                           help="source file to compile, use '-' to read from stdin")
     argparser.add_argument('--compact', dest='indent', action='store_const', const=None, default=4,
                            help='use compact JSON format instead of readable (default)')
     argparser.add_argument('--sorted', dest='sorted', action='store_true', default=False,
@@ -68,49 +91,38 @@ def main():
     outgroup.add_argument('--output', dest='outfile', type=str, default='', metavar='<filename>',
                            help='Output file, default is filename.json')
 
-
     args = argparser.parse_args()
     exit_code = 0
 
     # Compile
-    source, issuetracker = preprocess(args.file, args.include_paths)
-    if issuetracker.error_count == 0:
-        appname = appname_from_filename(args.file)
-        app_info, issuetracker = calvin_codegen(source, appname, verify=True)
-        deploy_info, issuetracker2 = calvin_dscodegen(source, appname)
-        issuetracker.merge(issuetracker2)
+    infile = '/dev/stdin' if args.file == '-' else args.file
+    deployable, issuetracker = compile_file(infile, args.include_paths)
 
     # Report errors and (optionally) warnings
     if issuetracker.error_count:
-        for issue in issuetracker.formatted_errors(sort_key='line', custom_format=args.fmt, script=args.file, line=0, col=0):
+        for issue in issuetracker.formatted_errors(sort_key='line', custom_format=args.fmt, script=infile, line=0, col=0):
             sys.stderr.write(issue + "\n")
         exit_code = 1
     if issuetracker.warning_count and args.verbose:
-        for issue in issuetracker.formatted_warnings(sort_key='line', custom_format=args.fmt, script=args.file, line=0, col=0):
+        for issue in issuetracker.formatted_warnings(sort_key='line', custom_format=args.fmt, script=infile, line=0, col=0):
             sys.stderr.write(issue + "\n")
     if exit_code != 0:
         # Don't produce output if there were errors
         return exit_code
 
     # If compilation has no errors, generate output 
-    indent, sort = (None, True) if args.signed else (args.indent, args.sorted)
     if args.signed:
-        signer = code_signer.CS(organization="com.ericsson", commonName="com.ericssonCS")
-        signature = signer.sign_deployable(app_info)
-    else:
-        signature = None
-    deployable = {
-        'app_info': app_info,  
-        'app_info_signature': signature,
-        'deploy_info': deploy_info
-    }
+        sign_deployable(deployable, organization="com.ericsson", common_name="com.ericssonCS")
+
     string_rep = json.dumps(deployable, indent=args.indent, sort_keys=args.sorted)
     
     # Write to destination
     if args.outfile:
         dst = args.outfile
     else:
-        path, ext = os.path.splitext(args.file)
+        path, ext = os.path.splitext(infile)
+        if path == '/dev/stdin':
+            path = appname
         dst = path + ".json"
     with open(dst, 'w') as f:
         f.write(string_rep)
