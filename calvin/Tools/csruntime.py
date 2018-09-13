@@ -38,7 +38,8 @@ Start runtime, compile calvinscript and deploy application.
 
     group = argparser.add_mutually_exclusive_group()
     group.add_argument('--gui', dest="gui", action="store_true", help="start Calvin GUI")
-    group.add_argument('--gui-mock-devices', dest="guimockdevices", action="store_true", help="start Calvin GUI with default set of mock devices")
+    group.add_argument('--gui-mock-devices', dest="guimockdevices", action="store_true",
+                        help="start Calvin GUI with default set of mock devices")
     argparser.add_argument('--gui-port', metavar='<gui port>', type=int, dest="guiport",
                            default=8000, help="use port <gui port> for gui server")
     argparser.add_argument('--gui-if', metavar='<gui interface>', type=str, dest="guiif",
@@ -61,9 +62,6 @@ Start runtime, compile calvinscript and deploy application.
     argparser.add_argument('-u', '--uri', dest='uris', action='append', default=[],
                            help="URI of calvin runtime 'calvinbt://id:port'")
 
-    argparser.add_argument('file', metavar='<filename>', type=str, nargs='?',
-                           help='source file to compile')
-
     argparser.add_argument('-d', '--debug', dest='debug', action='store_true',
                            help='Start PDB')
 
@@ -74,9 +72,6 @@ Start runtime, compile calvinscript and deploy application.
     argparser.add_argument('-f', '--logfile', dest='logfile', action="store", default=None, type=str,
                            help="Set logging to file, specify filename")
 
-    argparser.add_argument('-w', '--wait', dest='wait', metavar='sec', default=2, type=int,
-                           help='wait for sec seconds before quitting (0 means forever).')
-
     argparser.add_argument('-x', '--external', metavar='<calvinip>', action='append', default=[],
                             help="exposed external calvin ip (e.g. outside of container)",
                             dest='ext')
@@ -84,9 +79,6 @@ Start runtime, compile calvinscript and deploy application.
     argparser.add_argument('-y', '--external-control', metavar='<url>', type=str,
                            help="exposed external control url (e.g. outside of container)",
                            dest='control_ext')
-
-    argparser.add_argument('--keep-alive', dest='wait', action='store_const', const=0,
-                           help='run forever (equivalent to -w 0 option).')
 
     argparser.add_argument('--attr', metavar='<attr>', type=str,
                            help='JSON coded attributes for started node '
@@ -140,32 +132,6 @@ def storage_runtime(uri, control_uri, attributes=None, dispatch=False):
         start_storage_node(uri, control_uri, **kwargs)
 
 
-def compile_script(scriptfile, credentials):
-    _log.debug("Compiling %s ..." % scriptfile)
-    from calvin.Tools.cscompiler import compile_file
-    app_info, issuetracker = compile_file(scriptfile, False, False, credentials)
-    if issuetracker.error_count:
-        fmt = "{type!c}: {reason} {script} {line}:{col}"
-        for error in issuetracker.formatted_errors(sort_key='line', custom_format=fmt, script=scriptfile, line=0, col=0):
-            _log.error(error)
-        return False
-    return app_info
-
-
-def deploy(rt, app_info, credentials):
-    from calvin.Tools import deployer
-    d = {}
-    try:
-        d = deployer.Deployer(rt, app_info, credentials)
-        d.deploy()
-    except:
-        from calvin.utilities.calvinlogger import get_logger
-        time.sleep(0.1)
-        if get_logger().getEffectiveLevel <= logging.DEBUG:
-            traceback.print_exc()
-    return d.app_id
-
-
 def set_loglevel(levels, filename):
     from calvin.utilities.calvinlogger import get_logger, set_file
     global _log
@@ -197,23 +163,6 @@ def set_loglevel(levels, filename):
             get_logger(module).setLevel(5)
 
 
-def dispatch_and_deploy(app_info, wait, uris, control_uri, attr, credentials):
-    from calvin.requests.request_handler import RequestHandler
-    rt, process = runtime(uris, control_uri, attr, dispatch=True)
-    app_id = None
-    app_id = deploy(rt, app_info, credentials)
-    print "Deployed application", app_id
-
-    timeout = wait if wait else None
-    if timeout:
-        process.join(timeout)
-        RequestHandler().quit(rt)
-        # This time has to be long enough for the mainloop to wrap things up, otherwise the program will hang indefinitely
-        time.sleep(1.0)
-    else:
-        process.join()
-
-
 def set_config_from_args(args):
     from calvin.utilities import calvinconfig
     global _conf
@@ -242,7 +191,7 @@ def discover(timeout=2, retries=5):
         ttl = struct.pack('b', 1)
         sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl)
         try:
-            sent = sock.sendto(message, (SSDP_ADDR,SSDP_PORT))
+            sent = sock.sendto(message, (SSDP_ADDR, SSDP_PORT))
             while True:
                 try:
                     data, server = sock.recvfrom(1000)
@@ -364,30 +313,30 @@ def runtime_certificate(rt_attributes):
                 _log.debug("Runtime certificate available")
 
 def start_gui(interface4, port, mockdevices):
-  import calvinextras
-  import inspect
-  import os.path
-  from twisted.web.server import Site
-  from twisted.web.static import File
-  from twisted.internet import endpoints, reactor
-  from calvin.utilities import calvinconfig
+    import calvinextras
+    import inspect
+    import os.path
+    from twisted.web.server import Site
+    from twisted.web.static import File
+    from twisted.internet import endpoints, reactor
+    from calvin.utilities import calvinconfig
 
-  # find installation path of calvinextras package
-  extras_path = os.path.dirname(inspect.getfile(calvinextras))
-  # build path to gui files
-  gui_path = os.path.join(extras_path, "CalvinGUI", "Build", "GUI")
-  gui_config_path =  os.path.join(extras_path, "CalvinGUI", "calvin.conf")
-  if mockdevices:
-      # Patch config
-      _conf = calvinconfig.get()
-      delta_config = _conf.config_at_path(gui_config_path)
-      _conf.update_config(delta_config)
-  # Add endpoint to twisted reactor
-  resource = File(gui_path)
-  factory = Site(resource)
-  endpoint = endpoints.TCP4ServerEndpoint(reactor, interface=interface4, port=port)
-  endpoint.listen(factory)
-  _log.info("Calvin GUI server listening on http://{}:{}".format(interface4, port))
+    # find installation path of calvinextras package
+    extras_path = os.path.dirname(inspect.getfile(calvinextras))
+    # build path to gui files
+    gui_path = os.path.join(extras_path, "CalvinGUI", "Build", "GUI")
+    gui_config_path =  os.path.join(extras_path, "CalvinGUI", "calvin.conf")
+    if mockdevices:
+        # Patch config
+        _conf = calvinconfig.get()
+        delta_config = _conf.config_at_path(gui_config_path)
+        _conf.update_config(delta_config)
+    # Add endpoint to twisted reactor
+    resource = File(gui_path)
+    factory = Site(resource)
+    endpoint = endpoints.TCP4ServerEndpoint(reactor, interface=interface4, port=port)
+    endpoint.listen(factory)
+    _log.info("Calvin GUI server listening on http://{}:{}".format(interface4, port))
 
 
 def main():
@@ -415,14 +364,8 @@ def main():
             print "Credentials not JSON:\n", e
             return 1
 
-    if args.file:
-        app_info = compile_script(args.file, credentials_)
-        if not app_info:
-            print "Compilation failed."
-            return 1
-
     uris = args.uris
-    tls_enabled = _conf.get("security","control_interface_security")
+    tls_enabled = _conf.get("security", "control_interface_security")
     if args.host is None:
         control_uri = None
     else:
@@ -467,14 +410,11 @@ def main():
     if not 'name' in runtime_attr.setdefault("indexed_public",{}).setdefault("node_name",{}):
         runtime_attr["indexed_public"]["node_name"]['name'] = "no_name"
 
-    if app_info:
-        dispatch_and_deploy(app_info, args.wait, uris, control_uri, runtime_attr, credentials_)
+    runtime_certificate(runtime_attr)
+    if args.storage:
+        storage_runtime(uris, control_uri, runtime_attr, dispatch=False)
     else:
-        runtime_certificate(runtime_attr)
-        if args.storage:
-            storage_runtime(uris, control_uri, runtime_attr, dispatch=False)
-        else:
-            runtime(uris, control_uri, runtime_attr, dispatch=False)
+        runtime(uris, control_uri, runtime_attr, dispatch=False)
     return 0
 
 
