@@ -62,7 +62,6 @@ def main():
     argparser.add_argument('-i', '--include', dest='include_paths', action='append', default=[],
                            metavar='<include_path>',
                            help='add search paths for include statements. Use multiple times for multiple include paths.')
-    output_type = argparser.add_mutually_exclusive_group()
     outgroup = argparser.add_mutually_exclusive_group()
     outgroup.add_argument('--stdout', dest='outfile', action='store_const', const="/dev/stdout",
                            help='send output to stdout instead of file (default)')
