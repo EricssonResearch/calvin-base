@@ -3,7 +3,9 @@ from calvin.utilities.attribute_resolver import format_index_string
 from calvin.utilities import calvinconfig
 from calvin.utilities import calvinlogger
 from calvin.requests.request_handler import RT
+from calvin.requests.request_handler import RequestHandler
 from calvin.requests import calvinresponse
+from calvin.Tools import cscompiler
 import os
 import time
 import multiprocessing
@@ -14,6 +16,45 @@ import json
 
 _log = calvinlogger.get_logger(__name__)
 _conf = calvinconfig.get()
+
+class Deployer(object):
+
+    """
+    Deprecated!
+    Thin layer to support legacy users.
+    New users should use the control REST API or the RequestHandler.deploy_application or RequestHandler.deploy_app_info
+    Deploys an application to a runtime.
+    """
+
+    def __init__(self, runtime, deployable, credentials=None, verify=True, request_handler=None):
+        super(Deployer, self).__init__()
+        self.runtime = runtime
+        self.deployable = deployable
+        self.credentials = credentials
+        self.actor_map = {}
+        self.app_id = None
+        self.verify = verify
+        self.request_handler = request_handler if request_handler else RequestHandler()
+        self.name = self.deployable["app_info"]["name"]
+
+    def deploy(self):
+        """
+        Ask a runtime to instantiate actors and link them together.
+        """
+        if not self.deployable["app_info"]['valid']:
+            import json
+            print(json.dumps(self.deployable, indent=2, default=str))
+            raise Exception("Deploy information is not valid")
+
+        result = self.request_handler.deploy(self.runtime, self.deployable)
+        self.app_id = result['application_id']
+        self.actor_map = result['actor_map']
+        self.replication_map = result.get('replication_map', {})
+        return self.app_id
+
+    def destroy(self):
+        return self.request_handler.delete_application(self.runtime, self.app_id)
+
 
 def retry(retries, function, criterion, error_msg):
     """
@@ -203,7 +244,17 @@ def deploy_script(request_handler, name, script, runtime, retries=10):
     presence in registry on the runtime.
     """
 
-    response = request_handler.deploy_application(runtime, name, script)
+    deployable, issuetracker = cscompiler.compile_source(script, name)
+
+    return deploy(request_handler, deployable, runtime, retries)  
+
+def deploy(request_handler, deployable, runtime, retries=10):
+    """
+    Deploys app and then tries to verify its
+    presence in registry on the runtime.
+    """
+
+    response = request_handler.deploy(runtime, deployable)
     app_id = response['application_id']
 
     def check_application():

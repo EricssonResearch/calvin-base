@@ -13,7 +13,7 @@ applications = glob.glob(path + "/*.calvin")
 def deploy(rt, script_name):
     with open(script_name, "r") as fp:
         script = fp.read()
-    return handler.deploy_application(rt, script_name, script)
+    return handler.deploy(rt, script_name, script)
 
 def migrate_actor(rt, actor_id, dst_rt):
     return handler.migrate(rt, actor_id, dst_rt)

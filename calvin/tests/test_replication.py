@@ -351,6 +351,7 @@ class TestReplication(object):
         rt3 = rt_order3[2]
         rt_by_id = {r.id: r for r in runtimes}
 
+        # FIXME: --> calvin_codegen
         app_info, issuetracker = compiler.compile_script(script, "testScript")
         if issuetracker.error_count:
             _log.warning("Calvinscript contained errors:")
@@ -450,6 +451,7 @@ class TestReplication(object):
             shadow.token > snk.token
         """
 
+        # FIXME: --> calvin_codegen
         app_info, issuetracker = compiler.compile_script(script, "testScript")
         if issuetracker.error_count:
             _log.warning("Calvinscript contained errors:")
@@ -496,6 +498,7 @@ class TestReplication(object):
 
         rt_by_id = {r.id: r for r in runtimes}
 
+        # FIXME: --> calvin_codegen
         app_info, issuetracker = compiler.compile_script(script, "testScript")
         if issuetracker.error_count:
             _log.warning("Calvinscript contained errors:")

@@ -4,7 +4,7 @@ import astprint
 import numbers
 from parser import calvin_parse
 from calvin.actorstore.store import DocumentationStore, GlobalStore
-from calvin.requests import calvinresponse
+# from calvin.requests import calvinresponse
 from calvin.csparser.port_property_syntax import port_property_data
 
 def _create_signature(actor_type, metadata):

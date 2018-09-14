@@ -263,6 +263,7 @@ class CalvinConfig(object):
         except:
             pass
 
+    # FIXME: Get rid off
     def get_in_order(self, option, default=None):
         v = self.get('ARGUMENTS', option)
         if v is None:

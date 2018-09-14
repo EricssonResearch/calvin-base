@@ -19,7 +19,7 @@ import time
 import multiprocessing
 from calvin.runtime.north import calvin_node
 from calvin.Tools import cscompiler as compiler
-from calvin.Tools import deployer
+from calvin.Tools import deployer  # FIXME: Remove
 import pytest
 from calvin.requests.request_handler import RequestHandler
 from calvin.utilities.nodecontrol import dispatch_node

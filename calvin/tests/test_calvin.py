@@ -22,9 +22,9 @@ import numbers
 from collections import Counter
 
 from calvin.utilities import calvinconfig
-from calvin.csparser import cscompile as compiler
+# from calvin.csparser import cscompile as compiler
 from calvin.Tools import cscompiler as compile_tool
-from calvin.Tools import deployer
+# from calvin.Tools import deployer # FIXME: Remove
 from calvin.utilities import calvinlogger
 from calvin.requests.request_handler import RequestHandler
 from . import helpers
@@ -139,10 +139,10 @@ class CalvinTestBase(unittest.TestCase):
         assert actual
         assert reduce(lambda a, b: a and b[0] == b[1], zip(expected, actual), True)
 
-    def get_port_property(self, app_info, actor, port, direction, key):
+    def get_port_property(self, deployable, actor, port, direction, key):
         """Access port properties in a robust way since order might change between parser revisions"""
         # Get list of port properties
-        props = app_info['port_properties'][actor]
+        props = deployable['app_info']['port_properties'][actor]
         for p in props:
             found = p['direction'] == direction and p['port'] == port
             if not found:
@@ -150,12 +150,14 @@ class CalvinTestBase(unittest.TestCase):
             return p['properties'][key]
         raise KeyError("Property '{}' not present.".format(key))
 
+    # FIXME: --> calvin_codegen
     def compile_script(self, script, name):
         # Instead of rewriting tests after compiler.compile_script changed
-        # from returning app_info, errors, warnings to app_info, issuetracker
+        # from returning deployable, errors, warnings to deployable, issuetracker
         # use this stub in tests to keep old behaviour
-        app_info, issuetracker = compiler.compile_script(script, name)
-        return app_info, issuetracker.errors(), issuetracker.warnings()
+        deployable, issuetracker = compile_tool.compile_source(script, name)
+        return deployable, issuetracker.errors(), issuetracker.warnings()
+            
 
     def wait_for_migration(self, runtime, actors, retries=20):
         retry = 0
@@ -1038,16 +1040,18 @@ class TestCalvinScript(CalvinTestBase):
     """
 
         rt = self.rt1
-        app_info, errors, warnings = self.compile_script(script, "simple")
-        d = deployer.Deployer(rt, app_info)
+        deployable, errors, warnings = self.compile_script(script, "simple")
+        d = helpers.Deployer(rt, deployable)
+        print d
         deploy_app(d)
-
+        print d.actor_map
         src = d.actor_map['simple:src']
         snk = d.actor_map['simple:snk']
 
         wait_for_tokens(rt, snk)
         expected = expected_tokens(rt, src, 'seq')
         actual = actual_tokens(rt, snk, len(expected))
+        print expected, actual
         request_handler.disconnect(rt, src)
 
         self.assert_lists_equal(expected, actual)
@@ -1061,8 +1065,8 @@ class TestCalvinScript(CalvinTestBase):
     """
 
         rt = self.rt1
-        app_info, errors, warnings = self.compile_script(script, "simple")
-        d = deployer.Deployer(rt, app_info)
+        deployable, errors, warnings = self.compile_script(script, "simple")
+        d = helpers.Deployer(rt, deployable)
 
         deploy_app(d)
         app_id = d.app_id
@@ -1090,8 +1094,8 @@ class TestCalvinScript(CalvinTestBase):
       snk : test.Sink(store_tokens=1, quiet=1)
       src.integer > snk.token"""
 
-        app_info, errors, warnings = self.compile_script(script, "simple")
-        d = deployer.Deployer(rt, app_info)
+        deployable, errors, warnings = self.compile_script(script, "simple")
+        d = helpers.Deployer(rt, deployable)
         deploy_app(d)
         app_id = d.app_id
 
@@ -1232,8 +1236,8 @@ class TestScripts(CalvinTestBase):
           snk : test.Sink(store_tokens=1, quiet=1)
           src.integer > snk.token
           """
-        app_info, errors, warnings = self.compile_script(script, "simple")
-        d = deployer.Deployer(self.rt1, app_info)
+        deployable, errors, warnings = self.compile_script(script, "simple")
+        d = helpers.Deployer(self.rt1, deployable)
         deploy_app(d)
 
         snk = d.actor_map['simple:snk']
@@ -1251,9 +1255,8 @@ class TestScripts(CalvinTestBase):
         _log.analyze("TESTRUN", "+", {})
         scriptname = 'test1'
         scriptfile = absolute_filename("scripts/%s.calvin" % (scriptname, ))
-        app_info, issuetracker = compile_tool.compile_file(scriptfile, ds=False, ir=False)
-        d = deployer.Deployer(self.rt1, app_info)
-        deploy_app(d)
+        deployable, issuetracker = compile_tool.compile_file(scriptfile, include_paths=None)
+        d = helpers.deploy_app(self.rt1, deployable)
 
         src = d.actor_map['%s:src' % scriptname]
         snk = d.actor_map['%s:snk' % scriptname]
@@ -1277,8 +1280,8 @@ class TestStateMigration(CalvinTestBase):
           src.integer > sum.integer
           sum.integer > snk.token
           """
-        app_info, errors, warnings = self.compile_script(script, "simple")
-        d = deployer.Deployer(self.rt1, app_info)
+        deployable, errors, warnings = self.compile_script(script, "simple")
+        d = helpers.Deployer(self.rt1, deployable)
         deploy_app(d)
 
         src = d.actor_map['simple:src']
@@ -1310,8 +1313,8 @@ class TestAppLifeCycle(CalvinTestBase):
           src.integer > sum.integer
           sum.integer > snk.token
           """
-        app_info, errors, warnings = self.compile_script(script, "simple")
-        d = deployer.Deployer(self.rt1, app_info)
+        deployable, errors, warnings = self.compile_script(script, "simple")
+        d = helpers.Deployer(self.rt1, deployable)
         deploy_app(d)
 
         src = d.actor_map['simple:src']
@@ -1372,8 +1375,8 @@ class TestAppLifeCycle(CalvinTestBase):
         #? from twisted.python import log
         #? log.startLogging(sys.stdout)
 
-        app_info, errors, warnings = self.compile_script(script, "simple")
-        d = deployer.Deployer(self.rt1, app_info)
+        deployable, errors, warnings = self.compile_script(script, "simple")
+        d = helpers.Deployer(self.rt1, deployable)
         deploy_app(d)
 
         src = d.actor_map['simple:src']
@@ -1451,8 +1454,8 @@ class TestEnabledToEnabledBug(CalvinTestBase):
 
             src.integer > snk.token
         """
-        app_info, errors, warnings = self.compile_script(script, "simple")
-        d = deployer.Deployer(self.rt1, app_info)
+        deployable, errors, warnings = self.compile_script(script, "simple")
+        d = helpers.Deployer(self.rt1, deployable)
         deploy_app(d)
 
         snk = d.actor_map['simple:snk']
@@ -1542,8 +1545,8 @@ class TestEnabledToEnabledBug(CalvinTestBase):
             src.integer > ity.token
             ity.token > snk.token
           """
-        app_info, errors, warnings = self.compile_script(script, "simple")
-        d = deployer.Deployer(self.rt1, app_info)
+        deployable, errors, warnings = self.compile_script(script, "simple")
+        d = helpers.Deployer(self.rt1, deployable)
         deploy_app(d)
         snk = d.actor_map['simple:snk']
 
@@ -1586,8 +1589,8 @@ class TestEnabledToEnabledBug(CalvinTestBase):
             src.integer > snk1.token
             src.integer > snk2.token
         """
-        app_info, errors, warnings = self.compile_script(script, "test31")
-        d = deployer.Deployer(self.rt1, app_info)
+        deployable, errors, warnings = self.compile_script(script, "test31")
+        d = helpers.Deployer(self.rt1, deployable)
         deploy_app(d)
 
         snk1 = d.actor_map['test31:snk1']
@@ -1622,8 +1625,8 @@ class TestEnabledToEnabledBug(CalvinTestBase):
             foo.a > snk1.token
             foo.b > snk2.token
         """
-        app_info, errors, warnings = self.compile_script(script, "test32")
-        d = deployer.Deployer(self.rt1, app_info)
+        deployable, errors, warnings = self.compile_script(script, "test32")
+        d = helpers.Deployer(self.rt1, deployable)
         deploy_app(d)
 
         snk1 = d.actor_map['test32:snk1']
@@ -1687,9 +1690,9 @@ class TestNullPorts(CalvinTestBase):
             src2.void > join.token_2
             join.token > snk.token
         """
-        app_info, errors, warnings = self.compile_script(script, "testVoidActor")
+        deployable, errors, warnings = self.compile_script(script, "testVoidActor")
         print errors
-        d = deployer.Deployer(self.rt1, app_info)
+        d = helpers.Deployer(self.rt1, deployable)
         deploy_app(d)
 
         snk = d.actor_map['testVoidActor:snk']
@@ -1710,9 +1713,9 @@ class TestNullPorts(CalvinTestBase):
             src.integer > term.void
             src.integer > snk.token
         """
-        app_info, errors, warnings = self.compile_script(script, "testTerminatorActor")
+        deployable, errors, warnings = self.compile_script(script, "testTerminatorActor")
         print errors
-        d = deployer.Deployer(self.rt1, app_info)
+        d = helpers.Deployer(self.rt1, deployable)
         deploy_app(d)
 
         snk = d.actor_map['testTerminatorActor:snk']
@@ -1738,9 +1741,9 @@ class TestCompare(CalvinTestBase):
             const.token > pred.b
             pred.result > snk.token
         """
-        app_info, errors, warnings = self.compile_script(script, "testBadOp")
+        deployable, errors, warnings = self.compile_script(script, "testBadOp")
         print errors
-        d = deployer.Deployer(self.rt1, app_info)
+        d = helpers.Deployer(self.rt1, deployable)
         deploy_app(d)
 
         snk = d.actor_map['testBadOp:snk']
@@ -1762,9 +1765,9 @@ class TestCompare(CalvinTestBase):
             const.token > pred.b
             pred.result > snk.token
         """
-        app_info, errors, warnings = self.compile_script(script, "testEqual")
+        deployable, errors, warnings = self.compile_script(script, "testEqual")
         print errors
-        d = deployer.Deployer(self.rt1, app_info)
+        d = helpers.Deployer(self.rt1, deployable)
         deploy_app(d)
 
         snk = d.actor_map['testEqual:snk']
@@ -1788,9 +1791,9 @@ class TestCompare(CalvinTestBase):
             const.token > pred.b
             pred.result > snk.token
         """
-        app_info, errors, warnings = self.compile_script(script, "testGreaterThanOrEqual")
+        deployable, errors, warnings = self.compile_script(script, "testGreaterThanOrEqual")
         print errors
-        d = deployer.Deployer(self.rt1, app_info)
+        d = helpers.Deployer(self.rt1, deployable)
         deploy_app(d)
 
         snk = d.actor_map['testGreaterThanOrEqual:snk']
@@ -1819,9 +1822,9 @@ class TestSelect(CalvinTestBase):
             route.case_true  > snk.token
             route.case_false > term.void
         """
-        app_info, errors, warnings = self.compile_script(script, "testTrue")
+        deployable, errors, warnings = self.compile_script(script, "testTrue")
         print errors
-        d = deployer.Deployer(self.rt1, app_info)
+        d = helpers.Deployer(self.rt1, deployable)
         deploy_app(d)
 
         snk = d.actor_map['testTrue:snk']
@@ -1845,9 +1848,9 @@ class TestSelect(CalvinTestBase):
             route.case_true  > term.void
             route.case_false > snk.token
         """
-        app_info, errors, warnings = self.compile_script(script, "testFalse")
+        deployable, errors, warnings = self.compile_script(script, "testFalse")
         print errors
-        d = deployer.Deployer(self.rt1, app_info)
+        d = helpers.Deployer(self.rt1, deployable)
         deploy_app(d)
 
         snk = d.actor_map['testFalse:snk']
@@ -1873,9 +1876,9 @@ class TestSelect(CalvinTestBase):
             route.case_true  > term.void
             route.case_false > snk.token
         """
-        app_info, errors, warnings = self.compile_script(script, "testBadSelect")
+        deployable, errors, warnings = self.compile_script(script, "testBadSelect")
         print errors
-        d = deployer.Deployer(self.rt1, app_info)
+        d = helpers.Deployer(self.rt1, deployable)
         deploy_app(d)
 
         snk = d.actor_map['testBadSelect:snk']
@@ -1909,9 +1912,9 @@ class TestDeselect(CalvinTestBase):
             comp.result > ds.select
             ds.data > snk.token
         """
-        app_info, errors, warnings = self.compile_script(script, "testDeselectTrue")
+        deployable, errors, warnings = self.compile_script(script, "testDeselectTrue")
         print errors
-        d = deployer.Deployer(self.rt1, app_info)
+        d = helpers.Deployer(self.rt1, deployable)
         deploy_app(d)
 
         snk = d.actor_map['testDeselectTrue:snk']
@@ -1941,9 +1944,9 @@ class TestDeselect(CalvinTestBase):
             comp.result > ds.select
             ds.data > snk.token
         """
-        app_info, errors, warnings = self.compile_script(script, "testDeselectFalse")
+        deployable, errors, warnings = self.compile_script(script, "testDeselectFalse")
         print errors
-        d = deployer.Deployer(self.rt1, app_info)
+        d = helpers.Deployer(self.rt1, deployable)
         deploy_app(d)
 
         snk = d.actor_map['testDeselectFalse:snk']
@@ -1971,9 +1974,9 @@ class TestDeselect(CalvinTestBase):
             const_5.out > ds.select
             ds.data > snk.token
         """
-        app_info, errors, warnings = self.compile_script(script, "testDeselectBadSelect")
+        deployable, errors, warnings = self.compile_script(script, "testDeselectBadSelect")
         print errors
-        d = deployer.Deployer(self.rt1, app_info)
+        d = helpers.Deployer(self.rt1, deployable)
         deploy_app(d)
 
         snk = d.actor_map['testDeselectBadSelect:snk']
@@ -2003,10 +2006,10 @@ class TestLineJoin(CalvinTestBase):
             join.text > snk.token
         """ % (datafile, )
 
-        app_info, errors, warnings = self.compile_script(script, "testBasicJoin")
+        deployable, errors, warnings = self.compile_script(script, "testBasicJoin")
         print errors
 
-        d = deployer.Deployer(self.rt1, app_info)
+        d = helpers.Deployer(self.rt1, deployable)
         deploy_app(d)
 
         with open(datafile, "r") as fp:
@@ -2036,9 +2039,9 @@ class TestRegex(CalvinTestBase):
             regex.match    > snk.token
             regex.no_match > term.void
         """
-        app_info, errors, warnings = self.compile_script(script, "testRegexMatch")
+        deployable, errors, warnings = self.compile_script(script, "testRegexMatch")
         print errors
-        d = deployer.Deployer(self.rt1, app_info)
+        d = helpers.Deployer(self.rt1, deployable)
         deploy_app(d)
 
         snk = d.actor_map['testRegexMatch:snk']
@@ -2064,9 +2067,9 @@ class TestRegex(CalvinTestBase):
             regex.no_match > snk.token
             regex.match    > term.void
         """
-        app_info, errors, warnings = self.compile_script(script, "testRegexNoMatch")
+        deployable, errors, warnings = self.compile_script(script, "testRegexNoMatch")
         print errors
-        d = deployer.Deployer(self.rt1, app_info)
+        d = helpers.Deployer(self.rt1, deployable)
         deploy_app(d)
 
         snk = d.actor_map['testRegexNoMatch:snk']
@@ -2090,9 +2093,9 @@ class TestRegex(CalvinTestBase):
             regex.match    > snk.token
             regex.no_match > term.void
         """
-        app_info, errors, warnings = self.compile_script(script, "testRegexCapture")
+        deployable, errors, warnings = self.compile_script(script, "testRegexCapture")
         print errors
-        d = deployer.Deployer(self.rt1, app_info)
+        d = helpers.Deployer(self.rt1, deployable)
         deploy_app(d)
 
         snk = d.actor_map['testRegexCapture:snk']
@@ -2117,9 +2120,9 @@ class TestRegex(CalvinTestBase):
             regex.match    > snk.token
             regex.no_match > term.void
         """
-        app_info, errors, warnings = self.compile_script(script, "testRegexMultiCapture")
+        deployable, errors, warnings = self.compile_script(script, "testRegexMultiCapture")
         print errors
-        d = deployer.Deployer(self.rt1, app_info)
+        d = helpers.Deployer(self.rt1, deployable)
         deploy_app(d)
 
         snk = d.actor_map['testRegexMultiCapture:snk']
@@ -2144,9 +2147,9 @@ class TestRegex(CalvinTestBase):
             regex.no_match > snk.token
             regex.match    > term.void
         """
-        app_info, errors, warnings = self.compile_script(script, "testRegexCaptureNoMatch")
+        deployable, errors, warnings = self.compile_script(script, "testRegexCaptureNoMatch")
         print errors
-        d = deployer.Deployer(self.rt1, app_info)
+        d = helpers.Deployer(self.rt1, deployable)
         deploy_app(d)
 
         snk = d.actor_map['testRegexCaptureNoMatch:snk']
@@ -2169,9 +2172,9 @@ class TestConstantAsArguments(CalvinTestBase):
             snk   : test.Sink(store_tokens=1, quiet=1)
             src.token > snk.token
         """
-        app_info, errors, warnings = self.compile_script(script, "testConstant")
+        deployable, errors, warnings = self.compile_script(script, "testConstant")
         print errors
-        d = deployer.Deployer(self.rt1, app_info)
+        d = helpers.Deployer(self.rt1, deployable)
         deploy_app(d)
 
         snk = d.actor_map['testConstant:snk']
@@ -2192,9 +2195,9 @@ class TestConstantAsArguments(CalvinTestBase):
             snk   : test.Sink(store_tokens=1, quiet=1)
             src.token > snk.token
         """
-        app_info, errors, warnings = self.compile_script(script, "testConstantRecursive")
+        deployable, errors, warnings = self.compile_script(script, "testConstantRecursive")
         print errors
-        d = deployer.Deployer(self.rt1, app_info)
+        d = helpers.Deployer(self.rt1, deployable)
         deploy_app(d)
 
         snk = d.actor_map['testConstantRecursive:snk']
@@ -2216,9 +2219,9 @@ class TestConstantOnPort(CalvinTestBase):
             snk   : test.Sink(store_tokens=1, quiet=1)
             42 > snk.token
         """
-        app_info, errors, warnings = self.compile_script(script, "testLiteralOnPort")
+        deployable, errors, warnings = self.compile_script(script, "testLiteralOnPort")
         print errors
-        d = deployer.Deployer(self.rt1, app_info)
+        d = helpers.Deployer(self.rt1, deployable)
         deploy_app(d)
         time.sleep(.1)
 
@@ -2238,9 +2241,9 @@ class TestConstantOnPort(CalvinTestBase):
             snk   : test.Sink(store_tokens=1, quiet=1)
             FOO > snk.token
         """
-        app_info, errors, warnings = self.compile_script(script, "testConstantOnPort")
+        deployable, errors, warnings = self.compile_script(script, "testConstantOnPort")
         print errors
-        d = deployer.Deployer(self.rt1, app_info)
+        d = helpers.Deployer(self.rt1, deployable)
         deploy_app(d)
 
         snk = d.actor_map['testConstantOnPort:snk']
@@ -2260,9 +2263,9 @@ class TestConstantOnPort(CalvinTestBase):
             snk   : test.Sink(store_tokens=1, quiet=1)
             FOO > snk.token
         """
-        app_info, errors, warnings = self.compile_script(script, "testConstantRecursiveOnPort")
+        deployable, errors, warnings = self.compile_script(script, "testConstantRecursiveOnPort")
         print errors
-        d = deployer.Deployer(self.rt1, app_info)
+        d = helpers.Deployer(self.rt1, deployable)
         deploy_app(d)
 
         snk = d.actor_map['testConstantRecursiveOnPort:snk']
@@ -2290,9 +2293,9 @@ class TestConstantAndComponents(CalvinTestBase):
             snk   : test.Sink(store_tokens=1, quiet=1)
             src.out > snk.token
         """
-        app_info, errors, warnings = self.compile_script(script, "testLiteralOnCompPort")
+        deployable, errors, warnings = self.compile_script(script, "testLiteralOnCompPort")
         print errors
-        d = deployer.Deployer(self.rt1, app_info)
+        d = helpers.Deployer(self.rt1, deployable)
         deploy_app(d)
 
         snk = d.actor_map['testLiteralOnCompPort:snk']
@@ -2317,9 +2320,9 @@ class TestConstantAndComponents(CalvinTestBase):
             snk   : test.Sink(store_tokens=1, quiet=1)
             src.out > snk.token
         """
-        app_info, errors, warnings = self.compile_script(script, "testConstantOnCompPort")
+        deployable, errors, warnings = self.compile_script(script, "testConstantOnCompPort")
         print errors
-        d = deployer.Deployer(self.rt1, app_info)
+        d = helpers.Deployer(self.rt1, deployable)
         deploy_app(d)
 
         snk = d.actor_map['testConstantOnCompPort:snk']
@@ -2344,9 +2347,9 @@ class TestConstantAndComponents(CalvinTestBase):
             snk   : test.Sink(store_tokens=1, quiet=1)
             src.out > snk.token
         """
-        app_info, errors, warnings = self.compile_script(script, "testStringConstantOnCompPort")
+        deployable, errors, warnings = self.compile_script(script, "testStringConstantOnCompPort")
         print errors
-        d = deployer.Deployer(self.rt1, app_info)
+        d = helpers.Deployer(self.rt1, deployable)
         deploy_app(d)
 
         snk = d.actor_map['testStringConstantOnCompPort:snk']
@@ -2374,8 +2377,8 @@ class TestConstantAndComponentsArguments(CalvinTestBase):
         src.seq > snk.token
         """
 
-        app_info, errors, warnings = self.compile_script(script, "testComponentArgument")
-        d = deployer.Deployer(self.rt1, app_info)
+        deployable, errors, warnings = self.compile_script(script, "testComponentArgument")
+        d = helpers.Deployer(self.rt1, deployable)
         deploy_app(d)
 
         snk = d.actor_map['testComponentArgument:snk']
@@ -2400,8 +2403,8 @@ class TestConstantAndComponentsArguments(CalvinTestBase):
         src.seq > snk.token
         """
 
-        app_info, errors, warnings = self.compile_script(script, "testComponentConstantArgument")
-        d = deployer.Deployer(self.rt1, app_info)
+        deployable, errors, warnings = self.compile_script(script, "testComponentConstantArgument")
+        d = helpers.Deployer(self.rt1, deployable)
         deploy_app(d)
 
         snk = d.actor_map['testComponentConstantArgument:snk']
@@ -2427,8 +2430,8 @@ class TestConstantAndComponentsArguments(CalvinTestBase):
         src.seq > snk.token
         """
 
-        app_info, errors, warnings = self.compile_script(script, "testComponentConstantArgumentDirect")
-        d = deployer.Deployer(self.rt1, app_info)
+        deployable, errors, warnings = self.compile_script(script, "testComponentConstantArgumentDirect")
+        d = helpers.Deployer(self.rt1, deployable)
         deploy_app(d)
 
         snk = d.actor_map['testComponentConstantArgumentDirect:snk']
@@ -2453,8 +2456,8 @@ class TestConstantAndComponentsArguments(CalvinTestBase):
         src.seq > snk.token
         """
 
-        app_info, errors, warnings = self.compile_script(script, "testComponentArgumentAsImplicitActor")
-        d = deployer.Deployer(self.rt1, app_info)
+        deployable, errors, warnings = self.compile_script(script, "testComponentArgumentAsImplicitActor")
+        d = helpers.Deployer(self.rt1, deployable)
         deploy_app(d)
 
         snk = d.actor_map['testComponentArgumentAsImplicitActor:snk']
@@ -2480,8 +2483,8 @@ class TestConstantAndComponentsArguments(CalvinTestBase):
         src.seq > snk.token
         """
 
-        app_info, errors, warnings = self.compile_script(script, "testComponentConstantArgumentAsImplicitActor")
-        d = deployer.Deployer(self.rt1, app_info)
+        deployable, errors, warnings = self.compile_script(script, "testComponentConstantArgumentAsImplicitActor")
+        d = helpers.Deployer(self.rt1, deployable)
         deploy_app(d)
 
         snk = d.actor_map['testComponentConstantArgumentAsImplicitActor:snk']
@@ -2502,8 +2505,8 @@ class TestConstantifyOnPort(CalvinTestBase):
             snk : test.Sink(store_tokens=1, quiet=1)
             src.integer > /"X"/ snk.token
         """
-        app_info, errors, warnings = self.compile_script(script, "testLiteralOnPort")
-        d = deployer.Deployer(self.rt1, app_info)
+        deployable, errors, warnings = self.compile_script(script, "testLiteralOnPort")
+        d = helpers.Deployer(self.rt1, deployable)
         deploy_app(d)
 
         snk = d.actor_map['testLiteralOnPort:snk']
@@ -2523,8 +2526,8 @@ class TestConstantifyOnPort(CalvinTestBase):
             snk2 : test.Sink(store_tokens=1, quiet=1)
             src.integer > /"X"/ snk1.token, snk2.token
         """
-        app_info, errors, warnings = self.compile_script(script, "testLiteralOnPortlist")
-        d = deployer.Deployer(self.rt1, app_info)
+        deployable, errors, warnings = self.compile_script(script, "testLiteralOnPortlist")
+        d = helpers.Deployer(self.rt1, deployable)
         deploy_app(d)
 
         snk1 = d.actor_map['testLiteralOnPortlist:snk1']
@@ -2549,8 +2552,8 @@ class TestConstantifyOnPort(CalvinTestBase):
             snk2 : test.Sink(store_tokens=1, quiet=1)
             src.integer > /"X"/ snk1.token, /"Y"/ snk2.token
         """
-        app_info, errors, warnings = self.compile_script(script, "testLiteralsOnPortlist")
-        d = deployer.Deployer(self.rt1, app_info)
+        deployable, errors, warnings = self.compile_script(script, "testLiteralsOnPortlist")
+        d = helpers.Deployer(self.rt1, deployable)
         deploy_app(d)
 
         snk1 = d.actor_map['testLiteralsOnPortlist:snk1']
@@ -2576,8 +2579,8 @@ class TestConstantifyOnPort(CalvinTestBase):
             snk2 : test.Sink(store_tokens=1, quiet=1)
             src.integer > /FOO/ snk1.token, /BAR/ snk2.token
         """
-        app_info, errors, warnings = self.compile_script(script, "testConstantsOnPortlist")
-        d = deployer.Deployer(self.rt1, app_info)
+        deployable, errors, warnings = self.compile_script(script, "testConstantsOnPortlist")
+        d = helpers.Deployer(self.rt1, deployable)
         deploy_app(d)
 
         snk1 = d.actor_map['testConstantsOnPortlist:snk1']
@@ -2609,8 +2612,8 @@ class TestConstantifyOnPort(CalvinTestBase):
             tick.data > ticker.trigger
             ticker.out > test.token
         """
-        app_info, errors, warnings = self.compile_script(script, "testLiteralOnComponentInPort")
-        d = deployer.Deployer(self.rt1, app_info)
+        deployable, errors, warnings = self.compile_script(script, "testLiteralOnComponentInPort")
+        d = helpers.Deployer(self.rt1, deployable)
         deploy_app(d)
 
         snk = d.actor_map['testLiteralOnComponentInPort:test']
@@ -2636,9 +2639,9 @@ class TestPortProperties(CalvinTestBase):
             src.integer > snk1.token
             src.integer > snk2.token
         """
-        app_info, errors, warnings = self.compile_script(script, "testScript")
+        deployable, errors, warnings = self.compile_script(script, "testScript")
         print errors
-        d = deployer.Deployer(self.rt1, app_info)
+        d = helpers.Deployer(self.rt1, deployable)
         d.deploy()
 
         snk1 = d.actor_map['testScript:snk1']
@@ -2674,15 +2677,15 @@ class TestPortProperties(CalvinTestBase):
             src.seq > snk1.token
             src.seq > snk2.token
         """
-        app_info, errors, warnings = self.compile_script(script, "testScript")
+        deployable, errors, warnings = self.compile_script(script, "testScript")
         print errors
-        print app_info
-        assert 'testScript:src:compsrc' in app_info['port_properties']
-        assert 'port' in app_info['port_properties']['testScript:src:compsrc'][0]
-        assert (app_info['port_properties']['testScript:src:compsrc'][0]['port'] ==
+        print deployable
+        assert 'testScript:src:compsrc' in deployable['app_info']['port_properties']
+        assert 'port' in deployable['app_info']['port_properties']['testScript:src:compsrc'][0]
+        assert (deployable['app_info']['port_properties']['testScript:src:compsrc'][0]['port'] ==
                 'integer')
-        assert (self. get_port_property(app_info, 'testScript:src:compsrc', 'integer', 'out', 'routing') == 'round-robin')
-        d = deployer.Deployer(self.rt1, app_info)
+        assert (self. get_port_property(deployable, 'testScript:src:compsrc', 'integer', 'out', 'routing') == 'round-robin')
+        d = helpers.Deployer(self.rt1, deployable)
         d.deploy()
 
         snk1 = d.actor_map['testScript:snk1']
@@ -2720,25 +2723,25 @@ class TestPortProperties(CalvinTestBase):
             src.integer > snk1.seq
             src.integer > snk2.seq
         """
-        app_info, errors, warnings = self.compile_script(script, "testScript")
+        deployable, errors, warnings = self.compile_script(script, "testScript")
         print errors
-        print app_info
-        assert 'testScript:src' in app_info['port_properties']
-        assert 'port' in app_info['port_properties']['testScript:src'][0]
-        assert (app_info['port_properties']['testScript:src'][0]['port'] ==
+        print deployable
+        assert 'testScript:src' in deployable['app_info']['port_properties']
+        assert 'port' in deployable['app_info']['port_properties']['testScript:src'][0]
+        assert (deployable['app_info']['port_properties']['testScript:src'][0]['port'] ==
                 'integer')
-        assert (self.get_port_property(app_info, 'testScript:src', 'integer', 'out', 'routing') == 'round-robin')
+        assert (self.get_port_property(deployable, 'testScript:src', 'integer', 'out', 'routing') == 'round-robin')
 
-        assert 'port' in app_info['port_properties']['testScript:snk1:compsnk'][0]
-        assert (app_info['port_properties']['testScript:snk1:compsnk'][0]['port'] ==
+        assert 'port' in deployable['app_info']['port_properties']['testScript:snk1:compsnk'][0]
+        assert (deployable['app_info']['port_properties']['testScript:snk1:compsnk'][0]['port'] ==
                 'token')
-        assert (self.get_port_property(app_info, 'testScript:snk1:compsnk', 'token', 'in', 'test1') == 'dummy1')
-        assert 'port' in app_info['port_properties']['testScript:snk2:compsnk'][0]
-        assert (app_info['port_properties']['testScript:snk2:compsnk'][0]['port'] ==
+        assert (self.get_port_property(deployable, 'testScript:snk1:compsnk', 'token', 'in', 'test1') == 'dummy1')
+        assert 'port' in deployable['app_info']['port_properties']['testScript:snk2:compsnk'][0]
+        assert (deployable['app_info']['port_properties']['testScript:snk2:compsnk'][0]['port'] ==
                 'token')
-        assert (self.get_port_property(app_info, 'testScript:snk2:compsnk', 'token', 'in', 'test1') == 'dummy2')
+        assert (self.get_port_property(deployable, 'testScript:snk2:compsnk', 'token', 'in', 'test1') == 'dummy2')
 
-        d = deployer.Deployer(self.rt1, app_info)
+        d = helpers.Deployer(self.rt1, deployable)
         d.deploy()
 
         snk1 = d.actor_map['testScript:snk1:compsnk']
@@ -2774,15 +2777,15 @@ class TestPortProperties(CalvinTestBase):
             src.seq > snk1.token
             src.seq > snk2.token
         """
-        app_info, errors, warnings = self.compile_script(script, "testScript")
+        deployable, errors, warnings = self.compile_script(script, "testScript")
         print errors
-        print app_info
-        assert 'testScript:src:compsrc' in app_info['port_properties']
-        assert 'port' in app_info['port_properties']['testScript:src:compsrc'][0]
-        assert (app_info['port_properties']['testScript:src:compsrc'][0]['port'] ==
+        print deployable
+        assert 'testScript:src:compsrc' in deployable['app_info']['port_properties']
+        assert 'port' in deployable['app_info']['port_properties']['testScript:src:compsrc'][0]
+        assert (deployable['app_info']['port_properties']['testScript:src:compsrc'][0]['port'] ==
                 'integer')
-        assert (self.get_port_property(app_info, 'testScript:src:compsrc', 'integer', 'out', 'routing') == 'round-robin')
-        d = deployer.Deployer(self.rt1, app_info)
+        assert (self.get_port_property(deployable, 'testScript:src:compsrc', 'integer', 'out', 'routing') == 'round-robin')
+        d = helpers.Deployer(self.rt1, deployable)
         d.deploy()
 
         snk1 = d.actor_map['testScript:snk1']
@@ -2819,25 +2822,25 @@ class TestPortProperties(CalvinTestBase):
             src.integer > snk1.seq
             src.integer > snk2.seq
         """
-        app_info, errors, warnings = self.compile_script(script, "testScript")
+        deployable, errors, warnings = self.compile_script(script, "testScript")
         print errors
-        print app_info
-        assert 'testScript:src' in app_info['port_properties']
-        assert 'port' in app_info['port_properties']['testScript:src'][0]
-        assert (app_info['port_properties']['testScript:src'][0]['port'] ==
+        print deployable
+        assert 'testScript:src' in deployable['app_info']['port_properties']
+        assert 'port' in deployable['app_info']['port_properties']['testScript:src'][0]
+        assert (deployable['app_info']['port_properties']['testScript:src'][0]['port'] ==
                 'integer')
-        assert (self.get_port_property(app_info, 'testScript:src', 'integer', 'out', 'routing') == 'round-robin')
+        assert (self.get_port_property(deployable, 'testScript:src', 'integer', 'out', 'routing') == 'round-robin')
 
-        assert 'port' in app_info['port_properties']['testScript:snk1:compsnk'][0]
-        assert (app_info['port_properties']['testScript:snk1:compsnk'][0]['port'] ==
+        assert 'port' in deployable['app_info']['port_properties']['testScript:snk1:compsnk'][0]
+        assert (deployable['app_info']['port_properties']['testScript:snk1:compsnk'][0]['port'] ==
                 'token')
-        assert (self.get_port_property(app_info, 'testScript:snk1:compsnk', 'token', 'in', 'test1') == 'dummyx')
-        assert 'port' in app_info['port_properties']['testScript:snk2:compsnk'][0]
-        assert (app_info['port_properties']['testScript:snk2:compsnk'][0]['port'] ==
+        assert (self.get_port_property(deployable, 'testScript:snk1:compsnk', 'token', 'in', 'test1') == 'dummyx')
+        assert 'port' in deployable['app_info']['port_properties']['testScript:snk2:compsnk'][0]
+        assert (deployable['app_info']['port_properties']['testScript:snk2:compsnk'][0]['port'] ==
                 'token')
-        assert (self.get_port_property(app_info, 'testScript:snk2:compsnk', 'token', 'in', 'test1') == 'dummyx')
+        assert (self.get_port_property(deployable, 'testScript:snk2:compsnk', 'token', 'in', 'test1') == 'dummyx')
 
-        d = deployer.Deployer(self.rt1, app_info)
+        d = helpers.Deployer(self.rt1, deployable)
         d.deploy()
 
         snk1 = d.actor_map['testScript:snk1:compsnk']
@@ -2874,25 +2877,25 @@ class TestPortProperties(CalvinTestBase):
             src.seq > snk1.token
             src.seq > snk2.token
         """
-        app_info, errors, warnings = self.compile_script(script, "testScript")
+        deployable, errors, warnings = self.compile_script(script, "testScript")
         print errors
-        print app_info
-        assert 'testScript:src:compsrc' in app_info['port_properties']
-        assert 'port' in app_info['port_properties']['testScript:src:compsrc'][0]
-        assert (app_info['port_properties']['testScript:src:compsrc'][0]['port'] ==
+        print deployable
+        assert 'testScript:src:compsrc' in deployable['app_info']['port_properties']
+        assert 'port' in deployable['app_info']['port_properties']['testScript:src:compsrc'][0]
+        assert (deployable['app_info']['port_properties']['testScript:src:compsrc'][0]['port'] ==
                 'integer')
-        assert (self.get_port_property(app_info, 'testScript:src:compsrc', 'integer', 'out', 'routing') == 'round-robin')
+        assert (self.get_port_property(deployable, 'testScript:src:compsrc', 'integer', 'out', 'routing') == 'round-robin')
 
-        assert 'port' in app_info['port_properties']['testScript:snk1'][0]
-        assert (app_info['port_properties']['testScript:snk1'][0]['port'] ==
+        assert 'port' in deployable['app_info']['port_properties']['testScript:snk1'][0]
+        assert (deployable['app_info']['port_properties']['testScript:snk1'][0]['port'] ==
                 'token')
-        assert (self.get_port_property(app_info, 'testScript:snk1', 'token', 'in', 'test1') == 'dummyx')
-        assert 'port' in app_info['port_properties']['testScript:snk2'][0]
-        assert (app_info['port_properties']['testScript:snk2'][0]['port'] ==
+        assert (self.get_port_property(deployable, 'testScript:snk1', 'token', 'in', 'test1') == 'dummyx')
+        assert 'port' in deployable['app_info']['port_properties']['testScript:snk2'][0]
+        assert (deployable['app_info']['port_properties']['testScript:snk2'][0]['port'] ==
                 'token')
-        assert (self.get_port_property(app_info, 'testScript:snk2', 'token', 'in', 'test1') == 'dummyx')
+        assert (self.get_port_property(deployable, 'testScript:snk2', 'token', 'in', 'test1') == 'dummyx')
 
-        d = deployer.Deployer(self.rt1, app_info)
+        d = helpers.Deployer(self.rt1, deployable)
         d.deploy()
 
         snk1 = d.actor_map['testScript:snk1']
@@ -2928,16 +2931,16 @@ class TestPortProperties(CalvinTestBase):
             src.integer > snk1.seq
             src.integer > snk2.seq
         """
-        app_info, errors, warnings = self.compile_script(script, "testScript")
+        deployable, errors, warnings = self.compile_script(script, "testScript")
         print errors
-        print app_info
-        assert 'testScript:src' in app_info['port_properties']
-        assert 'port' in app_info['port_properties']['testScript:src'][0]
-        assert (app_info['port_properties']['testScript:src'][0]['port'] ==
+        print deployable
+        assert 'testScript:src' in deployable['app_info']['port_properties']
+        assert 'port' in deployable['app_info']['port_properties']['testScript:src'][0]
+        assert (deployable['app_info']['port_properties']['testScript:src'][0]['port'] ==
                 'integer')
-        assert (self.get_port_property(app_info, 'testScript:src', 'integer', 'out', 'routing') == 'round-robin')
+        assert (self.get_port_property(deployable, 'testScript:src', 'integer', 'out', 'routing') == 'round-robin')
 
-        d = deployer.Deployer(self.rt1, app_info)
+        d = helpers.Deployer(self.rt1, deployable)
         d.deploy()
 
         snk1 = d.actor_map['testScript:snk1:compsnk']
@@ -2973,17 +2976,17 @@ class TestPortProperties(CalvinTestBase):
             src.seq > snk1.token
             src.seq > snk2.token
         """
-        app_info, errors, warnings = self.compile_script(script, "testScript")
+        deployable, errors, warnings = self.compile_script(script, "testScript")
         print errors
-        print app_info
-        assert 'testScript:src:compsrc' in app_info['port_properties']
-        assert 'port' in app_info['port_properties']['testScript:src:compsrc'][0]
-        assert (app_info['port_properties']['testScript:src:compsrc'][0]['port'] ==
+        print deployable
+        assert 'testScript:src:compsrc' in deployable['app_info']['port_properties']
+        assert 'port' in deployable['app_info']['port_properties']['testScript:src:compsrc'][0]
+        assert (deployable['app_info']['port_properties']['testScript:src:compsrc'][0]['port'] ==
                 'integer')
-        assert (self.get_port_property(app_info, 'testScript:src:compsrc', 'integer', 'out', 'routing')[0] == 'round-robin')
-        assert (self.get_port_property(app_info, 'testScript:src:compsrc', 'integer', 'out', 'routing')[1] == 'random')
+        assert (self.get_port_property(deployable, 'testScript:src:compsrc', 'integer', 'out', 'routing')[0] == 'round-robin')
+        assert (self.get_port_property(deployable, 'testScript:src:compsrc', 'integer', 'out', 'routing')[1] == 'random')
 
-        d = deployer.Deployer(self.rt1, app_info)
+        d = helpers.Deployer(self.rt1, deployable)
         d.deploy()
 
         snk1 = d.actor_map['testScript:snk1']
@@ -3020,18 +3023,18 @@ class TestPortProperties(CalvinTestBase):
             src.seq > snk1.token
             src.seq > snk2.token
         """
-        app_info, errors, warnings = self.compile_script(script, "testScript")
+        deployable, errors, warnings = self.compile_script(script, "testScript")
         print errors
-        print app_info
+        print deployable
         assert len(errors) == 0
-        assert 'testScript:src:compsrc' in app_info['port_properties']
-        assert 'port' in app_info['port_properties']['testScript:src:compsrc'][0]
-        assert (app_info['port_properties']['testScript:src:compsrc'][0]['port'] ==
+        assert 'testScript:src:compsrc' in deployable['app_info']['port_properties']
+        assert 'port' in deployable['app_info']['port_properties']['testScript:src:compsrc'][0]
+        assert (deployable['app_info']['port_properties']['testScript:src:compsrc'][0]['port'] ==
                 'integer')
-        assert len(self.get_port_property(app_info, 'testScript:src:compsrc', 'integer', 'out', 'routing')) == 1
-        assert (self.get_port_property(app_info, 'testScript:src:compsrc', 'integer', 'out', 'routing')[0] == 'round-robin')
+        assert len(self.get_port_property(deployable, 'testScript:src:compsrc', 'integer', 'out', 'routing')) == 1
+        assert (self.get_port_property(deployable, 'testScript:src:compsrc', 'integer', 'out', 'routing')[0] == 'round-robin')
 
-        d = deployer.Deployer(self.rt1, app_info)
+        d = helpers.Deployer(self.rt1, deployable)
         d.deploy()
 
         snk1 = d.actor_map['testScript:snk1']
@@ -3069,9 +3072,9 @@ class TestPortProperties(CalvinTestBase):
             src.seq > snk1.token
             src.seq > snk2.token
         """
-        app_info, errors, warnings = self.compile_script(script, "testScript")
+        deployable, errors, warnings = self.compile_script(script, "testScript")
         print errors
-        print app_info
+        print deployable
         assert len(errors) == 2
         assert all([e['reason'] == "Can't handle conflicting properties without common alternatives" for e in errors])
         assert all([e['line'] in [5, 11] for e in errors])
@@ -3092,17 +3095,17 @@ class TestPortProperties(CalvinTestBase):
             src.integer > snk1.seq
             src.integer > snk2.seq
         """
-        app_info, errors, warnings = self.compile_script(script, "testScript")
+        deployable, errors, warnings = self.compile_script(script, "testScript")
         print errors
-        print app_info
-        assert 'testScript:src' in app_info['port_properties']
-        assert 'port' in app_info['port_properties']['testScript:src'][0]
-        assert (app_info['port_properties']['testScript:src'][0]['port'] ==
+        print deployable
+        assert 'testScript:src' in deployable['app_info']['port_properties']
+        assert 'port' in deployable['app_info']['port_properties']['testScript:src'][0]
+        assert (deployable['app_info']['port_properties']['testScript:src'][0]['port'] ==
                 'integer')
-        assert len(self.get_port_property(app_info, 'testScript:src', 'integer', 'out', 'routing')) == 2
-        assert (self.get_port_property(app_info, 'testScript:src', 'integer', 'out', 'routing')[0] == 'round-robin')
+        assert len(self.get_port_property(deployable, 'testScript:src', 'integer', 'out', 'routing')) == 2
+        assert (self.get_port_property(deployable, 'testScript:src', 'integer', 'out', 'routing')[0] == 'round-robin')
 
-        d = deployer.Deployer(self.rt1, app_info)
+        d = helpers.Deployer(self.rt1, deployable)
         d.deploy()
 
         snk1 = d.actor_map['testScript:snk1:compsnk']
@@ -3141,30 +3144,30 @@ class TestPortProperties(CalvinTestBase):
             src.seq > snk1.token
             src.seq > snk2.token
         """
-        app_info, errors, warnings = self.compile_script(script, "testScript")
+        deployable, errors, warnings = self.compile_script(script, "testScript")
         print errors
-        print app_info
-        assert 'testScript:src:compsrc' in app_info['port_properties']
-        assert 'port' in app_info['port_properties']['testScript:src:compsrc'][0]
-        assert (app_info['port_properties']['testScript:src:compsrc'][0]['port'] ==
+        print deployable
+        assert 'testScript:src:compsrc' in deployable['app_info']['port_properties']
+        assert 'port' in deployable['app_info']['port_properties']['testScript:src:compsrc'][0]
+        assert (deployable['app_info']['port_properties']['testScript:src:compsrc'][0]['port'] ==
                 'integer')
-        assert (self.get_port_property(app_info, 'testScript:src:compsrc', 'integer', 'out', 'routing') == 'round-robin')
+        assert (self.get_port_property(deployable, 'testScript:src:compsrc', 'integer', 'out', 'routing') == 'round-robin')
 
-        assert 'port' in app_info['port_properties']['testScript:snk1'][0]
-        assert (app_info['port_properties']['testScript:snk1'][0]['port'] ==
+        assert 'port' in deployable['app_info']['port_properties']['testScript:snk1'][0]
+        assert (deployable['app_info']['port_properties']['testScript:snk1'][0]['port'] ==
                 'token')
-        assert len(self.get_port_property(app_info, 'testScript:snk1', 'token', 'in', 'test1')) == 2
-        assert (self.get_port_property(app_info, 'testScript:snk1', 'token', 'in', 'test1')[0] == 'dummyz')
-        assert (self.get_port_property(app_info, 'testScript:snk1', 'token', 'in', 'test1')[1] == 'dummyy')
-        assert (self.get_port_property(app_info, 'testScript:snk1', 'token', 'in', 'test2') == 'dummyi')
-        assert 'port' in app_info['port_properties']['testScript:snk2'][0]
-        assert (app_info['port_properties']['testScript:snk2'][0]['port'] ==
+        assert len(self.get_port_property(deployable, 'testScript:snk1', 'token', 'in', 'test1')) == 2
+        assert (self.get_port_property(deployable, 'testScript:snk1', 'token', 'in', 'test1')[0] == 'dummyz')
+        assert (self.get_port_property(deployable, 'testScript:snk1', 'token', 'in', 'test1')[1] == 'dummyy')
+        assert (self.get_port_property(deployable, 'testScript:snk1', 'token', 'in', 'test2') == 'dummyi')
+        assert 'port' in deployable['app_info']['port_properties']['testScript:snk2'][0]
+        assert (deployable['app_info']['port_properties']['testScript:snk2'][0]['port'] ==
                 'token')
-        assert len(self.get_port_property(app_info, 'testScript:snk2', 'token', 'in', 'test1')) == 1
-        assert (self.get_port_property(app_info, 'testScript:snk2', 'token', 'in', 'test1')[0] == 'dummyy')
-        assert (self.get_port_property(app_info, 'testScript:snk2', 'token', 'in', 'test2') == 'dummyi')
+        assert len(self.get_port_property(deployable, 'testScript:snk2', 'token', 'in', 'test1')) == 1
+        assert (self.get_port_property(deployable, 'testScript:snk2', 'token', 'in', 'test1')[0] == 'dummyy')
+        assert (self.get_port_property(deployable, 'testScript:snk2', 'token', 'in', 'test2') == 'dummyi')
 
-        d = deployer.Deployer(self.rt1, app_info)
+        d = helpers.Deployer(self.rt1, deployable)
         d.deploy()
 
         snk1 = d.actor_map['testScript:snk1']
@@ -3199,17 +3202,17 @@ class TestCollectPort(CalvinTestBase):
         src2.integer > snk.token
         """
 
-        app_info, errors, warnings = self.compile_script(script, "testCollectPort")
+        deployable, errors, warnings = self.compile_script(script, "testCollectPort")
         print errors
-        print app_info
+        print deployable
         assert len(errors) == 0
-        assert 'testCollectPort:snk' in app_info['port_properties']
-        assert 'port' in app_info['port_properties']['testCollectPort:snk'][0]
-        assert (app_info['port_properties']['testCollectPort:snk'][0]['port'] ==
+        assert 'testCollectPort:snk' in deployable['app_info']['port_properties']
+        assert 'port' in deployable['app_info']['port_properties']['testCollectPort:snk'][0]
+        assert (deployable['app_info']['port_properties']['testCollectPort:snk'][0]['port'] ==
                 'token')
-        assert (self.get_port_property(app_info, 'testCollectPort:snk', 'token', 'in', 'nbr_peers') == 2)
+        assert (self.get_port_property(deployable, 'testCollectPort:snk', 'token', 'in', 'nbr_peers') == 2)
 
-        d = deployer.Deployer(self.rt1, app_info)
+        d = helpers.Deployer(self.rt1, deployable)
         d.deploy()
 
         snk = d.actor_map['testCollectPort:snk']
@@ -3246,17 +3249,17 @@ class TestCollectPort(CalvinTestBase):
         duo.seqout2 > snk2.token
         """
 
-        app_info, errors, warnings = self.compile_script(script, "testCollectPort")
+        deployable, errors, warnings = self.compile_script(script, "testCollectPort")
         print errors
-        print app_info
+        print deployable
         assert len(errors) == 0
-        assert (app_info['port_properties']['testCollectPort:duo:id1'][0]['port'] ==
+        assert (deployable['app_info']['port_properties']['testCollectPort:duo:id1'][0]['port'] ==
                 'token')
-        assert (app_info['port_properties']['testCollectPort:duo:id2'][0]['port'] ==
+        assert (deployable['app_info']['port_properties']['testCollectPort:duo:id2'][0]['port'] ==
                 'token')
-        assert (self.get_port_property(app_info, 'testCollectPort:duo:id1', 'token', 'in', 'nbr_peers') == 2)
-        assert (self.get_port_property(app_info, 'testCollectPort:duo:id2', 'token', 'in', 'nbr_peers') == 2)
-        d = deployer.Deployer(self.rt1, app_info)
+        assert (self.get_port_property(deployable, 'testCollectPort:duo:id1', 'token', 'in', 'nbr_peers') == 2)
+        assert (self.get_port_property(deployable, 'testCollectPort:duo:id2', 'token', 'in', 'nbr_peers') == 2)
+        d = helpers.Deployer(self.rt1, deployable)
         d.deploy()
 
         snk1 = d.actor_map['testCollectPort:snk1']
@@ -3294,17 +3297,17 @@ class TestCollectPort(CalvinTestBase):
         duo.seqout > snk2.token
         """
 
-        app_info, errors, warnings = self.compile_script(script, "testCollectPort")
+        deployable, errors, warnings = self.compile_script(script, "testCollectPort")
         print errors
-        print app_info
+        print deployable
         assert len(errors) == 0
-        assert (app_info['port_properties']['testCollectPort:snk1'][0]['port'] ==
+        assert (deployable['app_info']['port_properties']['testCollectPort:snk1'][0]['port'] ==
                 'token')
-        assert (app_info['port_properties']['testCollectPort:snk2'][0]['port'] ==
+        assert (deployable['app_info']['port_properties']['testCollectPort:snk2'][0]['port'] ==
                 'token')
-        assert (self.get_port_property(app_info, 'testCollectPort:snk1', 'token', 'in', 'nbr_peers') == 2)
-        assert (self.get_port_property(app_info, 'testCollectPort:snk2', 'token', 'in', 'nbr_peers') == 2)
-        d = deployer.Deployer(self.rt1, app_info)
+        assert (self.get_port_property(deployable, 'testCollectPort:snk1', 'token', 'in', 'nbr_peers') == 2)
+        assert (self.get_port_property(deployable, 'testCollectPort:snk2', 'token', 'in', 'nbr_peers') == 2)
+        d = helpers.Deployer(self.rt1, deployable)
         d.deploy()
 
         snk1 = d.actor_map['testCollectPort:snk1']
@@ -3329,14 +3332,14 @@ class TestCollectPort(CalvinTestBase):
         src2.integer > snk.token
         """
 
-        app_info, errors, warnings = self.compile_script(script, "testCollectPort")
+        deployable, errors, warnings = self.compile_script(script, "testCollectPort")
         print errors
-        print app_info
+        print deployable
         assert len(errors) == 0
-        assert (app_info['port_properties']['testCollectPort:snk'][0]['port'] ==
+        assert (deployable['app_info']['port_properties']['testCollectPort:snk'][0]['port'] ==
                 'token')
-        assert (self.get_port_property(app_info, 'testCollectPort:snk', 'token', 'in', 'nbr_peers') == 2)
-        d = deployer.Deployer(self.rt1, app_info)
+        assert (self.get_port_property(deployable, 'testCollectPort:snk', 'token', 'in', 'nbr_peers') == 2)
+        d = helpers.Deployer(self.rt1, deployable)
         d.deploy()
         snk = d.actor_map['testCollectPort:snk']
         self.migrate(self.rt1, self.rt2, snk)
@@ -3363,11 +3366,11 @@ class TestPortRouting(CalvinTestBase):
         src2.integer > snk.token
         """
 
-        app_info, errors, warnings = self.compile_script(script, "testCollectPort")
+        deployable, errors, warnings = self.compile_script(script, "testCollectPort")
         print errors
-        print app_info
+        print deployable
         assert len(errors) == 0
-        d = deployer.Deployer(self.rt1, app_info)
+        d = helpers.Deployer(self.rt1, deployable)
         d.deploy()
         snk = d.actor_map['testCollectPort:snk']
         actuals = [[]]
@@ -3397,11 +3400,11 @@ class TestPortRouting(CalvinTestBase):
         src2.integer > snk.token
         """
 
-        app_info, errors, warnings = self.compile_script(script, "testCollectPort")
+        deployable, errors, warnings = self.compile_script(script, "testCollectPort")
         print errors
-        print app_info
+        print deployable
         assert len(errors) == 0
-        d = deployer.Deployer(self.rt1, app_info)
+        d = helpers.Deployer(self.rt1, deployable)
         d.deploy()
         snk = d.actor_map['testCollectPort:snk']
         src2 = d.actor_map['testCollectPort:src2']
@@ -3433,11 +3436,11 @@ class TestPortRouting(CalvinTestBase):
         src2.integer > snk.token
         """
 
-        app_info, errors, warnings = self.compile_script(script, "testCollectPort")
+        deployable, errors, warnings = self.compile_script(script, "testCollectPort")
         print errors
-        print app_info
+        print deployable
         assert len(errors) == 0
-        d = deployer.Deployer(self.rt1, app_info)
+        d = helpers.Deployer(self.rt1, deployable)
         d.deploy()
         snk = d.actor_map['testCollectPort:snk']
         src1 = d.actor_map['testCollectPort:src1']
@@ -3472,11 +3475,11 @@ class TestPortRouting(CalvinTestBase):
         src2.integer > snk.token
         """
 
-        app_info, errors, warnings = self.compile_script(script, "testCollectPort")
+        deployable, errors, warnings = self.compile_script(script, "testCollectPort")
         print errors
-        print app_info
+        print deployable
         assert len(errors) == 0
-        d = deployer.Deployer(self.rt1, app_info)
+        d = helpers.Deployer(self.rt1, deployable)
         d.deploy()
         snk = d.actor_map['testCollectPort:snk']
         actuals = [[]]
@@ -3514,11 +3517,11 @@ class TestPortRouting(CalvinTestBase):
         src2.integer > snk.token
         """
 
-        app_info, errors, warnings = self.compile_script(script, "testCollectPort")
+        deployable, errors, warnings = self.compile_script(script, "testCollectPort")
         print errors
-        print app_info
+        print deployable
         assert len(errors) == 0
-        d = deployer.Deployer(self.rt1, app_info)
+        d = helpers.Deployer(self.rt1, deployable)
         d.deploy()
         snk = d.actor_map['testCollectPort:snk']
         src2 = d.actor_map['testCollectPort:src2']
@@ -3559,11 +3562,11 @@ class TestPortRouting(CalvinTestBase):
         src2.integer > snk.token
         """
 
-        app_info, errors, warnings = self.compile_script(script, "testCollectPort")
+        deployable, errors, warnings = self.compile_script(script, "testCollectPort")
         print errors
-        print app_info
+        print deployable
         assert len(errors) == 0
-        d = deployer.Deployer(self.rt1, app_info)
+        d = helpers.Deployer(self.rt1, deployable)
         d.deploy()
         snk = d.actor_map['testCollectPort:snk']
         src1 = d.actor_map['testCollectPort:src1']
@@ -3606,11 +3609,11 @@ class TestPortRouting(CalvinTestBase):
         src2.integer > snk.token
         """
 
-        app_info, errors, warnings = self.compile_script(script, "testCollectPort")
+        deployable, errors, warnings = self.compile_script(script, "testCollectPort")
         print errors
-        print app_info
+        print deployable
         assert len(errors) == 0
-        d = deployer.Deployer(self.rt1, app_info)
+        d = helpers.Deployer(self.rt1, deployable)
         d.deploy()
         snk = d.actor_map['testCollectPort:snk']
         actuals = [[]]
@@ -3648,11 +3651,11 @@ class TestPortRouting(CalvinTestBase):
         src2.integer > snk.token
         """
 
-        app_info, errors, warnings = self.compile_script(script, "testCollectPort")
+        deployable, errors, warnings = self.compile_script(script, "testCollectPort")
         print errors
-        print app_info
+        print deployable
         assert len(errors) == 0
-        d = deployer.Deployer(self.rt1, app_info)
+        d = helpers.Deployer(self.rt1, deployable)
         d.deploy()
         snk = d.actor_map['testCollectPort:snk']
         actuals = [[]]
@@ -3694,11 +3697,11 @@ class TestPortRouting(CalvinTestBase):
         expt.status > exptsnk.token
         """
 
-        app_info, errors, warnings = self.compile_script(script, "testCollectPort")
+        deployable, errors, warnings = self.compile_script(script, "testCollectPort")
         print errors
-        print app_info
+        print deployable
         assert len(errors) == 0
-        d = deployer.Deployer(self.rt1, app_info)
+        d = helpers.Deployer(self.rt1, deployable)
         d.deploy()
         snk = d.actor_map['testCollectPort:snk']
         exptsnk = d.actor_map['testCollectPort:exptsnk']
@@ -3732,11 +3735,11 @@ class TestPortRouting(CalvinTestBase):
         expt.status > exptsnk.token
         """
 
-        app_info, errors, warnings = self.compile_script(script, "testCollectPort")
+        deployable, errors, warnings = self.compile_script(script, "testCollectPort")
         print errors
-        print app_info
+        print deployable
         assert len(errors) == 0
-        d = deployer.Deployer(self.rt1, app_info)
+        d = helpers.Deployer(self.rt1, deployable)
         d.deploy()
         snk = d.actor_map['testCollectPort:snk']
         exptsnk = d.actor_map['testCollectPort:exptsnk']
@@ -3770,11 +3773,11 @@ class TestPortRouting(CalvinTestBase):
         expt.status > exptsnk.token
         """
 
-        app_info, errors, warnings = self.compile_script(script, "testCollectPort")
+        deployable, errors, warnings = self.compile_script(script, "testCollectPort")
         print errors
-        print app_info
+        print deployable
         assert len(errors) == 0
-        d = deployer.Deployer(self.rt1, app_info)
+        d = helpers.Deployer(self.rt1, deployable)
         d.deploy()
         snk = d.actor_map['testCollectPort:snk']
         exptsnk = d.actor_map['testCollectPort:exptsnk']
@@ -3807,11 +3810,11 @@ class TestPortRouting(CalvinTestBase):
             src.integer > snk2.token
         """
 
-        app_info, errors, warnings = self.compile_script(script, "testRRPort")
+        deployable, errors, warnings = self.compile_script(script, "testRRPort")
         print errors
-        print app_info
+        print deployable
         assert len(errors) == 0
-        d = deployer.Deployer(self.rt1, app_info)
+        d = helpers.Deployer(self.rt1, deployable)
         d.deploy()
         snk1 = d.actor_map['testRRPort:snk1']
         snk2 = d.actor_map['testRRPort:snk2']
@@ -3853,11 +3856,11 @@ class TestPortRouting(CalvinTestBase):
             src.integer > snk2.token
         """
 
-        app_info, errors, warnings = self.compile_script(script, "testRRPort")
+        deployable, errors, warnings = self.compile_script(script, "testRRPort")
         print errors
-        print app_info
+        print deployable
         assert len(errors) == 0
-        d = deployer.Deployer(self.rt1, app_info)
+        d = helpers.Deployer(self.rt1, deployable)
         d.deploy()
         snk1 = d.actor_map['testRRPort:snk1']
         snk2 = d.actor_map['testRRPort:snk2']
@@ -3900,11 +3903,11 @@ class TestPortRouting(CalvinTestBase):
             src.integer > snk2.token
         """
 
-        app_info, errors, warnings = self.compile_script(script, "testRRPort")
+        deployable, errors, warnings = self.compile_script(script, "testRRPort")
         print errors
-        print app_info
+        print deployable
         assert len(errors) == 0
-        d = deployer.Deployer(self.rt1, app_info)
+        d = helpers.Deployer(self.rt1, deployable)
         d.deploy()
         snk1 = d.actor_map['testRRPort:snk1']
         snk2 = d.actor_map['testRRPort:snk2']
@@ -3948,11 +3951,11 @@ class TestPortRouting(CalvinTestBase):
             src.integer > snk2.token
         """
 
-        app_info, errors, warnings = self.compile_script(script, "testRRPort")
+        deployable, errors, warnings = self.compile_script(script, "testRRPort")
         print errors
-        print app_info
+        print deployable
         assert len(errors) == 0
-        d = deployer.Deployer(self.rt1, app_info)
+        d = helpers.Deployer(self.rt1, deployable)
         d.deploy()
         snk1 = d.actor_map['testRRPort:snk1']
         snk2 = d.actor_map['testRRPort:snk2']
@@ -3986,11 +3989,11 @@ class TestPortRouting(CalvinTestBase):
             src.integer > snk2.token
         """
 
-        app_info, errors, warnings = self.compile_script(script, "testRRPort")
+        deployable, errors, warnings = self.compile_script(script, "testRRPort")
         print errors
-        print app_info
+        print deployable
         assert len(errors) == 0
-        d = deployer.Deployer(self.rt1, app_info)
+        d = helpers.Deployer(self.rt1, deployable)
         d.deploy()
         snk1 = d.actor_map['testRRPort:snk1']
         snk2 = d.actor_map['testRRPort:snk2']
@@ -4025,11 +4028,11 @@ class TestPortRouting(CalvinTestBase):
             src.integer > snk2.token
         """
 
-        app_info, errors, warnings = self.compile_script(script, "testRRPort")
+        deployable, errors, warnings = self.compile_script(script, "testRRPort")
         print errors
-        print app_info
+        print deployable
         assert len(errors) == 0
-        d = deployer.Deployer(self.rt1, app_info)
+        d = helpers.Deployer(self.rt1, deployable)
         d.deploy()
         snk1 = d.actor_map['testRRPort:snk1']
         snk2 = d.actor_map['testRRPort:snk2']
@@ -4071,12 +4074,12 @@ class TestPortRouting(CalvinTestBase):
         colcomp.token > snk.token
         """
 
-        app_info, errors, warnings = self.compile_script(script, "testActorPortProperty")
+        deployable, errors, warnings = self.compile_script(script, "testActorPortProperty")
         print errors
-        print app_info
+        print deployable
         assert len(errors) == 0
-        d = deployer.Deployer(self.rt1, app_info)
-        d.deploy()
+        response = helpers.deploy(request_handler, deployable, rt)
+
         snk = d.actor_map['testActorPortProperty:snk']
         actuals = [[]]
         rts = [self.rt1, self.rt2]

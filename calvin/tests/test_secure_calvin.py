@@ -26,7 +26,7 @@ from requests.exceptions import Timeout
 from calvin.requests.request_handler import RequestHandler, RT
 from calvin.csparser import cscompile as compiler
 from calvin.Tools import cscompiler as compile_tool
-from calvin.Tools import deployer
+from calvin.Tools import deployer  # FIXME: Remove
 from calvin.utilities.nodecontrol import dispatch_node, dispatch_storage_node
 from calvin.utilities.security import Security
 from calvin.utilities import certificate
@@ -345,6 +345,7 @@ class CalvinSecureTestBase(unittest.TestCase):
             return p['properties'][key]
         raise KeyError("Property '{}' not present.".format(key))
 
+    # FIXME: --> calvin_codegen
     def compile_script(self, script, name):
         # Instead of rewriting tests after compiler.compile_script changed
         # from returning app_info, errors, warnings to app_info, issuetracker
