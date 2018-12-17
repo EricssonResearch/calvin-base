@@ -8,7 +8,8 @@ meta = [
     ('io.knob', 'KY-040', 'Rotary encoder with push button', ['io.button'], ''),
     ('io.distance', 'Distance', 'Ultrasonic distance sensor', [], ''),
     ('io.temperature', 'KY-001', 'Temperature sensor', [], ''),
-    ('io.humidity', 'KY-015', 'Relative humidity sensor', [], 'DHT11 based, but not used as temparature sensor because of the poor resolution.'),
+    ('io.humidity', 'KY-015(h)', 'Relative humidity sensor', [], 'DHT11 based, can also serve as temperature sensor.'),
+    ('io.temperature.dht11', 'KY-015(t)', 'Temperatures sensor', ['io.temperature'], 'DHT11 based. Not activated by default, remove .dht11 suffix and remove/rename other temperature calvinsys to use'),
     ('io.hallswitch', 'KY-003', 'Hall magnetic sensor module', [], ''),
     ('io.vibrationsensor', 'KY-002', 'Vibration sensor module', ['io.tiltswitch', 'io.knocksensor'], 'Vibration, tilt and schock sensors are very similar, using the same default pin and have identical configs. Schematic shown only for the vibration sensor module.'),
     ('io.tiltswitch', 'KY-020', 'Tilt switch', ['io.vibrationsensor', 'io.knocksensor'], ''),
@@ -138,7 +139,8 @@ postamble = """
 [KY-011]: http://arduinomodules.info/ky-011-two-color-led-module-3mm/
 [KY-012]: http://arduinomodules.info/ky-012-active-buzzer-module/
 [KY-013]: http://arduinomodules.info/ky-013-analog-temperature-sensor-module/
-[KY-015]: http://arduinomodules.info/ky-015-temperature-humidity-sensor-module/
+[KY-015(t)]: http://arduinomodules.info/ky-015-temperature-humidity-sensor-module/
+[KY-015(h)]: http://arduinomodules.info/ky-015-temperature-humidity-sensor-module/
 [KY-016]: http://arduinomodules.info/ky-016-rgb-full-color-led-module/
 [KY-017]: http://arduinomodules.info/ky-016-rgb-full-color-led-module/
 [KY-018]: http://arduinomodules.info/ky-018-photoresistor-module/
@@ -171,7 +173,8 @@ postamble = """
 [KY-004-img]: images/KY-004.png
 [KY-010-img]: images/KY-010.png
 [KY-012-img]: images/KY-012.png
-[KY-015-img]: images/KY-015.png
+[KY-015(h)-img]: images/KY-015.png
+[KY-015(t)-img]: images/KY-015.png
 [KY-040-img]: images/KY-040.png
 [Distance-img]: images/Distance.png
 [LED-img]: images/LED.png

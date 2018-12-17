@@ -77,16 +77,14 @@ There is still room for expansion, since GPIO pins 6, 14, 15, and 27 are as of y
 
 Default pin(s): 16
 
-![KY-004][KY-004-img]
-
 Config entry in `capabilities` list:
 
 ```
 io.button: {
-    "comment": "Push-to-make button",
+    "comment": "Push-to-make button", 
     "attributes": {
         "switch_pin": 16
-    },
+    }, 
     "module": "io.ky040knob.raspberry_pi.PIGPIOKY040"
 }
 ```
@@ -108,17 +106,15 @@ Conflicts: io.knob
 
 Default pin(s): 17,18
 
-![KY-040][KY-040-img]
-
 Config entry in `capabilities` list:
 
 ```
 io.knob: {
-    "comment": "Rotary encoder",
+    "comment": "Rotary encoder", 
     "attributes": {
-        "data_pin": 17,
+        "data_pin": 17, 
         "clock_pin": 18
-    },
+    }, 
     "module": "io.ky040knob.raspberry_pi.PIGPIOKY040"
 }
 ```
@@ -153,16 +149,14 @@ Conflicts: io.button
 
 Default pin(s): 20,21
 
-![Distance][Distance-img]
-
 Config entry in `capabilities` list:
 
 ```
 io.distance: {
     "attributes": {
-        "echo_pin": 21,
+        "echo_pin": 21, 
         "trigger_pin": 20
-    },
+    }, 
     "module": "io.sr04distance.raspberry_pi.GPIOSR04"
 }
 ```
@@ -180,18 +174,16 @@ distance.meters > out.token
 
 ### Temperature sensor ([KY-001][KY-001]) <a name="_KY-001"></a>
 
-Default pin(s):
-
-![KY-001][KY-001-img]
+Default pin(s): 
 
 Config entry in `capabilities` list:
 
 ```
 io.temperature: {
-    "comment": "This device talks 1-wire on pin GPIO4",
+    "comment": "This device talks 1-wire on pin GPIO4", 
     "attributes": {
         "id": "n/a"
-    },
+    }, 
     "module": "io.ds18b20thermometer.raspberry_pi.DS18B20"
 }
 ```
@@ -207,21 +199,21 @@ temperature.centigrade > out.token
 ```
 
 
-### Relative humidity sensor ([KY-015][KY-015]) <a name="_KY-015"></a>
+### Relative humidity sensor ([KY-015(h)][KY-015(h)]) <a name="_KY-015(h)"></a>
 
-DHT11 based, but not used as temparature sensor because of the poor resolution.
+DHT11 based, can also serve as temperature sensor.
 
 Default pin(s): 19
-
-![KY-015][KY-015-img]
 
 Config entry in `capabilities` list:
 
 ```
 io.humidity: {
+    "comment": "DHT11 sensor, relative humidity", 
     "attributes": {
+        "mode": "humidity", 
         "pin": 19
-    },
+    }, 
     "module": "io.dht11temphumidity.raspberry_pi.DHT11"
 }
 ```
@@ -238,22 +230,42 @@ hum.percent > print.token
 ```
 
 
+### Temperatures sensor ([KY-015(t)][KY-015(t)]) <a name="_KY-015(t)"></a>
+
+DHT11 based. Not activated by default, remove .dht11 suffix and remove/rename other temperature calvinsys to use
+
+Default pin(s): 19
+
+Config entry in `capabilities` list:
+
+```
+io.temperature.dht11: {
+    "comment": "DHT11 sensor, temperature (default unused)", 
+    "attributes": {
+        "mode": "temperature", 
+        "pin": 19
+    }, 
+    "module": "io.dht11temphumidity.raspberry_pi.DHT11"
+}
+```
+
+Conflicts: io.temperature
+
+
 ### Hall magnetic sensor module ([KY-003][KY-003]) <a name="_KY-003"></a>
 
 Default pin(s): 23
-
-![KY-003][KY-003-img]
 
 Config entry in `capabilities` list:
 
 ```
 io.hallswitch: {
     "attributes": {
-        "pull": "OFF",
-        "direction": "IN",
-        "edge": "BOTH",
+        "pull": "OFF", 
+        "direction": "IN", 
+        "edge": "BOTH", 
         "pin": 23
-    },
+    }, 
     "module": "io.gpiopin.raspberry_pi.PIGPIOPin"
 }
 ```
@@ -268,12 +280,12 @@ Config entry in `capabilities` list:
 ```
 io.tiltswitch: {
     "attributes": {
-        "pull": "DOWN",
-        "direction": "IN",
-        "edge": "BOTH",
-        "pin": 13,
+        "pull": "DOWN", 
+        "direction": "IN", 
+        "edge": "BOTH", 
+        "pin": 13, 
         "bouncetime": 200
-    },
+    }, 
     "module": "io.gpiopin.raspberry_pi.PIGPIOPin"
 }
 ```
@@ -302,12 +314,12 @@ Config entry in `capabilities` list:
 ```
 io.knocksensor: {
     "attributes": {
-        "pull": "DOWN",
-        "direction": "IN",
-        "edge": "BOTH",
-        "pin": 13,
+        "pull": "DOWN", 
+        "direction": "IN", 
+        "edge": "BOTH", 
+        "pin": 13, 
         "bouncetime": 200
-    },
+    }, 
     "module": "io.gpiopin.raspberry_pi.PIGPIOPin"
 }
 ```
@@ -319,19 +331,17 @@ Conflicts: io.vibrationsensor, io.tiltswitch
 
 Default pin(s): 22
 
-![KY-010][KY-010-img]
-
 Config entry in `capabilities` list:
 
 ```
 io.lightbreaker: {
     "attributes": {
-        "pull": "DOWN",
-        "direction": "IN",
-        "edge": "BOTH",
-        "pin": 22,
+        "pull": "DOWN", 
+        "direction": "IN", 
+        "edge": "BOTH", 
+        "pin": 22, 
         "bouncetime": 200
-    },
+    }, 
     "module": "io.gpiopin.raspberry_pi.PIGPIOPin"
 }
 ```
@@ -355,17 +365,15 @@ Serial resistor 220 Ohm needed for LED.
 
 Default pin(s): 5
 
-![LED][LED-img]
-
 Config entry in `capabilities` list:
 
 ```
 io.light: {
-    "comment": "Digital out, use with LED + 150 Ohm resistor",
+    "comment": "Digital out, use with LED + 150 Ohm resistor", 
     "attributes": {
-        "direction": "OUT",
+        "direction": "OUT", 
         "pin": 5
-    },
+    }, 
     "module": "io.gpiopin.raspberry_pi.PIGPIOPin"
 }
 ```
@@ -390,17 +398,15 @@ Serial resistor 220 Ohm needed for LED.
 
 Default pin(s): 26
 
-![PWM][PWM-img]
-
 Config entry in `capabilities` list:
 
 ```
 io.pwm: {
     "attributes": {
         "frequency": 50, 
-        "pin": 26,
+        "pin": 26, 
         "dutycycle": 50
-    },
+    }, 
     "module": "io.pwm.raspberry_pi.PIGPIOPWM"
 }
 ```
@@ -414,17 +420,15 @@ Active buzzer 2.5kHz.
 
 Default pin(s): 12
 
-![KY-012][KY-012-img]
-
 Config entry in `capabilities` list:
 
 ```
 io.buzzer: {
-    "comment": "Active buzzer (KY-012, GND -> 'S', GPIO pin to '-')",
+    "comment": "Active buzzer (KY-012, GND -> 'S', GPIO pin to '-')", 
     "attributes": {
-        "direction": "OUT",
+        "direction": "OUT", 
         "pin": 12
-    },
+    }, 
     "module": "io.gpiopin.raspberry_pi.PIGPIOPin"
 }
 ```
@@ -452,7 +456,8 @@ buzzer: io.Buzzer()
 [KY-011]: http://arduinomodules.info/ky-011-two-color-led-module-3mm/
 [KY-012]: http://arduinomodules.info/ky-012-active-buzzer-module/
 [KY-013]: http://arduinomodules.info/ky-013-analog-temperature-sensor-module/
-[KY-015]: http://arduinomodules.info/ky-015-temperature-humidity-sensor-module/
+[KY-015(t)]: http://arduinomodules.info/ky-015-temperature-humidity-sensor-module/
+[KY-015(h)]: http://arduinomodules.info/ky-015-temperature-humidity-sensor-module/
 [KY-016]: http://arduinomodules.info/ky-016-rgb-full-color-led-module/
 [KY-017]: http://arduinomodules.info/ky-016-rgb-full-color-led-module/
 [KY-018]: http://arduinomodules.info/ky-018-photoresistor-module/
@@ -485,8 +490,10 @@ buzzer: io.Buzzer()
 [KY-004-img]: images/KY-004.png
 [KY-010-img]: images/KY-010.png
 [KY-012-img]: images/KY-012.png
-[KY-015-img]: images/KY-015.png
+[KY-015(h)-img]: images/KY-015.png
+[KY-015(t)-img]: images/KY-015.png
 [KY-040-img]: images/KY-040.png
 [Distance-img]: images/Distance.png
 [LED-img]: images/LED.png
 [PWM-img]: images/PWM.png
+

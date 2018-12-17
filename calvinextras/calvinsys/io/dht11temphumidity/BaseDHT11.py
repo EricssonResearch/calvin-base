@@ -24,8 +24,10 @@ class BaseDHT11(base_calvinsys_object.BaseCalvinsysObject):
         "description": "Initialize DHT11 sensor",
         "type": "object",
         "properties": {
-            "id":  {
-                "type": "string"
+            "mode": {
+               "type": "string",
+               "enum": ["humidity", "temperature"],
+               "description": "What to report from this instance (relative humidity or temperature)"
             }
         }
     }
@@ -37,7 +39,7 @@ class BaseDHT11(base_calvinsys_object.BaseCalvinsysObject):
 
     write_schema = {
         "description": "Read temperature",
-        "type": "boolean",
+        "type": "boolean"
     }
 
     can_read_schema =  {
@@ -46,7 +48,7 @@ class BaseDHT11(base_calvinsys_object.BaseCalvinsysObject):
     }
 
     read_schema = {
-        "description": "Latest reading of humidity [%]",
+        "description": "Latest reading of humidity [%] or temperature [C]",
         "type": "number"
     }
 
