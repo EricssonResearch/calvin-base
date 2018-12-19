@@ -196,6 +196,9 @@ def setup_calvinlib():
             "module": "mathlib.Random",
             "attributes": {"seed": 10}
         },
+        "math.hash": {
+            "module": "hash.Hash",
+        },
         "json": {
             "module": "jsonlib.Json"
         },
