@@ -220,6 +220,9 @@ class CalvinConfig(object):
                     "math.random": {
                         "module": "mathlib.Random"
                     },
+                    "math.hash": {
+                        "module": "hash.Hash",
+                    },
                     "json": {
                         "module": "jsonlib.Json"
                     },
