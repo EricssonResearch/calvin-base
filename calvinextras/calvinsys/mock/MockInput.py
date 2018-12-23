@@ -82,3 +82,6 @@ class MockInput(base_calvinsys_object.BaseCalvinsysObject):
 
     def start_verifying_calvinsys(self):
         self._read_allowed = False
+
+    def serialize(self):
+        return {"data": self.data}
