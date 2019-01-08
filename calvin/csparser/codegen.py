@@ -126,7 +126,7 @@ class Finder(Visitor):
         # print type(node).__name__
         if node.matches(self.kind, self.attributes):
             self.matches.append(node)
-        if not node.is_leaf() and self.depth < self.maxdepth:
+        if node.children and self.depth < self.maxdepth:
             self.depth += 1
             self._visit_children(node.children)
             self.depth -= 1

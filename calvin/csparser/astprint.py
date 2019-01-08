@@ -66,7 +66,7 @@ class BraceFormatter(Visitor):
 
     def _visit(self, node, preorder=None, inorder=None, postorder=None):
         if preorder: preorder(node)
-        if node.is_leaf():
+        if not node.children:
             if inorder: inorder(node)
         else:
             left, last = node.children[0:-1], node.children[-1:]

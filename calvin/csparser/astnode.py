@@ -47,9 +47,6 @@ class Node(object):
                     return False
         return True
 
-    def is_leaf(self):
-        return False
-
     def add_child(self, child):
         if child:
             child.parent = self
@@ -94,9 +91,6 @@ class Node(object):
 
 class LeafNode(Node):
     
-    def is_leaf(self):
-        return True
-
     def add_child(self, child):
         raise Exception("Can't add children to leaf node {}".format(self))
     
