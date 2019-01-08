@@ -3,7 +3,7 @@ import re
 from calvin.actorstore.store import DocumentationStore
 from calvin.csparser.parser import calvin_parse
 import calvin.csparser.astnode as ast
-import calvin.csparser.visitor as visitor
+from calvin.csparser.visitor import Visitor
 
 class Completion(object):
     """ Object handling completion requests
@@ -195,25 +195,18 @@ class Completion(object):
 #
 #  Use this as generic finder and add to ast.py
 #
-class Finder(object):
+class Finder(Visitor):
     """
     Perform queries on AST
     """
-    def __init__(self):
-        super(Finder, self).__init__()
 
-    @visitor.on('node')
-    def visit(self, node):
-        pass
-
-    @visitor.when(ast.Node)
-    def visit(self, node):
+    def generic_visit(self, node):
         if self.query(node):
             self.matches.append(node)
-        descend = not node.is_leaf() and self.depth < self.maxdepth
+        descend = node.children and self.depth < self.maxdepth
         if descend:
             self.depth += 1
-            map(self.visit, node.children)
+            self._visit_children(node.children)
             self.depth -= 1
 
     def find_all(self, root, query, maxdepth=1024):
@@ -230,5 +223,4 @@ class Finder(object):
         if root and isinstance(root, ast.Node):
             self.visit(root)
         return self.matches
-
 
