@@ -48,11 +48,9 @@ class Node(object):
         return True
 
     def is_leaf(self):
-        return self.children is None
+        return False
 
     def add_child(self, child):
-        if self.is_leaf():
-            raise Exception("Can't add children to leaf node {}".format(self))
         if child:
             child.parent = self
         self.children.append(child)
@@ -62,8 +60,6 @@ class Node(object):
             self.add_child(child)
 
     def remove_child(self, child):
-        if self.is_leaf():
-            raise Exception("Can't remove children from leaf node {}".format(self))
         if child in self.children:
             self.children.remove(child)
             child.parent = None
@@ -78,8 +74,6 @@ class Node(object):
         self.parent.remove_child(self)
 
     def replace_child(self, old, new):
-        if self.is_leaf():
-            raise Exception("Can't replace child in leaf node {}".format(self))
         if not old in self.children:
             return False
         i = self.children.index(old)
@@ -98,6 +92,27 @@ class Node(object):
         else:
             return "{}".format(self.__class__.__name__)
 
+class LeafNode(Node):
+    
+    def is_leaf(self):
+        return True
+
+    def add_child(self, child):
+        raise Exception("Can't add children to leaf node {}".format(self))
+    
+    def add_child(self, child):
+        raise Exception("Can't add children to leaf node {}".format(self))
+
+    def add_children(self, children):
+        raise Exception("Can't add children to leaf node {}".format(self))
+        
+    def remove_child(self, child):
+        raise Exception("Can't remove children from leaf node {}".format(self))
+
+    def remove_children(self, children):
+        raise Exception("Can't remove children from leaf node {}".format(self))
+        
+    
 class IdValuePair(Node):
     """Abstract: don't use directly, use NamedArg or Constant"""
     def __init__(self, **kwargs):
@@ -134,18 +149,16 @@ class Constant(IdValuePair):
     def __init__(self, **kwargs):
         super(Constant, self).__init__(**kwargs)
 
-class Id(Node):
+class Id(LeafNode):
     """docstring for IdNode"""
     def __init__(self, **kwargs):
         super(Id, self).__init__(**kwargs)
-        self.children = None
         self.ident = kwargs.get('ident')
 
-class Value(Node):
+class Value(LeafNode):
     """docstring for ValueNode"""
     def __init__(self, **kwargs):
         super(Value, self).__init__(**kwargs)
-        self.children = None
         self.value = kwargs.get('value')
 
 class Assignment(Node):
@@ -215,16 +228,14 @@ class Link(Node):
         else:
             return "{} {} > {}".format(self.__class__.__name__, str(self.outport), str(self.inport))
 
-class Void(Node):
+class Void(LeafNode):
     """docstring for Void"""
     def __init__(self, **kwargs):
         super(Void, self).__init__(**kwargs)
-        self.children = None
 
-class TransformedPort(Node):
+class TransformedPort(LeafNode):
     def __init__(self, **kwargs):
         super(TransformedPort, self).__init__(**kwargs)
-        self.children = None
         self.port = kwargs.get('port')
         self.value = kwargs.get('value')
         self.label = kwargs.get('label')

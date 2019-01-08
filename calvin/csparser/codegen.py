@@ -1,5 +1,5 @@
 import astnode as ast
-import visitor
+from visitor import Visitor
 import astprint
 import numbers
 from parser import calvin_parse
@@ -117,25 +117,20 @@ def _arguments(assignment, issue_tracker):
     return args
 
 
-class Finder(object):
+class Finder(Visitor):
     """
     Perform queries on the tree
     """
-    def __init__(self):
-        super(Finder, self).__init__()
-
-    @visitor.on('node')
-    def visit(self, node):
-        pass
-
-    @visitor.when(ast.Node)
-    def visit(self, node):
+            
+    def generic_visit(self, node):
+        # print type(node).__name__
         if node.matches(self.kind, self.attributes):
             self.matches.append(node)
         if not node.is_leaf() and self.depth < self.maxdepth:
             self.depth += 1
-            map(self.visit, node.children)
+            self._visit_children(node.children)
             self.depth -= 1
+            
 
     def find_all(self, root, kind=None, attributes=None, maxdepth=1024):
         """
@@ -150,24 +145,16 @@ class Finder(object):
         self.visit(root)
         return self.matches
 
-class PortlistRewrite(object):
+class PortlistRewrite(Visitor):
     """docstring for PortlistRewrite"""
     def __init__(self, issue_tracker):
         super(PortlistRewrite, self).__init__()
         self.issue_tracker = issue_tracker
 
-    @visitor.on('node')
-    def visit(self, node):
-        pass
+    def generic_visit(self, node):
+        self._visit_children(node.children[:])
 
-    @visitor.when(ast.Node)
-    def visit(self, node):
-        if node.is_leaf():
-            return
-        map(self.visit, node.children[:])
-
-    @visitor.when(ast.PortList)
-    def visit(self, node):
+    def visit_PortList(self, node):
         link = node.parent
         block = link.parent
         for inport in node.children:
@@ -176,17 +163,19 @@ class PortlistRewrite(object):
         link.delete()
 
 
-class PortRewrite(object):
+class PortRewrite(Visitor):
     """Baseclass for port rewrite operations"""
     def __init__(self, issue_tracker):
         super(PortRewrite, self).__init__()
         self.issue_tracker = issue_tracker
         self.counter = 0
 
+    def generic_visit(self, node):
+        self._visit_children(node.children[:])
+
     def _make_unique(self, name):
         self.counter += 1
         return "_{}_{}".format(name, str(self.counter))
-
 
     def _add_src_or_snk_and_relink(self, node, actor, port):
         link = node.parent
@@ -218,18 +207,8 @@ class ImplicitOutPortRewrite(PortRewrite):
 
     Running this cannot not fail and thus cannot cause an issue.
     """
-    @visitor.on('node')
-    def visit(self, node):
-        pass
 
-    @visitor.when(ast.Node)
-    def visit(self, node):
-        if node.is_leaf():
-            return
-        map(self.visit, node.children[:])
-
-    @visitor.when(ast.ImplicitPort)
-    def visit(self, node):
+    def visit_ImplicitPort(self, node):
         args = [ ast.NamedArg(ident=ast.Id(ident='data'), arg=node.arg) ]
         if node.label:
             const_name = node.label.ident
@@ -247,18 +226,7 @@ class ImplicitInPortRewrite(PortRewrite):
     """
     """
 
-    @visitor.on('node')
-    def visit(self, node):
-        pass
-
-    @visitor.when(ast.Node)
-    def visit(self, node):
-        if node.is_leaf():
-            return
-        map(self.visit, node.children[:])
-
-    @visitor.when(ast.TransformedPort)
-    def visit(self, node):
+    def visit_TransformedPort(self, node):
         # std.Constantify(constant) ports: in/out
         args = [ast.NamedArg(ident=ast.Id(ident='constant'), arg=node.value)]
         if node.label:
@@ -278,18 +246,7 @@ class VoidPortRewrite(PortRewrite):
     """
     """
 
-    @visitor.on('node')
-    def visit(self, node):
-        pass
-
-    @visitor.when(ast.Node)
-    def visit(self, node):
-        if node.is_leaf():
-            return
-        map(self.visit, node.children[:])
-
-    @visitor.when(ast.Void)
-    def visit(self, node):
+    def visit_Void(self, node):
         link = node.parent
         if link.outport is node:
             actor_type = 'flow.Void'
@@ -308,26 +265,19 @@ class VoidPortRewrite(PortRewrite):
         self._add_src_or_snk_and_relink(node, void_actor, void_actor_port)
 
 
-class RestoreParents(object):
+class RestoreParents(Visitor):
     """docstring for RestoreParents"""
     def __init__(self):
         super(RestoreParents, self).__init__()
         self.stack = [None]
 
-    @visitor.on('node')
-    def visit(self, node):
-        pass
-
-    @visitor.when(ast.Node)
-    def visit(self, node):
+    def generic_visit(self, node):
         node.parent = self.stack[-1]
-        if node.is_leaf():
-            return
         self.stack.append(node)
-        map(self.visit, node.children[:])
+        self._visit_children(node.children[:])
         self.stack.pop()
 
-class CollectPortProperties(object):
+class CollectPortProperties(Visitor):
     """
     Collect actor-declared port properties and PortProperty statements and make the port properties
     children of their respective ports.
@@ -340,18 +290,10 @@ class CollectPortProperties(object):
         super(CollectPortProperties, self).__init__()
         self.issue_tracker = issue_tracker
 
-    @visitor.on('node')
-    def visit(self, node):
-        pass
+    def generic_visit(self, node):
+        self._visit_children(node.children[:])
 
-    @visitor.when(ast.Node)
-    def visit(self, node):
-        if node.is_leaf():
-            return
-        map(self.visit, node.children[:])
-
-    @visitor.when(ast.PortProperty)
-    def visit(self, node):
+    def visit_PortProperty(self, node):
         # Collect explicit PortProperty statements and make them children of their respective ports
         block = node.parent
         ports = []
@@ -382,8 +324,7 @@ class CollectPortProperties(object):
             node.delete() # remove from tree
             port.add_child(node)
 
-    @visitor.when(ast.Assignment)
-    def visit(self, node):
+    def visit_Assignment(self, node):
         if not node.metadata['is_known']:
             return
         # Collect actor-declared port properties and make them children of their respective ports
@@ -412,7 +353,7 @@ class CollectPortProperties(object):
         destination_port.add_child(port_property)
 
 
-class Expander(object):
+class Expander(Visitor):
     """
     Expands a tree with components provided as a subtree
     """
@@ -426,19 +367,10 @@ class Expander(object):
         for comp in query(root, kind=ast.Component, maxdepth=1):
             comp.delete()
 
-    @visitor.on('node')
-    def visit(self, node):
-        pass
+    def generic_visit(self, node):
+        self._visit_children(node.children[:])
 
-    @visitor.when(ast.Node)
-    def visit(self, node):
-        if node.is_leaf():
-            return
-        map(self.visit, node.children[:])
-
-
-    @visitor.when(ast.Assignment)
-    def visit(self, node):
+    def visit_Assignment(self, node):
         if not node.metadata:
             node.metadata = _lookup(node, self.issue_tracker)
         if node.metadata['is_known'] and node.metadata['type'] == 'actor':
@@ -470,7 +402,7 @@ class Expander(object):
         self.visit(new)
 
 
-class Flatten(object):
+class Flatten(Visitor):
     """
     Flattens a block by wrapping everything in the block's namespace
     and propagating arguments before removing the block
@@ -484,17 +416,10 @@ class Flatten(object):
     def process(self, root):
         self.visit(root)
 
-    @visitor.on('node')
-    def visit(self, node):
-        pass
+    def generic_visit(self, node):
+        self._visit_children(node.children[:])
 
-    @visitor.when(ast.Node)
-    def visit(self, node):
-        if not node.is_leaf():
-            map(self.visit, node.children[:])
-
-    @visitor.when(ast.Block)
-    def visit(self, node):
+    def visit_Block(self, node):
         # Recurse into blocks first, putting block's namespace on stack
         self.stack.append(node.namespace)
         blocks = [x for x in node.children if type(x) is ast.Block]
@@ -519,8 +444,7 @@ class Flatten(object):
         node.delete()
         self.stack.pop()
 
-    @visitor.when(ast.Link)
-    def visit(self, node):
+    def visit_Link(self, node):
         # Make sure real ports have been promoted, i.e. have had the block namspace
         # added to the actor name, before juggling with component internal ports.
         linktype = (type(node.outport), type(node.inport))
@@ -529,8 +453,7 @@ class Flatten(object):
         else:
             map(self.visit, [node.outport, node.inport])
 
-    @visitor.when(ast.InternalOutPort)
-    def visit(self, node):
+    def visit_InternalOutPort(self, node):
         # Block expansion of link and properties over component inports
         # =============================================================
         #
@@ -565,8 +488,7 @@ class Flatten(object):
             new_link = self._relink(l1, l2)
             block.add_child(new_link)
 
-    @visitor.when(ast.InternalInPort)
-    def visit(self, node):
+    def visit_InternalInPort(self, node):
         # Block expansion of link and properties over component outports
         # ==============================================================
         #
@@ -610,13 +532,11 @@ class Flatten(object):
         self.consumed.add(l2_l3_link)
         return l0_l3_link
 
-    @visitor.when(ast.Assignment)
-    def visit(self, node):
+    def visit_Assignment(self, node):
         node.ident = self.stack[-1] + ':' + node.ident
         map(self.visit, node.children[:])
 
-    @visitor.when(ast.NamedArg)
-    def visit(self, node):
+    def visit_NamedArg(self, node):
         if type(node.arg) is ast.Id:
             # Get value from grandparent (block)
             block = node.parent.parent
@@ -625,12 +545,10 @@ class Flatten(object):
                 value = block.args[key]
                 node.replace_child(node.arg, value)
 
-    @visitor.when(ast.InPort)
-    def visit(self, node):
+    def visit_InPort(self, node):
         self._promote_port(node)
 
-    @visitor.when(ast.OutPort)
-    def visit(self, node):
+    def visit_OutPort(self, node):
         self._promote_port(node)
 
     def _promote_port(self, node):
@@ -640,8 +558,7 @@ class Flatten(object):
             node.actor = self.stack[-1]
 
 
-
-class CoalesceProperties(object):
+class CoalesceProperties(Visitor):
     """
     Add the nbr_peers property for all ports, generating a number of
     """
@@ -659,17 +576,10 @@ class CoalesceProperties(object):
             props.append(pp)
         root.add_children(props)
 
-    @visitor.on('node')
-    def visit(self, node):
-        pass
+    def generic_visit(self, node):
+        self._visit_children(node.children[:])
 
-    @visitor.when(ast.Node)
-    def visit(self, node):
-        if not node.is_leaf():
-            map(self.visit, node.children[:])
-
-    @visitor.when(ast.Link)
-    def visit(self, link):
+    def visit_Link(self, link):
         # Create port properties and compute number of connections for each port
         name = (link.inport.actor, link.inport.port, "in")
         self.port_properties.setdefault(name, ast.PortProperty(actor=link.inport.actor, port=link.inport.port, direction="in"))
@@ -681,12 +591,10 @@ class CoalesceProperties(object):
 
         map(self.visit, link.children[:])
 
-    @visitor.when(ast.InPort)
-    def visit(self, node):
+    def visit_InPort(self, node):
         self._coalsesce_properties_for_port(node, "in")
 
-    @visitor.when(ast.OutPort)
-    def visit(self, node):
+    def visit_OutPort(self, node):
         self._coalsesce_properties_for_port(node, "out")
 
     def _coalsesce_properties_for_port(self, node, direction):
@@ -699,7 +607,7 @@ class CoalesceProperties(object):
             node.remove_child(npp)
 
 
-class MergePortProperties(object):
+class MergePortProperties(Visitor):
     """
     Merge port properties that have been set in various places
 
@@ -713,17 +621,10 @@ class MergePortProperties(object):
         super(MergePortProperties, self).__init__()
         self.issue_tracker = issue_tracker
 
-    @visitor.on('node')
-    def visit(self, node):
-        pass
+    def generic_visit(self, node):
+        self._visit_children(node.children[:])
 
-    @visitor.when(ast.Node)
-    def visit(self, node):
-        if not node.is_leaf():
-            map(self.visit, node.children[:])
-
-    @visitor.when(ast.PortProperty)
-    def visit(self, node):
+    def visit_PortProperty(self, node):
         props = {}
         for p in node.children[:]:
             props.setdefault(p.ident.ident, []).append(p)
@@ -771,7 +672,7 @@ class MergePortProperties(object):
             prioritized = _merge_two(prioritized, merger)
         return prioritized
 
-class CheckPortProperties(object):
+class CheckPortProperties(Visitor):
     """
     Merge port properties that have been set in various places
 
@@ -785,17 +686,10 @@ class CheckPortProperties(object):
         super(CheckPortProperties, self).__init__()
         self.issue_tracker = issue_tracker
 
-    @visitor.on('node')
-    def visit(self, node):
-        pass
+    def generic_visit(self, node):
+        self._visit_children(node.children[:])
 
-    @visitor.when(ast.Node)
-    def visit(self, node):
-        if not node.is_leaf():
-            map(self.visit, node.children[:])
-
-    @visitor.when(ast.PortProperty)
-    def visit(self, node):
+    def visit_PortProperty(self, node):
         for p in node.children[:]:
             self.check_property(p)
 
@@ -849,7 +743,7 @@ class CheckPortProperties(object):
                     continue
 
 
-class AppInfo(object):
+class AppInfo(Visitor):
     """docstring for AppInfo"""
     def __init__(self, app_info, root, issue_tracker):
         super(AppInfo, self).__init__()
@@ -860,18 +754,7 @@ class AppInfo(object):
     def process(self):
         self.visit(self.root)
 
-
-    @visitor.on('node')
-    def visit(self, node):
-        pass
-
-    @visitor.when(ast.Node)
-    def visit(self, node):
-        if not node.is_leaf():
-            map(self.visit, node.children)
-
-    @visitor.when(ast.Assignment)
-    def visit(self, node):
+    def visit_Assignment(self, node):
         if not node.metadata['is_known']:
             # No metadata => we have already generated an error, just skip
             return
@@ -883,16 +766,14 @@ class AppInfo(object):
 
         self.app_info['actors'][node.ident] = value
 
-    @visitor.when(ast.Link)
-    def visit(self, node):
+    def visit_Link(self, node):
         key = "{}.{}".format(node.outport.actor, node.outport.port)
         value = "{}.{}".format(node.inport.actor, node.inport.port)
 
         self.app_info['connections'].setdefault(key, []).append(value)
 
 
-    @visitor.when(ast.PortProperty)
-    def visit(self, node):
+    def visit_PortProperty(self, node):
         value = {}
         value['port'] = node.port
         value['direction'] = node.direction
@@ -901,7 +782,7 @@ class AppInfo(object):
         self.app_info['port_properties'].setdefault(node.actor, []).append(value)
 
 
-class ReplaceConstants(object):
+class ReplaceConstants(Visitor):
     """docstring for ReplaceConstants"""
     def __init__(self, issue_tracker):
         super(ReplaceConstants, self).__init__()
@@ -933,17 +814,7 @@ class ReplaceConstants(object):
         self.definitions = defined
         self.visit(root)
 
-    @visitor.on('node')
-    def visit(self, node):
-        pass
-
-    @visitor.when(ast.Node)
-    def visit(self, node):
-        if not node.is_leaf():
-            map(self.visit, node.children)
-
-    @visitor.when(ast.NamedArg)
-    def visit(self, node):
+    def visit_NamedArg(self, node):
         if type(node.arg) is ast.Value:
             return
         if node.arg.ident in self.definitions:
@@ -951,7 +822,7 @@ class ReplaceConstants(object):
             node.replace_child(node.arg, value)
 
 
-class ConsistencyCheck(object):
+class ConsistencyCheck(Visitor):
     """docstring for RestoreParents
 
        Run before expansion.
@@ -965,17 +836,8 @@ class ConsistencyCheck(object):
     def process(self, root):
         self.visit(root)
 
-    @visitor.on('node')
-    def visit(self, node):
-        pass
 
-    @visitor.when(ast.Node)
-    def visit(self, node):
-        if not node.is_leaf():
-            map(self.visit, node.children)
-
-    @visitor.when(ast.Component)
-    def visit(self, node):
+    def visit_Component(self, node):
         self.component = node
 
         for arg_name in node.arg_names:
@@ -998,8 +860,7 @@ class ConsistencyCheck(object):
         map(self.visit, node.children)
         self.component = None
 
-    @visitor.when(ast.Block)
-    def visit(self, node):
+    def visit_Block(self, node):
         self.block = node
         assignments = [n for n in node.children if type(n) is ast.Assignment]
 
@@ -1019,8 +880,7 @@ class ConsistencyCheck(object):
         map(self.visit, port_props)
 
 
-    @visitor.when(ast.Assignment)
-    def visit(self, node):
+    def visit_Assignment(self, node):
         node.metadata = _lookup(node, self.issue_tracker)
         if not node.metadata['is_known']:
             # error issued in _lookup
@@ -1060,16 +920,13 @@ class ConsistencyCheck(object):
             issue_tracker.add_error(reason, node)
             return
 
-    @visitor.when(ast.InPort)
-    def visit(self, node):
+    def visit_InPort(self, node):
         self._check_port(node, 'in', self.issue_tracker)
 
-    @visitor.when(ast.OutPort)
-    def visit(self, node):
+    def visit_OutPort(self, node):
         self._check_port(node, 'out', self.issue_tracker)
 
-    @visitor.when(ast.InternalInPort)
-    def visit(self, node):
+    def visit_InternalInPort(self, node):
         if self.component:
             if node.port not in self.component.outports:
                 reason = "Component {} has no outport '{}'".format(self.component.name, node.port)
@@ -1079,8 +936,7 @@ class ConsistencyCheck(object):
             self.issue_tracker.add_error(reason, node)
 
 
-    @visitor.when(ast.InternalOutPort)
-    def visit(self, node):
+    def visit_InternalOutPort(self, node):
         if self.component:
             if node.port not in self.component.inports:
                 reason = "Component {} has no inport '{}'".format(self.component.name, node.port)
@@ -1089,16 +945,14 @@ class ConsistencyCheck(object):
             reason = "Internal port '.{}' outside component definition".format(node.port)
             self.issue_tracker.add_error(reason, node)
 
-    @visitor.when(ast.Link)
-    def visit(self, node):
+    def visit_Link(self, node):
         passthrough = type(node.inport) is ast.InternalInPort and type(node.outport) is ast.InternalOutPort
         if passthrough:
             self.issue_tracker.add_error('Component inport connected directly to outport.', node.inport)
         else:
             map(self.visit, node.children)
 
-    @visitor.when(ast.PortProperty)
-    def visit(self, node):
+    def visit_PortProperty(self, node):
         block = node.parent
         # FIXME: If direction present but redundant, make sure it is correct wrt port
         if node.actor is None:

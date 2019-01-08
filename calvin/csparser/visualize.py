@@ -1,7 +1,7 @@
 import string
 import random
 import inspect
-import visitor
+from visitor import Visitor
 import astnode as ast
 from codegen import calvin_astgen, calvin_components, query, PortlistRewrite #, ResolvePortRefs
 from parser import calvin_parse
@@ -248,7 +248,7 @@ class DotRenderer(BaseRenderer):
         return self._comment_out(node, order)
 
 
-class Visualize(object):
+class Visualize(Visitor):
    """docstring for VizPrinter"""
    def __init__(self, renderer=None):
        super(Visualize, self).__init__()
@@ -260,12 +260,7 @@ class Visualize(object):
        self.renderer.end()
        return self.renderer.result()
 
-   @visitor.on('node')
-   def visit(self, node):
-       pass
-
-   @visitor.when(ast.Node)
-   def visit(self, node):
+   def generic_visit(self, node):
        self.renderer.render(node, order='preorder')
        if not node.children or self.renderer.suppress:
            self.renderer.render(node, order='postorder')

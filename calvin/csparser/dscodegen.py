@@ -1,11 +1,11 @@
 import astnode as ast
-import visitor
+from visitor import Visitor
 import astprint
 from parser import calvin_parse
 from codegen import query, ReplaceConstants
 
 
-class ExpandRules(object):
+class ExpandRules(Visitor):
     """docstring for ExpandRules"""
     def __init__(self, issue_tracker):
         super(ExpandRules, self).__init__()
@@ -43,32 +43,24 @@ class ExpandRules(object):
         self.visit(rule.rule)
         return self._clean
 
-    @visitor.on('node')
-    def visit(self, node):
+    def generic_visit(self, node):
         pass
 
-    @visitor.when(ast.Node)
-    def visit(self, node):
-        pass
-
-    @visitor.when(ast.SetOp)
-    def visit(self, node):
+    def visit_SetOp(self, node):
         self.visit(node.left)
         self.visit(node.right)
 
-    @visitor.when(ast.UnarySetOp)
-    def visit(self, node):
+    def visit_UnarySetOp(self, node):
         self.visit(node.rule)
 
-    @visitor.when(ast.Id)
-    def visit(self, node):
+    def visit_Id(self, node):
         self._clean = False
         if node.ident in self.expanded_rules:
             node.parent.replace_child(node, self.expanded_rules[node.ident].clone())
             self._replaced = True
 
 
-class DeployInfo(object):
+class DeployInfo(Visitor):
     """docstring for DeployInfo"""
     def __init__(self, root, issue_tracker):
         super(DeployInfo, self).__init__()
@@ -79,39 +71,27 @@ class DeployInfo(object):
         self.requirements = {}
         self.visit(self.root)
 
-    @visitor.on('node')
-    def visit(self, node):
-        pass
 
-    @visitor.when(ast.Node)
-    def visit(self, node):
-        if not node.is_leaf():
-            map(self.visit, node.children)
-
-    @visitor.when(ast.RuleApply)
-    def visit(self, node):
+    def visit_RuleApply(self, node):
         rule = self.visit(node.rule)
         for t in node.targets:
             self.requirements[t.ident] = rule
 
-    @visitor.when(ast.RulePredicate)
-    def visit(self, node):
+    def visit_RulePredicate(self, node):
         pred = {
             "predicate":node.predicate.ident,
             "kwargs":{arg.ident.ident:arg.arg.value for arg in node.args}
         }
         return pred
 
-    @visitor.when(ast.SetOp)
-    def visit(self, node):
+    def visit_SetOp(self, node):
         rule = {
             "operator":node.op,
             "operands":[self.visit(node.left), self.visit(node.right)]
         }
         return rule
 
-    @visitor.when(ast.UnarySetOp)
-    def visit(self, node):
+    def visit_UnarySetOp(self, node):
         rule = {
             "operator":node.op,
             "operand":self.visit(node.rule)
