@@ -27,24 +27,11 @@ class Node(object):
             # No or empty attr dict matches.
             return True
         for key, value in attr_dict.iteritems():
-            if isinstance(key, tuple):
-                # Allow matching of sub attributes, usefull when having Id values
-                try:
-                    attr_value = self
-                    for inner_key in key:
-                        attr_value = getattr(attr_value, inner_key, None)
-                    if inspect.isclass(value):
-                        attr_value = type(attr_value)
-                    if value != attr_value:
-                        return False
-                except:
-                    return False
-            else:
-                attr_value = getattr(self, key, None)
-                if inspect.isclass(value):
-                    attr_value = type(attr_value)
-                if value != attr_value:
-                    return False
+            attr_value = getattr(self, key, None)
+            if inspect.isclass(value):
+                attr_value = type(attr_value)
+            if value != attr_value:
+                return False
         return True
 
     def add_child(self, child):
