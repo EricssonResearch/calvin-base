@@ -151,9 +151,6 @@ class PortlistRewrite(Visitor):
         super(PortlistRewrite, self).__init__()
         self.issue_tracker = issue_tracker
 
-    def generic_visit(self, node):
-        self._visit_children(node.children[:])
-
     def visit_PortList(self, node):
         link = node.parent
         block = link.parent
@@ -169,9 +166,6 @@ class PortRewrite(Visitor):
         super(PortRewrite, self).__init__()
         self.issue_tracker = issue_tracker
         self.counter = 0
-
-    def generic_visit(self, node):
-        self._visit_children(node.children[:])
 
     def _make_unique(self, name):
         self.counter += 1
@@ -290,9 +284,6 @@ class CollectPortProperties(Visitor):
         super(CollectPortProperties, self).__init__()
         self.issue_tracker = issue_tracker
 
-    def generic_visit(self, node):
-        self._visit_children(node.children[:])
-
     def visit_PortProperty(self, node):
         # Collect explicit PortProperty statements and make them children of their respective ports
         block = node.parent
@@ -367,9 +358,6 @@ class Expander(Visitor):
         for comp in query(root, kind=ast.Component, maxdepth=1):
             comp.delete()
 
-    def generic_visit(self, node):
-        self._visit_children(node.children[:])
-
     def visit_Assignment(self, node):
         if not node.metadata:
             node.metadata = _lookup(node, self.issue_tracker)
@@ -415,9 +403,6 @@ class Flatten(Visitor):
 
     def process(self, root):
         self.visit(root)
-
-    def generic_visit(self, node):
-        self._visit_children(node.children[:])
 
     def visit_Block(self, node):
         # Recurse into blocks first, putting block's namespace on stack
@@ -576,9 +561,6 @@ class CoalesceProperties(Visitor):
             props.append(pp)
         root.add_children(props)
 
-    def generic_visit(self, node):
-        self._visit_children(node.children[:])
-
     def visit_Link(self, link):
         # Create port properties and compute number of connections for each port
         name = (link.inport.actor, link.inport.port, "in")
@@ -620,9 +602,6 @@ class MergePortProperties(Visitor):
     def __init__(self, issue_tracker):
         super(MergePortProperties, self).__init__()
         self.issue_tracker = issue_tracker
-
-    def generic_visit(self, node):
-        self._visit_children(node.children[:])
 
     def visit_PortProperty(self, node):
         props = {}
@@ -685,9 +664,6 @@ class CheckPortProperties(Visitor):
     def __init__(self, issue_tracker):
         super(CheckPortProperties, self).__init__()
         self.issue_tracker = issue_tracker
-
-    def generic_visit(self, node):
-        self._visit_children(node.children[:])
 
     def visit_PortProperty(self, node):
         for p in node.children[:]:

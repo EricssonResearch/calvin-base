@@ -12,9 +12,10 @@ class Visitor(object):
         return meth(node)
 
     def _visit_children(self, children):
-        children = children or []
         for child in children:
             self.visit(child)    
     
     def generic_visit(self, node):
-        self._visit_children(node.children)
+        # Sometimes a shallow copy of the children list is necessary, 
+        # and it is always OK and simplifies usage
+        self._visit_children(node.children[:])
