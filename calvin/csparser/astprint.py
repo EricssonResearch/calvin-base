@@ -14,8 +14,7 @@ class DotPrinter(Visitor):
         self.decorate(node)
         self.properties(node)
         self.edges(node)
-        if node.children:
-            map(self.visit, node.children)
+        self._visit_children(node.children)
 
     def add(self, stmt):
         self.statements.append(stmt)
@@ -246,7 +245,7 @@ if __name__ == '__main__':
     bp = BracePrinter()
     bp.process(n)
 
-    # dp = DotPrinter()
-    # dp.process(n)
+    dp = DotPrinter()
+    dp.process(n)
 
 

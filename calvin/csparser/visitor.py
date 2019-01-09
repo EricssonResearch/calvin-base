@@ -23,7 +23,7 @@ class Visitor(object):
             self.visit(child)    
     
     def generic_visit(self, node):
-        """Default behaviour is to descend into children. Override in subclass to alter behaviour"""
+        """Default behaviour is to descend into children of <node>. Override in subclass to alter behaviour"""
         # Sometimes a shallow copy of the children list is necessary, 
         # and it is always OK and simplifies usage
         self._visit_children(node.children[:])

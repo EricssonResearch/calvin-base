@@ -380,16 +380,15 @@ class Flatten(Visitor):
         # Recurse into blocks first, putting block's namespace on stack
         self.stack.append(node.namespace)
         blocks = [x for x in node.children if type(x) is ast.Block]
-        map(self.visit, blocks)
+        self._visit_children(blocks)
 
         # Keep track of nodes to to delete
         self.consumed = set()
 
         # Promote ports and assignments, and create links across component borders
         # N.B. By this point all sub-blocks have been removed, thus non_blocks == node.children
-        non_blocks = node.children[:]
-        map(self.visit, non_blocks)
-
+        self.generic_visit(node)
+        
         # Clean up nodes no longer needed
         for n in self.consumed:
             n.delete()
@@ -406,9 +405,11 @@ class Flatten(Visitor):
         # added to the actor name, before juggling with component internal ports.
         linktype = (type(node.outport), type(node.inport))
         if linktype == (ast.InternalOutPort, ast.InPort):
-            map(self.visit, [node.inport, node.outport])
+            self.visit(node.inport)
+            self.visit(node.outport)
         else:
-            map(self.visit, [node.outport, node.inport])
+            self.visit(node.outport)
+            self.visit(node.inport)
 
     def visit_InternalOutPort(self, node):
         # Block expansion of link and properties over component inports
@@ -491,7 +492,7 @@ class Flatten(Visitor):
 
     def visit_Assignment(self, node):
         node.ident = self.stack[-1] + ':' + node.ident
-        map(self.visit, node.children[:])
+        self.generic_visit(node)
 
     def visit_NamedArg(self, node):
         if type(node.arg) is ast.Id:
@@ -543,7 +544,7 @@ class CoalesceProperties(Visitor):
         self.port_properties.setdefault(name, ast.PortProperty(actor=link.outport.actor, port=link.outport.port, direction="out"))
         self.counter[name] = self.counter.get(name, 0) + 1
 
-        map(self.visit, link.children[:])
+        self.generic_visit(link)
 
     def visit_InPort(self, node):
         self._coalsesce_properties_for_port(node, "in")
@@ -784,7 +785,6 @@ class ConsistencyCheck(Visitor):
     def process(self, root):
         self.visit(root)
 
-
     def visit_Component(self, node):
         self.component = node
 
@@ -805,7 +805,7 @@ class ConsistencyCheck(Visitor):
             if not matches:
                 reason = "Component {} is missing connection to inport '{}'".format(node.name, port)
                 self.issue_tracker.add_error(reason, node)
-        map(self.visit, node.children)
+        self.generic_visit(node)
         self.component = None
 
     def visit_Block(self, node):
@@ -821,12 +821,11 @@ class ConsistencyCheck(Visitor):
             # Relate error to last seen declaration
             self.issue_tracker.add_error(reason, dup_assignments[-1])
 
-        map(self.visit, assignments)
+        self._visit_children(assignments)
         links = [n for n in node.children if type(n) is ast.Link]
-        map(self.visit, links)
+        self._visit_children(links)
         port_props = [n for n in node.children if type(n) is ast.PortProperty]
-        map(self.visit, port_props)
-
+        self._visit_children(port_props)
 
     def visit_Assignment(self, node):
         node.metadata = _lookup(node, self.issue_tracker)
@@ -898,7 +897,7 @@ class ConsistencyCheck(Visitor):
         if passthrough:
             self.issue_tracker.add_error('Component inport connected directly to outport.', node.inport)
         else:
-            map(self.visit, node.children)
+            self.generic_visit(node)
 
     def visit_PortProperty(self, node):
         block = node.parent
