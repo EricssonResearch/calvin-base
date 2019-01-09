@@ -119,31 +119,33 @@ def _arguments(assignment, issue_tracker):
 
 class Finder(Visitor):
     """
-    Perform queries on the tree
+    Perform queries on AST
     """
-            
+
     def generic_visit(self, node):
-        # print type(node).__name__
-        if node.matches(self.kind, self.attributes):
+        if self.query(node):
             self.matches.append(node)
-        if node.children and self.depth < self.maxdepth:
+        descend = node.children and self.depth < self.maxdepth
+        if descend:
             self.depth += 1
             self._visit_children(node.children)
             self.depth -= 1
-            
 
-    def find_all(self, root, kind=None, attributes=None, maxdepth=1024):
+    def find_all(self, root, query, maxdepth=1024):
         """
         Return a list of all nodes matching <kind>, at most <maxdepth> levels
         down from the starting node <node>
+        If root evaluates to False or is not a subclass of ast.Node, return None
+
         """
         self.depth = 0
-        self.kind = kind
         self.maxdepth = maxdepth
+        self.query = query
         self.matches = []
-        self.attributes = attributes
-        self.visit(root)
+        if root and isinstance(root, ast.Node):
+            self.visit(root)
         return self.matches
+
 
 class PortlistRewrite(Visitor):
     """docstring for PortlistRewrite"""
@@ -1089,8 +1091,10 @@ class CodeGen(object):
 
 
 def query(root, kind=None, attributes=None, maxdepth=1024):
+    from functools import partial
     finder = Finder()
-    finder.find_all(root, kind, attributes=attributes, maxdepth=maxdepth)
+    query = partial(ast.Node.matches, kind=kind, attr_dict=attributes)
+    finder.find_all(root, query, maxdepth)    
     # print
     # print "QUERY", kind.__name__, attributes, finder.matches
     return finder.matches
