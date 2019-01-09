@@ -1060,7 +1060,7 @@ class CodeGen(object):
         self.app_info['valid'] = (issue_tracker.error_count == 0)
 
 
-def query(root, kind=None, attributes=None, maxdepth=1024):
+def query(root, kind=None, attributes=None, maxdepth=-1):
     from functools import partial
     query = partial(ast.Node.matches, kind=kind, attr_dict=attributes)
     return search_tree(root, query, maxdepth)
