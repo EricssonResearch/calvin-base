@@ -89,14 +89,12 @@ class IdValuePair(Node):
 
 class NamedArg(IdValuePair):
     """docstring for ConstNode"""
-    def __init__(self, **kwargs):
-        super(NamedArg, self).__init__(**kwargs)
-
+    pass
+    
 class Constant(IdValuePair):
     """docstring for ConstNode"""
-    def __init__(self, **kwargs):
-        super(Constant, self).__init__(**kwargs)
-
+    pass
+    
 class Id(LeafNode):
     """docstring for IdNode"""
     def __init__(self, **kwargs):
@@ -178,8 +176,7 @@ class Link(Node):
 
 class Void(LeafNode):
     """docstring for Void"""
-    def __init__(self, **kwargs):
-        super(Void, self).__init__(**kwargs)
+    pass
 
 class TransformedPort(LeafNode):
     def __init__(self, **kwargs):
@@ -212,9 +209,8 @@ class ImplicitPort(Node):
 
 class PortList(Node):
     """docstring for LinkNode"""
-    def __init__(self, **kwargs):
-        super(PortList, self).__init__(**kwargs)
-
+    pass
+    
 # FIXME: Abstract
 class Port(Node):
     """
@@ -240,14 +236,12 @@ class Port(Node):
 
 class InPort(Port):
     """docstring for LinkNode"""
-    def __init__(self, **kwargs):
-        super(InPort, self).__init__(**kwargs)
-
+    pass
+    
 class OutPort(Port):
     """docstring for LinkNode"""
-    def __init__(self, **kwargs):
-        super(OutPort, self).__init__(**kwargs)
-
+    pass
+    
 class InternalInPort(InPort):
     """docstring for InternalPortNode"""
     def __init__(self, **kwargs):
