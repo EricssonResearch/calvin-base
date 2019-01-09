@@ -3,7 +3,7 @@ import re
 from calvin.actorstore.store import DocumentationStore
 from calvin.csparser.parser import calvin_parse
 import calvin.csparser.astnode as ast
-from calvin.csparser.visitor import Visitor
+from calvin.csparser.visitor import Visitor, search_tree
 
 class Completion(object):
     """ Object handling completion requests
@@ -25,7 +25,6 @@ class Completion(object):
     def __init__(self, first_line_is_zero=False):
         super(Completion, self).__init__()
         self._first_line_is_zero = first_line_is_zero
-        self.finder = Finder()
         self.set_source('')
         self._init_metadata()
 
@@ -75,7 +74,7 @@ class Completion(object):
     def definition_for(self, name):
         context = self.current_context()
         query = lambda node: type(node) is ast.Assignment and node.ident == name
-        defs = self.finder.find_all(context, query, maxdepth=2)
+        defs = search_tree(context, query, maxdepth=2)
         if not defs:
             return
         return defs[0].actor_type
@@ -191,36 +190,4 @@ class Completion(object):
         port = matched.group(1) or ''
         # FIXME
         return port
-
-#
-#  Use this as generic finder and add to ast.py
-#
-class Finder(Visitor):
-    """
-    Perform queries on AST
-    """
-
-    def generic_visit(self, node):
-        if self.query(node):
-            self.matches.append(node)
-        descend = node.children and self.depth < self.maxdepth
-        if descend:
-            self.depth += 1
-            self._visit_children(node.children)
-            self.depth -= 1
-
-    def find_all(self, root, query, maxdepth=1024):
-        """
-        Return a list of all nodes matching <kind>, at most <maxdepth> levels
-        down from the starting node <node>
-        If root evaluates to False or is not a subclass of ast.Node, return None
-
-        """
-        self.depth = 0
-        self.maxdepth = maxdepth
-        self.query = query
-        self.matches = []
-        if root and isinstance(root, ast.Node):
-            self.visit(root)
-        return self.matches
 

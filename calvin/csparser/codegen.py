@@ -1,5 +1,5 @@
 import astnode as ast
-from visitor import Visitor
+from visitor import Visitor, search_tree
 import astprint
 import numbers
 from parser import calvin_parse
@@ -115,36 +115,6 @@ def _arguments(assignment, issue_tracker):
             reason = "Undefined identifier: '{}'".format(arg_node.arg.ident)
             issue_tracker.add_error(reason, arg_node.arg)
     return args
-
-
-class Finder(Visitor):
-    """
-    Perform queries on AST
-    """
-
-    def generic_visit(self, node):
-        if self.query(node):
-            self.matches.append(node)
-        descend = node.children and self.depth < self.maxdepth
-        if descend:
-            self.depth += 1
-            self._visit_children(node.children)
-            self.depth -= 1
-
-    def find_all(self, root, query, maxdepth=1024):
-        """
-        Return a list of all nodes matching <kind>, at most <maxdepth> levels
-        down from the starting node <node>
-        If root evaluates to False or is not a subclass of ast.Node, return None
-
-        """
-        self.depth = 0
-        self.maxdepth = maxdepth
-        self.query = query
-        self.matches = []
-        if root and isinstance(root, ast.Node):
-            self.visit(root)
-        return self.matches
 
 
 class PortlistRewrite(Visitor):
@@ -1092,12 +1062,8 @@ class CodeGen(object):
 
 def query(root, kind=None, attributes=None, maxdepth=1024):
     from functools import partial
-    finder = Finder()
     query = partial(ast.Node.matches, kind=kind, attr_dict=attributes)
-    finder.find_all(root, query, maxdepth)    
-    # print
-    # print "QUERY", kind.__name__, attributes, finder.matches
-    return finder.matches
+    return search_tree(root, query, maxdepth)
 
 def _calvin_cg(source_text, app_name):
     ast_root, issuetracker = calvin_parse(source_text)
