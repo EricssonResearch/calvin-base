@@ -2,18 +2,38 @@ import inspect
 from copy import copy, deepcopy
 # from calvin.requests import calvinresponse
 
-
-class Node(object):
-
+class BaseNode(object):
+    
     _verbose_desc = False
 
     """Base class for all nodes in CS AST"""
     def __init__(self, **kwargs):
-        super(Node, self).__init__()
+        super(BaseNode, self).__init__()
         self.parent = None
         self.children = []
         self.debug_info = kwargs.get('debug_info')
 
+    def delete(self):
+        if not self.parent:
+            raise Exception("Can't remove root node {}".format(self))
+        self.parent.remove_child(self)
+    
+    def clone(self):
+        x = copy(self)
+        x.parent = None
+        return x
+
+    def __str__(self):
+        if self._verbose_desc:
+            return "{} {} {}".format(self.__class__.__name__, hex(id(self)), self.debug_info)
+        else:
+            return "{}".format(self.__class__.__name__)
+    
+class LeafNode(BaseNode):
+    pass
+
+class Node(BaseNode):
+    
     def add_child(self, child):
         if child:
             child.parent = self
@@ -32,11 +52,6 @@ class Node(object):
         for child in children:
             self.remove_child(child)
 
-    def delete(self):
-        if not self.parent:
-            raise Exception("Can't remove root node {}".format(self))
-        self.parent.remove_child(self)
-
     def replace_child(self, old, new):
         if not old in self.children:
             return False
@@ -44,34 +59,6 @@ class Node(object):
         self.children[i] = new
         new.parent = self
         return True
-
-    def clone(self):
-        x = copy(self)
-        x.parent = None
-        return x
-
-    def __str__(self):
-        if self._verbose_desc:
-            return "{} {} {}".format(self.__class__.__name__, hex(id(self)), self.debug_info)
-        else:
-            return "{}".format(self.__class__.__name__)
-
-class LeafNode(Node):
-    
-    def add_child(self, child):
-        raise Exception("Can't add children to leaf node {}".format(self))
-    
-    def add_child(self, child):
-        raise Exception("Can't add children to leaf node {}".format(self))
-
-    def add_children(self, children):
-        raise Exception("Can't add children to leaf node {}".format(self))
-        
-    def remove_child(self, child):
-        raise Exception("Can't remove children from leaf node {}".format(self))
-
-    def remove_children(self, children):
-        raise Exception("Can't remove children from leaf node {}".format(self))
         
     
 class IdValuePair(Node):

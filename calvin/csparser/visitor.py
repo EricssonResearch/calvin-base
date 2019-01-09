@@ -1,5 +1,5 @@
 # FIXME: For debugging NoneType object in tree, remove when fixed
-from astnode import Node
+from astnode import BaseNode
 
 class Visitor(object):
 
@@ -10,7 +10,7 @@ class Visitor(object):
         Assumes <node> to have property children, a list of nodes.  
         """
         # FIXME: For debugging NoneType object in tree, remove when fixed
-        if not issubclass(type(node), Node):
+        if not issubclass(type(node), BaseNode):
             print "Skipping {}, {}".format(type(node), node)
             return  
         methname = 'visit_' + type(node).__name__ 
