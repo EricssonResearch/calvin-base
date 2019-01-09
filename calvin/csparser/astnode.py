@@ -78,11 +78,11 @@ class IdValuePair(Node):
         self.children[0] = value
 
     @property
-    def arg(self):
+    def value(self):
         return self.children[1]
 
-    @arg.setter
-    def inport(self, value):
+    @value.setter
+    def value(self, value):
         value.parent = self
         self.arg.parent = None
         self.children[1] = value
