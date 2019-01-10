@@ -1,11 +1,13 @@
-import astnode as ast
-from visitor import Visitor, search_tree
-import astprint
 import numbers
+import astnode as ast
+import astprint
 from parser import calvin_parse
-from calvin.actorstore.store import DocumentationStore, GlobalStore
-# from calvin.requests import calvinresponse
+from visitor import Visitor, search_tree
 from calvin.csparser.port_property_syntax import port_property_data
+
+# FIXME: External dependency to be removed
+from calvin.actorstore.store import DocumentationStore, GlobalStore
+
 
 def _create_signature(actor_type, metadata):
     # Create the actor signature to be able to look it up in the GlobalStore if neccessary

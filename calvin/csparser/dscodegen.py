@@ -1,6 +1,6 @@
 import astnode as ast
-from visitor import Visitor
 import astprint
+from visitor import Visitor
 from parser import calvin_parse
 from codegen import query, ReplaceConstants
 

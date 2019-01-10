@@ -1,6 +1,5 @@
-from visitor import Visitor
-
 import astnode as ast
+from visitor import Visitor
 
 class DotPrinter(Visitor):
     """docstring for DotPrinter"""

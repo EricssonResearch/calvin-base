@@ -1,9 +1,10 @@
 import re
-
-from calvin.actorstore.store import DocumentationStore
 from calvin.csparser.parser import calvin_parse
 import calvin.csparser.astnode as ast
 from calvin.csparser.visitor import Visitor, search_tree
+
+# FIXME: External dependency to be removed
+from calvin.actorstore.store import DocumentationStore
 
 class Completion(object):
     """ Object handling completion requests

@@ -1,6 +1,4 @@
-import inspect
 from copy import copy, deepcopy
-# from calvin.requests import calvinresponse
 
 class BaseNode(object):
     
