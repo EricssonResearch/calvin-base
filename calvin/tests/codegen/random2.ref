@@ -68,8 +68,7 @@
                 "direction": "out", 
                 "port": "out", 
                 "properties": {
-                    "nbr_peers": 2, 
-                    "routing": "round-robin"
+                    "nbr_peers": 2 
                 }
             }
         ]

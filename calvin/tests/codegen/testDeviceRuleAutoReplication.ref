@@ -44,8 +44,7 @@
                 "direction": "in", 
                 "port": "token", 
                 "properties": {
-                    "nbr_peers": 1, 
-                    "routing": "collect-tagged"
+                    "nbr_peers": 1
                 }
             }, 
             {
@@ -86,8 +85,7 @@
                 "direction": "out", 
                 "port": "integer", 
                 "properties": {
-                    "nbr_peers": 1, 
-                    "routing": "balanced"
+                    "nbr_peers": 1
                 }
             }
         ]

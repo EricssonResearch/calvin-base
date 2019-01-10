@@ -33,8 +33,8 @@ class TestBase(unittest.TestCase):
         src.out > delay.token
         delay.token > src.in
 
-        src.out(routing="round-robin")
-        delay.token[in](routing="round-robin")
+        # src.out(routing="round-robin")
+        # delay.token[in](routing="round-robin")
 
         # define rules
         rule src_rule: node_attr(node_name=NODE1)
@@ -63,14 +63,14 @@ class TestBase(unittest.TestCase):
 class SanityCheck(TestBase):
 
     def test_sanity(self):
-        from calvin.csparser import astprint
+        # from calvin.csparser import astprint
         # bp = astprint.BracePrinter()
         # bp.process(self.ir)
 
         self.assertTrue(self.ir)
         self.assertTrue(self.it)
         self.assertEqual(len(self.ir.children), 5)
-        self.assertEqual(len(self.ir.children[4].children), 18)
+        self.assertEqual(len(self.ir.children[4].children), 16)
 
         self.assertEqual(self.it.issue_count, 0)
 

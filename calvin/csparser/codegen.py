@@ -258,37 +258,6 @@ class CollectPortProperties(Visitor):
         super(CollectPortProperties, self).__init__()
         self.issue_tracker = issue_tracker
 
-    def visit_PortProperty(self, node):
-        # Collect explicit PortProperty statements and make them children of their respective ports
-        block = node.parent
-        ports = []
-        if node.actor is None:
-            # This works because any ambiguity in port names have been detected in check_consistency in a previous step
-            if not node.direction or node.direction == "in":
-                ports += query(block, kind=ast.InternalInPort, maxdepth=2, attributes={'port':node.port})
-            if not node.direction or node.direction == "out":
-                ports += query(block, kind=ast.InternalOutPort, maxdepth=2, attributes={'port':node.port})
-        else:
-            # This works because any ambiguity in port names have been detected in check_consistency in a previous step
-            if not node.direction or node.direction == "in":
-                ports += query(block, kind=ast.InPort, maxdepth=2, attributes={'actor':node.actor, 'port':node.port})
-            if not node.direction or node.direction == "out":
-                ports += query(block, kind=ast.OutPort, maxdepth=2, attributes={'actor':node.actor, 'port':node.port})
-        self._transfer_property(node, ports)
-
-    def _transfer_property(self, node, portlist):
-            # If len(portlist) == 0 then there is no port with such a name => error should have been reported earlier
-            # Since there is no port to attach the property to, drop the node and continue
-            if not portlist:
-                node.delete() # remove from tree
-                return
-            # If len(portlist) > 1 then there are multiple ports connected which is OK as long there is not a mix of inports and outports
-            # which should have been detected earlier => error should have been reported earlier.
-            # Since it is enough to attach the the property to one port instance, grab the first port instance.
-            port = portlist[0]
-            node.delete() # remove from tree
-            port.add_child(node)
-
     def visit_Assignment(self, node):
         if not node.metadata['is_known']:
             return
@@ -564,68 +533,6 @@ class CoalesceProperties(Visitor):
             node.remove_child(npp)
 
 
-class MergePortProperties(Visitor):
-    """
-    Merge port properties that have been set in various places
-
-    FIXME: Order is important, IMHO an _intrinsic_ property, i.e. defined by actor
-           should have preceedence over externally set properties, and likewise
-           a property defined inside a component should have preceedence over
-           externally set properties.
-    FIXME: Assuming for now that order of PortProperty's children complies with the above
-    """
-    def __init__(self, issue_tracker):
-        super(MergePortProperties, self).__init__()
-        self.issue_tracker = issue_tracker
-
-    def visit_PortProperty(self, node):
-        props = {}
-        for p in node.children[:]:
-            props.setdefault(p.ident.ident, []).append(p)
-        for p, mergelist in props.iteritems():
-            if len(mergelist) < 2:
-                # Uncontested
-                continue
-            # Detach properties from node
-            node.remove_children(mergelist)
-            # Merge list of properties targeting the same port
-            merged = self.merge_properties(mergelist)
-            # Add the resulting, single, merged property to node
-            node.add_child(merged)
-
-    def merge_properties(self, mergelist):
-
-        def _merge_two(left, right):
-            lval = left.arg.value
-            rval = right.arg.value
-            if lval == rval:
-                # Identical properties
-                return left
-            lval_is_scalar = not isinstance(lval, (tuple, list))
-            rval_is_scalar = not isinstance(rval, (tuple, list))
-            if lval_is_scalar and rval_is_scalar:
-                # Both are non-iterables => left is prioritized (see class docs)
-                return left
-            # Make sure lval and rval are both lists
-            if lval_is_scalar:
-                lval = [lval]
-            if rval_is_scalar:
-                rval = [rval]
-            # Make ordered subset, possibly empty
-            merged_val = [item for item in lval if item in rval]
-            if not merged_val:
-                # Generate errors for each port property targeting this port
-                reason = "Can't handle conflicting properties without common alternatives"
-                for node in mergelist:
-                    self.issue_tracker.add_error(reason, node)
-            left.arg.value = merged_val
-            return left
-
-        prioritized = mergelist[0]
-        for merger in mergelist[1:]:
-            prioritized = _merge_two(prioritized, merger)
-        return prioritized
-
 class CheckPortProperties(Visitor):
     """
     Merge port properties that have been set in various places
@@ -635,6 +542,7 @@ class CheckPortProperties(Visitor):
            a property defined inside a component should have preceedence over
            externally set properties.
     FIXME: Assuming for now that order of PortProperty's children complies with the above
+    FIXME: Now that port properties can no longer be set in scripts, we can simplify this
     """
     def __init__(self, issue_tracker):
         super(CheckPortProperties, self).__init__()
@@ -901,31 +809,6 @@ class ConsistencyCheck(Visitor):
         else:
             self.generic_visit(node)
 
-    def visit_PortProperty(self, node):
-        block = node.parent
-        # FIXME: If direction present but redundant, make sure it is correct wrt port
-        if node.actor is None:
-            iip = query(block, kind=ast.InternalInPort, maxdepth=2, attributes={'port':node.port})
-            iop = query(block, kind=ast.InternalOutPort, maxdepth=2, attributes={'port':node.port})
-            n_iip, n_iop = len(iip), len(iop)
-            if n_iip == 0 and n_iop == 0:
-                self.issue_tracker.add_error('No such port.', node)
-            elif n_iip == 1 and n_iop == 1:
-                if node.direction not in ["in", "out"]:
-                    reason = "Port property need direction since ambigious names"
-                    self.issue_tracker.add_error(reason, node)
-        else:
-            ip = query(block, kind=ast.InPort, maxdepth=2, attributes={'actor':node.actor, 'port':node.port})
-            op = query(block, kind=ast.OutPort, maxdepth=2, attributes={'actor':node.actor, 'port':node.port})
-            n_ip, n_op = len(ip), len(op)
-            if n_ip == 0 and n_op == 0:
-                self.issue_tracker.add_error('No such port.', node)
-            elif n_ip == 1 and n_op == 1:
-                if node.direction not in ["in", "out"]:
-                    reason = "Port property need direction since ambigious names"
-                    self.issue_tracker.add_error(reason, node)
-
-
 
 class CodeGen(object):
 
@@ -1013,11 +896,6 @@ class CodeGen(object):
         consolidate.process(self.root)
         self.dump_tree('Coalesced')
 
-    def merge_properties(self, issue_tracker):
-        mp = MergePortProperties(issue_tracker)
-        mp.visit(self.root)
-        self.dump_tree('Merged properties')
-
     def check_properties(self, issue_tracker):
         cp = CheckPortProperties(issue_tracker)
         cp.visit(self.root)
@@ -1050,8 +928,6 @@ class CodeGen(object):
         self.flatten(issue_tracker)
         # Retrieve the port properties from the ports (now with correctly namespaced actor names)
         self.coalesce_properties(issue_tracker)
-        # Merge possibly conflicting port properties, remove redundant properties
-        self.merge_properties(issue_tracker)
         self.check_properties(issue_tracker)
 
     def generate_code(self, issue_tracker, verify):
@@ -1155,6 +1031,9 @@ if __name__ == '__main__':
 
     script = 'inline'
     source_text = r"""
+    foo : std.CountTimer()
+    bar : io.Print()
+    foo.integer > bar.token
     """
 
     source_text = cleandoc(source_text)

@@ -797,41 +797,41 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         result, errors, warnings = self.parse('inline', script)
         self.assertTrue(len(errors) > 0)
 
-    def testAmbigousPortProperty1(self):
-        script = r"""
-        i : std.Identity()
-        src : std.CountTimer()
-        snk : io.Print()
-        src.integer > i.token
-        i.token > snk.token
-        i.token(routing="round-robin")
-        """
-        result, errors, warnings = self.parse('inline', script)
-        self.assertEqual(len(errors), 2)
+    # def testAmbigousPortProperty1(self):
+    #     script = r"""
+    #     i : std.Identity()
+    #     src : std.CountTimer()
+    #     snk : io.Print()
+    #     src.integer > i.token
+    #     i.token > snk.token
+    #     i.token(routing="round-robin")
+    #     """
+    #     result, errors, warnings = self.parse('inline', script)
+    #     self.assertEqual(len(errors), 2)
 
-    def testAmbigousPortProperty2(self):
-        script = r"""
-        i : std.Identity()
-        src : std.CountTimer()
-        snk : io.Print()
-        src.integer > i.token
-        i.token > snk.token
-        i.token[in](routing="round-robin")
-        """
-        result, errors, warnings = self.parse('inline', script)
-        self.assertEqual(len(errors), 1)
+    # def testAmbigousPortProperty2(self):
+    #     script = r"""
+    #     i : std.Identity()
+    #     src : std.CountTimer()
+    #     snk : io.Print()
+    #     src.integer > i.token
+    #     i.token > snk.token
+    #     i.token[in](routing="round-robin")
+    #     """
+    #     result, errors, warnings = self.parse('inline', script)
+    #     self.assertEqual(len(errors), 1)
 
-    def testAmbigousPortProperty3(self):
-        script = r"""
-        i : std.Identity()
-        src : std.CountTimer()
-        snk : io.Print()
-        src.integer > i.token
-        i.token > snk.token
-        i.token[out](routing="round-robin")
-        """
-        result, errors, warnings = self.parse('inline', script)
-        self.assertEqual(len(errors), 0)
+    # def testAmbigousPortProperty3(self):
+    #     script = r"""
+    #     i : std.Identity()
+    #     src : std.CountTimer()
+    #     snk : io.Print()
+    #     src.integer > i.token
+    #     i.token > snk.token
+    #     i.token[out](routing="round-robin")
+    #     """
+    #     result, errors, warnings = self.parse('inline', script)
+    #     self.assertEqual(len(errors), 0)
 
     def testComponentToComponent1(self):
         script = r"""

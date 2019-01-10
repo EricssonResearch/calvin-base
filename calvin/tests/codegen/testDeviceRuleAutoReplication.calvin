@@ -2,8 +2,8 @@ src    : std.CountTimer(sleep=0.01)
 ident  : std.Burn()
 delay  : std.Identity()
 snk    : test.Sink(store_tokens=1, quiet=1)
-src.integer(routing="balanced")
-delay.token[in](routing="collect-tagged")
+# src.integer(routing="balanced")
+# delay.token[in](routing="collect-tagged")
 src.integer > ident.token
 ident.token > delay.token
 delay.token > snk.token

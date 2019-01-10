@@ -24,7 +24,6 @@ src.out > print.token
 src.out > delay.token
 delay.token > src.in
 
-src.out(routing="round-robin")
 
 # define rules
 rule src_rule: node_attr(node_name=NODE1)

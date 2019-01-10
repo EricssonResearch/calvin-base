@@ -119,8 +119,6 @@ class CalvinParser(object):
 
     def p_comp_statement(self, p):
         """comp_statement : assignment
-                          | port_property
-                          | internal_port_property
                           | link"""
         p[0] = p[1]
 
@@ -139,7 +137,6 @@ class CalvinParser(object):
 
     def p_statement(self, p):
         """statement : assignment
-                     | port_property
                      | link
                      | define_rule
                      | group
@@ -150,33 +147,6 @@ class CalvinParser(object):
     def p_assignment(self, p):
         """assignment : IDENTIFIER COLON qualified_name LPAREN named_args RPAREN"""
         p[0] = ast.Assignment(ident=p[1], actor_type=p[3], args=p[5], debug_info=self.debug_info(p, 1))
-
-
-    def p_opt_direction(self, p):
-        """opt_direction : LBRACK IDENTIFIER RBRACK
-                         | empty"""
-        if p[1] is None:
-            p[0] = None
-        else:
-            if p[2] not in ['in', 'out']:
-                info = {
-                    'line': p.lineno(2),
-                    'col': self._find_column(p.lexpos(2))
-                }
-                self.issuetracker.add_error('Invalid direction ({}).'.format(p[2]), info)
-            p[0] = p[2]
-
-
-    def p_port_property(self, p):
-        """port_property : qualified_port opt_direction LPAREN named_args RPAREN"""
-        _, (actor, port), direction, _, args, _ = p[:]
-        p[0] = ast.PortProperty(actor=actor, port=port, direction=direction, args=args, debug_info=self.debug_info(p, 3))
-
-
-    def p_internal_port_property(self, p):
-        """internal_port_property : unqualified_port opt_direction LPAREN named_args RPAREN"""
-        _, (actor, port), direction, _, args, _ = p[:]
-        p[0] = ast.PortProperty(actor=actor, port=port, direction=direction, args=args, debug_info=self.debug_info(p, 3))
 
 
     def p_link_error(self, p):
