@@ -1,1 +1,1 @@
-"""Actors related to sensors and other hardware"""
+"""- Actors related to sensors and other hardware"""

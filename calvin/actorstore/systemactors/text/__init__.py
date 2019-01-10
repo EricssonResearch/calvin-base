@@ -1,1 +1,1 @@
-"""This module organizes actors related to text processing."""
+"""- This module organizes actors related to text processing."""

@@ -1,1 +1,1 @@
-"""Actors related to timing."""
+"""- Actors related to timing."""

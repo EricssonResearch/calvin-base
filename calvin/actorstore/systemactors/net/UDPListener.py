@@ -23,20 +23,20 @@ _log = get_logger(__name__)
 
 class UDPListener(Actor):
     """
-    Listen for UDP messages on a given port.
-
-    Control port takes control commands of the form (uri only applicable for connect.)
-
-        {
-            "command" : "listen"/"stop",
-            "uri": "udp://<ipv4 address>:<port>"
-        }
-
-
-    Input:
-      control_in : JSON containing host & port to listen to.
-    Output:
-      data_out : Data received on the UDP port will be sent as tokens.
+    documentation:
+    - Listen for UDP messages on a given port.
+    - Control port takes control commands of the form (uri only applicable for connect.)
+      {
+          "command" : "listen"/"stop",
+          "uri": "udp://<ipv4 address>:<port>"
+      }
+    ports:
+    - direction: in
+      name: control_in
+      help: JSON containing host & port to listen to.
+    - direction: out
+      name: data_out
+      help : Data received on the UDP port will be sent as tokens.
     """
 
     @manage(['host', 'port'])

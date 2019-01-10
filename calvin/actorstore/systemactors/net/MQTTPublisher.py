@@ -23,15 +23,13 @@ _log = get_logger(__name__)
 
 class MQTTPublisher(Actor):
     """
-    Publish all incoming messages to given broker"
-
-    Arguments:
+    documentation:
+    - Publish all incoming messages to given broker"
+    - Arguments:
       hostname: <ip/name of of mqtt broker>,
       port: <port to use on mqtt broker>,
-
-    Settings is a dictionary with optional arguments.
-
-        {
+    - Settings is a dictionary with optional arguments.
+      {
           "tls": {
               "ca_certs": <ca certs>, "certfile": <certfile>, "keyfile": <keyfile>, 
               "tls_version": <tls version>, "ciphers": <ciphers>
@@ -41,11 +39,14 @@ class MQTTPublisher(Actor):
           "transport": <tcp or websocket>,
           "client_id": <id of this mqtt client>
           "topic": <prefix all outgoing message topics with this>
-        }
-
-    input:
-      topic : topic of message
-      payload: payload of message
+      }
+    ports:
+    - direction: in
+      name: topic
+      help: topic of message
+    - direction: in 
+      name: payload
+      help: payload of message
     """
 
     @manage(['mqtt'])

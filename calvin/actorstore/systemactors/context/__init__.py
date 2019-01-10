@@ -1,1 +1,1 @@
-"""Actors for accessing the application context, such as runtime properties"""
+"""- Actors for accessing the application context, such as runtime properties"""

@@ -23,15 +23,14 @@ _log = get_logger(__name__)
 
 class MQTTSubscriber(Actor):
     """
-    Subscribe to given topics (list of mqtt ), output messages on message-port
-
-    Arguments:
+    documentation:
+    - Subscribe to given topics (list of mqtt ), output messages on message-port
+    - Arguments:
       hostname: <ip/name of mqtt broker>,
       port: <port to use on mqtt broker>,
       topics: <list of topics to subscribe to>
-
-    settings is a dictionary with optional arguments :
-        {
+    - settings is a dictionary with optional arguments :
+      {
           "tls": {
               "ca_certs": <ca certs>, "certfile": <certfile>, "keyfile": <keyfile>,
               "tls_version": <tls version>, "ciphers": <ciphers>
@@ -40,10 +39,11 @@ class MQTTSubscriber(Actor):
           "will": { "topic": <topic>, "payload": <payload> },
           "transport": <tcp or websocket>,
           "client_id": <id of this mqtt client>
-        }
-
-    output:
-      message : dictionary {"topic": <topic>, "payload": <payload>}
+      }
+    ports:
+    - direction: out
+      name: message
+      help: dictionary {"topic": <topic>, "payload": <payload>}
     """
 
     @manage(['mqtt'])

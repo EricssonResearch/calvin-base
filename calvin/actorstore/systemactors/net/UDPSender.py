@@ -23,19 +23,20 @@ _log = get_logger(__name__)
 
 class UDPSender(Actor):
     """
-    Send all incoming tokens to given address/port over UDP
-
-    Control port takes control commands of the form (uri only applicable for connect.)
-
-        {
-            "command" : "connect"/"disconnect",
-            "uri": "udp://<address>:<port>"
-        }
-
-
-    Input:
-      data_in : Each received token will be sent to address set via control port
-      control_in : Control port
+    documentation:
+    - Send all incoming tokens to given address/port over UDP
+    - Control port takes control commands of the form (uri only applicable for connect.)
+      {
+          "command" : "connect"/"disconnect",
+          "uri": "udp://<address>:<port>"
+      }
+    ports:
+    - direction: in
+      name: data_in
+      help: Each received token will be sent to address set via control port
+    - direction: in
+      name: control_in
+      help: Control port
     """
 
     @manage(['address', 'port'])

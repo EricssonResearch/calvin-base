@@ -1,1 +1,1 @@
-"""This module organizes actors that cannot easily be categorized."""
+"""- This module organizes actors that cannot easily be categorized."""
