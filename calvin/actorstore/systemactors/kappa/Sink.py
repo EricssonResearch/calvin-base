@@ -22,10 +22,13 @@ _log = get_actor_logger(__name__)
 
 class Sink(Actor):
     """
-    Sink for kappa results. Parameter buffer_size determines maximum number of items to hold
-    
-    Input:
-      in : Any token
+    documentation:
+    - Sink for kappa results. Parameter buffer_size determines maximum number of items
+      to hold
+    ports:
+    - direction: in
+      help: Any token
+      name: in
     """
 
     def exception_handler(self, action, args):

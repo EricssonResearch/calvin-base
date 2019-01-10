@@ -20,10 +20,12 @@ from calvin.actor.actor import Actor, manage, condition, calvinsys
 class PWM(Actor):
 
     """
-    Pulse width modulation on runtime-defined pin.
-    
-    Input:
-      dutycycle : new dutycycle
+    documentation:
+    - Pulse width modulation on runtime-defined pin.
+    ports:
+    - direction: in
+      help: new dutycycle
+      name: dutycycle
     """
 
     @manage(["dutycycle"])

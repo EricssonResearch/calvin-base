@@ -29,12 +29,15 @@ def absolute_filename(filename):
 class FileReader(Actor):
 
     """
-    Read a file line by line, and send each line as a token on output port
-
-    Inputs:
-      filename : File to read. If file doesn't exist, an ExceptionToken is produced
-    Outputs:
-      out : Each token is a line of text, or EOSToken.
+    documentation:
+    - Read a file line by line, and send each line as a token on output port
+    ports:
+    - direction: in
+      help: File to read. If file doesn't exist, an ExceptionToken is produced
+      name: filename
+    - direction: out
+      help: Each token is a line of text, or EOSToken.
+      name: out
     """
 
     @manage([])

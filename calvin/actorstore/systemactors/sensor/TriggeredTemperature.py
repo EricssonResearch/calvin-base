@@ -22,12 +22,15 @@ _log = get_logger(__name__)
 class TriggeredTemperature(Actor):
 
     """
-    Measure temperature.
-
-    Inputs:
-        trigger : any token triggers meausurement
-    Outputs:
-        centigrade :  temperature, in centigrade
+    documentation:
+    - Measure temperature.
+    ports:
+    - direction: in
+      help: any token triggers meausurement
+      name: trigger
+    - direction: out
+      help: temperature, in centigrade
+      name: centigrade
     """
 
     @manage(['temperature'])

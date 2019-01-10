@@ -22,13 +22,18 @@ _log = get_actor_logger(__name__)
 
 class PersistentBuffer(Actor):
     """
-    Buffer data to file (when necessary.)
-    
-    Inputs:
-      item : data to be buffered
-    Outputs:
-        current : list of data, current and on-line
-        buffered : catching up of buffered data, list
+    documentation:
+    - Buffer data to file (when necessary.)
+    ports:
+    - direction: in
+      help: data to be buffered
+      name: item
+    - direction: out
+      help: list of data, current and on-line
+      name: current
+    - direction: out
+      help: catching up of buffered data, list
+      name: buffered
     """
 
     def exception_handler(self, action, args):

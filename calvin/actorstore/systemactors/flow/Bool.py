@@ -23,21 +23,19 @@ _log = get_actor_logger(__name__)
 
 class Bool(Actor):
     """
-    Any token on the inport will be tested for truth value.
-    The following values are considered false
-
-    null
-    false
-    zero of any numeric type, for example, 0, 0L, 0.0, 0j
-    any empty sequence, for example, "", (), []
-    any empty mapping, for example, {}
-
-    All other values are considered true
-
-    Inputs:
-      token : a token to evaluate to either true or false
-    Outputs:
-      bool : true or false
+    documentation:
+    - Any token on the inport will be tested for truth value. The following values are
+      considered false
+    - null false zero of any numeric type, for example, 0, 0L, 0.0, 0j any empty sequence,
+      for example, "", (), [] any empty mapping, for example, {}
+    - All other values are considered true
+    ports:
+    - direction: in
+      help: a token to evaluate to either true or false
+      name: token
+    - direction: out
+      help: true or false
+      name: bool
     """
     @manage()
     def init(self):

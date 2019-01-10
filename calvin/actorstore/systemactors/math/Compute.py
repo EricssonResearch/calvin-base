@@ -24,16 +24,19 @@ _log = get_actor_logger(__name__)
 
 class Compute(Actor):
     """
-    Perform a OP b where OP is the operator passed as (a string) argument.
-
-    Allowed values for OP are
-    +, -, *, /, div (integer division), mod (modulo)
-
-    Inputs:
-      a : a token
-      b : a token
-    Outputs:
-      result : result of 'a' OP 'b'
+    documentation:
+    - Perform a OP b where OP is the operator passed as (a string) argument.
+    - Allowed values for OP are +, -, *, /, div (integer division), mod (modulo)
+    ports:
+    - direction: in
+      help: a token
+      name: a
+    - direction: in
+      help: a token
+      name: b
+    - direction: out
+      help: result of 'a' OP 'b'
+      name: result
     """
     @manage(['op_string'])
     def init(self, op):

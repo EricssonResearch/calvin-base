@@ -19,12 +19,15 @@ from calvin.actor.actor import Actor, manage, condition
 
 class Constantify(Actor):
     """
-    Consume a token and produce a constant
-    
-    Input:
-      in : token
-    Output:
-      out : token
+    documentation:
+    - Consume a token and produce a constant
+    ports:
+    - direction: in
+      help: token
+      name: in
+    - direction: out
+      help: token
+      name: out
     """
 
     @manage()

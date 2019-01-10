@@ -22,10 +22,12 @@ _log = get_logger(__name__)
 class Distance(Actor):
 
     """
-    Measure distance. Takes the period of measurements, in seconds, as input.
-
-    Outputs:
-        meters : distance, in meters
+    documentation:
+    - Measure distance. Takes the period of measurements, in seconds, as input.
+    ports:
+    - direction: out
+      help: distance, in meters
+      name: meters
     """
 
     @manage(['period', 'distance', 'timer'])

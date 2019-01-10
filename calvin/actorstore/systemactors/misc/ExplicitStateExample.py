@@ -31,15 +31,17 @@ class Wrapper(object):
 class ExplicitStateExample(Actor):
 
     """
-    Demonstrate (and test) explicit state handling in actors.
-    
-    In order to migrate this actor, potentially to non-python platforms,
-    we need to explicitly handle set/get state for the custom wrap object.
-    
-    Input:
-        token : any token
-    Output:
-        token : a string with input token wrapped in '(((' and ')))'
+    documentation:
+    - Demonstrate (and test) explicit state handling in actors.
+    - In order to migrate this actor, potentially to non-python platforms, we need to
+      explicitly handle set/get state for the custom wrap object.
+    ports:
+    - direction: in
+      help: any token
+      name: token
+    - direction: out
+      help: a string with input token wrapped in '(((' and ')))'
+      name: token
     """
 
     def init(self):

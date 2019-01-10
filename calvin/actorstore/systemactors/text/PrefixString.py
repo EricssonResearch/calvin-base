@@ -21,12 +21,15 @@ from calvin.runtime.north.calvin_token import EOSToken
 class PrefixString(Actor):
 
     """
-    Prepends <prefix> to input tokens and passes them to ouput port as strings
-    
-    Inputs:
-      in : Text token
-    Outputs:
-      out : Prefixed text token
+    documentation:
+    - Prepends <prefix> to input tokens and passes them to ouput port as strings
+    ports:
+    - direction: in
+      help: Text token
+      name: in
+    - direction: out
+      help: Prefixed text token
+      name: out
     """
     @manage(['prefix'])
     def init(self, prefix='-'):

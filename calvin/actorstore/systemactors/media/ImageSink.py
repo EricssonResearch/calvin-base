@@ -23,10 +23,12 @@ _log = get_actor_logger(__name__)
 class ImageSink(Actor):
 
     """
-    Incoming tokens, as base64 endoded images, sent to renderer.
-
-    Inputs:
-      b64image: base64 encoded jpg
+    documentation:
+    - Incoming tokens, as base64 endoded images, sent to renderer.
+    ports:
+    - direction: in
+      help: base64 encoded jpg
+      name: b64image
     """
 
     @manage(exclude=["_sink"])

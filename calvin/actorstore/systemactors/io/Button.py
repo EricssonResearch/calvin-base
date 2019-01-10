@@ -18,10 +18,12 @@ from calvin.actor.actor import Actor, manage, condition, stateguard, calvinsys
 
 class Button(Actor):
     """
-    Handle a button and trigger on state changes.
-
-    Output:
-      state : Button state 1=pressed, 0=not pressed
+    documentation:
+    - Handle a button and trigger on state changes.
+    ports:
+    - direction: out
+      help: Button state 1=pressed, 0=not pressed
+      name: state
     """
 
     @manage(include = ["text", "button"])

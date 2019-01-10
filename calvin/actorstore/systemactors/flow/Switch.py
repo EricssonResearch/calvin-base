@@ -19,17 +19,26 @@ from calvin.actor.actor import Actor, manage, condition, stateguard
 
 class Switch(Actor):
     """
-    Switch data paths depending on 'switch'
-
-    Switch assumes 'false' or 'true' as input to 'switch', other values are considered 'false'.
-
-    Inputs:
-      switch : Switch data paths a->b, b->a if 'true, else a->a, b->b
-      a : token
-      b : token
-    Outputs:
-      a : token
-      b : token
+    documentation:
+    - Switch data paths depending on 'switch'
+    - Switch assumes 'false' or 'true' as input to 'switch', other values are considered
+      'false'.
+    ports:
+    - direction: in
+      help: Switch data paths a->b, b->a if 'true, else a->a, b->b
+      name: switch
+    - direction: in
+      help: token
+      name: a
+    - direction: in
+      help: token
+      name: b
+    - direction: out
+      help: token
+      name: a
+    - direction: out
+      help: token
+      name: b
     """
     @manage([])
     def init(self):

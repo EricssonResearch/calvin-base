@@ -22,12 +22,15 @@ _log = get_logger(__name__)
 class TriggeredPressure(Actor):
 
     """
-    Measure atmospheric pressure
-
-    Inputs:
-        trigger : any token triggers measurement
-    Outputs:
-        mbar: atmospheric pressure, in millibars
+    documentation:
+    - Measure atmospheric pressure
+    ports:
+    - direction: in
+      help: any token triggers measurement
+      name: trigger
+    - direction: out
+      help: atmospheric pressure, in millibars
+      name: mbar
     """
 
     @manage(['pressure'])

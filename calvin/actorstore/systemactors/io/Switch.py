@@ -18,10 +18,12 @@ from calvin.actor.actor import Actor, manage, condition, stateguard, calvinsys
 
 class Switch(Actor):
     """
-    Creates a on/off switch.
-
-    Output:
-      state : 0/1 according to switch state
+    documentation:
+    - Creates a on/off switch.
+    ports:
+    - direction: out
+      help: 0/1 according to switch state
+      name: state
     """
 
     @manage([])

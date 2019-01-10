@@ -20,10 +20,12 @@ from calvin.actor.actor import Actor, manage, condition, stateguard, calvinsys
 class Light(Actor):
 
     """
-    Set state of a light (e.g. an LED or a lightbulb)
-    
-    Input:
-      on : true if light should be on, false if turned off
+    documentation:
+    - Set state of a light (e.g. an LED or a lightbulb)
+    ports:
+    - direction: in
+      help: true if light should be on, false if turned off
+      name: 'on'
     """
 
     @manage(include = ["light"])

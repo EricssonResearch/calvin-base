@@ -24,10 +24,12 @@ _log = get_logger(__name__)
 class RFIDReader(Actor):
 
     """
-    RFIDReader - read MIFare Classic/ultralight when present.
-
-    Outputs:
-        data : {"cardno": uid, "data": <data>, "timestamp": <timestamp>}
+    documentation:
+    - RFIDReader - read MIFare Classic/ultralight when present.
+    ports:
+    - direction: out
+      help: '{"cardno": uid, "data": <data>, "timestamp": <timestamp>}'
+      name: data
     """
 
 

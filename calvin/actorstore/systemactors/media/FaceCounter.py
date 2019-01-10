@@ -19,12 +19,15 @@ from calvin.actor.actor import Actor, condition, manage, stateguard, calvinsys
 
 class FaceCounter(Actor) :
     """
-    Counts faces in a base64 encoded jpg image
-
-    Inputs:
-        b64image: Image to analyze
-    Outputs:
-        objects: number of faces found in image
+    documentation:
+    - Counts faces in a base64 encoded jpg image
+    ports:
+    - direction: in
+      help: Image to analyze
+      name: b64image
+    - direction: out
+      help: number of faces found in image
+      name: objects
     """
 
     @manage([])

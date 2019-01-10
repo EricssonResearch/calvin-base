@@ -19,15 +19,16 @@ from calvin.actor.actor import Actor, manage, condition
 
 class Terminator(Actor):
     """
-    Acts like a true sink.
-
-    This behaviour is useful if an actor produces outputs that will never be used
-    in a particular application. Because of how the runtime works, all output
-    ports must be connected before the application can run, so leaving a port
-    unconnected is not an option.
-
-    Inputs:
-      void : A port that will consume tokens
+    documentation:
+    - Acts like a true sink.
+    - This behaviour is useful if an actor produces outputs that will never be used in
+      a particular application. Because of how the runtime works, all output ports must
+      be connected before the application can run, so leaving a port unconnected is not
+      an option.
+    ports:
+    - direction: in
+      help: A port that will consume tokens
+      name: void
     """
     @manage()
     def init(self):

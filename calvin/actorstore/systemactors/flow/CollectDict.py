@@ -21,13 +21,18 @@ _log = get_actor_logger(__name__)
 
 class CollectDict(Actor):
     """
-    Collect tokens from token port, forming a dict according to mapping. May produce
-    a partial dictionary.
-
-    Inputs:
-      token#collect-any-tagged : token
-    Outputs:
-      dict : Collected dictionary according to 'mapping'
+    documentation:
+    - Collect tokens from token port, forming a dict according to mapping. May produce
+      a partial dictionary.
+    ports:
+    - direction: in
+      help: token
+      name: token
+      properties:
+        routing: collect-any-tagged
+    - direction: out
+      help: Collected dictionary according to 'mapping'
+      name: dict
     """
 
     @manage(['mapping'])

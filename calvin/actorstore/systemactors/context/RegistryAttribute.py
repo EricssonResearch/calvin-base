@@ -21,12 +21,16 @@ _log = get_actor_logger(__name__)
 
 class RegistryAttribute(Actor):
     """
-    Fetch given registry attribute of runtime given as a section.subsection.subsubsection. Will only work for locally known attributes.
-
-    Input:
-        trigger: Any token will trigger a read
-    Output:
-      value : The given attribute of this runtime, or null
+    documentation:
+    - Fetch given registry attribute of runtime given as a section.subsection.subsubsection.
+      Will only work for locally known attributes.
+    ports:
+    - direction: in
+      help: Any token will trigger a read
+      name: trigger
+    - direction: out
+      help: The given attribute of this runtime, or null
+      name: value
     """
 
     @manage(["attribute", "registry"])

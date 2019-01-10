@@ -23,12 +23,15 @@ _log = get_logger(__name__)
 
 class Stringify(Actor):
     """
-    Consume a token and stringify its value
-
-    Input:
-      in : token
-    Output:
-      out : string
+    documentation:
+    - Consume a token and stringify its value
+    ports:
+    - direction: in
+      help: token
+      name: in
+    - direction: out
+      help: string
+      name: out
     """
 
     @manage()

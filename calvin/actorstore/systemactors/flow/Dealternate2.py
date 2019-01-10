@@ -19,13 +19,18 @@ from calvin.actor.actor import Actor, condition, stateguard, manage
 
 class Dealternate2(Actor):
     """
-    Split token stream into two streams of tokens (odd and even tokens)
-    
-    Inputs:
-      token : incoming token stream
-    Outputs:
-      token_1 : first token stream
-      token_2 : second token stream
+    documentation:
+    - Split token stream into two streams of tokens (odd and even tokens)
+    ports:
+    - direction: in
+      help: incoming token stream
+      name: token
+    - direction: out
+      help: first token stream
+      name: token_1
+    - direction: out
+      help: second token stream
+      name: token_2
     """
 
     @manage(['is_even_token'])

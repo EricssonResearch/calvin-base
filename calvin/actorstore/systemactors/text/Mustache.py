@@ -20,15 +20,17 @@ from calvin.actor.actor import Actor, manage, condition, calvinlib
 class Mustache(Actor):
 
     """
-    Formats string based on template and incoming dictionary
-
-    Format string uses \"{{access.key.path}}\" to access dict
-    Also refer to Mustache documentation (http://mustache.github.io/)
-
-    Inputs:
-      dict : dictionary
-    Outputs:
-      text : formatted string
+    documentation:
+    - Formats string based on template and incoming dictionary
+    - Format string uses \"{{access.key.path}}\" to access dict Also refer to Mustache
+      documentation (http://mustache.github.io/)
+    ports:
+    - direction: in
+      help: dictionary
+      name: dict
+    - direction: out
+      help: formatted string
+      name: text
     """
 
     @manage(['fmt'])

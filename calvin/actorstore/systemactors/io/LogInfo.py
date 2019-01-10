@@ -19,10 +19,12 @@ from calvin.actor.actor import Actor, manage, condition, calvinsys, stateguard
 
 class LogInfo(Actor):
     """
-    Write data to system log at loglevel "INFO"
-
-    Input:
-      data : data to be logged
+    documentation:
+    - Write data to system log at loglevel "INFO"
+    ports:
+    - direction: in
+      help: data to be logged
+      name: data
     """
 
     def exception_handler(self, action_function, args):

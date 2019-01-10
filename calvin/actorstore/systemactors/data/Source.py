@@ -23,21 +23,15 @@ _log = get_logger(__name__)
 
 class Source(Actor):
     """
-    Data source.
-    {
-        "id": "ns=2;s=/Channel/Parameter/rpa[u1,115]",
-        "tag": "R115",
-        "type": "Double",
-        "value": 0.0,
-        "serverts": "2017-03-20 15:42:41.600000",
-        "sourcets": "2017-03-20 15:42:41.542000",
-        "calvints": 1490021096110,
-        "status": 0
-        "info": "description given for parameter"
-    }
-    
-    Output:
-        parameter : description of parameter as shown above
+    documentation:
+    - 'Data source. { "id": "ns=2;s=/Channel/Parameter/rpa[u1,115]", "tag": "R115", "type":
+      "Double", "value": 0.0, "serverts": "2017-03-20 15:42:41.600000", "sourcets": "2017-03-20
+      15:42:41.542000", "calvints": 1490021096110, "status": 0 "info": "description given
+      for parameter" }'
+    ports:
+    - direction: out
+      help: description of parameter as shown above
+      name: parameter
     """
 
     @manage([])

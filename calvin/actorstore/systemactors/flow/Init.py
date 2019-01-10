@@ -21,12 +21,15 @@ from calvin.actor.actor import Actor, manage, condition, stateguard, calvinsys
 class Init(Actor):
 
     """
-    Insert an initial token (data) before passing all others through
-
-    Inputs:
-      in: Any token
-    Outputs:
-      out: Data given as parameter followed by data from in port
+    documentation:
+    - Insert an initial token (data) before passing all others through
+    ports:
+    - direction: in
+      help: Any token
+      name: in
+    - direction: out
+      help: Data given as parameter followed by data from in port
+      name: out
     """
 
     @manage(['data', 'schedule'])

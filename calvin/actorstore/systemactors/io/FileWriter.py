@@ -51,11 +51,13 @@ def verify_file(actor):
 class FileWriter(Actor):
 
     """
-        Writes input 'data' to file 'basename' + some counter + '.' + suffix
-        End of stream token changes file
-    
-        inputs:
-            data: data
+    documentation:
+    - Writes input 'data' to file 'basename' + some counter + '.' + suffix End of stream
+      token changes file
+    ports:
+    - direction: in
+      help: data
+      name: data
     """
 
     @manage(['basename', 'counter', 'suffix'])

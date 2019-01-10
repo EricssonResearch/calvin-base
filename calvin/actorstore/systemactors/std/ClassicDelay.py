@@ -19,12 +19,15 @@ from calvin.actor.actor import Actor, manage, condition, stateguard, calvinsys
 
 class ClassicDelay(Actor):
     """
-    After first token, pass on token once every 'delay' seconds.
-    
-    Input :
-        token: anything
-    Outputs:
-        token: anything
+    documentation:
+    - After first token, pass on token once every 'delay' seconds.
+    ports:
+    - direction: in
+      help: anything
+      name: token
+    - direction: out
+      help: anything
+      name: token
     """
 
     @manage(['timer', 'delay', 'started'])

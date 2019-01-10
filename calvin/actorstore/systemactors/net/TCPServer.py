@@ -25,17 +25,29 @@ _log = get_logger(__name__)
 
 class TCPServer(Actor):
     """
-    Etablish a TCP connection and forward all tokens except EOST on this connection.
-    Any recevied data on the TCP connection is forwarded according to either Line mode or Raw mode.
-
-    Inputs:
-      host   : The host name as a string
-      port   : The port number
-      handle : A handle to the connection for which the data is meant.
-      token  : Each received token will be sent to the client matching the handle.
-    Output:
-      handle : A handle to the connection from which the data was received.
-      token  : Data received on the TCP connection will be sent as tokens.
+    documentation:
+    - Etablish a TCP connection and forward all tokens except EOST on this connection.
+      Any recevied data on the TCP connection is forwarded according to either Line mode
+      or Raw mode.
+    ports:
+    - direction: in
+      help: The host name as a string
+      name: host
+    - direction: in
+      help: The port number
+      name: port
+    - direction: in
+      help: A handle to the connection for which the data is meant.
+      name: handle
+    - direction: in
+      help: Each received token will be sent to the client matching the handle.
+      name: token
+    - direction: out
+      help: A handle to the connection from which the data was received.
+      name: handle
+    - direction: out
+      help: Data received on the TCP connection will be sent as tokens.
+      name: token
     """
 
     @manage(['host', 'port', 'mode', 'delimiter', 'max_length'])

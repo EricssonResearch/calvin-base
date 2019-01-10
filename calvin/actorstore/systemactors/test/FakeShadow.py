@@ -23,14 +23,17 @@ _log = get_logger(__name__)
 
 class FakeShadow(Actor):
     """
-    forward a token unchanged like identity
-    Starts as shadow and can be later changed to not be a shadow
-    by having a fakeshadow requires (but needs to be migrated to reeval)
-    
-    Inputs:
-      token : a token
-    Outputs:
-      token : the same token
+    documentation:
+    - forward a token unchanged like identity Starts as shadow and can be later changed
+      to not be a shadow by having a fakeshadow requires (but needs to be migrated to
+      reeval)
+    ports:
+    - direction: in
+      help: a token
+      name: token
+    - direction: out
+      help: the same token
+      name: token
     """
     @manage(['dump', 'last', 'node_id', 'jumps', 'index'])
     def init(self, dump=False):

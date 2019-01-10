@@ -23,18 +23,24 @@ from calvin.runtime.north.calvin_token import EOSToken, ExceptionToken
 class GetValue(Actor):
 
     """
-    Extract a value from a container using key/index
-
-    If container is a list then the key must be an integer index (zero-based), or a list of indices if for nested lists.
-    If container is a dictionary the key must be a string or list of (string) keys for nested dictionaries.
-    It is OK to make a key list of mixed strings and integers if the container comprises nested dictionaries and lists.
-    Produce an ExceptionToken if mapping between key and (sub-)container is incorrect, or if a  integer index is out of range, or key is not present in dictionary.
-
-    Inputs:
-      container: a dictionary, list or a nested mix of them
-      key:  index (integer), key (string), or a (possibly mixed) list for nested containers
-    Outputs:
-      value: value for the key/index/list
+    documentation:
+    - Extract a value from a container using key/index
+    - If container is a list then the key must be an integer index (zero-based), or a
+      list of indices if for nested lists. If container is a dictionary the key must be
+      a string or list of (string) keys for nested dictionaries. It is OK to make a key
+      list of mixed strings and integers if the container comprises nested dictionaries
+      and lists. Produce an ExceptionToken if mapping between key and (sub-)container
+      is incorrect, or if a integer index is out of range, or key is not present in dictionary.
+    ports:
+    - direction: in
+      help: a dictionary, list or a nested mix of them
+      name: container
+    - direction: in
+      help: index (integer), key (string), or a (possibly mixed) list for nested containers
+      name: key
+    - direction: out
+      help: value for the key/index/list
+      name: value
     """
 
     def exception_handler(self, action, args):

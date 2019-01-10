@@ -19,12 +19,15 @@ from calvin.actor.actor import Actor, manage, condition, stateguard, calvinsys
 class TriggeredSoilMoisture(Actor):
 
     """
-    Measure the moisture level in the soil.
-
-    Inputs:
-        trigger : any token triggers meausurement
-    Outputs:
-        level :  moisture level, in percent
+    documentation:
+    - Measure the moisture level in the soil.
+    ports:
+    - direction: in
+      help: any token triggers meausurement
+      name: trigger
+    - direction: out
+      help: moisture level, in percent
+      name: level
     """
 
     @manage(exclude=['level'])

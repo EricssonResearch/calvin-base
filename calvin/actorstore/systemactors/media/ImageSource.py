@@ -23,12 +23,15 @@ _log = get_actor_logger(__name__)
 class ImageSource(Actor):
 
     """
-    When token on input, get an image.
-
-    Inputs:
-      trigger: anything
-    Outputs:
-      b64image: generated image
+    documentation:
+    - When token on input, get an image.
+    ports:
+    - direction: in
+      help: anything
+      name: trigger
+    - direction: out
+      help: generated image
+      name: b64image
     """
 
     @manage(exclude=["_cam"])

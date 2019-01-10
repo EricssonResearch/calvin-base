@@ -21,18 +21,22 @@ from calvin.runtime.north.calvin_token import EOSToken, ExceptionToken
 class ExceptionHandler(Actor):
 
     """
-    Scan tokens for Exceptions.
-
-    Any non-exception or EOS is simply passed on. Exceptions other than EOS are replaced
-    with an EOS token on the ouput 'token' port unless optional 'replace' argument is true,
-    in which case 'replacement' argument (defaults to null) is produced.
-    Any exception (including EOS) are produces its reason on the 'status' output port.
-
-    Inputs:
-      token  : any token
-    Outputs:
-      token  : input token or EOS/replacement on exception
-      status : reason for any exception tokens encountered (including EOS)
+    documentation:
+    - Scan tokens for Exceptions.
+    - Any non-exception or EOS is simply passed on. Exceptions other than EOS are replaced
+      with an EOS token on the ouput 'token' port unless optional 'replace' argument is
+      true, in which case 'replacement' argument (defaults to null) is produced. Any exception
+      (including EOS) are produces its reason on the 'status' output port.
+    ports:
+    - direction: in
+      help: any token
+      name: token
+    - direction: out
+      help: input token or EOS/replacement on exception
+      name: token
+    - direction: out
+      help: reason for any exception tokens encountered (including EOS)
+      name: status
     """
 
     def exception_handler(self, action, args):

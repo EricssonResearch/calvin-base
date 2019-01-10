@@ -23,16 +23,19 @@ _log = get_actor_logger(__name__)
 
 class Compare(Actor):
     """
-    Perform a REL b where REL is a comparison relation passed as (a string) argument.
-
-    Allowed values for REL are
-    =, <, >, <=, >=, !=
-
-    Inputs:
-      a : a token
-      b : a token
-    Outputs:
-      result : true or false according to result of 'a' REL 'b'
+    documentation:
+    - Perform a REL b where REL is a comparison relation passed as (a string) argument.
+    - Allowed values for REL are =, <, >, <=, >=, !=
+    ports:
+    - direction: in
+      help: a token
+      name: a
+    - direction: in
+      help: a token
+      name: b
+    - direction: out
+      help: true or false according to result of 'a' REL 'b'
+      name: result
     """
     @manage(['rel'])
     def init(self, rel):

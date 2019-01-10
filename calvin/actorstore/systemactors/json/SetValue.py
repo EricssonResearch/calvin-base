@@ -23,20 +23,28 @@ from copy import deepcopy
 class SetValue(Actor):
 
     """
-    Modify a container (list or dictionary)
-
-    If container is a list then the key must be an integer index (zero-based), or a list of indices if for nested lists.
-    If container is a dictionary the key must be a string or list of (string) keys for nested dictionaries.
-    It is OK to make a key list of mixed strings and integers if the container comprises nested dictionaries and lists.
-    Produce an ExceptionToken if mapping between key and (sub-)container is incorrect, or if a  integer index is out of range.
-    N.B. This actor will incur a performance penalty from a deep copy operation. Use wisely.
-
-    Inputs:
-      container: a list or dictionary
-      key: index (integer), key (string), or a (possibly mixed) list for nested containers
-      value: value to set
-    Outputs:
-      container:  a modified container
+    documentation:
+    - Modify a container (list or dictionary)
+    - If container is a list then the key must be an integer index (zero-based), or a
+      list of indices if for nested lists. If container is a dictionary the key must be
+      a string or list of (string) keys for nested dictionaries. It is OK to make a key
+      list of mixed strings and integers if the container comprises nested dictionaries
+      and lists. Produce an ExceptionToken if mapping between key and (sub-)container
+      is incorrect, or if a integer index is out of range. N.B. This actor will incur
+      a performance penalty from a deep copy operation. Use wisely.
+    ports:
+    - direction: in
+      help: a list or dictionary
+      name: container
+    - direction: in
+      help: index (integer), key (string), or a (possibly mixed) list for nested containers
+      name: key
+    - direction: in
+      help: value to set
+      name: value
+    - direction: out
+      help: a modified container
+      name: container
     """
 
     def exception_handler(self, action, args):

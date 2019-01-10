@@ -20,12 +20,15 @@ from calvin.runtime.north.calvin_token import EOSToken, ExceptionToken
 
 class Split(Actor):
     """
-    Split string into list of strings on delimiter 'delim'. Consumes delimiter.
-
-    Inputs:
-      text : arbitrary string
-    Outputs:
-      lines : list of strings
+    documentation:
+    - Split string into list of strings on delimiter 'delim'. Consumes delimiter.
+    ports:
+    - direction: in
+      help: arbitrary string
+      name: text
+    - direction: out
+      help: list of strings
+      name: lines
     """
     @manage(['delim'])
     def init(self, delim):

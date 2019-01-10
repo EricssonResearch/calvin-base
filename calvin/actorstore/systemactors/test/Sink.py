@@ -22,10 +22,12 @@ _log = get_logger(__name__)
 
 class Sink(Actor):
     """
-    Write tokens to standard output
-    
-    Input:
-      token : Any token
+    documentation:
+    - Write tokens to standard output
+    ports:
+    - direction: in
+      help: Any token
+      name: token
     """
 
     def exception_handler(self, action, args):

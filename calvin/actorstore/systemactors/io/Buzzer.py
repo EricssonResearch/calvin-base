@@ -20,10 +20,12 @@ from calvin.actor.actor import Actor, manage, condition, calvinsys, stateguard
 class Buzzer(Actor):
 
     """
-    Buzz
-    
-    Input:
-      on : true/false for on/off
+    documentation:
+    - Buzz
+    ports:
+    - direction: in
+      help: true/false for on/off
+      name: 'on'
     """
 
     @manage([])

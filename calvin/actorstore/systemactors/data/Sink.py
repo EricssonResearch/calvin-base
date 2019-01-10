@@ -23,10 +23,12 @@ _log = get_logger(__name__)
 
 class Sink(Actor):
     """
-    Data sink - usually some form of permanent storage
-
-    input:
-        data: a list of json structures to be saved
+    documentation:
+    - Data sink - usually some form of permanent storage
+    ports:
+    - direction: in
+      help: a list of json structures to be saved
+      name: data
     """
 
     @manage([])

@@ -18,15 +18,21 @@ from calvin.actor.actor import Actor, condition, stateguard, manage
 
 class DispatchDict(Actor):
     """
-    Route tokens to the ports connected to the fan-out port token according to 'mapping'
-
-    For unrecognized mappings tokens are routed to 'default' port.
-
-    Inputs:
-      dict: dictionary
-    Outputs:
-      token#dispatch-mapped : Dispatching tokens to connected ports according to 'mapping'
-      default: Default route for unknown token values
+    documentation:
+    - Route tokens to the ports connected to the fan-out port token according to 'mapping'
+    - For unrecognized mappings tokens are routed to 'default' port.
+    ports:
+    - direction: in
+      help: dictionary
+      name: dict
+    - direction: out
+      help: Dispatching tokens to connected ports according to 'mapping'
+      name: token
+      properties:
+        routing: dispatch-mapped
+    - direction: out
+      help: Default route for unknown token values
+      name: default
     """
 
     @manage(['mapping', 'mapped_out', "unmapped_out"])

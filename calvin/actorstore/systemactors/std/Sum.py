@@ -20,12 +20,15 @@ from calvin.actor.actor import Actor, manage, condition
 class Sum(Actor):
 
     """
-    Read a number and compute a cumulative sum
-    
-    Inputs:
-      integer : Number
-    Outputs:
-      integer : Cumulative sum
+    documentation:
+    - Read a number and compute a cumulative sum
+    ports:
+    - direction: in
+      help: Number
+      name: integer
+    - direction: out
+      help: Cumulative sum
+      name: integer
     """
     @manage(['sum'])
     def init(self):

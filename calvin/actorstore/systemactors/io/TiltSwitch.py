@@ -18,10 +18,12 @@ from calvin.actor.actor import Actor, manage, condition, stateguard, calvinsys
 
 class TiltSwitch(Actor):
     """
-    React to changes in a TiltSwitch.
-
-    Output:
-      open : state true=closed, false=open
+    documentation:
+    - React to changes in a TiltSwitch.
+    ports:
+    - direction: out
+      help: state true=closed, false=open
+      name: open
     """
 
     @manage(include=[])

@@ -23,12 +23,16 @@ _log = get_logger(__name__)
 
 class TriggeredWeather(Actor):
     """
-    Get current weather at selected destination, given as "city,country code", "city", or ",country code"
-
-    Input:
-      trigger : start fetching weather on any token
-    Output:
-        forecast: weather at given city, or null on error
+    documentation:
+    - Get current weather at selected destination, given as "city,country code", "city",
+      or ",country code"
+    ports:
+    - direction: in
+      help: start fetching weather on any token
+      name: trigger
+    - direction: out
+      help: weather at given city, or null on error
+      name: forecast
     """
 
     @manage(["city"])

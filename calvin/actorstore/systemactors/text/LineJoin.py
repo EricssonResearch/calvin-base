@@ -20,16 +20,18 @@ from calvin.runtime.north.calvin_token import EOSToken, ExceptionToken
 
 class LineJoin(Actor):
     """
-    Join strings into a text token using delimiter 'delim' (defaults to '\\n')
-
-    Consume consecutive strings until an end-of-stream (EOSToken) is received,
-    which triggers an output of the joined lines. After receiving the EOFToken,
-    the LineJoin is reset and ready for new lines to join.
-
-    Inputs:
-      line : arbitrary string
-    Outputs:
-      text : strings joined by
+    documentation:
+    - Join strings into a text token using delimiter 'delim' (defaults to '\\n')
+    - Consume consecutive strings until an end-of-stream (EOSToken) is received, which
+      triggers an output of the joined lines. After receiving the EOFToken, the LineJoin
+      is reset and ready for new lines to join.
+    ports:
+    - direction: in
+      help: arbitrary string
+      name: line
+    - direction: out
+      help: strings joined by
+      name: text
     """
     @manage(['lines', 'delim', 'text'])
     def init(self, delim='\n'):

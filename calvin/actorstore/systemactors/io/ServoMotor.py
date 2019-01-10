@@ -22,10 +22,12 @@ _log = get_actor_logger(__name__)
 class ServoMotor(Actor):
 
     """
-    Rotate servo given degrees.
-    
-    Input:
-      angle : set servo to given angle
+    documentation:
+    - Rotate servo given degrees.
+    ports:
+    - direction: in
+      help: set servo to given angle
+      name: angle
     """
 
     @manage([])

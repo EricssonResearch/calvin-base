@@ -22,17 +22,30 @@ _log = get_logger(__name__)
 
 class HTTPDelete(Actor):
     """
-    Send delete to URL
-
-    Input:
-      URL : URL to send delete to
-      params : dictionary with query parameters (optional)
-      headers: dictionary with headers to include in request (optional)
-      auth : dictionary with authtype (basic/digest), username and password (optional)
-    Output:
-      status: HTTP status of request
-      headers: dictionary of response headers
-      data : body of response (only if body is non-empty)
+    documentation:
+    - Send delete to URL
+    ports:
+    - direction: in
+      help: URL to send delete to
+      name: URL
+    - direction: in
+      help: dictionary with query parameters (optional)
+      name: params
+    - direction: in
+      help: dictionary with headers to include in request (optional)
+      name: headers
+    - direction: in
+      help: dictionary with authtype (basic/digest), username and password (optional)
+      name: auth
+    - direction: out
+      help: HTTP status of request
+      name: status
+    - direction: out
+      help: dictionary of response headers
+      name: headers
+    - direction: out
+      help: body of response (only if body is non-empty)
+      name: data
     """
 
     @manage()

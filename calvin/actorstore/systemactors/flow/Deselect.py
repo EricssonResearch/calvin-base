@@ -19,17 +19,23 @@ from calvin.actor.actor import Actor, manage, condition, stateguard
 
 class Deselect(Actor):
     """
-    Route token from 'case_true' or 'case_false' to 'data' port depending on 'select'
-
-    Deselect assumes 'false' or 'true' as input, values outside that
-    range will default to 'case_false'.
-
-    Inputs:
-      case_false  : Token to output 'data' if select token is 'false'
-      case_true   : Token to output 'data' if select token is 'true'
-      select : Select which inport will propagate to 'data' port
-    Outputs:
-      data  : Token from 'case_true' or 'case_false' port
+    documentation:
+    - Route token from 'case_true' or 'case_false' to 'data' port depending on 'select'
+    - Deselect assumes 'false' or 'true' as input, values outside that range will default
+      to 'case_false'.
+    ports:
+    - direction: in
+      help: Token to output 'data' if select token is 'false'
+      name: case_false
+    - direction: in
+      help: Token to output 'data' if select token is 'true'
+      name: case_true
+    - direction: in
+      help: Select which inport will propagate to 'data' port
+      name: select
+    - direction: out
+      help: Token from 'case_true' or 'case_false' port
+      name: data
     """
     @manage(['select'])
     def init(self):

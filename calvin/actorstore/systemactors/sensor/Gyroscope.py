@@ -19,10 +19,13 @@ from calvin.actor.actor import Actor, manage, condition, stateguard, calvinsys
 class Gyroscope(Actor):
 
     """
-    Measure the rotation. Takes the period of measurements, in microseconds, as input.
-
-    Outputs:
-        rotation :  Rotation around the x,y and z axis. Is returned as a dict with the x,y, and z keys.
+    documentation:
+    - Measure the rotation. Takes the period of measurements, in microseconds, as input.
+    ports:
+    - direction: out
+      help: Rotation around the x,y and z axis. Is returned as a dict with the x,y, and
+        z keys.
+      name: rotation
     """
 
     @manage(['level', 'period'])

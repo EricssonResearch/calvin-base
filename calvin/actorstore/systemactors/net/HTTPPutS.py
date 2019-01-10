@@ -22,22 +22,25 @@ _log = get_logger(__name__)
 
 class HTTPPutS(Actor):
     """
-    HTTP method PUT
-
-    <url> url to send to
-    
-    <params> dictionary with query parameters (or null)
-    
-    <headers> dictionary with headers to include in request (or null)
-    
-    <auth> dictionary with authtype (basic/digest), username and password (or null)
-
-    Input:
-        data : execute request, include data as body if not null or boolean
-    Output:
-      status: status of request
-      headers: JSON dictionary of incoming headers
-      data : body of response (if any)
+    documentation:
+    - HTTP method PUT
+    - <url> url to send to
+    - <params> dictionary with query parameters (or null)
+    - <headers> dictionary with headers to include in request (or null)
+    - <auth> dictionary with authtype (basic/digest), username and password (or null)
+    ports:
+    - direction: in
+      help: execute request, include data as body if not null or boolean
+      name: data
+    - direction: out
+      help: status of request
+      name: status
+    - direction: out
+      help: JSON dictionary of incoming headers
+      name: headers
+    - direction: out
+      help: body of response (if any)
+      name: data
     """
 
     @manage(['command'])

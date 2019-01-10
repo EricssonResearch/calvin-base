@@ -27,12 +27,15 @@ _log = get_logger(__name__)
 
 class WordCount(Actor):
     """
-    Count occurances of words in a stream of words.
-
-    Inputs:
-      in : a word
-    Outputs:
-      out : count for each word
+    documentation:
+    - Count occurances of words in a stream of words.
+    ports:
+    - direction: in
+      help: a word
+      name: in
+    - direction: out
+      help: count for each word
+      name: out
     """
 
     @manage([])

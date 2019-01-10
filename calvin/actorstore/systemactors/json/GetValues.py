@@ -23,18 +23,25 @@ from calvin.actorstore.systemactors.json.GetValue import GetValue
 class GetValues(GetValue):
 
     """
-    Extract values from a container using list of keys/indices
-
-    If container is a list then the key must be an integer index (zero-based), or a list of indices if for nested lists.
-    If container is a dictionary the key must be a string or list of (string) keys for nested dictionaries.
-    It is OK to make a key list of mixed strings and integers if the container comprises nested dictionaries and lists.
-    Produce an ExceptionToken if mapping between key and (sub-)container is incorrect, or if a  integer index is out of range, or key is not present in dictionary.
-
-    Inputs:
-      container: a dictionary, list or a nested mix of them
-      keys:  A list of items to access using index (integer), key (string), or a (possibly mixed) list for nested containers
-    Outputs:
-      values: A list of values for the specifiers in keys
+    documentation:
+    - Extract values from a container using list of keys/indices
+    - If container is a list then the key must be an integer index (zero-based), or a
+      list of indices if for nested lists. If container is a dictionary the key must be
+      a string or list of (string) keys for nested dictionaries. It is OK to make a key
+      list of mixed strings and integers if the container comprises nested dictionaries
+      and lists. Produce an ExceptionToken if mapping between key and (sub-)container
+      is incorrect, or if a integer index is out of range, or key is not present in dictionary.
+    ports:
+    - direction: in
+      help: a dictionary, list or a nested mix of them
+      name: container
+    - direction: in
+      help: A list of items to access using index (integer), key (string), or a (possibly
+        mixed) list for nested containers
+      name: keys
+    - direction: out
+      help: A list of values for the specifiers in keys
+      name: values
     """
 
 

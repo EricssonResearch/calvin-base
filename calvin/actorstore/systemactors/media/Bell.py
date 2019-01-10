@@ -24,10 +24,12 @@ _log = get_actor_logger(__name__)
 class Bell(Actor):
 
     """
-    Triggers a audible or visible bell (runtime dependent).
-
-    Inputs:
-      trigger: any token triggers the bell.
+    documentation:
+    - Triggers a audible or visible bell (runtime dependent).
+    ports:
+    - direction: in
+      help: any token triggers the bell.
+      name: trigger
     """
 
     @manage([])

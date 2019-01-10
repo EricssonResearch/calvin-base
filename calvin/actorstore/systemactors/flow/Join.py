@@ -19,18 +19,21 @@ from calvin.actor.actor import Actor, condition
 
 class Join(Actor):
     """
-    Join two streams of tokens. Deprecated.
-
-    N.B. This actor gives preference to token_1, hence if there is
-    always a token available on that port, then token_2 will starve.
-    The actor you are looking for is probably flow.Collect or possibly
-    flow.Alternate2
-
-    Inputs:
-      token_1 : first token stream
-      token_2 : second token stream
-    Outputs:
-        token : resulting token stream
+    documentation:
+    - Join two streams of tokens. Deprecated.
+    - N.B. This actor gives preference to token_1, hence if there is always a token available
+      on that port, then token_2 will starve. The actor you are looking for is probably
+      flow.Collect or possibly flow.Alternate2
+    ports:
+    - direction: in
+      help: first token stream
+      name: token_1
+    - direction: in
+      help: second token stream
+      name: token_2
+    - direction: out
+      help: resulting token stream
+      name: token
     """
 
     def init(self):

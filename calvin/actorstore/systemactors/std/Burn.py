@@ -19,12 +19,15 @@ import time  # NEVER DO THIS OUTSIDE OF TEST
 
 class Burn(Actor):
     """
-    forward a token unchanged and Burns cycles
-    
-    Inputs:
-      token : a token
-    Outputs:
-      token : the same token
+    documentation:
+    - forward a token unchanged and Burns cycles
+    ports:
+    - direction: in
+      help: a token
+      name: token
+    - direction: out
+      help: the same token
+      name: token
     """
     @manage(['dump', 'last', 'duration'])
     def init(self, dump=False, duration=0.1):

@@ -25,14 +25,16 @@ _log = get_actor_logger(__name__)
 class Items(Actor):
 
     """
-    Produce all items from a list as a sequence of tokens.
-
-    Produce an exception token if data is not a list.
-
-    Inputs:
-      list:  a list
-    Outputs:
-      item: items of list in order
+    documentation:
+    - Produce all items from a list as a sequence of tokens.
+    - Produce an exception token if data is not a list.
+    ports:
+    - direction: in
+      help: a list
+      name: list
+    - direction: out
+      help: items of list in order
+      name: item
     """
 
 

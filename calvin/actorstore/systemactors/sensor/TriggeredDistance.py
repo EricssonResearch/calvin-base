@@ -22,12 +22,15 @@ _log = get_logger(__name__)
 class TriggeredDistance(Actor):
 
     """
-    Measure distance.
-
-    Inputs:
-        trigger : any token triggers meausurement
-    Outputs:
-        meters : distance, in meters
+    documentation:
+    - Measure distance.
+    ports:
+    - direction: in
+      help: any token triggers meausurement
+      name: trigger
+    - direction: out
+      help: distance, in meters
+      name: meters
     """
 
     @manage([])

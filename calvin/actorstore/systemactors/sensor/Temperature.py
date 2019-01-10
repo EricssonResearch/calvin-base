@@ -22,10 +22,12 @@ _log = get_logger(__name__)
 class Temperature(Actor):
 
     """
-    Measure temperature. Takes the period of measurements, in seconds, as input.
-
-    Outputs:
-        centigrade :  temperature, in centigrade
+    documentation:
+    - Measure temperature. Takes the period of measurements, in seconds, as input.
+    ports:
+    - direction: out
+      help: temperature, in centigrade
+      name: centigrade
     """
 
     @manage(['period', 'timer', 'temperature'])

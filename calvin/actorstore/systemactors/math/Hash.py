@@ -24,15 +24,17 @@ _log = get_actor_logger(__name__)
 
 class Hash(Actor):
     """
-    Produce a hash hex-digest of input string.
-
-    Allowed values for algorithm are at least
-    'sha1', 'sha224', 'sha384', 'sha256', 'sha512', 'md5'
-
-    Inputs:
-      string : a string
-    Outputs:
-      result : hex-digest of input string
+    documentation:
+    - Produce a hash hex-digest of input string.
+    - Allowed values for algorithm are at least 'sha1', 'sha224', 'sha384', 'sha256',
+      'sha512', 'md5'
+    ports:
+    - direction: in
+      help: a string
+      name: string
+    - direction: out
+      help: hex-digest of input string
+      name: result
     """
     @manage(['algorithm'])
     def init(self, algorithm):

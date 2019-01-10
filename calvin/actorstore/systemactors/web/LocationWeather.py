@@ -23,12 +23,16 @@ _log = get_logger(__name__)
 
 class LocationWeather(Actor):
     """
-    Get current weather at selected destination, given as "city,country code", "city", or ",country code"
-
-    Input:
-      location : location to fetch weather from
-    Output:
-        forecast: weather at given city, or null on error
+    documentation:
+    - Get current weather at selected destination, given as "city,country code", "city",
+      or ",country code"
+    ports:
+    - direction: in
+      help: location to fetch weather from
+      name: location
+    - direction: out
+      help: weather at given city, or null on error
+      name: forecast
     """
 
     @manage([])

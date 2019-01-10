@@ -19,12 +19,15 @@ from calvin.actor.actor import Actor, manage, condition, stateguard, calvinsys
 
 class DelayToken(Actor):
     """
-    Sends input on after a given delay has passed. Preserves time between tokens.
-
-    Input :
-        token : anything
-    Outputs:
-        token : anything
+    documentation:
+    - Sends input on after a given delay has passed. Preserves time between tokens.
+    ports:
+    - direction: in
+      help: anything
+      name: token
+    - direction: out
+      help: anything
+      name: token
     """
 
     @manage(['delay', 'timers'])

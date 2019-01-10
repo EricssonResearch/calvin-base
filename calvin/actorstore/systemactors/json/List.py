@@ -22,19 +22,20 @@ from calvin.runtime.north.calvin_token import EOSToken, ExceptionToken
 class List(Actor):
 
     """
-    Create a list.
-
-    Consumes 'n' tokens  to produce a list, 'n' defaults to 1. If 'n' is zero or negative,
-    consumes tokens until EOS encountered (variable list length).
-    The optional arguments pre_list and post_list are used to prepend and extend the list before
-    delivering the final list.
-    Will produce an ExceptionToken if EOS is encountered when n > 0, or if an ExceptionToken is
-    encountered regardless of value of 'n'.
-
-    Inputs:
-      item: items to append to list
-    Outputs:
-      list: a list of consumed items
+    documentation:
+    - Create a list.
+    - Consumes 'n' tokens to produce a list, 'n' defaults to 1. If 'n' is zero or negative,
+      consumes tokens until EOS encountered (variable list length). The optional arguments
+      pre_list and post_list are used to prepend and extend the list before delivering
+      the final list. Will produce an ExceptionToken if EOS is encountered when n > 0,
+      or if an ExceptionToken is encountered regardless of value of 'n'.
+    ports:
+    - direction: in
+      help: items to append to list
+      name: item
+    - direction: out
+      help: a list of consumed items
+      name: list
     """
 
     def exception_handler(self, action, args):

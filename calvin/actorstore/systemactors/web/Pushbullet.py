@@ -23,10 +23,12 @@ _log = get_logger(__name__)
 
 class Pushbullet(Actor):
     """
-    Post incoming tokens (text) to runtime specific pushbullet channel with given title
-
-    Input:
-      message : A message
+    documentation:
+    - Post incoming tokens (text) to runtime specific pushbullet channel with given title
+    ports:
+    - direction: in
+      help: A message
+      name: message
     """
 
     @manage(["title"])

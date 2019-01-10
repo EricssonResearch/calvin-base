@@ -20,12 +20,15 @@ from calvin.runtime.north.calvin_token import EOSToken, ExceptionToken
 
 class Length(Actor):
     """
-    Return length of string
-
-    Inputs:
-      string : arbitrary string
-    Outputs:
-      length : integer
+    documentation:
+    - Return length of string
+    ports:
+    - direction: in
+      help: arbitrary string
+      name: string
+    - direction: out
+      help: integer
+      name: length
     """
     @manage()
     def init(self):

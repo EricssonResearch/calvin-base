@@ -22,16 +22,18 @@ from calvin.runtime.north.calvin_token import EOSToken, ExceptionToken
 
 class FromString(Actor):
     """
-    Transform JSON-formatted string to value
-
-    Invalid input will produce an Exception token as output unless another value is supplied
-    through the optional 'exception_output' argument.
-    N.B. Using 'null' for 'exception_output' will produce an ExceptionToken rather than 'null'.
-
-    Inputs:
-      string : JSON-formatted string
-    Outputs:
-      data   : data read from input string
+    documentation:
+    - Transform JSON-formatted string to value
+    - Invalid input will produce an Exception token as output unless another value is
+      supplied through the optional 'exception_output' argument. N.B. Using 'null' for
+      'exception_output' will produce an ExceptionToken rather than 'null'.
+    ports:
+    - direction: in
+      help: JSON-formatted string
+      name: string
+    - direction: out
+      help: data read from input string
+      name: data
     """
 
     def exception_handler(self, action, args):

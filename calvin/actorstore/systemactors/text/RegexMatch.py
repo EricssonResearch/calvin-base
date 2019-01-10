@@ -20,21 +20,23 @@ from calvin.actor.actor import Actor, manage, condition, stateguard, calvinlib
 
 class RegexMatch(Actor):
     """
-    Apply the regex supplied as argument to the incoming text.
-
-    If the regex matches, the text is routed to the 'match' output,
-    otherwise it is routed to the 'no_match' output.
-    If a (single) capture group is present, the captured result will
-    be routed to 'match' instead of the full match, but it the match
-    fails, the full input text will be routed to 'no_match' just as
-    if no capture group was present. Any additional capture groups
-    will be ignored.
-
-    Inputs:
-      text : text to match
-    Outputs:
-      match    : matching text or capture if capture group present
-      no_match : input text if match fails
+    documentation:
+    - Apply the regex supplied as argument to the incoming text.
+    - If the regex matches, the text is routed to the 'match' output, otherwise it is
+      routed to the 'no_match' output. If a (single) capture group is present, the captured
+      result will be routed to 'match' instead of the full match, but it the match fails,
+      the full input text will be routed to 'no_match' just as if no capture group was
+      present. Any additional capture groups will be ignored.
+    ports:
+    - direction: in
+      help: text to match
+      name: text
+    - direction: out
+      help: matching text or capture if capture group present
+      name: match
+    - direction: out
+      help: input text if match fails
+      name: no_match
     """
     @manage(['regex', 'result', 'did_match'])
     def init(self, regex):

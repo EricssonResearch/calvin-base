@@ -21,12 +21,15 @@ from calvin.actor.actor import Actor, manage, condition, calvinlib
 
 class BasicAuthHeader(Actor):
     """
-    Generate Basic Authorization header from username/password
-
-    Inputs:
-      credential: JSon with values for "username" and "password"
-    Outputs:
-      header : Authorization header
+    documentation:
+    - Generate Basic Authorization header from username/password
+    ports:
+    - direction: in
+      help: JSon with values for "username" and "password"
+      name: credential
+    - direction: out
+      help: Authorization header
+      name: header
     """
 
     @manage()

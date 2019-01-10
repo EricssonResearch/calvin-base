@@ -19,12 +19,15 @@ from calvin.actor.actor import Actor, manage, condition, stateguard, calvinsys, 
 
 class RandomDelay(Actor):
     """
-    Sends input on after a random delay has passed.
-
-    Input :
-        token : anything
-    Outputs:
-        token : anything
+    documentation:
+    - Sends input on after a random delay has passed.
+    ports:
+    - direction: in
+      help: anything
+      name: token
+    - direction: out
+      help: anything
+      name: token
     """
 
     @manage(['timers'])

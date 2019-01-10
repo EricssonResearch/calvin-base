@@ -19,16 +19,22 @@ from calvin.actor.actor import Actor, manage, condition, calvinlib
 
 class SampleHold(Actor):
     """
-    Sample 'in' and hold it internally if 'sample' input is true, replacing any previous value.
-
-    Produce the held token on the 'out' port regardless of wether 'sample' is true or false.
-    Assumes 'false' or 'true' as input to 'sample', other values are considered 'false'.
-
-    Inputs:
-      sample : Sample 'in' if true.
-      in     : A token
-    Outputs:
-      out    : The currently held token, or the 'default' argument if not sampled yet.
+    documentation:
+    - Sample 'in' and hold it internally if 'sample' input is true, replacing any previous
+      value.
+    - Produce the held token on the 'out' port regardless of wether 'sample' is true or
+      false. Assumes 'false' or 'true' as input to 'sample', other values are considered
+      'false'.
+    ports:
+    - direction: in
+      help: Sample 'in' if true.
+      name: sample
+    - direction: in
+      help: A token
+      name: in
+    - direction: out
+      help: The currently held token, or the 'default' argument if not sampled yet.
+      name: out
     """
 
     @manage(['held', 'immutable'])

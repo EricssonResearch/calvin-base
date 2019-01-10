@@ -23,10 +23,12 @@ _log = get_logger(__name__)
 
 class SimpleUDPSender(Actor):
     """
-    Send all incoming tokens to given address/port over UDP
-
-    Input:
-      data : Each received token will be sent to address set via control port
+    documentation:
+    - Send all incoming tokens to given address/port over UDP
+    ports:
+    - direction: in
+      help: Each received token will be sent to address set via control port
+      name: data
     """
 
     @manage(['address', 'port'])

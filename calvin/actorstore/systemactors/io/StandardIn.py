@@ -19,10 +19,12 @@ from calvin.actor.actor import Actor, manage, condition, stateguard, calvinsys
 
 class StandardIn(Actor):
     """
-    Reads from Standard IN, and send each read line as a token on output port
-
-    Outputs:
-      out : Each token is a line of text, or EOSToken.
+    documentation:
+    - Reads from Standard IN, and send each read line as a token on output port
+    ports:
+    - direction: out
+      help: Each token is a line of text, or EOSToken.
+      name: out
     """
 
     @manage([])

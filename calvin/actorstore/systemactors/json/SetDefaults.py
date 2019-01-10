@@ -24,20 +24,29 @@ from copy import deepcopy
 class SetDefaults(SetDefault):
 
     """
-    Modify a dictionary part of container if key does not exist (key must be string)
-
-    If container is a list then the key must be an integer index (zero-based), or a list of indices if for nested lists.
-    If container is a dictionary the key must be a string or list of (string) keys for nested dictionaries.
-    It is OK to make a key list of mixed strings and integers if the container comprises nested dictionaries and lists.
-    Produce an ExceptionToken if mapping between key and (sub-)container is incorrect, or if a  integer index is out of range.
-    N.B. This actor will incur a performance penalty from a deep copy operation. Use wisely.
-
-    Inputs:
-      container: a list or dictionary
-      keys: A list of keys (string), or a (possibly mixed) list for nested containers (must point to dictionary key)
-      values: A list of default values to set
-    Outputs:
-      container:  a modified container
+    documentation:
+    - Modify a dictionary part of container if key does not exist (key must be string)
+    - If container is a list then the key must be an integer index (zero-based), or a
+      list of indices if for nested lists. If container is a dictionary the key must be
+      a string or list of (string) keys for nested dictionaries. It is OK to make a key
+      list of mixed strings and integers if the container comprises nested dictionaries
+      and lists. Produce an ExceptionToken if mapping between key and (sub-)container
+      is incorrect, or if a integer index is out of range. N.B. This actor will incur
+      a performance penalty from a deep copy operation. Use wisely.
+    ports:
+    - direction: in
+      help: a list or dictionary
+      name: container
+    - direction: in
+      help: A list of keys (string), or a (possibly mixed) list for nested containers
+        (must point to dictionary key)
+      name: keys
+    - direction: in
+      help: A list of default values to set
+      name: values
+    - direction: out
+      help: a modified container
+      name: container
     """
 
     @condition(['container', 'keys', 'values'], ['container'])

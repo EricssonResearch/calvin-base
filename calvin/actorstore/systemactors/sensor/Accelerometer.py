@@ -19,10 +19,13 @@ from calvin.actor.actor import Actor, manage, condition, stateguard, calvinsys
 class Accelerometer(Actor):
 
     """
-    Measure the acceleration. Takes the period of measurements, in microseconds, as input.
-
-    Outputs:
-        acceleration :  Acceleration as a dict with the x,y, and z directions.
+    documentation:
+    - Measure the acceleration. Takes the period of measurements, in microseconds, as
+      input.
+    ports:
+    - direction: out
+      help: Acceleration as a dict with the x,y, and z directions.
+      name: acceleration
     """
 
     @manage(['level', 'period'])

@@ -21,12 +21,15 @@ from calvin.runtime.north.calvin_token import EOSToken
 class PostfixString(Actor):
 
     """
-    Appends <postfix> to input tokens and passes them to ouput port as strings
-    
-    Inputs:
-      in : Text token
-    Outputs:
-      out : Postfixed text token
+    documentation:
+    - Appends <postfix> to input tokens and passes them to ouput port as strings
+    ports:
+    - direction: in
+      help: Text token
+      name: in
+    - direction: out
+      help: Postfixed text token
+      name: out
     """
     @manage(['postfix'])
     def init(self, postfix='-'):

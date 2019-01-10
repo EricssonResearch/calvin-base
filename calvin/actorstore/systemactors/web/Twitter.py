@@ -23,10 +23,12 @@ _log = get_logger(__name__)
 
 class Twitter(Actor):
     """
-    Post incoming tokens (text) as twitter status
-
-    Input:
-      status : A text (with a maximum length)
+    documentation:
+    - Post incoming tokens (text) as twitter status
+    ports:
+    - direction: in
+      help: A text (with a maximum length)
+      name: status
     """
 
     @manage([])

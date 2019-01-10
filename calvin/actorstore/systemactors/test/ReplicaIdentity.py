@@ -19,12 +19,15 @@ from calvin.actor.actor import Actor, manage, condition
 
 class ReplicaIdentity(Actor):
     """
-    forward a token with replica index prepended
-    
-    Inputs:
-      token : a token
-    Outputs:
-      token : the prepended token
+    documentation:
+    - forward a token with replica index prepended
+    ports:
+    - direction: in
+      help: a token
+      name: token
+    - direction: out
+      help: the prepended token
+      name: token
     """
     @manage(['dump', 'index'])
     def init(self, dump=False):

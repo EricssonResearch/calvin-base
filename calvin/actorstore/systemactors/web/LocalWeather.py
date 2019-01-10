@@ -23,12 +23,15 @@ _log = get_logger(__name__)
 
 class LocalWeather(Actor):
     """
-    Get current weather where runtime is located (or think it is located)
-
-    Input:
-      trigger : start fetching weather on any token
-    Output:
-        forecast: weather at preconfigured city, or null on error
+    documentation:
+    - Get current weather where runtime is located (or think it is located)
+    ports:
+    - direction: in
+      help: start fetching weather on any token
+      name: trigger
+    - direction: out
+      help: weather at preconfigured city, or null on error
+      name: forecast
     """
 
     @manage([])

@@ -19,12 +19,17 @@ from calvin.actor.actor import Actor, condition
 
 class Collect(Actor):
     """
-    Collect tokens from many ports on the inport
-    
-    Inputs:
-      token#collect-unordered : collecting token stream
-    Outputs:
-        token : resulting token stream
+    documentation:
+    - Collect tokens from many ports on the inport
+    ports:
+    - direction: in
+      help: collecting token stream
+      name: token
+      properties:
+        routing: collect-unordered
+    - direction: out
+      help: resulting token stream
+      name: token
     """
 
     def init(self):

@@ -23,10 +23,13 @@ _log = get_logger(__name__)
 
 class SimpleUDPListener(Actor):
     """
-    Listen for UDP messages on a given port. Address is of the form "ip:port" (note: ip is ipv4)
-
-    Output:
-      data : data in packets received on the UDP port will forwarded as tokens.
+    documentation:
+    - 'Listen for UDP messages on a given port. Address is of the form "ip:port" (note:
+      ip is ipv4)'
+    ports:
+    - direction: out
+      help: data in packets received on the UDP port will forwarded as tokens.
+      name: data
     """
 
     @manage(['host', 'port'])

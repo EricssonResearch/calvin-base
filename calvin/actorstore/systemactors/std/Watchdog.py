@@ -19,14 +19,21 @@ from calvin.actor.actor import Actor, manage, condition, stateguard, calvinsys
 
 class Watchdog(Actor):
     """
-    Data on inport is passed on to outport unchanged. If nothing has arrived on the inport after `timeout` seconds, then true is sent on the timeout port.
-    If parameter `immediate` is false, then the timer will not start until at least one token has arrived, otherwise it will start upon instantiation.
-
-    Inputs:
-        data : anything
-    Outputs:
-        data: whatever arrived on the inport of the same name
-        timeout: true iff timeout seconds has passed without tokens on inport
+    documentation:
+    - Data on inport is passed on to outport unchanged. If nothing has arrived on the
+      inport after `timeout` seconds, then true is sent on the timeout port. If parameter
+      `immediate` is false, then the timer will not start until at least one token has
+      arrived, otherwise it will start upon instantiation.
+    ports:
+    - direction: in
+      help: anything
+      name: data
+    - direction: out
+      help: whatever arrived on the inport of the same name
+      name: data
+    - direction: out
+      help: true iff timeout seconds has passed without tokens on inport
+      name: timeout
     """
 
     @manage(['timeout'])

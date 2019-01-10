@@ -22,15 +22,17 @@ from calvin.runtime.north.calvin_token import EOSToken, ExceptionToken
 
 class ToString(Actor):
     """
-    Transform data to JSON-string
-
-    Exception tokens will produce "null" as output unless another value is supplied
-    through the optional 'exception_output' argument.
-
-    Inputs:
-      data : any kind of token
-    Outputs:
-      string : JSON-formatted string
+    documentation:
+    - Transform data to JSON-string
+    - Exception tokens will produce "null" as output unless another value is supplied
+      through the optional 'exception_output' argument.
+    ports:
+    - direction: in
+      help: any kind of token
+      name: data
+    - direction: out
+      help: JSON-formatted string
+      name: string
     """
 
     def exception_handler(self, action, args):

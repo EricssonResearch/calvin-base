@@ -18,12 +18,18 @@ from calvin.actor.actor import Actor, condition, manage
 
 class Dealternate(Actor):
     """
-    Route tokens to the ports connected to the fan-out port token in the order given by the argument 'order'
-    
-    Inputs:
-      token: Any token
-    Outputs:
-      token#dispatch-ordered : Dispatching tokens to connected ports in order
+    documentation:
+    - Route tokens to the ports connected to the fan-out port token in the order given
+      by the argument 'order'
+    ports:
+    - direction: in
+      help: Any token
+      name: token
+    - direction: out
+      help: Dispatching tokens to connected ports in order
+      name: token
+      properties:
+        routing: dispatch-ordered
     """
 
     @manage(['order'])

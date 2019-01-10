@@ -20,12 +20,15 @@ from calvin.actor.actor import Actor, manage, condition, stateguard, calvinsys
 class TriggeredRelativeHumidity(Actor):
 
     """
-    Read Relative Humidity when told to.
-
-    Inputs:
-        measure: Triggers a temperature reading
-    Outputs:
-        percent: The measured humidity in percent
+    documentation:
+    - Read Relative Humidity when told to.
+    ports:
+    - direction: in
+      help: Triggers a temperature reading
+      name: measure
+    - direction: out
+      help: The measured humidity in percent
+      name: percent
     """
 
     @manage([])

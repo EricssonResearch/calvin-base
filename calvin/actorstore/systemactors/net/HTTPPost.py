@@ -22,18 +22,33 @@ _log = get_logger(__name__)
 
 class HTTPPost(Actor):
     """
-    Post data to URL
-
-    Input:
-      URL : URL to post to
-      data : Data to post
-      params : dictionary with query parameters (optional)
-      headers: dictionary with headers to include in request (optional)
-      auth : dictionary with authtype (basic/digest), username and password (optional)
-    Output:
-      status: HTTP status of request
-      headers: dictionary of response headers
-      data : body of response (only if body is non-empty)
+    documentation:
+    - Post data to URL
+    ports:
+    - direction: in
+      help: URL to post to
+      name: URL
+    - direction: in
+      help: Data to post
+      name: data
+    - direction: in
+      help: dictionary with query parameters (optional)
+      name: params
+    - direction: in
+      help: dictionary with headers to include in request (optional)
+      name: headers
+    - direction: in
+      help: dictionary with authtype (basic/digest), username and password (optional)
+      name: auth
+    - direction: out
+      help: HTTP status of request
+      name: status
+    - direction: out
+      help: dictionary of response headers
+      name: headers
+    - direction: out
+      help: body of response (only if body is non-empty)
+      name: data
     """
 
     @manage()

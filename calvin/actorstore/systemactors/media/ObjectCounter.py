@@ -19,12 +19,15 @@ from calvin.actor.actor import Actor, condition, manage, stateguard, calvinsys
 
 class ObjectCounter(Actor) :
     """
-    Counts objects in a base64 encoded jpg image
-
-    Inputs:
-        b64image: Image to analyze
-    Outputs:
-        objects: number of objects found in image
+    documentation:
+    - Counts objects in a base64 encoded jpg image
+    ports:
+    - direction: in
+      help: Image to analyze
+      name: b64image
+    - direction: out
+      help: number of objects found in image
+      name: objects
     """
 
     @manage([])

@@ -20,12 +20,15 @@ from calvin.runtime.north.calvin_token import EOSToken
 
 class Sequencer(Actor):
     """
-    Interleave incoming tokens with end of string token (EOS) on outport.
-
-    Inputs:
-        data_in : Tokens, any kind.
-    Outputs:
-        data_out: Tokens seen on input, interleaved with EOS
+    documentation:
+    - Interleave incoming tokens with end of string token (EOS) on outport.
+    ports:
+    - direction: in
+      help: Tokens, any kind.
+      name: data_in
+    - direction: out
+      help: Tokens seen on input, interleaved with EOS
+      name: data_out
     """
 
     @manage(['token', 'eos'])

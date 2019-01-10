@@ -20,10 +20,12 @@ from calvin.actor.actor import Actor, manage, condition, stateguard, calvinsys
 class DigitalOut(Actor):
 
     """
-    Set runtime defined-pin to inport state.
-    
-    Inputs:
-        state: 1/0
+    documentation:
+    - Set runtime defined-pin to inport state.
+    ports:
+    - direction: in
+      help: 1/0
+      name: state
     """
 
     @manage()

@@ -23,14 +23,19 @@ _log = get_logger(__name__)
 
 class TCPClient(Actor):
     """
-    Etablish a TCP connection and forward all tokens.
-    Any recevied data on the TCP connection is forwarded according to protocol.
-
-    Input:
-      data_in : Each received token will be sent out through the TCP connection.
-      control_in : Each received token will be sent out through the TCP connection.
-    Output:
-      data_out : Data received on the TCP connection will be sent as tokens.
+    documentation:
+    - Etablish a TCP connection and forward all tokens. Any recevied data on the TCP connection
+      is forwarded according to protocol.
+    ports:
+    - direction: in
+      help: Each received token will be sent out through the TCP connection.
+      name: data_in
+    - direction: in
+      help: Each received token will be sent out through the TCP connection.
+      name: control_in
+    - direction: out
+      help: Data received on the TCP connection will be sent as tokens.
+      name: data_out
     """
 
     @manage(['address', 'port', 'mode', 'delimiter'])

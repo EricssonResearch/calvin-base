@@ -18,12 +18,17 @@ from calvin.actor.actor import Actor, condition, manage, stateguard
 
 class Alternate(Actor):
     """
-    Fetch tokens from the fan-in port in the order given by the argument 'order'
-    
-    Inputs:
-      token#collect-all-tagged : incoming tokens from connected ports in order
-    Outputs:
-      token : tokens collected from ports as given by order
+    documentation:
+    - Fetch tokens from the fan-in port in the order given by the argument 'order'
+    ports:
+    - direction: in
+      help: incoming tokens from connected ports in order
+      name: token
+      properties:
+        routing: collect-all-tagged
+    - direction: out
+      help: tokens collected from ports as given by order
+      name: token
     """
 
     @manage(['order', 'incoming'])

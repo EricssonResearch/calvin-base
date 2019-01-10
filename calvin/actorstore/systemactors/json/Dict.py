@@ -22,17 +22,21 @@ from calvin.runtime.north.calvin_token import EOSToken, ExceptionToken
 class Dict(Actor):
 
     """
-    Create a dict
-
-    Consume 'n' key/value pairs to produce a dictionary, 'n' defaults to 1.
-    If 'n' is zero or negative, consume key/value pairs until EOS encountered
-    on both input ports. If EOS is only encountered on one port, produce an execption.
-
-    Inputs:
-      key: key must be string
-      value: can be any token
-    Outputs:
-      dict: dictionary or Exception
+    documentation:
+    - Create a dict
+    - Consume 'n' key/value pairs to produce a dictionary, 'n' defaults to 1. If 'n' is
+      zero or negative, consume key/value pairs until EOS encountered on both input ports.
+      If EOS is only encountered on one port, produce an execption.
+    ports:
+    - direction: in
+      help: key must be string
+      name: key
+    - direction: in
+      help: can be any token
+      name: value
+    - direction: out
+      help: dictionary or Exception
+      name: dict
     """
 
 

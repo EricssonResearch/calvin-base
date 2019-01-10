@@ -19,17 +19,23 @@ from calvin.actor.actor import Actor, manage, condition, stateguard
 
 class Select(Actor):
     """
-    Route 'data' token to 'case_true' or 'case_false' port depending on 'select'
-
-    Select assumes false or true as input, values outside that
-    range will default to 'case_false'.
-
-    Inputs:
-      select : Select output for token on 'data' port
-      data   : Token to send to 'case_true' or 'case_false' port
-    Outputs:
-      case_false  : Token from input 'data' if select token is false
-      case_true   : Token from input 'data' if select token is true
+    documentation:
+    - Route 'data' token to 'case_true' or 'case_false' port depending on 'select'
+    - Select assumes false or true as input, values outside that range will default to
+      'case_false'.
+    ports:
+    - direction: in
+      help: Select output for token on 'data' port
+      name: select
+    - direction: in
+      help: Token to send to 'case_true' or 'case_false' port
+      name: data
+    - direction: out
+      help: Token from input 'data' if select token is false
+      name: case_false
+    - direction: out
+      help: Token from input 'data' if select token is true
+      name: case_true
     """
     @manage(['select'])
     def init(self):

@@ -18,10 +18,12 @@ from calvin.actor.actor import Actor, manage, condition, stateguard, calvinsys
 
 class Constant(Actor):
    """
-   Send predetermined data on output. Never ending sequence.
-
-   Outputs:
-       token : given data
+   documentation:
+   - Send predetermined data on output. Never ending sequence.
+   ports:
+   - direction: out
+     help: given data
+     name: token
    """
 
    @manage(['data', 'schedule'])

@@ -20,10 +20,12 @@ from calvin.actor.actor import Actor, manage, condition, stateguard, calvinsys
 class PlayAudio(Actor):
 
     """
-    Play audio file  <audiofile>.
-
-    Inputs:
-      play: starts playing file when true
+    documentation:
+    - Play audio file <audiofile>.
+    ports:
+    - direction: in
+      help: starts playing file when true
+      name: play
     """
 
     @manage(['player'])

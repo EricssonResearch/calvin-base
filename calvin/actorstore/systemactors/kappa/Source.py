@@ -22,10 +22,12 @@ _log = get_actor_logger(__name__)
 
 class Source(Actor):
     """
-    Load up tokens for a kappa
-    
-    Output:
-      out : Any token
+    documentation:
+    - Load up tokens for a kappa
+    ports:
+    - direction: out
+      help: Any token
+      name: out
     """
 
     def exception_handler(self, action, args):

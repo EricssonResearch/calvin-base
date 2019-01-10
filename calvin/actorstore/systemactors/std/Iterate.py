@@ -21,18 +21,21 @@ from calvin.actor.actor import Actor, manage, condition, stateguard, calvinlib
 class Iterate(Actor):
 
     """
-    Produce sequence of items by iterating over 'token',
-    or simply pass 'token' along if not iterable (i.e. list, dict, or string)
-
-    N.B. Empty iterables produces a 'null' token.
-
-    FIXME Is 'null' production the right thing? Exception? Nothing?
-
-    Inputs:
-      token: any token
-    Outputs:
-      item: item (or value if input is dictionary)
-      index: index of item (or key if input is dictionary)
+    documentation:
+    - Produce sequence of items by iterating over 'token', or simply pass 'token' along
+      if not iterable (i.e. list, dict, or string)
+    - N.B. Empty iterables produces a 'null' token.
+    - FIXME Is 'null' production the right thing? Exception? Nothing?
+    ports:
+    - direction: in
+      help: any token
+      name: token
+    - direction: out
+      help: item (or value if input is dictionary)
+      name: item
+    - direction: out
+      help: index of item (or key if input is dictionary)
+      name: index
     """
 
     @manage(['data', 'has_data', 'index'])

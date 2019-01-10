@@ -20,10 +20,12 @@ from calvin.actor.actor import Actor, manage, condition, stateguard, calvinsys
 class Knob(Actor):
 
     """
-    Read a knob to see which way it turned.
-
-    Outputs:
-        direction: clockwise or anti-clockwise
+    documentation:
+    - Read a knob to see which way it turned.
+    ports:
+    - direction: out
+      help: clockwise or anti-clockwise
+      name: direction
     """
 
     @manage([])

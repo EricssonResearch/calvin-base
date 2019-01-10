@@ -19,12 +19,15 @@ from calvin.actor.actor import Actor, condition, manage, stateguard, calvinsys
 
 class FaceFinder(Actor) :
     """
-    Finds and marks faces in a base64 encoded jpg image function
-
-    Inputs:
-        b64image: Image to analyze
-    Outputs:
-        b64image: New image with all detected faces marked
+    documentation:
+    - Finds and marks faces in a base64 encoded jpg image function
+    ports:
+    - direction: in
+      help: Image to analyze
+      name: b64image
+    - direction: out
+      help: New image with all detected faces marked
+      name: b64image
     """
 
     @manage([])

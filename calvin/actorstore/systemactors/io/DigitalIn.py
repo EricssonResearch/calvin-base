@@ -20,10 +20,12 @@ from calvin.actor.actor import Actor, manage, condition, stateguard, calvinsys
 class DigitalIn(Actor):
 
     """
-    Edge triggered digital input in runtime-defined pin.
-    
-    Outputs:
-        state: 1/0 when edge goes high/low
+    documentation:
+    - Edge triggered digital input in runtime-defined pin.
+    ports:
+    - direction: out
+      help: 1/0 when edge goes high/low
+      name: state
     """
 
     @manage()

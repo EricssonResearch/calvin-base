@@ -23,11 +23,13 @@ _log = get_actor_logger(__name__)
 
 class FiniteCounter(Actor):
     """
-    Produce next token in a sequence start, start+1, ..., start+steps-1, EOSToken
-    If repeat is True will repeat sequence
-    
-    Outputs:
-      integer : Integer
+    documentation:
+    - Produce next token in a sequence start, start+1, ..., start+steps-1, EOSToken If
+      repeat is True will repeat sequence
+    ports:
+    - direction: out
+      help: Integer
+      name: integer
     """
 
     @manage(['count', 'ends', 'restart', 'start', 'replicate_mult', 'stopped'])

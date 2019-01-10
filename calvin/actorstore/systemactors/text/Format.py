@@ -28,14 +28,16 @@ def value_for_key(d, keypath):
 class Format(Actor):
 
     """
-    Format output according to 'fmt' using dict
-
-    Format string uses \"{access.key.path}\" to access dict
-
-    Inputs:
-      dict : Dictionary
-    Outputs:
-      text : Formatted string
+    documentation:
+    - Format output according to 'fmt' using dict
+    - Format string uses \"{access.key.path}\" to access dict
+    ports:
+    - direction: in
+      help: Dictionary
+      name: dict
+    - direction: out
+      help: Formatted string
+      name: text
     """
 
     REGEX = r"{(.+?)}"

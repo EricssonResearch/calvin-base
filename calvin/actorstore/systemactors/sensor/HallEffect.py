@@ -18,10 +18,12 @@ from calvin.actor.actor import Actor, manage, condition, stateguard, calvinsys
 
 class HallEffect(Actor):
     """
-    React to presence of magnetic field.
-
-    Output:
-      state : true if magnetic field present, false otherwise
+    documentation:
+    - React to presence of magnetic field.
+    ports:
+    - direction: out
+      help: true if magnetic field present, false otherwise
+      name: state
     """
 
     @manage(include=[])

@@ -18,15 +18,17 @@ from calvin.actor.actor import Actor, manage, condition, calvinlib
 
 class Datetime(Actor):
     """
-    Return a dictionary with current date and time.
-
-    The dictionary contains entries for
-    century, year, month, day, hour, minute, second, timezone
-
-    Input:
-      trigger : any token
-    Output:
-      datetime : dictionary
+    documentation:
+    - Return a dictionary with current date and time.
+    - The dictionary contains entries for century, year, month, day, hour, minute, second,
+      timezone
+    ports:
+    - direction: in
+      help: any token
+      name: trigger
+    - direction: out
+      help: dictionary
+      name: datetime
     """
 
     @manage([])

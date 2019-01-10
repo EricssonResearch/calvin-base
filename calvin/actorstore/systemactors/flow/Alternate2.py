@@ -19,13 +19,18 @@ from calvin.actor.actor import Actor, condition, stateguard, manage
 
 class Alternate2(Actor):
     """
-    Alternating between two streams of tokens
-    
-    Inputs:
-      token_1 : first token stream
-      token_2 : second token stream
-    Outputs:
-        token : resulting token stream
+    documentation:
+    - Alternating between two streams of tokens
+    ports:
+    - direction: in
+      help: first token stream
+      name: token_1
+    - direction: in
+      help: second token stream
+      name: token_2
+    - direction: out
+      help: resulting token stream
+      name: token
     """
 
     @manage(['token_one'])

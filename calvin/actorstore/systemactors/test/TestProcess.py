@@ -24,13 +24,16 @@ _log = get_actor_logger(__name__)
 
 class TestProcess(Actor):
     """
-    This is only intended to be used for testing.
-    Perform processing on input token and send out.
-
-    Inputs:
-      data : a token
-    Outputs:
-      result : result of processing
+    documentation:
+    - This is only intended to be used for testing. Perform processing on input token
+      and send out.
+    ports:
+    - direction: in
+      help: a token
+      name: data
+    - direction: out
+      help: result of processing
+      name: result
     """
     @manage(['eval_str', 'replicate_str', 'kwargs', 'last', 'dump'])
     def init(self, eval_str, replicate_str=None, kwargs=None, dump=False):

@@ -21,12 +21,15 @@ from calvin.runtime.north.calvin_token import EOSToken, ExceptionToken
 class IsEOS(Actor):
 
     """
-    Return 'true' if token is EOS-token
-
-    Inputs:
-      token  : any token
-    Outputs:
-      status : 'true' if input token is EOS-token, false otherwise
+    documentation:
+    - Return 'true' if token is EOS-token
+    ports:
+    - direction: in
+      help: any token
+      name: token
+    - direction: out
+      help: '''true'' if input token is EOS-token, false otherwise'
+      name: status
     """
 
     def exception_handler(self, action, args):

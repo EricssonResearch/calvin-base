@@ -19,15 +19,15 @@ from calvin.actor.actor import Actor, manage, condition, stateguard
 
 class Void(Actor):
     """
-    Acts like a source but will never generate tokens.
-
-    This behaviour is useful if an actor has inputs that will never be used
-    in a particular application. Because of how the runtime works, all input
-    ports must be connected before the application can run, so leaving a port
-    unconnected is not an option.
-
-    Outputs:
-      void : A port that will never produce tokens
+    documentation:
+    - Acts like a source but will never generate tokens.
+    - This behaviour is useful if an actor has inputs that will never be used in a particular
+      application. Because of how the runtime works, all input ports must be connected
+      before the application can run, so leaving a port unconnected is not an option.
+    ports:
+    - direction: out
+      help: A port that will never produce tokens
+      name: void
     """
     @manage()
     def init(self):

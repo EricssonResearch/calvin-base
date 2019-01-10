@@ -24,13 +24,18 @@ _log = get_actor_logger(__name__)
 
 class Evaluate(Actor):
     """
-    Evaluate arithmetic expression 'expr' with two arguments, passed as (a string) argument.
-
-    Inputs:
-      x : a number
-      y : a number
-    Outputs:
-      result : value expr with x and y substituted for given values
+    documentation:
+    - Evaluate arithmetic expression 'expr' with two arguments, passed as (a string) argument.
+    ports:
+    - direction: in
+      help: a number
+      name: x
+    - direction: in
+      help: a number
+      name: y
+    - direction: out
+      help: value expr with x and y substituted for given values
+      name: result
     """
     @manage(['expr'])
     def init(self, expr):

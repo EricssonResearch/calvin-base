@@ -18,14 +18,16 @@ from calvin.actor.actor import Actor, manage, condition, calvinlib
 
 class Timestamp(Actor):
     """
-    Return the (UTC) time in seconds since Jan 1st 1970
-    
-    Detailed information
-    
-    Input:
-      trigger : any token
-    Output:
-      timestamp : floating point number
+    documentation:
+    - Return the (UTC) time in seconds since Jan 1st 1970
+    - Detailed information
+    ports:
+    - direction: in
+      help: any token
+      name: trigger
+    - direction: out
+      help: floating point number
+      name: timestamp
     """
 
     @manage([])

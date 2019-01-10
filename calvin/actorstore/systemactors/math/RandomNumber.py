@@ -22,12 +22,15 @@ _log = get_actor_logger(__name__)
 
 class RandomNumber(Actor):
     """
-    Produce random number (floating point) in range [lower ... upper)
-
-    Inputs:
-      trigger : Any token
-    Outputs:
-      number : Random number in range [lower ... upper)
+    documentation:
+    - Produce random number (floating point) in range [lower ... upper)
+    ports:
+    - direction: in
+      help: Any token
+      name: trigger
+    - direction: out
+      help: Random number in range [lower ... upper)
+      name: number
     """
 
     @manage(['lower', 'upper'])

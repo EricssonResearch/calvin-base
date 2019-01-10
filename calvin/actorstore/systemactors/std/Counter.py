@@ -18,10 +18,12 @@ from calvin.actor.actor import Actor, manage, condition, stateguard, calvinsys
 
 class Counter(Actor):
     """
-    Produce next integer in a sequence 1,2,3,...
-    
-    Outputs:
-      integer : Integer
+    documentation:
+    - Produce next integer in a sequence 1,2,3,...
+    ports:
+    - direction: out
+      help: Integer
+      name: integer
     """
 
     @manage(['count', 'stopped', 'schedule'])

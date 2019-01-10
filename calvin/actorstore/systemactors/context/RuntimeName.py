@@ -22,12 +22,15 @@ _log = get_actor_logger(__name__)
 
 class RuntimeName(Actor):
     """
-    Get name of current runtime
-
-    Input:
-        trigger: Any token will trigger a read
-    Output:
-      value : A string denoting the name of this runtime, or null
+    documentation:
+    - Get name of current runtime
+    ports:
+    - direction: in
+      help: Any token will trigger a read
+      name: trigger
+    - direction: out
+      help: A string denoting the name of this runtime, or null
+      name: value
     """
 
     @manage(["registry"])
