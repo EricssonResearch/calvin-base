@@ -23,6 +23,7 @@ _log = get_logger(__name__)
 class Sink(Actor):
     """
     Write tokens to standard output
+    
     Input:
       token : Any token
     """

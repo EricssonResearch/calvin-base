@@ -19,8 +19,9 @@ from calvin.actor.actor import Actor, condition, manage, stateguard
 class Alternate(Actor):
     """
     Fetch tokens from the fan-in port in the order given by the argument 'order'
+    
     Inputs:
-      token(routing="collect-all-tagged"): incoming tokens from connected ports in order
+      token#collect-all-tagged : incoming tokens from connected ports in order
     Outputs:
       token : tokens collected from ports as given by order
     """

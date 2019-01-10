@@ -23,11 +23,14 @@ _log = get_logger(__name__)
 class HTTPDeleteS(Actor):
     """
     HTTP method DELETE
+
+    <url> url to send to
     
-    url : url to send to
-    params : dictionary with query parameters (or null)
-    headers: dictionary with headers to include in request (or null)
-    auth : dictionary with authtype (basic/digest), username and password (or null)
+    <params> dictionary with query parameters (or null)
+    
+    <headers> dictionary with headers to include in request (or null)
+    
+    <auth> dictionary with authtype (basic/digest), username and password (or null)
 
     Input:
         data : execute request, include data as body if not null or boolean

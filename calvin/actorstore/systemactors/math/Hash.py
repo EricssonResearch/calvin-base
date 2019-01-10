@@ -26,7 +26,7 @@ class Hash(Actor):
     """
     Produce a hash hex-digest of input string.
 
-    Allowed values for algorithm are at least:
+    Allowed values for algorithm are at least
     'sha1', 'sha224', 'sha384', 'sha256', 'sha512', 'md5'
 
     Inputs:

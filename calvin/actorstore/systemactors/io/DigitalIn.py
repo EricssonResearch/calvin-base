@@ -21,6 +21,7 @@ class DigitalIn(Actor):
 
     """
     Edge triggered digital input in runtime-defined pin.
+    
     Outputs:
         state: 1/0 when edge goes high/low
     """

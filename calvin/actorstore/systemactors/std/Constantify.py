@@ -20,10 +20,11 @@ from calvin.actor.actor import Actor, manage, condition
 class Constantify(Actor):
     """
     Consume a token and produce a constant
+    
     Input:
-      in
+      in : token
     Output:
-      out
+      out : token
     """
 
     @manage()

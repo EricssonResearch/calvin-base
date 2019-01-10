@@ -25,7 +25,7 @@ class Length(Actor):
     Inputs:
       string : arbitrary string
     Outputs:
-      length :
+      length : integer
     """
     @manage()
     def init(self):

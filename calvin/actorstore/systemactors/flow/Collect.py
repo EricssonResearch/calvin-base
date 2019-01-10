@@ -20,8 +20,9 @@ from calvin.actor.actor import Actor, condition
 class Collect(Actor):
     """
     Collect tokens from many ports on the inport
+    
     Inputs:
-      token(routing="collect-unordered") : collecting token stream
+      token#collect-unordered : collecting token stream
     Outputs:
         token : resulting token stream
     """

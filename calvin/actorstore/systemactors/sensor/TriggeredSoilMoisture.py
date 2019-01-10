@@ -23,7 +23,6 @@ class TriggeredSoilMoisture(Actor):
 
     Inputs:
         trigger : any token triggers meausurement
-
     Outputs:
         level :  moisture level, in percent
     """

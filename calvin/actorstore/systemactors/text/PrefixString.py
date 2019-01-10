@@ -22,6 +22,7 @@ class PrefixString(Actor):
 
     """
     Prepends <prefix> to input tokens and passes them to ouput port as strings
+    
     Inputs:
       in : Text token
     Outputs:

@@ -26,7 +26,7 @@ class Mustache(Actor):
     Also refer to Mustache documentation (http://mustache.github.io/)
 
     Inputs:
-      dict :
+      dict : dictionary
     Outputs:
       text : formatted string
     """

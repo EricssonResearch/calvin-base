@@ -23,6 +23,7 @@ class ServoMotor(Actor):
 
     """
     Rotate servo given degrees.
+    
     Input:
       angle : set servo to given angle
     """

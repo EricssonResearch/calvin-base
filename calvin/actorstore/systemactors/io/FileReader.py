@@ -19,9 +19,9 @@ from calvin.runtime.north.calvin_token import EOSToken, ExceptionToken
 
 
 def absolute_filename(filename):
-    """Test helper - get absolute name of file
+    '''Test helper - get absolute name of file
     @TODO: Possibly not the best way of doing this
-    """
+    '''
     import os.path
     return os.path.join(os.path.dirname(__file__), filename)
 

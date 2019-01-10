@@ -21,6 +21,7 @@ class Buzzer(Actor):
 
     """
     Buzz
+    
     Input:
       on : true/false for on/off
     """

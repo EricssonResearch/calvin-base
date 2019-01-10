@@ -20,6 +20,7 @@ from calvin.actor.actor import Actor, manage, condition, stateguard, calvinsys
 class ClassicDelay(Actor):
     """
     After first token, pass on token once every 'delay' seconds.
+    
     Input :
         token: anything
     Outputs:

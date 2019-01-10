@@ -21,7 +21,7 @@ class Join(Actor):
     """
     Join two streams of tokens. Deprecated.
 
-    Note: This actor gives preference to token_1, hence if there is
+    N.B. This actor gives preference to token_1, hence if there is
     always a token available on that port, then token_2 will starve.
     The actor you are looking for is probably flow.Collect or possibly
     flow.Alternate2

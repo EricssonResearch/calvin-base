@@ -26,7 +26,6 @@ class TriggeredTemperature(Actor):
 
     Inputs:
         trigger : any token triggers meausurement
-
     Outputs:
         centigrade :  temperature, in centigrade
     """

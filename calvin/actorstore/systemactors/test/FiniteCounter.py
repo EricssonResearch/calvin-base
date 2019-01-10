@@ -25,6 +25,7 @@ class FiniteCounter(Actor):
     """
     Produce next token in a sequence start, start+1, ..., start+steps-1, EOSToken
     If repeat is True will repeat sequence
+    
     Outputs:
       integer : Integer
     """

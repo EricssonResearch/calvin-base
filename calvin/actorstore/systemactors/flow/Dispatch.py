@@ -20,10 +20,11 @@ from calvin.actor.actor import Actor, condition
 class Dispatch(Actor):
     """
     Dispatch tokens to all connected outports, aiming at keeping all queues equal, i.e. the token will end up in the smallest queue at all times.
+    
     Inputs:
         token : incoming token stream
     Outputs:
-        token(routing="round-robin") : outgoing token stream
+        token#round-robin : outgoing token stream
     """
 
     def init(self):

@@ -21,6 +21,7 @@ class Sum(Actor):
 
     """
     Read a number and compute a cumulative sum
+    
     Inputs:
       integer : Number
     Outputs:

@@ -21,6 +21,7 @@ class PWM(Actor):
 
     """
     Pulse width modulation on runtime-defined pin.
+    
     Input:
       dutycycle : new dutycycle
     """

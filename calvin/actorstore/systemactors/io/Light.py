@@ -21,6 +21,7 @@ class Light(Actor):
 
     """
     Set state of a light (e.g. an LED or a lightbulb)
+    
     Input:
       on : true if light should be on, false if turned off
     """

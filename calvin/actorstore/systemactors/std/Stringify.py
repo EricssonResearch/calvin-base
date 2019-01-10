@@ -26,9 +26,9 @@ class Stringify(Actor):
     Consume a token and stringify its value
 
     Input:
-      in
+      in : token
     Output:
-      out
+      out : string
     """
 
     @manage()

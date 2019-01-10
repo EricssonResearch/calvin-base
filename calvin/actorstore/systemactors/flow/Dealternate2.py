@@ -20,6 +20,7 @@ from calvin.actor.actor import Actor, condition, stateguard, manage
 class Dealternate2(Actor):
     """
     Split token stream into two streams of tokens (odd and even tokens)
+    
     Inputs:
       token : incoming token stream
     Outputs:

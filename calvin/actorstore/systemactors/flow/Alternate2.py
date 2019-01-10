@@ -20,6 +20,7 @@ from calvin.actor.actor import Actor, condition, stateguard, manage
 class Alternate2(Actor):
     """
     Alternating between two streams of tokens
+    
     Inputs:
       token_1 : first token stream
       token_2 : second token stream

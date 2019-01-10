@@ -18,7 +18,7 @@ from calvin.actor.actor import Actor, condition
 
 
 class Wrapper(object):
-    """Wrap a token value in 'left' and 'right', i.e. 1 => ((( 1 )))"""
+    '''Wrap a token value in 'left' and 'right', i.e. 1 => ((( 1 )))'''
     def __init__(self, left, right):
         super(Wrapper, self).__init__()
         self.left = str(left)
@@ -32,8 +32,10 @@ class ExplicitStateExample(Actor):
 
     """
     Demonstrate (and test) explicit state handling in actors.
+    
     In order to migrate this actor, potentially to non-python platforms,
     we need to explicitly handle set/get state for the custom wrap object.
+    
     Input:
         token : any token
     Output:

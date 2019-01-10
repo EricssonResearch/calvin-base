@@ -20,10 +20,11 @@ from calvin.actor.actor import Actor, manage, condition
 class ConstSequencer(Actor):
     """
     Consume a token and produce a constant from a sequence
+    
     Input:
-      in
+      in : token
     Output:
-      out
+      out : token
     """
 
     @manage()

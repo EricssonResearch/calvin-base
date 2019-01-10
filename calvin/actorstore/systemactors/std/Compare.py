@@ -25,7 +25,7 @@ class Compare(Actor):
     """
     Perform a REL b where REL is a comparison relation passed as (a string) argument.
 
-    Allowed values for REL are:
+    Allowed values for REL are
     =, <, >, <=, >=, !=
 
     Inputs:

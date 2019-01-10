@@ -26,7 +26,6 @@ class TriggeredPressure(Actor):
 
     Inputs:
         trigger : any token triggers measurement
-
     Outputs:
         mbar: atmospheric pressure, in millibars
     """

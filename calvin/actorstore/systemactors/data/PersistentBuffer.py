@@ -23,9 +23,9 @@ _log = get_actor_logger(__name__)
 class PersistentBuffer(Actor):
     """
     Buffer data to file (when necessary.)
+    
     Inputs:
       item : data to be buffered
-
     Outputs:
         current : list of data, current and on-line
         buffered : catching up of buffered data, list

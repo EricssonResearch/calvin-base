@@ -25,7 +25,7 @@ class CollectCompleteDict(Actor):
     a complete dictionary.
 
     Inputs:
-      token(routing="collect-all-tagged"): token
+      token#collect-all-tagged: token
     Outputs:
       dict : Collected dictionary according to 'mapping' 
     """

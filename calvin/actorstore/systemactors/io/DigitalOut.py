@@ -21,6 +21,7 @@ class DigitalOut(Actor):
 
     """
     Set runtime defined-pin to inport state.
+    
     Inputs:
         state: 1/0
     """

@@ -22,11 +22,15 @@ _log = get_logger(__name__)
 
 class HTTPPutS(Actor):
     """
-    HTTP method PUT 
-        url : url to send to
-        params : dictionary with query parameters (or null)
-        headers: dictionary with headers to include in request (or null)
-        auth : dictionary with authtype (basic/digest), username and password (or null)
+    HTTP method PUT
+
+    <url> url to send to
+    
+    <params> dictionary with query parameters (or null)
+    
+    <headers> dictionary with headers to include in request (or null)
+    
+    <auth> dictionary with authtype (basic/digest), username and password (or null)
 
     Input:
         data : execute request, include data as body if not null or boolean

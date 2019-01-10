@@ -25,7 +25,7 @@ class DispatchDict(Actor):
     Inputs:
       dict: dictionary
     Outputs:
-      token(routing="dispatch-mapped") : Dispatching tokens to connected ports according to 'mapping'
+      token#dispatch-mapped : Dispatching tokens to connected ports according to 'mapping'
       default: Default route for unknown token values
     """
 

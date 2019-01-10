@@ -23,7 +23,6 @@ class IsEOS(Actor):
     """
     Return 'true' if token is EOS-token
 
-
     Inputs:
       token  : any token
     Outputs:

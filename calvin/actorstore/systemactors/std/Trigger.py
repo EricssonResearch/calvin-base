@@ -20,6 +20,7 @@ from calvin.actor.actor import Actor, manage, condition, stateguard, calvinsys
 class Trigger(Actor):
     """
     Pass on given _data_ every _tick_ seconds
+    
     Outputs:
         data: given data
     """

@@ -20,6 +20,7 @@ from calvin.actor.actor import Actor, manage, condition
 class ReplicaIdentity(Actor):
     """
     forward a token with replica index prepended
+    
     Inputs:
       token : a token
     Outputs:

@@ -20,6 +20,7 @@ import time  # NEVER DO THIS OUTSIDE OF TEST
 class Burn(Actor):
     """
     forward a token unchanged and Burns cycles
+    
     Inputs:
       token : a token
     Outputs:

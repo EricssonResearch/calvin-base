@@ -26,7 +26,7 @@ class Compute(Actor):
     """
     Perform a OP b where OP is the operator passed as (a string) argument.
 
-    Allowed values for OP are:
+    Allowed values for OP are
     +, -, *, /, div (integer division), mod (modulo)
 
     Inputs:

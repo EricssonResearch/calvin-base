@@ -26,7 +26,6 @@ class TriggeredDistance(Actor):
 
     Inputs:
         trigger : any token triggers meausurement
-
     Outputs:
         meters : distance, in meters
     """

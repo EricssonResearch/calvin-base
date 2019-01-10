@@ -25,7 +25,7 @@ class CollectDict(Actor):
     a partial dictionary.
 
     Inputs:
-      token(routing="collect-any-tagged"): token
+      token#collect-any-tagged : token
     Outputs:
       dict : Collected dictionary according to 'mapping'
     """

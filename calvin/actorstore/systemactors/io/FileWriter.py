@@ -28,9 +28,9 @@ file_data = ['this is line 1', 'this is line 2']
 
 
 def absolute_basename(base):
-    """Test helper - get absolute name of file
+    '''Test helper - get absolute name of file
         @TODO: Not a good way of doing this.
-    """
+    '''
     import os.path
     return os.path.join(os.path.dirname(__file__), base)
 
@@ -53,6 +53,7 @@ class FileWriter(Actor):
     """
         Writes input 'data' to file 'basename' + some counter + '.' + suffix
         End of stream token changes file
+    
         inputs:
             data: data
     """

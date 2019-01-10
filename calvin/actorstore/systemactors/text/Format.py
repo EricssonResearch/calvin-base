@@ -33,7 +33,7 @@ class Format(Actor):
     Format string uses \"{access.key.path}\" to access dict
 
     Inputs:
-      dict :
+      dict : Dictionary
     Outputs:
       text : Formatted string
     """

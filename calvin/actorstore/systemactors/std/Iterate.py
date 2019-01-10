@@ -26,7 +26,7 @@ class Iterate(Actor):
 
     N.B. Empty iterables produces a 'null' token.
 
-    FIXME: Is 'null' production the right thing? Exception? Nothing?
+    FIXME Is 'null' production the right thing? Exception? Nothing?
 
     Inputs:
       token: any token

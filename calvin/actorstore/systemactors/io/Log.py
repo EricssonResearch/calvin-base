@@ -22,10 +22,10 @@ _log = calvinlogger.get_logger(__name__)
 class Log(Actor):
     """
     Write data to calvin log using specified loglevel.
-    Supported loglevels: INFO, WARNING, ERROR
+    Supported loglevels are INFO, WARNING, ERROR
 
     Input:
-      data : data to be logger
+      data : data to be logged
     """
 
     def exception_handler(self, action_function, args):

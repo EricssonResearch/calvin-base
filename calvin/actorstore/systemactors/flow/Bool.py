@@ -24,7 +24,7 @@ _log = get_actor_logger(__name__)
 class Bool(Actor):
     """
     Any token on the inport will be tested for truth value.
-    The following values are considered false:
+    The following values are considered false
 
     null
     false
