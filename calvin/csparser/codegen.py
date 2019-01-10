@@ -109,11 +109,11 @@ def _arguments(assignment, issue_tracker):
     given_args = assignment.children
     args = {}
     for arg_node in given_args:
-        if type(arg_node.value) is ast.Value:
-            args[arg_node.ident.ident] = arg_node.value.value
+        if type(arg_node.arg) is ast.Value:
+            args[arg_node.ident.ident] = arg_node.arg.value
         else:
-            reason = "Undefined identifier: '{}'".format(arg_node.value.ident)
-            issue_tracker.add_error(reason, arg_node.value)
+            reason = "Undefined identifier: '{}'".format(arg_node.arg.ident)
+            issue_tracker.add_error(reason, arg_node.arg)
     return args
 
 
@@ -356,7 +356,7 @@ class Expander(Visitor):
         new.namespace = node.ident
         # Add arguments from assignment to block
         args = node.children
-        new.args = {x.ident.ident: x.value for x in args}
+        new.args = {x.ident.ident: x.arg for x in args}
         node.parent.replace_child(node, new)
         # Recurse
         self.visit(new)
@@ -495,13 +495,13 @@ class Flatten(Visitor):
         self.generic_visit(node)
 
     def visit_NamedArg(self, node):
-        if type(node.value) is ast.Id:
+        if type(node.arg) is ast.Id:
             # Get value from grandparent (block)
             block = node.parent.parent
-            key = node.value.ident
+            key = node.arg.ident
             if key in block.args:
                 value = block.args[key]
-                node.replace_child(node.value, value)
+                node.replace_child(node.arg, value)
 
     def visit_InPort(self, node):
         self._promote_port(node)
@@ -644,7 +644,7 @@ class CheckPortProperties(Visitor):
 
     def check_property(self, prop):
         p_name = prop.ident.ident
-        p_value = prop.value.value if isinstance(prop.value.value, (list, tuple)) else [prop.value.value]
+        p_value = prop.arg.value if isinstance(prop.arg.value, (list, tuple)) else [prop.arg.value]
         # print p_name, p_value
         # Check that the property type is allowed
         if p_name not in port_property_data:
@@ -680,7 +680,7 @@ class CheckPortProperties(Visitor):
                     reason = "Input port {}.{} with multiple connections must have a routing port property.".format(prop.parent.actor, prop.parent.port)
                     self.issue_tracker.add_error(reason, prop)
                     continue
-                routings = res[0].parent.value.value
+                routings = res[0].parent.arg.value
                 if not isinstance(routings, (list, tuple)):
                     routings = [routings]
                 valid_routings = [routing for routing in routings if port_property_data['routing']['values'][routing].get('multipeer', False)]
@@ -739,13 +739,13 @@ class ReplaceConstants(Visitor):
 
     def process(self, root):
         constants = query(root, ast.Constant, maxdepth=2)
-        defined = {c.ident.ident: c.value for c in constants if type(c.value) is ast.Value}
-        unresolved = [c for c in constants if type(c.value) is ast.Id]
+        defined = {c.ident.ident: c.arg for c in constants if type(c.arg) is ast.Value}
+        unresolved = [c for c in constants if type(c.arg) is ast.Id]
         seen = [c.ident.ident for c in unresolved]
         while True:
             did_replace = False
             for c in unresolved[:]:
-                key, const_key = c.ident, c.value
+                key, const_key = c.ident, c.arg
                 if const_key.ident in defined:
                     defined[key.ident] = defined[const_key.ident]
                     unresolved.remove(c)
@@ -754,7 +754,7 @@ class ReplaceConstants(Visitor):
             if not did_replace:
                 break
         for c in unresolved:
-            key, const_key = c.ident, c.value
+            key, const_key = c.ident, c.arg
             if const_key.ident in seen:
                 reason = "Constant '{}' has a circular reference".format(key.ident)
             else:
@@ -764,11 +764,11 @@ class ReplaceConstants(Visitor):
         self.visit(root)
 
     def visit_NamedArg(self, node):
-        if type(node.value) is ast.Value:
+        if type(node.arg) is ast.Value:
             return
-        if node.value.ident in self.definitions:
-            value = self.definitions[node.value.ident]
-            node.replace_child(node.value, value)
+        if node.arg.ident in self.definitions:
+            value = self.definitions[node.arg.ident]
+            node.replace_child(node.arg, value)
 
 
 class ConsistencyCheck(Visitor):
@@ -790,7 +790,7 @@ class ConsistencyCheck(Visitor):
 
         for arg_name in node.arg_names:
             matches = query(node, kind=ast.NamedArg)
-            referenced_values = [m.value.ident for m in matches if type(m.value) is ast.Id]
+            referenced_values = [m.arg.ident for m in matches if type(m.arg) is ast.Id]
             if not arg_name in referenced_values:
                 reason = "Unused argument: '{}'".format(arg_name)
                 self.issue_tracker.add_error(reason, node)

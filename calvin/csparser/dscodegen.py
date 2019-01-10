@@ -80,7 +80,7 @@ class DeployInfo(Visitor):
     def visit_RulePredicate(self, node):
         pred = {
             "predicate":node.predicate.ident,
-            "kwargs":{arg.ident.ident:arg.value.value for arg in node.args}
+            "kwargs":{arg.ident.ident:arg.arg.value for arg in node.args}
         }
         return pred
 
