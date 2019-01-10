@@ -15,7 +15,7 @@
 # limitations under the License.
 
 import random
-from calvin.actorstore.store import ActorStore
+# from calvin.actorstore.store import ActorStore
 from calvin.utilities import dynops
 from calvin.utilities.requirement_matching import ReqMatch
 from calvin.runtime.south.async import async
@@ -276,9 +276,46 @@ class ActorManager(object):
 
         self.actors[actor_id].disable()
 
+    def class_factory(self, src, metadata, actor_type):
+        co = compile(src, actor_type, 'exec')
+        import calvin.actor.actor as caa
+        namespace = {
+            'Actor':caa.Actor, 
+            'manage':caa.manage, 
+            'condition':caa.condition, 
+            'stateguard':caa.stateguard, 
+            'calvinsys':caa.calvinsys, 
+        }
+        exec(co, namespace)
+        _, name = actor_type.split('.') 
+        actor_class = namespace[name]
+        # append metadata
+        actor_class.inport_properties = {} # {p: pp for p, pp in inports}
+        actor_class.outport_properties = {} #{p: pp for p, pp in outports}
+        for port in metadata["ports"]:
+            target = actor_class.inport_properties if port['direction'] == "in" else actor_class.outport_properties
+            target[port['name']] = port.get('properties', {})
+        return actor_class
+
+    def new_actorstore_lookup(self, actor_type):
+        ns, name = actor_type.split('.') 
+        import requests
+        r = requests.get('http://127.0.0.1:4999/actors/{}/{}'.format(ns, name))
+        if r.status_code != 200:
+            raise("BAD STORE")
+        res = r.json()
+        metadata = res['properties']
+        src = res['src']
+        actor_def = self.class_factory(src, metadata, actor_type)
+        found = True
+        is_primitive = True
+        signer = None
+        return (found, is_primitive, actor_def, signer)
+        
     def lookup_and_verify(self, actor_type, security=None):
         """Lookup and verify actor in actor store."""
-        found, is_primitive, actor_def, signer = ActorStore(security=security).lookup(actor_type)
+        # found, is_primitive, actor_def, signer = ActorStore(security=security).lookup(actor_type)
+        found, is_primitive, actor_def, signer = self.new_actorstore_lookup(actor_type)
         if not found or not is_primitive:
             raise Exception("Not known actor type: %s" % actor_type)
         return (actor_def, signer)

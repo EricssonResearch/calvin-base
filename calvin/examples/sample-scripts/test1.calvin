@@ -1,5 +1,5 @@
 /* Actors */
-src : std.CountTimer()
+src : std.CountTimer(sleep=0.1, start=1, steps=100000)
 snk : io.Print()
 /* Connections */
 src.integer > snk.token

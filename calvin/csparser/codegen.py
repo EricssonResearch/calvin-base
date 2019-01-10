@@ -6,15 +6,17 @@ from visitor import Visitor, search_tree
 from calvin.csparser.port_property_syntax import port_property_data
 
 # FIXME: External dependency to be removed
-from calvin.actorstore.store import DocumentationStore, GlobalStore
+from calvin.actorstore.store import GlobalStore
 
 
 def _create_signature(actor_type, metadata):
     # Create the actor signature to be able to look it up in the GlobalStore if neccessary
-    signature_desc = {'is_primitive': True,
-                      'actor_type': actor_type,
-                      'inports': metadata['inputs'],
-                      'outports': metadata['outputs']}
+    signature_desc = {
+        'is_primitive': True,
+        'actor_type': actor_type,
+        'inports': [port['name'] for port in metadata['ports'] if port['direction'] == 'in'],
+        'outports': [port['name'] for port in metadata['ports'] if port['direction'] == 'out']
+    }
     return GlobalStore.actor_signature(signature_desc)
 
 def _is_local_component(actor_type):
@@ -28,6 +30,7 @@ def _root(node):
 
 def _construct_metadata(node):
     # FIXME: Actually construct metadata
+    #        Use new format
     return {
         'is_known': False,
         'inputs': [],
@@ -37,6 +40,8 @@ def _construct_metadata(node):
             'optional':{}
         }
     }
+
+CACHE = {}
 
 def _lookup(node, issue_tracker):
     if _is_local_component(node.actor_type):
@@ -59,10 +64,21 @@ def _lookup(node, issue_tracker):
             'definition': comp.children[0]
         }
     else:
-        metadata = DocumentationStore().metadata(node.actor_type)
+        if node.actor_type in CACHE:
+            return CACHE[node.actor_type]
+        ns, name = node.actor_type.split('.') 
+        import requests
+        r = requests.get('http://127.0.0.1:4999/actors/{}/{}'.format(ns, name))
+        if r.status_code != 200:
+            raise("BAD STORE")
+        res = r.json()
+        metadata = res['properties']
+        # metadata = DocumentationStore().metadata(node.actor_type)
+        # print metadata
         if not metadata['is_known']:
             reason = "Not validating actor type: '{}'".format(node.actor_type)
             issue_tracker.add_warning(reason, node)
+        CACHE[node.actor_type] = metadata    
 
     return metadata
 
@@ -72,8 +88,10 @@ def _check_arguments(assignment, issue_tracker):
     Verify that all arguments are present and valid when instantiating actors.
     """
     metadata = assignment.metadata
-    mandatory = set(metadata['args']['mandatory'])
-    optional = set(metadata['args']['optional'].keys())
+    # mandatory = set(metadata['args']['mandatory'])
+    # optional = set(metadata['args']['optional'].keys())
+    mandatory = set([arg['name'] for arg in metadata['args'] if arg['mandatory']])
+    optional = set([arg['name'] for arg in metadata['args'] if not arg['mandatory']])
 
     given_args = assignment.children
     given_idents = {a.ident.ident: a.ident for a in given_args}
@@ -263,12 +281,21 @@ class CollectPortProperties(Visitor):
             return
         # Collect actor-declared port properties and make them children of their respective ports
         name = node.ident
-        for port, pp in  node.metadata['input_properties'].items():
-            query_res = query(node.parent, kind=ast.InPort, maxdepth=2, attributes={'actor':name, 'port':port})
-            self._transfer_actor_properties(node, name, port, query_res, pp)
-        for port, pp in  node.metadata['output_properties'].items():
-            query_res = query(node.parent, kind=ast.OutPort, maxdepth=2, attributes={'actor':name, 'port':port})
-            self._transfer_actor_properties(node, name, port, query_res, pp)
+        # for port, pp in  node.metadata['input_properties'].items():
+        #     query_res = query(node.parent, kind=ast.InPort, maxdepth=2, attributes={'actor':name, 'port':port})
+        #     self._transfer_actor_properties(node, name, port, query_res, pp)
+        # for port, pp in  node.metadata['output_properties'].items():
+        #     query_res = query(node.parent, kind=ast.OutPort, maxdepth=2, attributes={'actor':name, 'port':port})
+        #     self._transfer_actor_properties(node, name, port, query_res, pp)
+        for portdef in node.metadata['ports']:
+            port = portdef['name']
+            properties = portdef.get('properties', None)
+            if not properties:
+                continue  
+            kind = ast.InPort if portdef['direction'] == 'in' else ast.OutPort
+            query_res = query(node.parent, kind=kind, maxdepth=2, attributes={'actor':name, 'port':port})
+            self._transfer_actor_properties(node, name, port, query_res, properties)
+
 
     def _transfer_actor_properties(self, node, actor, port, portlist, properties):
         if not portlist:
@@ -745,18 +772,19 @@ class ConsistencyCheck(Visitor):
 
         _check_arguments(node, self.issue_tracker)
 
-        for port in node.metadata['inputs']:
-            matches = query(self.block, kind=ast.InPort, maxdepth=3, attributes={'actor':node.ident, 'port':port})
-            matches = matches + query(self.block, kind=ast.InternalInPort, maxdepth=3, attributes={'actor':node.ident, 'port':port})
+        for portdef in node.metadata['ports']:
+            port = portdef['name']
+            if portdef['direction'] == 'in':
+                matches = query(self.block, kind=ast.InPort, maxdepth=3, attributes={'actor':node.ident, 'port':port})
+                matches = matches + query(self.block, kind=ast.InternalInPort, maxdepth=3, attributes={'actor':node.ident, 'port':port})
+            # if not matches:
+            #     reason = "{} {} ({}.{}) is missing connection to inport '{}'".format(node.metadata['type'].capitalize(), node.ident, node.metadata.get('ns', 'local'), node.metadata['name'], port)
+            #     self.issue_tracker.add_error(reason, node)
+            else:
+                matches = query(self.block, kind=ast.OutPort, maxdepth=3, attributes={'actor':node.ident, 'port':port})
+                matches = matches + query(self.block, kind=ast.InternalOutPort, maxdepth=3, attributes={'actor':node.ident, 'port':port})
             if not matches:
-                reason = "{} {} ({}.{}) is missing connection to inport '{}'".format(node.metadata['type'].capitalize(), node.ident, node.metadata.get('ns', 'local'), node.metadata['name'], port)
-                self.issue_tracker.add_error(reason, node)
-
-        for port in node.metadata['outputs']:
-            matches = query(self.block, kind=ast.OutPort, maxdepth=3, attributes={'actor':node.ident, 'port':port})
-            matches = matches + query(self.block, kind=ast.InternalOutPort, maxdepth=3, attributes={'actor':node.ident, 'port':port})
-            if not matches:
-                reason = "{} {} ({}.{}) is missing connection to outport '{}'".format(node.metadata['type'].capitalize(), node.ident, node.metadata.get('ns', 'local'), node.metadata['name'], port)
+                reason = "{} {} ({}.{}) is missing connection to {}port '{}'".format(node.metadata['type'].capitalize(), node.ident, node.metadata.get('ns', 'local'), node.metadata['name'], portdef['direction'], port)
                 self.issue_tracker.add_error(reason, node)
 
 
@@ -770,7 +798,7 @@ class ConsistencyCheck(Visitor):
             # Already covered by assignment node
             return
 
-        ports = matches[0].metadata[direction + 'puts']
+        ports = [port['name'] for port in matches[0].metadata['ports'] if port['direction'] == direction]
         if node.port not in ports:
             metadata = matches[0].metadata
             reason = "{} {} ({}.{}) has no {}port '{}'".format(metadata['type'].capitalize(), node.actor, metadata.get('ns', 'local'), metadata['name'], direction, node.port)

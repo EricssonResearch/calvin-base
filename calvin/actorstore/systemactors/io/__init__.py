@@ -1,1 +1,1 @@
-"""This module organizes actors related to input and output."""
+"""- This module organizes actors related to input and output."""

@@ -20,14 +20,17 @@ from calvin.actor.actor import Actor, manage, condition, stateguard, calvinsys
 class CountTimer(Actor):
 
     """
-    Produce a counter token on the output every period seconds
-    and for steps times, using a timer.
-    Outputs:
-      integer: Integer counter
+    documentation:
+    - Produce a counter token on the output every period seconds and for steps times, using a timer.
+        
+    ports:
+    - name: integer
+      direction: out
+      help: Integer counter
     """
 
     @manage()
-    def init(self, sleep=0.1, start=1, steps=sys.maxint):
+    def init(self, sleep=0.1, start=1, steps=1000000000):
         self.start = start
         self.count = start
         self.sleep = sleep

@@ -18,10 +18,13 @@ from calvin.actor.actor import Actor, manage, condition, calvinsys, stateguard
 
 class Print(Actor):
     """
-    Print data to standard out of runtime. Note that what constitutes standard out varies.
+    documentation:
+    - Print data to standard out of runtime. Note that what constitutes standard out varies.
 
-    Input:
-      token : data to write
+    ports:
+    - name: token
+      direction: in 
+      help: data to write
     """
 
     def exception_handler(self, action, args):

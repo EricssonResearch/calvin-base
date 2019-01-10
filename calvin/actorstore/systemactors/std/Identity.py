@@ -19,11 +19,18 @@ from calvin.actor.actor import Actor, manage, condition
 
 class Identity(Actor):
     """
-    forward a token unchanged
-    Inputs:
-      token : a token
-    Outputs:
-      token : the same token
+    documentation:
+    - Forward a token unchanged
+    - This can be surprsingly helpful at times.
+    
+    ports:
+    - name: token
+      direction: in
+      help: a token
+    
+    - name: token
+      direction: out
+      help: the same token
     """
     @manage(['dump', 'last'])
     def init(self, dump=False):
