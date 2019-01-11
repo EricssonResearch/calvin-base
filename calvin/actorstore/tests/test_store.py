@@ -15,39 +15,36 @@
 # limitations under the License.
 
 import pytest
-import timeit
+import os
+import json
+import yaml
+import jsonschema
+from jsonschema.exceptions import ValidationError
+from calvin.actorstore.newstore import Store
 
-from calvin.actorstore.store import ActorStore
+# Helpers
+def actor_files():
+    dir_path = os.path.dirname(os.path.realpath(__file__))
+    dir_path = os.path.join(dir_path, "../systemactors")
+    for dirpath, dirnames, filenames in os.walk(dir_path):
+        filenames = [os.path.join(dirpath, f) for f in filenames if f.endswith('.py') and f != '__init__.py']
+        for f in filenames:
+            yield f
 
+def read_file(filepath):
+    with open(filepath, 'r') as f:
+        src = f.read()
+    return src
 
-class TestActorStore(object):
-
-    def setup_class(self):
-        self.ms = ActorStore()
-        pass
-
-    def teardown_class(self):
-        pass
-
-    def test_find_modules(self):
-
-        # Valid
-        module = self.ms.lookup("std.Sum")
-        assert len(module) is 4
-        assert module[0]
-
-        # Fail
-        module = self.ms.lookup("non.ExistantActor")
-        assert not module[0]
-
-        # Sys module
-        module = self.ms.lookup("os")
-        assert not module[0]
-
-    def test_load_modules(self):
-        pass
-
-    @pytest.mark.xfail  # May or may not pass. Not that important
-    def test_perf(self):
-        time = timeit.timeit(lambda: self.ms.lookup("std.Sum"), number=1000)
-        assert time < .2
+@pytest.mark.parametrize('actor_file', actor_files())
+def test_valid_docstring(actor_file):
+    src = read_file(actor_file)
+    _, docs, _ = src.split('"""', 2)
+    data = yaml.load(docs)
+    result = True
+    try:
+        jsonschema.validate(data, Store.actor_properties_schema)
+    except ValidationError:
+        result = False
+    assert result    
+    
