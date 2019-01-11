@@ -284,7 +284,8 @@ class ActorManager(object):
             'manage':caa.manage, 
             'condition':caa.condition, 
             'stateguard':caa.stateguard, 
-            'calvinsys':caa.calvinsys, 
+            'calvinsys':caa.calvinsys,
+            'calvinlib':caa.calvinlib, 
         }
         exec(co, namespace)
         _, name = actor_type.split('.') 
