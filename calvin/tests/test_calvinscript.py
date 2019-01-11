@@ -60,7 +60,7 @@ class CalvinScriptCheckerTest(CalvinTestBase):
 
     def testCheckSimpleScript(self):
         script = """
-        a:std.CountTimer()
+        a:std.CountTimer(sleep=0.1, start=1, steps=100)
         b:io.Print()
 
         a.integer > b.token
@@ -79,11 +79,11 @@ class CalvinScriptCheckerTest(CalvinTestBase):
     def testCheckLocalComponent(self):
         script = """
         component Foo() -> out {
-            f:std.CountTimer()
+            f:std.CountTimer(sleep=0.1, start=1, steps=100)
             f.integer > .out
         }
         a:Foo()
-        b:test.Sink()
+        b:test.Sink(store_tokens=false, quiet=false, active=true)
         a.out > b.token
         """
         result, errors, warnings = self.parse('inline', script)
@@ -91,9 +91,9 @@ class CalvinScriptCheckerTest(CalvinTestBase):
 
     def testCheckOutportConnections(self):
         script = """
-        a:std.CountTimer()
-        b:std.CountTimer()
-        c:test.Sink()
+        a:std.CountTimer(sleep=0.1, start=1, steps=100)
+        b:std.CountTimer(sleep=0.1, start=1, steps=100)
+        c:test.Sink(store_tokens=false, quiet=false, active=true)
         a.integer > c.token
         """
         result, errors, warnings = self.parse('inline', script)
@@ -101,7 +101,7 @@ class CalvinScriptCheckerTest(CalvinTestBase):
 
     def testCheckInportConnections1(self):
         script = """
-        c:test.Sink()
+        c:test.Sink(store_tokens=false, quiet=false, active=true)
         """
         result, errors, warnings = self.parse('inline', script)
         self.assertEqual(len(errors), 1)
@@ -109,9 +109,9 @@ class CalvinScriptCheckerTest(CalvinTestBase):
 
     def testCheckInportConnections2(self):
         script = """
-        a:std.CountTimer()
-        b:std.CountTimer()
-        c:test.Sink()
+        a:std.CountTimer(sleep=0.1, start=1, steps=100)
+        b:std.CountTimer(sleep=0.1, start=1, steps=100)
+        c:test.Sink(store_tokens=false, quiet=false, active=true)
         a.integer > c.token
         b.integer > c.token
         """
@@ -123,12 +123,12 @@ class CalvinScriptCheckerTest(CalvinTestBase):
     def testBadComponent1(self):
         script = """
         component Foo() -> out {
-            a:std.CountTimer()
-            b:std.CountTimer()
+            a:std.CountTimer(sleep=0.1, start=1, steps=100)
+            b:std.CountTimer(sleep=0.1, start=1, steps=100)
             a.integer > .out
         }
         a:Foo()
-        b:test.Sink()
+        b:test.Sink(store_tokens=false, quiet=false, active=true)
         a.out > b.token
         """
         result, errors, warnings = self.parse('inline', script)
@@ -138,12 +138,12 @@ class CalvinScriptCheckerTest(CalvinTestBase):
     def testBadComponent2(self):
         script = """
         component Foo() -> out {
-            a:std.CountTimer()
-            b:test.Sink()
+            a:std.CountTimer(sleep=0.1, start=1, steps=100)
+            b:test.Sink(store_tokens=false, quiet=false, active=true)
             a.integer > b.token
         }
         a:Foo()
-        b:test.Sink()
+        b:test.Sink(store_tokens=false, quiet=false, active=true)
         a.out > b.token
         """
         result, errors, warnings = self.parse('inline', script)
@@ -153,12 +153,12 @@ class CalvinScriptCheckerTest(CalvinTestBase):
     def testBadComponent3(self):
         script = """
         component Foo() -> out {
-            a:std.CountTimer()
+            a:std.CountTimer(sleep=0.1, start=1, steps=100)
             a.integer > .out
             a.integer > .out
         }
         a:Foo()
-        b:test.Sink()
+        b:test.Sink(store_tokens=false, quiet=false, active=true)
         a.out > b.token
         """
         result, errors, warnings = self.parse('inline', script)
@@ -168,10 +168,10 @@ class CalvinScriptCheckerTest(CalvinTestBase):
     def testBadComponent4(self):
         script = """
         component Foo() in -> {
-            a:test.Sink()
+            a:test.Sink(store_tokens=false, quiet=false, active=true)
         }
         b:Foo()
-        a:std.CountTimer()
+        a:std.CountTimer(sleep=0.1, start=1, steps=100)
         a.integer > b.in
         """
         result, errors, warnings = self.parse('inline', script)
@@ -182,11 +182,11 @@ class CalvinScriptCheckerTest(CalvinTestBase):
     def testBadComponent5(self):
         script = """
         component Foo() in -> {
-            a:test.Sink()
+            a:test.Sink(store_tokens=false, quiet=false, active=true)
             .foo > a.token
         }
         b:Foo()
-        a:std.CountTimer()
+        a:std.CountTimer(sleep=0.1, start=1, steps=100)
         a.integer > b.in
         """
         result, errors, warnings = self.parse('inline', script)
@@ -197,11 +197,11 @@ class CalvinScriptCheckerTest(CalvinTestBase):
     def testBadComponent6(self):
         script = """
         component Foo() -> out {
-            a:std.CountTimer()
+            a:std.CountTimer(sleep=0.1, start=1, steps=100)
             a.integer > .foo
         }
         b:Foo()
-        a:test.Sink()
+        a:test.Sink(store_tokens=false, quiet=false, active=true)
         b.out > a.token
         """
         result, errors, warnings = self.parse('inline', script)
@@ -235,7 +235,7 @@ class CalvinScriptCheckerTest(CalvinTestBase):
     def testUndefinedArguments(self):
         script = """
         a:std.Constant()
-        b:test.Sink()
+        b:test.Sink(store_tokens=false, quiet=false, active=true)
         a.token > b.token
         """
         result, errors, warnings = self.parse('inline', script)
@@ -245,7 +245,7 @@ class CalvinScriptCheckerTest(CalvinTestBase):
     def testExcessArguments(self):
         script = """
         a:std.Constant(data=1, bar=2)
-        b:test.Sink()
+        b:test.Sink(store_tokens=false, quiet=false, active=true)
         a.token > b.token
         """
         result, errors, warnings = self.parse('inline', script)
@@ -256,11 +256,11 @@ class CalvinScriptCheckerTest(CalvinTestBase):
     def testComponentUndefinedArgument(self):
         script = """
         component Foo(file) in -> {
-            a:test.Sink()
+            a:test.Sink(store_tokens=false, quiet=false, active=true)
             .in > a.token
         }
         b:Foo()
-        a:std.CountTimer()
+        a:std.CountTimer(sleep=0.1, start=1, steps=100)
         a.integer > b.in
         """
         result, errors, warnings = self.parse('inline', script)
@@ -271,11 +271,11 @@ class CalvinScriptCheckerTest(CalvinTestBase):
     def testComponentUnusedArgument(self):
         script = """
         component Foo(file) in -> {
-            a:test.Sink()
+            a:test.Sink(store_tokens=false, quiet=false, active=true)
             .in > a.token
         }
         b:Foo(file="Foo.txt")
-        a:std.CountTimer()
+        a:std.CountTimer(sleep=0.1, start=1, steps=100)
         a.integer > b.in
         """
         result, errors, warnings = self.parse('inline', script)
@@ -299,7 +299,7 @@ class CalvinScriptCheckerTest(CalvinTestBase):
     def testLocalComponentRecurse(self):
         script = """
           component E() in -> out {
-          f:std.Identity()
+          f:std.Identity(dump=false)
 
           .in > f.token
           f.token > .out
@@ -313,7 +313,7 @@ class CalvinScriptCheckerTest(CalvinTestBase):
 
         a:std.Counter()
         b:B()
-        c:test.Sink()
+        c:test.Sink(store_tokens=false, quiet=false, active=true)
 
         a.integer > b.in
         b.out > c.token
@@ -330,7 +330,7 @@ class CalvinScriptCheckerTest(CalvinTestBase):
           e.out > .out
         }
         component E() in -> out {
-          f:std.Identity()
+          f:std.Identity(dump=false)
 
           .in > f.token
           f.token > .out
@@ -338,7 +338,7 @@ class CalvinScriptCheckerTest(CalvinTestBase):
 
         a:std.Counter()
         b:B()
-        c:test.Sink()
+        c:test.Sink(store_tokens=false, quiet=false, active=true)
 
         a.integer > b.in
         b.out > c.token
@@ -388,9 +388,9 @@ class CalvinScriptCheckerTest(CalvinTestBase):
 
     def testNoSuchPort(self):
         script = """
-        i:std.Identity()
-        src:std.CountTimer()
-        dst:test.Sink()
+        i:std.Identity(dump=false)
+        src:std.CountTimer(sleep=0.1, start=1, steps=100)
+        dst:test.Sink(store_tokens=false, quiet=false, active=true)
         src.integer > i.foo
         i.bar > dst.token
         """
@@ -403,9 +403,9 @@ class CalvinScriptCheckerTest(CalvinTestBase):
 
     def testRedefineInstance(self):
         script = """
-        i:std.Identity()
-        src:std.CountTimer()
-        dst:test.Sink()
+        i:std.Identity(dump=false)
+        src:std.CountTimer(sleep=0.1, start=1, steps=100)
+        dst:test.Sink(store_tokens=false, quiet=false, active=true)
         i:std.ClassicDelay(delay=0.2)
         src.integer > i.token
         i.token > dst.token
@@ -427,7 +427,7 @@ class CalvinScriptCheckerTest(CalvinTestBase):
     def testUndefinedConstant(self):
         script = """
         src : std.Constant(data=FOO)
-        snk : test.Sink()
+        snk : test.Sink(store_tokens=false, quiet=false, active=true)
         src.token > snk.token
         """
         result, errors, warnings = self.parse('inline', script)
@@ -450,7 +450,7 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         script = """
         define FOO = 42
         src : std.Constant(data=FOO)
-        snk : test.Sink()
+        snk : test.Sink(store_tokens=false, quiet=false, active=true)
         src.token > snk.token
         """
         result, errors, warnings = self.parse('inline', script)
@@ -460,7 +460,7 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         script = """
         define FOO = BAR
         src : std.Constant(data=FOO)
-        snk : test.Sink()
+        snk : test.Sink(store_tokens=false, quiet=false, active=true)
         src.token > snk.token
         """
         result, errors, warnings = self.parse('inline', script)
@@ -474,7 +474,7 @@ class CalvinScriptCheckerTest(CalvinTestBase):
         define FOO = BAR
         define BAR = 42
         src : std.Constant(data=FOO)
-        snk : test.Sink()
+        snk : test.Sink(store_tokens=false, quiet=false, active=true)
         src.token > snk.token
         """
         result, errors, warnings = self.parse('inline', script)
@@ -483,7 +483,7 @@ class CalvinScriptCheckerTest(CalvinTestBase):
 
     def testLiteralOnPort(self):
         script = """
-        snk : test.Sink()
+        snk : test.Sink(store_tokens=false, quiet=false, active=true)
         42 > snk.token
         """
         result, errors, warnings = self.parse('inline', script)
@@ -511,7 +511,7 @@ class CalvinScriptCheckerTest(CalvinTestBase):
     def testBadLocalPort(self):
         script = """
         component Foo() in -> {
-            snk : test.Sink()
+            snk : test.Sink(store_tokens=false, quiet=false, active=true)
             .in > snk.token
         }
         src : std.Counter()
@@ -799,8 +799,8 @@ class CalvinScriptCheckerTest(CalvinTestBase):
 
     # def testAmbigousPortProperty1(self):
     #     script = r"""
-    #     i : std.Identity()
-    #     src : std.CountTimer()
+    #     i : std.Identity(dump=false)
+    #     src : std.CountTimer(sleep=0.1, start=1, steps=100)
     #     snk : io.Print()
     #     src.integer > i.token
     #     i.token > snk.token
@@ -811,8 +811,8 @@ class CalvinScriptCheckerTest(CalvinTestBase):
 
     # def testAmbigousPortProperty2(self):
     #     script = r"""
-    #     i : std.Identity()
-    #     src : std.CountTimer()
+    #     i : std.Identity(dump=false)
+    #     src : std.CountTimer(sleep=0.1, start=1, steps=100)
     #     snk : io.Print()
     #     src.integer > i.token
     #     i.token > snk.token
@@ -823,8 +823,8 @@ class CalvinScriptCheckerTest(CalvinTestBase):
 
     # def testAmbigousPortProperty3(self):
     #     script = r"""
-    #     i : std.Identity()
-    #     src : std.CountTimer()
+    #     i : std.Identity(dump=false)
+    #     src : std.CountTimer(sleep=0.1, start=1, steps=100)
     #     snk : io.Print()
     #     src.integer > i.token
     #     i.token > snk.token

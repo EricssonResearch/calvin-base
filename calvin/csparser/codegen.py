@@ -55,12 +55,9 @@ def _lookup(node, issue_tracker):
             'is_known': True,
             'name': comp.name,
             'type': 'component',
-            'inputs': comp.inports,
-            'outputs': comp.outports,
-            'args':{
-                'mandatory':comp.arg_names,
-                'optional':{}
-            },
+            'ports': [{'direction': 'out', 'name': name} for name in comp.outports] +
+                     [{'direction': 'in', 'name': name} for name in comp.inports],
+            'args': [{'mandatory': True, 'name':name} for name in comp.arg_names],
             'definition': comp.children[0]
         }
     else:
