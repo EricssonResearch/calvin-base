@@ -25,10 +25,12 @@ class MQTTPublisher(Actor):
     """
     documentation:
     - Publish all incoming messages to given broker"
-    - Arguments:
+    - | 
+      Arguments:
       hostname: <ip/name of of mqtt broker>,
       port: <port to use on mqtt broker>,
-    - Settings is a dictionary with optional arguments.
+    - | 
+      Settings is a dictionary with optional arguments.
       {
           "tls": {
               "ca_certs": <ca certs>, "certfile": <certfile>, "keyfile": <keyfile>, 

@@ -25,11 +25,13 @@ class MQTTSubscriber(Actor):
     """
     documentation:
     - Subscribe to given topics (list of mqtt ), output messages on message-port
-    - Arguments:
+    - |
+      Arguments:
       hostname: <ip/name of mqtt broker>,
       port: <port to use on mqtt broker>,
       topics: <list of topics to subscribe to>
-    - settings is a dictionary with optional arguments :
+    - |
+      settings is a dictionary with optional arguments
       {
           "tls": {
               "ca_certs": <ca certs>, "certfile": <certfile>, "keyfile": <keyfile>,
@@ -43,7 +45,7 @@ class MQTTSubscriber(Actor):
     ports:
     - direction: out
       name: message
-      help: dictionary {"topic": <topic>, "payload": <payload>}
+      help: dictionary with keys "topic" and "payload"
     """
 
     @manage(['mqtt'])

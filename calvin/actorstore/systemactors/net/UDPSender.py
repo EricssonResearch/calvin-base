@@ -25,7 +25,8 @@ class UDPSender(Actor):
     """
     documentation:
     - Send all incoming tokens to given address/port over UDP
-    - Control port takes control commands of the form (uri only applicable for connect.)
+    - |
+      Control port takes control commands of the form (uri only applicable for connect.)
       {
           "command" : "connect"/"disconnect",
           "uri": "udp://<address>:<port>"
