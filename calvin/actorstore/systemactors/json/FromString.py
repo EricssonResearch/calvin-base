@@ -40,7 +40,7 @@ class FromString(Actor):
         return (self.default,)
 
     @manage(['exception_output'])
-    def init(self, exception_output=None):
+    def init(self, exception_output):
         self.exception_output = exception_output
         self.setup()
 

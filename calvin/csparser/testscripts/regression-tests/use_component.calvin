@@ -1,5 +1,5 @@
 component Foo() in -> out {
-    str : std.Stringify()
+    str : std.Stringify(encoding=null)()
 
     .in > str.in
     str.out > .out

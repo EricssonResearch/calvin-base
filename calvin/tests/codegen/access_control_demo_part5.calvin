@@ -1,4 +1,4 @@
-button : io.Button()
+button : io.Button(text="Button")
 bell: media.PlayAudio(audiofile="dingdong.ogg")
 camera : media.ImageSource()
 screen : media.ImageSink()

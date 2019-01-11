@@ -1,4 +1,4 @@
-num : std.CountTimer()
+num : std.CountTimer(start=1, sleep=0.1, steps=1000000000)
 buff : data.PersistentBuffer(buffer_id="test", chunk_size=10, interval=1)
 coll : flow.Collect()
 out : io.Print()

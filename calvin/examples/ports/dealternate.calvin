@@ -1,5 +1,5 @@
 switch: flow.Dealternate(order=[&out3.in, &out1.in, &out2.in])
-input: std.CountTimer(sleep=0.5)
+input: std.CountTimer(start=1, sleep=0.5, steps=1000000000)
 
 out1 : text.PrefixString(prefix="tag-1:")
 out2 : text.PrefixString(prefix="tag-2:")

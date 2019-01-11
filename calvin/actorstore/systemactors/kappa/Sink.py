@@ -36,7 +36,7 @@ class Sink(Actor):
         return action(self, *args)
 
     @manage(['tokens', 'buffer_size'])
-    def init(self, buffer_size=5):
+    def init(self, buffer_size):
         self.tokens = []
         self.buffer_size = buffer_size if buffer_size < 10 else 10
 

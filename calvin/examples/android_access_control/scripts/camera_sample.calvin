@@ -1,5 +1,5 @@
 /* actors */
-src : std.CountTimer(sleep=3)
+src : std.CountTimer(start=1, sleep=3, steps=1000000000)
 camera : media.ImageSource()
 screen : media.ImageSink()
 

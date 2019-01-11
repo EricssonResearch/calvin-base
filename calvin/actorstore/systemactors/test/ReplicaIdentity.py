@@ -30,7 +30,7 @@ class ReplicaIdentity(Actor):
       name: token
     """
     @manage(['dump', 'index'])
-    def init(self, dump=False):
+    def init(self, dump):
         self.dump = dump
         self.index = 0
 

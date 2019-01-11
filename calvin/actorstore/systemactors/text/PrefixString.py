@@ -32,7 +32,7 @@ class PrefixString(Actor):
       name: out
     """
     @manage(['prefix'])
-    def init(self, prefix='-'):
+    def init(self, prefix):
         self.prefix = str(prefix)
 
     def exception_handler(self, action, args):

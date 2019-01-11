@@ -1,5 +1,5 @@
-data : data.Source()
-conv : json.ToString()
+data : data.Source(tags=null)
+conv : json.ToString(exception_output=null)
 out : io.Print()
 
 data.parameter > conv.data

@@ -36,7 +36,7 @@ class TestProcess(Actor):
       name: result
     """
     @manage(['eval_str', 'replicate_str', 'kwargs', 'last', 'dump'])
-    def init(self, eval_str, replicate_str=None, kwargs=None, dump=False):
+    def init(self, eval_str, replicate_str, kwargs, dump):
         self.eval_str = eval_str
         self.replicate_str = replicate_str
         self.kwargs = {} if kwargs is None else kwargs

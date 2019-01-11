@@ -6,8 +6,8 @@ component WrappedSrc() -> out {
   src.integer > .out
 }
 
-snk1 : test.Sink()
-snk2 : test.Sink()
+snk1 : test.Sink(store_tokens=false, active=true, quiet=false)
+snk2 : test.Sink(store_tokens=false, active=true, quiet=false)
 src : WrappedSrc()
 
 src.out > snk1.token

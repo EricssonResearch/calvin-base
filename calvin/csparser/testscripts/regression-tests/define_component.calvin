@@ -1,6 +1,6 @@
 component Foo() -> {
     src : std.Counter()
-    snk : test.Sink()
+    snk : test.Sink(store_tokens=false, active=true, quiet=false)
 
     src.integer > snk.token
 }

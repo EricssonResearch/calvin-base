@@ -34,7 +34,7 @@ class LineJoin(Actor):
       name: text
     """
     @manage(['lines', 'delim', 'text'])
-    def init(self, delim='\n'):
+    def init(self, delim):
         self.delim = delim
         self.lines = []
         self.text = None

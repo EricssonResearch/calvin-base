@@ -30,7 +30,7 @@ class CountTimer(Actor):
     """
 
     @manage()
-    def init(self, sleep=0.1, start=1, steps=1000000000):
+    def init(self, sleep, start, steps):
         self.start = start
         self.count = start
         self.sleep = sleep

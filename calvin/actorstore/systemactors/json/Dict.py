@@ -24,7 +24,7 @@ class Dict(Actor):
     """
     documentation:
     - Create a dict
-    - Consume 'n' key/value pairs to produce a dictionary, 'n' defaults to 1. If 'n' is
+    - Consume 'n' key/value pairs to produce a dictionary. If 'n' is
       zero or negative, consume key/value pairs until EOS encountered on both input ports.
       If EOS is only encountered on one port, produce an execption.
     ports:
@@ -41,7 +41,7 @@ class Dict(Actor):
 
 
     @manage(['n', '_dict', 'done'])
-    def init(self, n=1):
+    def init(self, n):
         self.n = n if n > 0 else 0
         self._dict = {}
         self.done = False

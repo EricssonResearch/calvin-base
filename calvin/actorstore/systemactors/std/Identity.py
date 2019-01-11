@@ -33,7 +33,7 @@ class Identity(Actor):
       help: the same token
     """
     @manage(['dump', 'last'])
-    def init(self, dump=False):
+    def init(self, dump):
         self.dump = dump
         self.last = None
 

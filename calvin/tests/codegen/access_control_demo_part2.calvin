@@ -5,7 +5,7 @@ component StopLight() state -> status {
     id.token > .status
 }
 
-button : io.Button()
+button : io.Button(text="Button")
 lock   : StopLight()
 sink   : flow.Terminator()
 

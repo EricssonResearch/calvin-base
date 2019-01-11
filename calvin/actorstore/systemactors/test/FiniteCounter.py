@@ -16,7 +16,6 @@
 
 from calvin.actor.actor import Actor, manage, condition, stateguard
 from calvin.runtime.north.calvin_token import EOSToken
-import sys
 from calvin.utilities.calvinlogger import get_actor_logger
 
 _log = get_actor_logger(__name__)
@@ -33,7 +32,7 @@ class FiniteCounter(Actor):
     """
 
     @manage(['count', 'ends', 'restart', 'start', 'replicate_mult', 'stopped'])
-    def init(self, start=0, steps=sys.maxint, repeat=False, replicate_mult=False, stopped=False):
+    def init(self, start, steps, repeat, replicate_mult, stopped):
         self.count = start
         self.ends = start + steps
         self.restart = start if repeat else self.ends + 1

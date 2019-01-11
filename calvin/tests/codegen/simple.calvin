@@ -1,5 +1,5 @@
-src : std.CountTimer()
-snk : test.Sink(store_tokens=1, quiet=1)
+src : std.CountTimer(start=1, sleep=0.1, steps=1000000000)
+snk : test.Sink(store_tokens=1, quiet=1, active=true)
 src.integer > snk.token
 
 rule simple: node_attr_match(index=["node_name", {"organization": "com.ericsson"}])

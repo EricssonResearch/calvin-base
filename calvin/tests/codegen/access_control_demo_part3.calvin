@@ -1,4 +1,4 @@
-button : io.Button()
+button : io.Button(text="Button")
 camera : media.ImageSource()
 screen : media.ImageSink()
 

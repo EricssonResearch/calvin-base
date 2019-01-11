@@ -34,7 +34,7 @@ component B() in -> out {
 
 a:std.Counter()
 b:B()
-c:test.Sink()
+c:test.Sink(store_tokens=false, active=true, quiet=false)
 
 a.integer > b.in
 b.out > c.token

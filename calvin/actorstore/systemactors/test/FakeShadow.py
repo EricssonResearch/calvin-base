@@ -36,7 +36,7 @@ class FakeShadow(Actor):
       name: token
     """
     @manage(['dump', 'last', 'node_id', 'jumps', 'index'])
-    def init(self, dump=False):
+    def init(self, dump):
         self.dump = dump
         self.last = None
         self.node_id = get_calvinsys()._node.id

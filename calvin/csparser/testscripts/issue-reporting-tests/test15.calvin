@@ -2,6 +2,6 @@
 
 /* Actors */
 src : std.CounterActor()
-snk : test.Sink()
+snk : test.Sink(store_tokens=false, active=true, quiet=false)
 /* Connections */
 src.integer > snk.token

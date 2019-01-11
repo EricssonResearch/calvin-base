@@ -1,6 +1,6 @@
 client : net.HTTPPut()
 format : text.Format(fmt="http://{address}/api/{username}/lights/{light}/state")
-to_string : json.ToString()
+to_string : json.ToString(exception_output=null)
 status : io.Print()
 data   : io.Print()
 headers: io.Print()

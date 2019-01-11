@@ -1,7 +1,7 @@
 component UDPSend(uri) -> {
     set_uri : json.SetValue()
-    cnt : std.CountTimer()
-    stringify : std.Stringify()
+    cnt : std.CountTimer(start=1, sleep=0.1, steps=1000000000)
+    stringify : std.Stringify(encoding=null)()
     sender : net.UDPSender()
 
     {"command" : "connect" } > set_uri.container

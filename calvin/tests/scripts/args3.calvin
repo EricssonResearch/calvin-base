@@ -21,6 +21,6 @@ component PrefixFileTwice(file, prefix) -> out {
 
 /* Order of arguments is irrelevant */
 src:PrefixFileTwice(prefix="--- ", file="data.txt")
-snk:test.Sink()
+snk:test.Sink(store_tokens=false, active=true, quiet=false)
 
 src.out>snk.token

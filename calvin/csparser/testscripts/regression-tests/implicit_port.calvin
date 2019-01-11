@@ -1,4 +1,4 @@
 # Test 4: program
-snk : test.Sink()
+snk : test.Sink(store_tokens=false, active=true, quiet=false)
 
 [1, 2] > snk.token

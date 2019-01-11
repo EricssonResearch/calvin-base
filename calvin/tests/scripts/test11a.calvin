@@ -1,8 +1,8 @@
 // Actor fan-out
 
 
-snk1 : test.Sink()
-snk2 : test.Sink()
+snk1 : test.Sink(store_tokens=false, active=true, quiet=false)
+snk2 : test.Sink(store_tokens=false, active=true, quiet=false)
 src : std.Counter()
 
 src.integer > snk1.token

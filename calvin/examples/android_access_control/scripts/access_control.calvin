@@ -1,6 +1,6 @@
 
 /* Actors */
-cameraButton : io.Button()
+cameraButton : io.Button(text="Button")
 mobileCamera : media.ImageSource()
 computerScreen :  media.ImageSink()
 computerButtonOpen : io.Button(text="Open door")

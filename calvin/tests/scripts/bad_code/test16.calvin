@@ -11,7 +11,7 @@ component ArgWrapper(sourcefile) -> out {
 }
 
 src:ArgWrapper(sourcefile="data.txt")
-snk:test.Sink()
+snk:test.Sink(store_tokens=false, active=true, quiet=false)
 
 src.out > snk.token
 

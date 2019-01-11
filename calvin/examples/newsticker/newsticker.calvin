@@ -143,7 +143,7 @@ component GetCommitData() url, params -> status, data {
   """
   header_gen : HeaderGen()
   request : net.HTTPGet()
-  body_to_json : json.FromString()
+  body_to_json : json.FromString(exception_output=null)
 
   .url > request.URL
   .params > request.params

@@ -25,9 +25,9 @@ class List(Actor):
     documentation:
     - Create a list.
     - Consumes 'n' tokens to produce a list, 'n' defaults to 1. If 'n' is zero or negative,
-      consumes tokens until EOS encountered (variable list length). The optional arguments
+      consumes tokens until EOS encountered (variable list length). Arguments
       pre_list and post_list are used to prepend and extend the list before delivering
-      the final list. Will produce an ExceptionToken if EOS is encountered when n > 0,
+      the final list unless set to None. Will produce an ExceptionToken if EOS is encountered when n > 0,
       or if an ExceptionToken is encountered regardless of value of 'n'.
     ports:
     - direction: in
@@ -45,7 +45,7 @@ class List(Actor):
 
 
     @manage(['n', '_list', 'done'])
-    def init(self, n=1, pre_list=None, post_list=None):
+    def init(self, n, pre_list, post_list):
         self.n = n if n > 0 else 0
         self._list = []
         self.pre_list = pre_list

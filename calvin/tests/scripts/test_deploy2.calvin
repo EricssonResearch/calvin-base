@@ -1,4 +1,4 @@
-src : std.CountTimer()
+src : std.CountTimer(start=1, sleep=0.1, steps=1000000000)
 sum1 : std.Sum()
 sum2 : std.Sum()
 sum3 : std.Sum()
@@ -7,7 +7,7 @@ sum5 : std.Sum()
 sum6 : std.Sum()
 sum7 : std.Sum()
 sum8 : std.Sum()
-snk : test.Sink()
+snk : test.Sink(store_tokens=false, active=true, quiet=false)
 
 src.integer > sum1.integer
 sum1.integer > sum2.integer

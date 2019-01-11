@@ -10,7 +10,7 @@ component Lock() state -> {
   check_lock_status.data > lock.token
 }
 
-button : io.Button()
+button : io.Button(text="Button")
 lock   : Lock()
 
 button.state > lock.state

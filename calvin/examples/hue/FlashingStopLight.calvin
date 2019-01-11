@@ -73,7 +73,7 @@ component FlashStopLight(address, username, lightno, interval) -> {
 }
 
 component CmdBuilder() on, sat, bri, hue -> string {
-    to_str : json.ToString()
+    to_str : json.ToString(exception_output=null)
     set_on : json.SetValue()
     set_sat: json.SetValue()
     set_bri: json.SetValue()

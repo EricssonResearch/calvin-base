@@ -24,8 +24,8 @@ class ToString(Actor):
     """
     documentation:
     - Transform data to JSON-string
-    - Exception tokens will produce "null" as output unless another value is supplied
-      through the optional 'exception_output' argument.
+    - Exception tokens will value is supplied
+      through the 'exception_output' argument.
     ports:
     - direction: in
       help: any kind of token
@@ -39,7 +39,7 @@ class ToString(Actor):
         return (self.json.tostring(self.default),)
 
     @manage(['default'])
-    def init(self, exception_output=None):
+    def init(self, exception_output):
         self.default = exception_output
         self.setup()
 

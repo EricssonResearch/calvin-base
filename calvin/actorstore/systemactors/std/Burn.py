@@ -30,7 +30,7 @@ class Burn(Actor):
       name: token
     """
     @manage(['dump', 'last', 'duration'])
-    def init(self, dump=False, duration=0.1):
+    def init(self, dump, duration):
         self.dump = dump
         self.last = None
         self.duration = duration

@@ -7,7 +7,7 @@ component Pass() in -> out {
 
 src:std.Counter()
 pass:Pass()
-snk:test.Sink()
+snk:test.Sink(store_tokens=false, active=true, quiet=false)
 
 src.integer > pass.in
 pass.out > snk.token

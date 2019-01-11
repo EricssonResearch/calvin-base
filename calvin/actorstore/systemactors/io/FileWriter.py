@@ -61,7 +61,7 @@ class FileWriter(Actor):
     """
 
     @manage(['basename', 'counter', 'suffix'])
-    def init(self, basename, suffix=""):
+    def init(self, basename, suffix):
         self.basename = basename
         self.suffix = suffix
         self.counter = 0

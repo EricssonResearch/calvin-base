@@ -51,7 +51,7 @@ class TCPServer(Actor):
     """
 
     @manage(['host', 'port', 'mode', 'delimiter', 'max_length'])
-    def init(self, mode='line', delimiter='\r\n', max_length=8192):
+    def init(self, mode, delimiter, max_length):
         self.host                = None
         self.port                = None
         self.server              = None

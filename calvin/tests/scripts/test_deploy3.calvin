@@ -1,5 +1,5 @@
 component TheSource() -> out {
-  first: std.CountTimer()
+  first: std.CountTimer(start=1, sleep=0.1, steps=1000000000)
   second: std.Identity()
   
   first.integer > second.token
@@ -8,7 +8,7 @@ component TheSource() -> out {
 
 src : TheSource()
 sum : std.Sum()
-snk : test.Sink()
+snk : test.Sink(store_tokens=false, active=true, quiet=false)
 
 src.out > sum.integer
 sum.integer > snk.token

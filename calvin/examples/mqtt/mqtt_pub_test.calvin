@@ -8,7 +8,7 @@ define settings={
 }
 
 mqtt : net.MQTTPublisher(hostname="broker.hivemq.com", port=1883, settings=settings)
-counter : std.CountTimer(sleep=2.0)
+counter : std.CountTimer(start=1, sleep=2.0, steps=1000000000)
 
 "testing" > mqtt.topic
 counter.integer > mqtt.payload

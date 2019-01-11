@@ -141,8 +141,8 @@ component HTTPFileReader() filename -> resource, status {
   """
 
   read_html : io.FileReader()
-  concat : text.LineJoin()
-  exception_handler : exception.ExceptionHandler()
+  concat : text.LineJoin(delim="\n")
+  exception_handler : exception.ExceptionHandler(replacement=null, replace=false)
   is_eos : std.Compare(rel="=")
   status_mapper : flow.Deselect()
 
@@ -167,7 +167,7 @@ component StatusMap() status -> reason {
 
   choice : json.GetValue()
   except : exception.ExceptionHandler(replacement="Unknown Status", replace=true)
-  stringify : std.Stringify()
+  stringify : std.Stringify(encoding=null)()
 
   .status > stringify.in
   stringify.out > choice.key
@@ -235,7 +235,7 @@ component Server(host, port) response -> request {
   """
   TCPServer
   """
-  tcp_server : net.TCPServer(delimiter="\r\n\r\n")
+  tcp_server : net.TCPServer(max_length=8192, mode="line", delimiter="\r\n\r\n")
 
   host > tcp_server.host
   port > tcp_server.port
@@ -313,7 +313,7 @@ component GetResource() absolute_path, status -> body, status {
 #     """
 #     Debugging helper
 #     """
-#     to_str : std.Stringify()
+#     to_str : std.Stringify(encoding=null)()
 #     add_label : text.PrefixString(prefix=label)
 #     log : io.Print()
 #

@@ -35,7 +35,7 @@ class Stringify(Actor):
     """
 
     @manage()
-    def init(self, encoding=None):
+    def init(self, encoding):
         self.encoding = encoding
 
     @condition(['in'], ['out'])

@@ -22,7 +22,7 @@ iip : flow.Init(data="nothing")
 client : net.HTTPGetS(url="http://api.open-notify.org/astros.json", params=null, headers={"content-type": "application/json"}, auth=null)
 cmp : std.Compare(rel="=")
 sel : flow.Select()
-to_json: json.FromString()
+to_json: json.FromString(exception_output=null)
 get_list : json.GetValue()
 print : PrintFormattedList(item_fmt="{name}, {craft}")
 

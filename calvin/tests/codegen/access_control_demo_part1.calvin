@@ -1,4 +1,4 @@
-button : io.Button()
+button : io.Button(text="Button")
 check  : std.Identity(dump=true)
 bell   : media.PlayAudio(audiofile="dingdong.ogg")
 

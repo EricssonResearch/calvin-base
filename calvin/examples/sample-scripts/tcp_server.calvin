@@ -1,7 +1,7 @@
 /* Actors */
 host   : std.Constant(data="localhost")
 port   : std.Constant(data=8124)
-server : net.TCPServer()
+server : net.TCPServer(delimiter="\r\n", max_length=8192, mode="line")
 output : io.Print()
 
 /* Connections */

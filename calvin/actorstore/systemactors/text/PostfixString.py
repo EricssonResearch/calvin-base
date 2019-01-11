@@ -32,7 +32,7 @@ class PostfixString(Actor):
       name: out
     """
     @manage(['postfix'])
-    def init(self, postfix='-'):
+    def init(self, postfix):
         self.postfix = str(postfix)
 
     def exception_handler(self, action, args):

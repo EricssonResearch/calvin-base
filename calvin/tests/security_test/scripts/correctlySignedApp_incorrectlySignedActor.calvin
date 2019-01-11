@@ -1,6 +1,6 @@
-src : std.CountTimer()
+src : std.CountTimer(start=1, sleep=0.1, steps=1000000000)
 sum : std.SumFake()
-snk : test.Sink(store_tokens=true)
+snk : test.Sink(store_tokens=true, quiet=1, active=true)
 
 src.integer > sum.integer
 sum.integer > snk.token

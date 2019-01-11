@@ -1,5 +1,5 @@
 tick : std.Trigger(tick=1.0, data="{\"this\": \"is a test\"}")
-fromstring : json.FromString()
+fromstring : json.FromString(exception_output=null)
 out : io.Print()
 
 tick.data > fromstring.string

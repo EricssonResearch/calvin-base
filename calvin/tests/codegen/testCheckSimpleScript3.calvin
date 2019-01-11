@@ -1,4 +1,4 @@
-a:std.CountTimer()
+a:std.CountTimer(start=1, sleep=0.1, steps=1000000000)
 b:io.Print()
 
 a.integer > b.token

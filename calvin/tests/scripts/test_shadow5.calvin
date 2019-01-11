@@ -1,5 +1,5 @@
 component TheSource() -> out {
-  first: std.CountTimer()
+  first: std.CountTimer(start=1, sleep=0.1, steps=1000000000)
   second: std.Identity()
   
   first.integer > second.token
@@ -7,7 +7,7 @@ component TheSource() -> out {
 }
 button : TheSource()
 check : std.Sum()
-bell : test.Sink(store_tokens=true)
+bell : test.Sink(store_tokens=true, quiet=1, active=true)
 
 button.out > check.integer
 check.integer > bell.token

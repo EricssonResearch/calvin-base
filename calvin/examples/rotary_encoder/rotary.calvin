@@ -13,7 +13,7 @@ component Formatter(case_true, case_false) val -> result {
 }
 
 rotary : io.Knob()
-button : io.Button()
+button : io.Button(text="Button")
 collect : flow.Collect()
 print: io.Print()
 turn_formatter : Formatter(case_true="Knob turned left", case_false="Knob turned right")

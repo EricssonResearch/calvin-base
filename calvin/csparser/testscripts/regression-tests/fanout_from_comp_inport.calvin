@@ -1,8 +1,8 @@
 // Component with fan-out from inport
 
 component TeeSink() in -> {
-  snk1 : test.Sink()
-  snk2 : test.Sink()
+  snk1 : test.Sink(store_tokens=false, active=true, quiet=false)
+  snk2 : test.Sink(store_tokens=false, active=true, quiet=false)
 
   .in > snk1.token
   .in > snk2.token

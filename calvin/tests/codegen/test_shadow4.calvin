@@ -1,6 +1,6 @@
-button : std.CountTimer()
+button : std.CountTimer(start=1, sleep=0.1, steps=1000000000)
 check : std.Sum()
-bell : test.Sink(store_tokens=true)
+bell : test.Sink(store_tokens=true, active=true, quiet=false)
 
 button.integer > check.integer
 check.integer > bell.token

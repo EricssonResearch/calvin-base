@@ -9,7 +9,7 @@ component Tag(tag) in -> {
 }
 
 disp : flow.Dispatch()
-input : std.CountTimer()
+input : std.CountTimer(start=1, sleep=0.1, steps=1000000000)
 tag1: Tag(tag="tag1-")
 tag2: Tag(tag="tag2-")
 tag3: Tag(tag="tag3-")

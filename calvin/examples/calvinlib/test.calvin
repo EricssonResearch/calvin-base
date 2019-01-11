@@ -1,5 +1,5 @@
-tostring : json.ToString()
-fromstring : json.FromString()
+tostring : json.ToString(exception_output=null)
+fromstring : json.FromString(exception_output=null)
 out : io.Print()
 
 {"hello": "this is a test", "section": 2.3 } > tostring.data

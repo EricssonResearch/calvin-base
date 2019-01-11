@@ -1,4 +1,4 @@
-button : io.Button()
+button : io.Button(text="Button")
 light: io.Light()
 out : io.Print()
 

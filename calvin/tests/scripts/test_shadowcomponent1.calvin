@@ -1,6 +1,6 @@
 src : testshadow.TheSource()
 sum : std.Sum()
-snk : test.Sink()
+snk : test.Sink(store_tokens=false, active=true, quiet=false)
 
 src.out > sum.integer
 sum.integer > snk.token

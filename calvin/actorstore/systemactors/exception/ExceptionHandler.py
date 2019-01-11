@@ -25,7 +25,7 @@ class ExceptionHandler(Actor):
     - Scan tokens for Exceptions.
     - Any non-exception or EOS is simply passed on. Exceptions other than EOS are replaced
       with an EOS token on the ouput 'token' port unless optional 'replace' argument is
-      true, in which case 'replacement' argument (defaults to null) is produced. Any exception
+      true, in which case 'replacement' argument is produced. Any exception
       (including EOS) are produces its reason on the 'status' output port.
     ports:
     - direction: in
@@ -48,7 +48,7 @@ class ExceptionHandler(Actor):
         self.token = EOSToken()
 
     @manage(['status', 'token', 'replace', 'replacement'])
-    def init(self, replace=False, replacement=None):
+    def init(self, replace, replacement):
         self.replace = replace
         self.replacement = replacement
         self.status = None

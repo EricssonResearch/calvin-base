@@ -10,6 +10,6 @@ component PrefixFile(prefix, file) -> out {
 }
 
 src : PrefixFile(prefix="?--- ", file="data.txt")
-snk : test.Sink()
+snk : test.Sink(store_tokens=false, active=true, quiet=false)
 
 src.out>snk.token

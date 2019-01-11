@@ -35,7 +35,7 @@ class Sink(Actor):
         return action(self, *args)
 
     @manage(['tokens', 'store_tokens', 'quiet', 'active'])
-    def init(self, store_tokens=False, quiet=False, active=True):
+    def init(self, store_tokens, quiet, active):
         self.store_tokens = store_tokens
         self.tokens = []
         self.quiet = quiet

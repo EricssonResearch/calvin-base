@@ -2,7 +2,11 @@
     "actors": {
         "testCheckSimpleScript1:a": {
             "actor_type": "std.CountTimer", 
-            "args": {}, 
+            "args": {
+                    "start": 1, 
+                    "sleep": 0.1, 
+                    "steps": 1000000000
+                }, 
             "signature": "3bf2bdf645bf20cb21bd6134d016106923c2697f8694137a471b9121b12cb6aa"
         }, 
         "testCheckSimpleScript1:b": {

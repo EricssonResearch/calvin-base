@@ -1,7 +1,7 @@
 // Missing actor
 
 /* Actors */
-src : std.CountTimer()
-snk : test.Sink(store_tokens=1, quiet=1)
+src : std.CountTimer(start=1, sleep=0.1, steps=1000000000)
+snk : test.Sink(store_tokens=1, quiet=1, active=true)
 /* Connections */
 src.integer > snk.token

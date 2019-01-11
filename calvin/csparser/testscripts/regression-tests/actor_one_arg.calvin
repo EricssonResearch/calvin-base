@@ -1,4 +1,4 @@
-src:std.CountTimer()
+src:std.CountTimer(start=1, sleep=0.1, steps=1000000000)
 filter:std.Constantify(constant={"FOO":"Hello", "bar":1})
 snk:io.Print()
 

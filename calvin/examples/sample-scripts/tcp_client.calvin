@@ -1,7 +1,7 @@
 /* Actors */
-cnt : std.CountTimer()
-stringify : std.Stringify()
-client : net.TCPClient(mode="raw")
+cnt : std.CountTimer(start=1, sleep=0.1, steps=1000000000)
+stringify : std.Stringify(encoding=null)()
+client : net.TCPClient(mode="raw", delimiter="\r\n")
 control : std.Constant(data={"control": "connect", "uri": "tcp://localhost:8124"})
 sink : io.Print()
 

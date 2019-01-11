@@ -38,7 +38,7 @@ class SampleHold(Actor):
     """
 
     @manage(['held', 'immutable'])
-    def init(self, default=None):
+    def init(self, default):
         self.set_current(default)
         self.setup()
 

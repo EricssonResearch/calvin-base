@@ -1,4 +1,4 @@
-button : io.Button()
+button : io.Button(text="Button")
 lock   : hue.StopLight(address="192.168.0.101", username="newdeveloper", lightno=1)
 
 button.state > lock.state
