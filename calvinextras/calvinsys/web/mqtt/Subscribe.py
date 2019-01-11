@@ -14,11 +14,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from urlparse import urlparse
+import paho.mqtt.client as mqtt
+
 from calvin.runtime.south.async import threads
 from calvin.runtime.south.calvinsys import base_calvinsys_object
 from calvin.utilities.calvinlogger import get_logger
-import paho.mqtt.subscribe
-
 
 _log = get_logger(__name__)
 
@@ -31,6 +32,11 @@ class Subscribe(base_calvinsys_object.BaseCalvinsysObject):
     init_schema = {
         "type": "object",
         "properties": {
+            "uri": {
+                "description": "Identifies MQTT broker listener location."
+                "Property value format: scheme://host:port",
+                "type": "string"
+            },
             "hostname": {
                 "description": "hostname of broker",
                 "type": "string"
@@ -118,7 +124,7 @@ class Subscribe(base_calvinsys_object.BaseCalvinsysObject):
                 "type": "boolean"
             }
         },
-        "required": ["hostname", "topics"],
+        "required": ["topics"],
     }
 
     can_read_schema = {
@@ -148,7 +154,8 @@ class Subscribe(base_calvinsys_object.BaseCalvinsysObject):
         "description": "Does nothing"
     }
 
-    def init(self, topics, hostname, port=1883, qos=0, client_id='', will=None, auth=None, tls=None, transport='tcp', payload_only=False, **kwargs):
+    def init(self, topics, uri=None, hostname=None, port=1883, qos=0, client_id='', will=None, auth=None, tls=None, transport='tcp', payload_only=False, **kwargs):
+
         def on_connect(client, userdata, flags, rc):
             if rc != 0:
                 _log.warning("Connection to MQTT broker {}:{} failed".format(hostname, port))
@@ -166,6 +173,28 @@ class Subscribe(base_calvinsys_object.BaseCalvinsysObject):
         def on_subscribe(client, userdata, message_id, granted_qos):
             _log.info("MQTT subscription {}:{} started".format(hostname, port))
 
+        def on_log(client, userdata, level, string):
+            log_options[level](client, string);
+
+        def on_log_info(client, string):
+            _log.info("MQTT[{}] {}".format(client.client_id, string))
+
+        def on_log_err(client, string):
+            _log.error("MQTT[{}] {}".format(client.client_id, string))
+
+        def on_log_warn(client, string):
+            _log.warning("MQTT[{}] {}".format(client.client_id, string))
+
+        def on_log_debug(client, string):
+            _log.debug("MQTT[{}] {}".format(client.client_id, string))
+
+        log_options = {
+            mqtt.MQTT_LOG_INFO : on_log_info,
+            mqtt.MQTT_LOG_NOTICE : on_log_info,
+            mqtt.MQTT_LOG_WARNING : on_log_warn,
+            mqtt.MQTT_LOG_ERR : on_log_err,
+            mqtt.MQTT_LOG_DEBUG : on_log_debug
+        }
         # Config
         self.settings = {
             "msg_count": 1,
@@ -179,16 +208,26 @@ class Subscribe(base_calvinsys_object.BaseCalvinsysObject):
             "transport": transport
         }
 
+        is_tls = False
+        if (uri):
+            result = urlparse(uri)
+            if (result.scheme.lower() in ["https", "mqtts"]):
+                is_tls = True
+            # override hostname and port
+            hostname = result.hostname
+            port = result.port
+
         _log.info("TLS: {}".format(tls))
         self.payload_only = payload_only
         self.topics = [(topic.encode("ascii"), qos) for topic in topics]
         self.data = []
 
-        self.client = paho.mqtt.client.Client(client_id=client_id, transport=transport)
+        self.client = mqtt.Client(client_id=client_id, transport=transport)
         self.client.on_connect = on_connect
         self.client.on_disconnect = on_disconnect
         self.client.on_message = on_message
         self.client.on_subscribe = on_subscribe
+        self.client.on_log = on_log
 
         if will:
             # set will
@@ -201,19 +240,42 @@ class Subscribe(base_calvinsys_object.BaseCalvinsysObject):
             self.client.username_pw_set(username=auth.get("username"), password=auth.get("password"))
 
         if tls:
-            #_log.info("setting tls: {} / {} / {}".format(tls.get("ca_certs"), tls.get("certfile"), tls.get("keyfile")))
+            # _log.info("setting tls: {} / {} / {}".format(tls.get("ca_certs"), tls.get("certfile"), tls.get("keyfile")))
             self.client.tls_set(ca_certs=tls.get("ca_certs"), certfile=tls.get("certfile"), keyfile=tls.get("keyfile"))
-
+        elif is_tls:
+            _log.warning("TLS configuration is missing!")
 
         self.client.connect_async(host=hostname, port=port)
         self.client.loop_start()
 
-
     def can_write(self):
         return True
 
-    def write(self, data=None):
-        pass
+    def write(self, data):
+        topic = data.get("topic", "").encode("ascii")
+        qos = data.get("qos", 0)
+        update_topic = True
+        topic_index = -1
+        # check if topic already exist
+        for idx in range(len(self.topics)):
+            (t, q) = self.topics[idx]
+            if t == topic:
+                if (q == qos):
+                    update_topic = False
+                else:
+                    topic_index = idx
+                break
+
+        if (update_topic):
+            status = self.client.subscribe([(topic, qos)])
+            if (status[0] == mqtt.MQTT_ERR_SUCCESS):
+                if (topic_index >= 0):
+                    self.topics[topic_index] = (topic, qos)
+                else:
+                    self.topics.append((topic, qos))
+            else:
+                _log.error("Failed to update topic: ({}, {}) Check MQTT logs"
+                           .format(topic, qos))
 
     def can_read(self):
         return bool(self.data)
