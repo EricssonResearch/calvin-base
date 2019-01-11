@@ -199,6 +199,9 @@ def setup_calvinlib():
         "math.hash": {
             "module": "hash.Hash",
         },
+        "collections.jq": {
+            "module": "collections.Jq",
+        },
         "json": {
             "module": "jsonlib.Json"
         },
