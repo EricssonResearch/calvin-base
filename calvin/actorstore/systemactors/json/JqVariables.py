@@ -17,6 +17,9 @@
 # encoding: utf-8
 
 from calvin.actor.actor import Actor, manage, condition, stateguard, calvinlib
+from calvin.utilities.calvinlogger import get_actor_logger
+
+_log = get_actor_logger(__name__)
 
 
 class JqVariables(Actor):
@@ -56,13 +59,16 @@ class JqVariables(Actor):
     def transform(self, value, vars):
         if not vars:
             vars = {}
-        cscript = self.jq.compile(self.script, vars)
-        if self.mode == "all":
-            self.outputs.append(cscript.all(value))
-        elif self.mode == "first":
-            self.outputs.append(cscript.first(value))
-        elif self.mode == "split":
-            self.outputs.extend(cscript.all(value))
+        try:
+            cscript = self.jq.compile(self.script, vars)
+            if self.mode == "all":
+                self.outputs.append(cscript.all(value))
+            elif self.mode == "first":
+                self.outputs.append(cscript.first(value))
+            elif self.mode == "split":
+                self.outputs.extend(cscript.all(value))
+        except:
+            _log.exception("Failed jq script")
 
     action_priority = (send, transform)
     requires = ["collections.jq"]

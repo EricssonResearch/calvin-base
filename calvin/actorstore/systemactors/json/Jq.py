@@ -17,6 +17,9 @@
 # encoding: utf-8
 
 from calvin.actor.actor import Actor, manage, condition, stateguard, calvinlib
+from calvin.utilities.calvinlogger import get_actor_logger
+
+_log = get_actor_logger(__name__)
 
 
 class Jq(Actor):
@@ -47,7 +50,11 @@ class Jq(Actor):
 
     def setup(self):
         self.jq = calvinlib.use('collections.jq')
-        self.cscript = self.jq.compile(self.script, self.vars)
+        try:
+            self.cscript = self.jq.compile(self.script, self.vars)
+        except:
+            _log.exception("Failed compile jq script")
+            self.cscript = None
 
     @stateguard(lambda actor: actor.outputs)
     @condition(action_output=['value'])
@@ -56,12 +63,17 @@ class Jq(Actor):
 
     @condition(['value'])
     def transform(self, value):
-        if self.mode == "all":
-            self.outputs.append(self.cscript.all(value))
-        elif self.mode == "first":
-            self.outputs.append(self.cscript.first(value))
-        elif self.mode == "split":
-            self.outputs.extend(self.cscript.all(value))
+        if self.cscript is None:
+            return
+        try:
+            if self.mode == "all":
+                self.outputs.append(self.cscript.all(value))
+            elif self.mode == "first":
+                self.outputs.append(self.cscript.first(value))
+            elif self.mode == "split":
+                self.outputs.extend(self.cscript.all(value))
+        except:
+            _log.exception("Failed apply jq script")
 
     action_priority = (send, transform)
     requires = ["collections.jq"]
