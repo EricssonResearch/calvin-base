@@ -14,7 +14,9 @@
         "ports_alternate:input": {
             "actor_type": "std.CountTimer", 
             "args": {
-                "sleep": 0.5
+                "sleep": 0.5,
+                "start":1,
+                "steps":1000000000
             }, 
             "signature": "3bf2bdf645bf20cb21bd6134d016106923c2697f8694137a471b9121b12cb6aa"
         }, 

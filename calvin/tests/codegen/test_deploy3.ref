@@ -2,17 +2,21 @@
     "actors": {
         "test_deploy3:snk": {
             "actor_type": "test.Sink", 
-            "args": {}, 
+            "args": {
+                "store_tokens":false, 
+                "active":true, 
+                "quiet":false
+            }, 
             "signature": "797d9e5483ae235af0772329ecf3d37bff628542181279a98b73fb8c748a7e7c"
         }, 
         "test_deploy3:src:first": {
             "actor_type": "std.CountTimer", 
-            "args": {}, 
+            "args": {"start":1, "sleep":0.1, "steps":1000000000}, 
             "signature": "3bf2bdf645bf20cb21bd6134d016106923c2697f8694137a471b9121b12cb6aa"
         }, 
         "test_deploy3:src:second": {
             "actor_type": "std.Identity", 
-            "args": {}, 
+            "args": {"dump":false}, 
             "signature": "1cd0b1f440ac8a5d1ed69108ebce63902b0383778da8ac2d9aa817f021665168"
         }, 
         "test_deploy3:sum": {

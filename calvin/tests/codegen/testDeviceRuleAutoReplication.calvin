@@ -1,6 +1,6 @@
 src    : std.CountTimer(start=1, sleep=0.01, steps=1000000000)
 ident  : std.Burn(duration=0.1, dump=false)
-delay  : std.Identity()
+delay  : std.Identity(dump=false)
 snk    : test.Sink(store_tokens=1, quiet=1, active=true)
 # src.integer(routing="balanced")
 # delay.token[in](routing="collect-tagged")

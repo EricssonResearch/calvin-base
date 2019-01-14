@@ -1,6 +1,6 @@
 component TheSource() -> out {
   first: std.CountTimer(start=1, sleep=0.1, steps=1000000000)
-  second: std.Identity()
+  second: std.Identity(dump=false)
 
   first.integer > second.token
   second.token > .out

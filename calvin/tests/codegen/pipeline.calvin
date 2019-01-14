@@ -1,6 +1,6 @@
 src : std.Trigger(tick=1, data="fire")
-id1 : std.Identity()
-id2 : std.Identity()
+id1 : std.Identity(dump=false)
+id2 : std.Identity(dump=false)
 snk : io.Log(loglevel="INFO")
 
 src.data > id1.token

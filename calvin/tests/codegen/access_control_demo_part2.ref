@@ -46,7 +46,7 @@
     "valid": true, 
     "actors": {
         "access_control_demo_part2:lock:id": {
-            "args": {}, 
+            "args": {"dump": false}, 
             "actor_type": "std.Identity", 
             "signature": "1cd0b1f440ac8a5d1ed69108ebce63902b0383778da8ac2d9aa817f021665168"
         }, 
@@ -56,7 +56,7 @@
             "signature": "d020e4a1dc9953df2924eba3ceed61544fff2bd4fab9f602758cce0e8957d522"
         }, 
         "access_control_demo_part2:button": {
-            "args": {}, 
+            "args": {"text": "Button"}, 
             "actor_type": "io.Button", 
             "signature": "489cd10a57de72e45ea1202fff45e6ae1a742ba336715264f98af4aa8b1b55d6"
         }

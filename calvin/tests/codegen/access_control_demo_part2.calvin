@@ -1,5 +1,5 @@
 component StopLight() state -> status {
-    id : std.Identity()
+    id : std.Identity(dump=false)
 
     .state > id.token
     id.token > .status

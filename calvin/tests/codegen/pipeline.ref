@@ -2,12 +2,12 @@
     "actors": {
         "pipeline:id1": {
             "actor_type": "std.Identity", 
-            "args": {}, 
+            "args": {"dump": false}, 
             "signature": "1cd0b1f440ac8a5d1ed69108ebce63902b0383778da8ac2d9aa817f021665168"
         }, 
         "pipeline:id2": {
             "actor_type": "std.Identity", 
-            "args": {}, 
+            "args": {"dump": false}, 
             "signature": "1cd0b1f440ac8a5d1ed69108ebce63902b0383778da8ac2d9aa817f021665168"
         }, 
         "pipeline:snk": {

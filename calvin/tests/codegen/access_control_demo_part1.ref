@@ -53,7 +53,7 @@
             "signature": "1cd0b1f440ac8a5d1ed69108ebce63902b0383778da8ac2d9aa817f021665168"
         }, 
         "access_control_demo_part1:button": {
-            "args": {}, 
+            "args": {"text": "Button"}, 
             "actor_type": "io.Button", 
             "signature": "489cd10a57de72e45ea1202fff45e6ae1a742ba336715264f98af4aa8b1b55d6"
         }, 

@@ -56,7 +56,7 @@
     "valid": true, 
     "actors": {
         "access_control_demo_part4:button": {
-            "args": {}, 
+            "args": {"text":"Button"}, 
             "actor_type": "io.Button", 
             "signature": "489cd10a57de72e45ea1202fff45e6ae1a742ba336715264f98af4aa8b1b55d6"
         }, 
