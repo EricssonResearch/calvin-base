@@ -39,7 +39,7 @@ class TCPClient(Actor):
     """
 
     @manage(['address', 'port', 'mode', 'delimiter'])
-    def init(self, mode, delimiter:
+    def init(self, mode, delimiter):
         self.address = None
         self.port = None
         self.EOST_token_received = False
