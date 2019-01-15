@@ -1,6 +1,7 @@
 import json
 import inspect
 import pystache
+from collections import namedtuple
 from calvin.utilities.calvinlogger import get_logger
 
 _log = get_logger(__name__)
@@ -14,17 +15,11 @@ class DocObject(object):
     DETAILED_FMT_MD = "{{{e_qualified_name}}} : {{{e_short_desc}}}"
     DETAILED_FMT_PLAIN = COMPACT_FMT
 
-    def __init__(self, namespace, name=None, docs=None):
+    def __init__(self, metadata):
         super(DocObject, self).__init__()
-        self.ns = namespace
-        self.name = name
-        if type(docs) is list:
-            docs = "\n".join(docs)
-        self.label = "DocObject"
-        self.docs = docs.rstrip() or ""
-
+        self.metadata = metadata
     #
-    # Allow templates to use e_attr to access an escaped version of attribute attr
+    # Allow templates to use e_<attr> to access an escaped version of attribute <attr>
     #
     def __getattr__(self, synthetic_attr):
         if not synthetic_attr.startswith('e_'):
@@ -50,6 +45,10 @@ class DocObject(object):
         return "\n".join(lines_out)
 
     @property
+    def label(self):
+        return self.metadata['type'].capitalize()
+    
+    @property
     def has_actors(self):
         return False
 
@@ -58,20 +57,31 @@ class DocObject(object):
         return False
 
     @property
+    def ns(self):
+        self.metadata.get('ns', 'NO_NAMESPACE')
+        
+    @property
+    def name(self):
+        self.metadata['name']
+        
+    @property
     def qualified_name(self):
-        if self.name:
-            return "{}.{}".format(self.ns, self.name)
-        return self.ns
+        if 'ns' in self.metadata:
+            return "{}.{}".format(self.metadata['ns'], self.metadata['name'])
+        return self.metadata['name']
 
     @property
     def own_name(self):
-        return self.name or self.ns
+        return self.metadata['name'] or self.metadata['ns']
 
     @property
     def short_desc(self):
-        short_desc, _, _ = self.docs.partition('\n')
-        return short_desc
+        return self.metadata['documentation'][0]
 
+    @property
+    def docs(self):
+        return "\n".join(self.metadata['documentation'])
+        
     @property
     def slug(self):
         return self.qualified_name.replace('.', '_')
@@ -97,19 +107,6 @@ class DocObject(object):
         fmt = inspect.cleandoc(self.DETAILED_FMT_MD)
         return pystache.render(fmt, self)
 
-    def metadata(self):
-        return {'is_known': False}
-
-    def __repr__(self):
-        def _convert(x):
-            try:
-                return x.name or x.ns
-            except:
-                return None
-
-        r = {'type':str(self.__class__.__name__)}
-        r.update(self.__dict__)
-        return json.dumps(r, default=_convert)
 
 
 class ErrorDoc(DocObject):
@@ -132,15 +129,12 @@ class ModuleDoc(DocObject):
     """docstring for ModuleDoc"""
 
     COMPACT_FMT = """
-    {{{qualified_name}}}
+    {{{label}}}: {{{qualified_name}}}
     {{{short_desc}}}
 
-    {{#modules_compact}}
-    Modules: {{{modules_compact}}}
-    {{/modules_compact}}
-    {{#actors_compact}}
-    Actors: {{{actors_compact}}}
-    {{/actors_compact}}
+    {{#items_compact}}
+    Items: {{{items_compact}}}
+    {{/items_compact}}
     """
 
     DETAILED_FMT_PLAIN = """
@@ -148,20 +142,12 @@ class ModuleDoc(DocObject):
     {{{label}}}: {{{qualified_name}}}
     ============================================================
     {{{docs}}}
-    {{#has_modules}}
 
-    Modules:
-    {{/has_modules}}
-    {{#modules}}
+    Items:
+    {{#items}}
       {{{own_name}}} : {{{short_desc}}}
-    {{/modules}}
-    {{#has_actors}}
+    {{/items}}
 
-    Actors:
-    {{/has_actors}}
-    {{#actors}}
-      {{{own_name}}} : {{{short_desc}}}
-    {{/actors}}
     """
 
     DETAILED_FMT_MD = """
@@ -169,68 +155,33 @@ class ModuleDoc(DocObject):
 
     {{{e_docs}}}
 
-    {{#has_modules}}
-    ### Modules:
+    ### Items:
 
-    {{/has_modules}}
-    {{#modules}}
+    {{#items}}
     {{#use_links}}[**{{{e_own_name}}}**](#{{{slug}}}){{/use_links}}{{^use_links}}**{{{e_own_name}}}**{{/use_links}} : {{{e_short_desc}}}
 
-    {{/modules}}
-    {{#has_actors}}
-    ### Actors:
+    {{/items}}
 
-    {{/has_actors}}
-    {{#actors}}
-    {{#use_links}}[**{{{e_own_name}}}**](#{{{slug}}}){{/use_links}}{{^use_links}}**{{{e_own_name}}}**{{/use_links}} : {{{e_short_desc}}}
-
-    {{/actors}}
     {{#use_links}}[\[Top\]](#Calvin){{/use_links}}
     ***
     """
 
-
-    def __init__(self, namespace, modules, actors, doclines):
-        super(ModuleDoc, self).__init__(namespace, None, doclines)
-        self.modules = modules
-        self.actors = actors
-        self.label = "Module"
+    @property
+    def label(self):
+        return "Module"
 
     @property
-    def has_actors(self):
-        return bool(self.actors)
+    def has_items(self):
+        return bool(self.metadata.get['items'])
 
     @property
-    def has_modules(self):
-        return bool(self.modules)
-
+    def items_compact(self):
+        return ", ".join([a['name'] for a in self.metadata['items']])
+        
     @property
-    def modules_compact(self):
-        return ", ".join([x.own_name for x in self.modules if type(x) is not ErrorDoc])
-
-    @property
-    def actors_compact(self):
-        return ", ".join([x.own_name for x in self.actors if type(x) is not ErrorDoc])
-
-    def search(self, search_list):
-        if not search_list:
-            return self
-        name = search_list.pop(0)
-        for x in self.modules:
-            if name == x.ns:
-                return x.search(search_list)
-        for x in self.actors:
-            if name == x.name:
-                if not search_list:
-                    return x
-                return None # Error
-        return None
-
-    def metadata(self):
-        metadata = super(ModuleDoc, self).metadata()
-        metadata['modules'] = [x.ns for x in self.modules]
-        metadata['actors'] = [x.name for x in self.actors]
-        return metadata
+    def items(self):
+        return [DocObject(a) for a in self.metadata['items']]
+    
 
 
 class ActorDoc(DocObject):
@@ -255,14 +206,14 @@ class ActorDoc(DocObject):
     Inports:
     {{/has_inports}}
     {{#inports}}
-      {{{name}}} : {{{docs}}} {{#props}}Properties({{{props}}}){{/props}}
+      {{{name}}} {{#props}}({{{props}}}){{/props}} : {{{docs}}} 
     {{/inports}}
     {{#has_outports}}
 
     Outports:
     {{/has_outports}}
     {{#outports}}
-      {{{name}}} : {{{docs}}} {{#props}}Properties({{{props}}}){{/props}}
+      {{{name}}} {{#props}}({{{props}}}){{/props}} : {{{docs}}} 
     {{/outports}}
     {{#has_requirements}}
 
@@ -302,110 +253,79 @@ class ActorDoc(DocObject):
     ***
     """
 
+    PortDoc = namedtuple('PortDoc', ['name', 'docs', 'props'])
 
-    def __init__(self, namespace, name, args, inputs, outputs, doclines, requires):
-        super(ActorDoc, self).__init__(namespace, name, doclines)
-        self.args = args
-        self.inports = [PortDoc(namespace='in', name=pn, docs=pd, properties=pp) for pn, pd, pp in inputs]
-        self.outports = [PortDoc(namespace='out', name=pn, docs=pd, properties=pp) for pn, pd, pp in outputs]
-        self.input_properties = {pn:pp for pn, _, pp in inputs}
-        self.output_properties = {pn:pp for pn, _, pp in outputs}
-        self.inputs = [pn for pn, _, _ in inputs]
-        self.outputs = [pn for pn, _, _ in outputs]
-        self.requires = sorted(requires)
-        self.label = "Actor"
-
+    def __init__(self, metadata):
+        super(ActorDoc, self).__init__(metadata)
+        self.metadata = metadata
+    
     @property
     def has_inports(self):
-        return bool(self.inports)
+        return any((p['direction'] == 'in' for p  in self.metadata['ports']))
 
     @property
     def has_outports(self):
-        return bool(self.outports)
+        return any((p['direction'] == 'out' for p  in self.metadata['ports']))
 
     @property
     def has_requirements(self):
-        return bool(self.requires)
+        return bool(self.metadata['requires'])
 
     @property
     def fargs(self):
-        def _escape_string_arg(arg):
-            if type(arg) == str or type(arg) == unicode:
-                # Handle \n, \r etc
-                return '"{}"'.format(arg).encode('string_escape')
-            if arg is True:
-                return 'true'
-            if arg is False:
-                return 'false'
-            if arg is None:
-                return 'null'
-            return arg
-            # return '"{}"'.format(arg)
-        return ", ".join(self.args['mandatory'] + ["{}={}".format(k, _escape_string_arg(v)) for k,v in self.args['optional'].iteritems()])
-
+        return ", ".join([a['name'] for a in self.metadata['args']])
+    
     @property
     def inports_compact(self):
-        return ", ".join(self.inputs)
+        return ", ".join(p['name'] for p  in self.metadata['ports'] if p['direction'] == 'in' )
 
     @property
     def outports_compact(self):
-        return ", ".join(self.outputs)
+        return ", ".join(p['name'] for p  in self.metadata['ports'] if p['direction'] == 'out' )
+    
+    @property
+    def inports(self):
+        return [self.PortDoc(p['name'], p['help'], p.get('properties', {}).get('routing')) for p  in self.metadata['ports'] if p['direction'] == 'in' ]
 
+    @property
+    def outports(self):
+        return [self.PortDoc(p['name'], p['help'], p.get('properties', {}).get('routing')) for p  in self.metadata['ports'] if p['direction'] == 'out' ]
+        
     @property
     def requires_compact(self):
-        return ", ".join(self.requires)
-
-    def metadata(self):
-        metadata = {
-            'ns': self.ns,
-            'name': self.name,
-            'type': 'actor',
-            'args': self.args,
-            'inputs': self.inputs,
-            'input_properties': self.input_properties,
-            'outputs': self.outputs,
-            'output_properties': self.output_properties,
-            'requires': self.requires,
-            'is_known': True
-        }
-        return metadata
-
-class PortDoc(DocObject):
-
-    def __init__(self, namespace, name, docs, properties):
-        super(PortDoc, self).__init__(namespace, name, docs)
-        self.properties = properties;
-
-    @property
-    def props(self):
-        def _fmt_val(v):
-            if type(v) is not list:
-                return str(v)
-            l = ", ".join(v)
-            return "[{}]".format(l) if l else ""
-        res = ", ".join(["{}:{}".format(k, _fmt_val(v)) for k,v in self.properties.iteritems()])
-        return res
-
+        return ", ".join(self.metadata['requires'])
 
 
 class ComponentDoc(ActorDoc):
-    #
-    # Augment a couple of methods in the superclass
-    #
-    def __init__(self, namespace, name, args, inputs, outputs, doclines, definition):
-        # FIXME: Build requirements by recursing definition
-        requires = []
-        super(ComponentDoc, self).__init__(namespace, name, args, inputs, outputs, doclines, requires)
-        self.definition = definition
-        self.label = "Component"
-
-    def metadata(self):
-        metadata = super(ComponentDoc, self).metadata()
-        metadata['type'] = 'component'
-        metadata['definition'] = self.definition
-        return metadata
+    pass
 
 
+class DocFormatter(object):
+    """docstring for DocFormatter"""
+    def __init__(self, outputformat='plain', compact=False, links=False):
+        super(DocFormatter, self).__init__()
+        self.outputformat = outputformat
+        self.compact = compact
+        self.links = links
+        
+    def format(self, metadata):
+        class_ = {
+            'actor': ActorDoc,
+            'component': ComponentDoc,
+            'module': ModuleDoc,
+        }.get(metadata['type'], ErrorDoc)
+        a = class_(metadata)
+        if self.outputformat == 'md':
+            if self.links:
+                return a.markdown_links()
+            else:
+                return a.markdown()
+        if self.compact:
+            return a.compact()
+        else:    
+            return a.detailed()
+        
+        
 if __name__ == '__main__':
 
     def test_all_formatters(d):
@@ -414,29 +334,10 @@ if __name__ == '__main__':
             print "%s:\n-----------------------" % (formatter.__name__,)
             print formatter()
 
-    # d = DocObject('yadda')
-    # test_all_formatters(d)
-
-    # d = ErrorDoc('foo', 'Bar', 'short error description')
-    # test_all_formatters(d)
-    # #
-    # d = ModuleDoc('root', [ModuleDoc('std', [], [], 'std short description'), ModuleDoc('io', [], [], 'io short description')], [], 'short description')
-    # test_all_formatters(d)
-    #
-    doclines = """actor yaddda, yadda
-
-        Even more
-    """
-    a = ActorDoc('std', 'Comp', {'mandatory':['x', 'y'], 'optional':{'z':1}}, [('in1', 'anything', 'property'), ('in2', 'something', 'property')], [('out', 'token', {'foo':['apa', 'banan']})], doclines)
-    test_all_formatters(a)
-
-    # c = ComponentDoc('std', 'Args', {'mandatory':['x', 'y'], 'optional':{'z':1}}, [('in1', 'anything', 'property'), ('in2', 'something', 'property')], [('out', 'token', 'property')], doclines, ['alpha', 'beta'], {})
-    # test_all_formatters(c)
-    #
-    # d = ModuleDoc('std', [], [a, c], 'short description')
-    # test_all_formatters(d)
-
-
-
-
-
+    from newstore import Store, Pathinfo
+    s = Store()
+    
+    metadata = s.get_metadata('io.Print')
+    df = DocFormatter(compact=False, outputformat='md', links=True)
+    print df.format(metadata)
+    

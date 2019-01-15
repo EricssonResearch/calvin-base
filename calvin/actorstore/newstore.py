@@ -21,6 +21,7 @@ class Pathinfo(object):
     directory = 1
     actor = 2
     component = 3
+    root = 4
 
 class Store(object):
     
@@ -83,8 +84,10 @@ class Store(object):
         basepath = basepath or os.path.dirname(os.path.realpath(__file__))
         self.basepath = os.path.join(basepath, 'systemactors')
     
-    def normalize(self, actor_type):
-        path = actor_type.replace('.', '/')
+    def normalize(self, query):
+        if not query:
+            return (self.basepath, Pathinfo.root)
+        path = query.replace('.', '/')
         if os.path.isabs(path):
             return (path, Pathinfo.invalid)
         path = os.path.join(self.basepath, path)
@@ -124,23 +127,14 @@ class Store(object):
     def parse_actor_docs(self, docs):
         props = yaml.load(docs)
         jsonschema.validate(props, self.actor_properties_schema)
-        props = self.transform_properties(props)
         return props
-        # json_props = json.dumps(props)
-        # return json_props
 
     def parse_module_docs(self, docs):
         props = yaml.load(docs)
         jsonschema.validate(props, self.module_properties_schema)
         return props
-        # json_props = json.dumps(props)
-        # return json_props
-    
-    def transform_properties(self, props):
-        return props
-        
+
     def get_args(self, co):
-        # FIXME: Assumes all arguments are mandatory
         argspec = inspect.getargs(co)
         args = [{'mandatory':True, 'name':name} for name in argspec.args[1:]]
         return args
@@ -149,7 +143,7 @@ class Store(object):
         basepath, filename = os.path.split(path)
         _, ns = os.path.split(basepath)
         actor_class, _ = os.path.splitext(filename)
-        print  path, actor_class
+        # print  path, actor_class
         src = self.read_file(path)
         co = compile(src, '<string>', 'exec')
         i = self.get_startofcode(co)
@@ -184,50 +178,92 @@ class Store(object):
         raise Exception("FIXME")
         src = self.read_file(path)
         return (src, {})
-        
+
+    def _extract_module_docs(self, path):
+        src = self.read_file(path)
+        co = compile(src, '<string>', 'exec')
+        docstr = self.get_docs(co) 
+        return self.parse_module_docs(docstr)
+               
+            
     def get_directory(self, path):
         tmp_path = os.path.join(path, '__init__.py')
-        src = self.read_file(tmp_path)
-        co = compile(src, '<string>', 'exec')
-        docs = self.get_docs(co) 
-        props = self.parse_module_docs(docs)
+        docs = self._extract_module_docs(tmp_path)
+        _, ns = os.path.split(path)
+        filenames = os.listdir(path)
+        actors = []
+        # modules = []
+        actor_names = [os.path.splitext(f)[0] for f in filenames if f.endswith('.py') and not f == '__init__.py']
+        actor_names.sort()
+        for a in actor_names:
+            props = self.get_metadata("{}.{}".format(ns, a))
+            actors.append({'name':props['name'], 'documentation':props['documentation']})
+            
+        props = {
+            'type': 'module',
+            'name': ns,
+            'documentation': docs,
+            'items': actors,
+        }
         return (None, props)
+        
+    def get_root(self, path):
+        tmp_path = os.path.join(path, '__init__.py')
+        docs = self._extract_module_docs(tmp_path)
+        filenames = os.listdir(path)
+        modules = []
+        module_names = []
+        for f in filenames:
+            filepath = os.path.join(path, f)
+            if os.path.isdir(filepath) and os.path.exists(os.path.join(filepath, '__init__.py')):
+                module_names.append(f)
+        module_names.sort()
+        for m in module_names:
+            props = self.get_metadata(m)
+            modules.append({'name':props['name'], 'documentation':props['documentation']})
+            
+        props = {
+            'type': 'module',
+            'name': '/',
+            'documentation': docs,
+            'items': modules,
+        }
+        return (None, props)
+        
         
     def error_handler(self, path):
         return (path, "Error message")
 
-    def get(self, actor_type):
-        path, info = self.normalize(actor_type)
+    def get_info(self, query):
+        """
+        Get information on actor_type specified as <ns>.<Name>, e.g. 'io.Print
+
+        Returns tuple (info, src, properties), where
+            info is an enum: Pathinfo(invalid, directory, actor, component)
+            src is the actor implementation
+            properties is metadata
+        """
+        path, typeinfo = self.normalize(query)
         handler = {
+            Pathinfo.root : self.get_root,
             Pathinfo.directory : self.get_directory,
             Pathinfo.actor : self.get_actor,
             Pathinfo.component : self.get_component,
-        }.get(info, self.error_handler)
+        }.get(typeinfo, self.error_handler)
         src, properties = handler(path)
-        return (info, src, properties)
+        return (typeinfo, src, properties)
         
+    def get_metadata(self, query):
+        _, _, metadata = self.get_info(query)
+        return metadata
         
-    # metadata_example = {
-    #     'type': 'actor',
-    #     'ns': 'flow',
-    #     'name': 'Init',
-    #     'args': {
-    #         'mandatory': ['data'],
-    #         'optional': {},
-    #     },
-    #     'inputs': ['in'],
-    #     'input_properties': {
-    #         'in': {}
-    #     },
-    #     'outputs': ['out'],
-    #     'output_properties': {
-    #         'out': {}
-    #     },
-    #     'requires': ['sys.schedule'],
-    #     'is_known': True,
-    # }
-    #
-    # new_metadata_example = {
+    def get_src(self, query):
+        _, src, _ = self.get_info(query)
+        return src
+           
+        
+    # metadata_example 
+    #     'flow.Init' => {
     #     'type': 'actor',
     #     'ns': 'flow',
     #     'name': 'Init',
@@ -260,28 +296,50 @@ class Store(object):
     #     'is_known': True,
     #     'documentation': ['', '',] 
     # }
+    
+    # metadata_example 
+    #     'flow' => {
+    #     'type': 'module',
+    #     'name': 'flow',
+    #     'items': [
+    #         {    
+    #             'name':'Foo',
+    #             'documentation': ["actor doc", ""]
+    #         },
+    #         {
+    #             'name':'Bar',
+    #             'documentation': ["actor doc", ""]
+    #         },
+    #     ]
+    #     'documentation': ['', '',] 
+    # }
+    
+    # metadata_example 
+    #     '' => {
+    #     'type': 'module',
+    #     'name': '/',
+    #     'items': [
+    #         {
+    #             'name':'Baz',
+    #             'documentation': ["module doc", ""]
+    #         },
+    #         {
+    #             'name':'Bit',
+    #             'documentation': ["module doc", ""]
+    #         },
+    #     ]
+    #     'documentation': ['', '',] 
+    # }
+    
+    
             
          
 if __name__ == '__main__':
-    s = Store()
-    # print(s.normalize('/Users/eperspe/Source/calvin-base/calvin/std'))
-    # print(s.normalize('std'))
-    # print(s.normalize('std/'))
-    # print(s.normalize('std/Init'))
-    # print(s.normalize('std/Identity'))
-    # print(s.normalize(''))
-    #
-    # print(s.get('std'))
-    # print(s.get('std.Init'))
-    # print(s.get('std.Identity'))
-    # print(s.get(''))
+    s = Store()    
+    print json.dumps((s.get_metadata('std.CountTimer')), indent=4)
+    print json.dumps((s.get_metadata('std')), indent=4)
+    print json.dumps((s.get_metadata(None)), indent=4)
     
-    print('')
-    print s.get('std')[2]
-    print
-    print s.get('std.Identity')[2]
-    print s.get('std.CountTimer')[2]
-    print s.get('io.Print')[2]
     
     
     
