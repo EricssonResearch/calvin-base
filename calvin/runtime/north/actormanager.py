@@ -291,6 +291,7 @@ class ActorManager(object):
         _, name = actor_type.split('.') 
         actor_class = namespace[name]
         # append metadata
+        actor_class.requires = metadata['requires']
         actor_class.inport_properties = {} # {p: pp for p, pp in inports}
         actor_class.outport_properties = {} #{p: pp for p, pp in outports}
         for port in metadata["ports"]:
