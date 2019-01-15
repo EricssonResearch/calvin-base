@@ -18,9 +18,8 @@
 
 from calvin.actor.actor import Actor, manage, condition, stateguard
 from calvin.runtime.north.calvin_token import EOSToken, ExceptionToken
-from calvin.actorstore.systemactors.json.GetValue import GetValue
 
-class GetValues(GetValue):
+class GetValues(Actor):
 
     """
     documentation:
@@ -44,7 +43,31 @@ class GetValues(GetValue):
       name: values
     """
 
+    def exception_handler(self, action, args):
+        return (ExceptionToken(),)
 
+    @manage()
+    def init(self):
+        pass
+
+    def _check_type_mismatch(self, container, key):
+        t_cont = type(container)
+        t_key = type(key)
+        mismatch = (t_cont is list and t_key is not int) or (t_cont is dict and not isinstance(key, basestring))
+        if mismatch:
+            raise Exception()
+
+    def _get_value(self, data, key):
+        keylist = key if type(key) is list else [key]
+        try:
+            res = data
+            for key in keylist:
+                self._check_type_mismatch(res, key)
+                res = res[key]
+        except Exception as e:
+            res = ExceptionToken()
+        return res
+        
     @condition(['container', 'keys'], ['values'])
     def get_values(self, data, keys):
         retval = [self._get_value(data, key) for key in keys]

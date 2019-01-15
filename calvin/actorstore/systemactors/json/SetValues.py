@@ -18,10 +18,9 @@
 
 from calvin.actor.actor import Actor, manage, condition, stateguard
 from calvin.runtime.north.calvin_token import EOSToken, ExceptionToken
-from calvin.actorstore.systemactors.json.SetValue import SetValue
 from copy import deepcopy
 
-class SetValues(SetValue):
+class SetValues(Actor):
 
     """
     documentation:
@@ -49,6 +48,32 @@ class SetValues(SetValue):
       name: container
     """
 
+    def exception_handler(self, action, args):
+        return (ExceptionToken(),)
+
+    @manage()
+    def init(self):
+        pass
+
+    def _check_type_mismatch(self, container, key):
+        t_cont = type(container)
+        t_key = type(key)
+        mismatch = (t_cont is list and t_key is not int) or (t_cont is dict and not isinstance(key, basestring))
+        if mismatch:
+            raise Exception()
+
+    def _set_value(self, container, key, value):
+        keylist = key if type(key) is list else [key]
+        try:
+            res = container
+            for key in keylist[:-1]:
+                self._check_type_mismatch(res, key)
+                res = res[key]
+            self._check_type_mismatch(res, keylist[-1])
+            res[keylist[-1]] = value
+        except:
+            container = ExceptionToken()
+        return container
 
 
     @condition(['container', 'keys', 'values'], ['container'])
