@@ -33,6 +33,8 @@ class TriggeredWeather(Actor):
     - direction: out
       help: weather at given city, or null on error
       name: forecast
+    requires:
+    - weather
     """
 
     @manage(["city"])
@@ -68,7 +70,7 @@ class TriggeredWeather(Actor):
         return (forecast,)
 
     action_priority = (start_forecast, finish_forecast,)
-    requires = ['weather']
+    
 
 
     test_kwargs = {'city': 'Lund'}

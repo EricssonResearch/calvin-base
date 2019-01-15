@@ -36,6 +36,8 @@ class Evaluate(Actor):
     - direction: out
       help: value expr with x and y substituted for given values
       name: result
+    requires:
+    - math.arithmetic.eval
     """
     @manage(['expr'])
     def init(self, expr):
@@ -60,7 +62,7 @@ class Evaluate(Actor):
         return (result, )
 
     action_priority = ( compute, )
-    requires = ['math.arithmetic.eval']
+    
 
 
     test_args = ['x+y']

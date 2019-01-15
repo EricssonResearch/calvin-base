@@ -30,6 +30,8 @@ class SimpleUDPListener(Actor):
     - direction: out
       help: data in packets received on the UDP port will forwarded as tokens.
       name: data
+    requires:
+    - network.udplistener
     """
 
     @manage(['host', 'port'])
@@ -55,7 +57,7 @@ class SimpleUDPListener(Actor):
         return (message["data"],)
 
     action_priority = (receive,)
-    requires = ['network.udplistener']
+    
 
 
 #    TBD: Reenable test after updating to use new calvinsys API

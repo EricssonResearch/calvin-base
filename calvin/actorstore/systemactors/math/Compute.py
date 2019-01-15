@@ -37,6 +37,8 @@ class Compute(Actor):
     - direction: out
       help: result of 'a' OP 'b'
       name: result
+    requires:
+    - math.arithmetic.operator
     """
     @manage(['op_string'])
     def init(self, op):
@@ -60,7 +62,7 @@ class Compute(Actor):
         return (res, )
 
     action_priority = (compute, )
-    requires = ['math.arithmetic.operator']
+    
 
     test_args = ['+']
     test_set = [

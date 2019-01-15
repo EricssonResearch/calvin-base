@@ -35,6 +35,8 @@ class Hash(Actor):
     - direction: out
       help: hex-digest of input string
       name: result
+    requires:
+    - math.hash
     """
     @manage(['algorithm'])
     def init(self, algorithm):
@@ -58,7 +60,7 @@ class Hash(Actor):
         return (res, )
 
     action_priority = (compute, )
-    requires = ['math.hash']
+    
 
     test_args = ['md5']
     test_set = [

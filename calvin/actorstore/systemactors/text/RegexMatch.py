@@ -37,6 +37,8 @@ class RegexMatch(Actor):
     - direction: out
       help: input text if match fails
       name: no_match
+    requires:
+    - regexp
     """
     @manage(['regex', 'result', 'did_match'])
     def init(self, regex):
@@ -77,7 +79,7 @@ class RegexMatch(Actor):
         return (result,)
 
     action_priority = (match, output_match, output_no_match)
-    requires = ['regexp']
+    
 
 
     test_args = [".* (FLERP).* "]

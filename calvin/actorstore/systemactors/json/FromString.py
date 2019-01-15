@@ -34,6 +34,8 @@ class FromString(Actor):
     - direction: out
       help: data read from input string
       name: data
+    requires:
+    - json
     """
 
     def exception_handler(self, action, args):
@@ -60,7 +62,7 @@ class FromString(Actor):
         return (res,)
 
     action_priority = (load,)
-    requires = ['json']
+    
 
 
     test_set = [

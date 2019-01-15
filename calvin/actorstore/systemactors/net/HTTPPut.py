@@ -49,6 +49,8 @@ class HTTPPut(Actor):
     - direction: out
       help: body of response (only if body is non-empty)
       name: data
+    requires:
+    - http.put
     """
 
     @manage()
@@ -81,5 +83,5 @@ class HTTPPut(Actor):
         return (response.get("status"), response.get("headers"))
 
     action_priority = (new_request, handle_reply, reply_with_body, reply_without_body)
-    requires = ['http.put']
+    
 

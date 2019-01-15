@@ -30,6 +30,8 @@ class BasicAuthHeader(Actor):
     - direction: out
       help: Authorization header
       name: header
+    requires:
+    - base64
     """
 
     @manage()
@@ -49,7 +51,7 @@ class BasicAuthHeader(Actor):
         return (header,)
 
     action_priority = (authorization_header,)
-    requires = ['base64']
+    
 
 
     test_set = [

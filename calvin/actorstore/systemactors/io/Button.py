@@ -24,6 +24,8 @@ class Button(Actor):
     - direction: out
       help: Button state 1=pressed, 0=not pressed
       name: state
+    requires:
+    - io.button
     """
 
     @manage(include = ["text", "button"])
@@ -38,7 +40,7 @@ class Button(Actor):
         return (calvinsys.read(self.button),)
 
     action_priority = (trigger, )
-    requires = ['io.button']
+    
 
 
     test_kwargs = {'text': "Button"}

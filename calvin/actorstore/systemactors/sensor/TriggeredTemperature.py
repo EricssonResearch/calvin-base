@@ -31,6 +31,8 @@ class TriggeredTemperature(Actor):
     - direction: out
       help: temperature, in centigrade
       name: centigrade
+    requires:
+    - io.temperature
     """
 
     @manage(['temperature'])
@@ -49,7 +51,7 @@ class TriggeredTemperature(Actor):
         calvinsys.write(self.temperature, True)
 
     action_priority = (read_measurement, trigger_measurement)
-    requires = ['io.temperature']
+    
 
 
     test_calvinsys = {'io.temperature': {'read': [20, 14],

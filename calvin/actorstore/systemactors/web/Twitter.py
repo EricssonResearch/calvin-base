@@ -29,6 +29,8 @@ class Twitter(Actor):
     - direction: in
       help: A text (with a maximum length)
       name: status
+    requires:
+    - web.twitter.post
     """
 
     @manage([])
@@ -56,7 +58,7 @@ class Twitter(Actor):
         calvinsys.write(self._twit, status)
 
     action_priority = (post_update,)
-    requires = ['web.twitter.post']
+    
 
 
     test_calvinsys = {'web.twitter.post': {'write': ["A twitter message"]}}

@@ -25,6 +25,8 @@ class Trigger(Actor):
     - direction: out
       help: given data
       name: data
+    requires:
+    - sys.timer.repeating
     """
 
     @manage(['timer', 'tick', 'data', 'started'])
@@ -55,7 +57,7 @@ class Trigger(Actor):
         return (self.data, )
 
     action_priority = (start_timer, trigger)
-    requires = ['sys.timer.repeating']
+    
 
 
     test_kwargs = {'tick': 12, 'data': "data_to_forward"}

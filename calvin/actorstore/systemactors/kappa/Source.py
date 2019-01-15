@@ -28,6 +28,8 @@ class Source(Actor):
     - direction: out
       help: Any token
       name: out
+    requires:
+    - kappa
     """
 
     def exception_handler(self, action, args):
@@ -51,4 +53,4 @@ class Source(Actor):
 
     action_priority = (send, )
     
-    requires=['kappa']
+    

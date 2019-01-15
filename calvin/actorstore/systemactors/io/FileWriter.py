@@ -58,6 +58,8 @@ class FileWriter(Actor):
     - direction: in
       help: data
       name: data
+    requires:
+    - io.filewriter
     """
 
     @manage(['basename', 'counter', 'suffix'])
@@ -88,7 +90,7 @@ class FileWriter(Actor):
         calvinsys.write(self.file, data.encode('utf-8'))
 
     action_priority = (writef,)
-    requires = ['io.filewriter']
+    
 
     test_kwargs = {'basename': 'test'}
     test_calvinsys = {

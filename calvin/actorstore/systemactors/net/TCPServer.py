@@ -48,6 +48,8 @@ class TCPServer(Actor):
     - direction: out
       help: Data received on the TCP connection will be sent as tokens.
       name: token
+    requires:
+    - network.tcpserver
     """
 
     @manage(['host', 'port', 'mode', 'delimiter', 'max_length'])
@@ -97,7 +99,7 @@ class TCPServer(Actor):
         calvinsys.write(self.server, {"handle": handle, "data": token.encode('utf-8')})
 
     action_priority = (receive, send, setup, start)
-    requires = ['network.tcpserver']
+    
 
     test_set = [
         {

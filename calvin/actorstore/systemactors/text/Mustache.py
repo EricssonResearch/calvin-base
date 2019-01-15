@@ -31,6 +31,8 @@ class Mustache(Actor):
     - direction: out
       help: formatted string
       name: text
+    requires:
+    - mustache
     """
 
     @manage(['fmt'])
@@ -50,7 +52,7 @@ class Mustache(Actor):
         return (text, )
 
     action_priority = (action, )
-    requires = ["mustache"]
+    
 
 
     test_kwargs = {'fmt': "City:{{city}} Country:{{country}} Weather:{{weather}} Temperature:{{temperature}} Humidity:{{humidity}} Pressure:{{pressure}}"}

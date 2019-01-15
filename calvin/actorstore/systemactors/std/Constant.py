@@ -24,6 +24,8 @@ class Constant(Actor):
    - direction: out
      help: given data
      name: token
+   requires:
+   - sys.schedule
    """
 
    @manage(['data', 'schedule'])
@@ -41,7 +43,7 @@ class Constant(Actor):
        return (self.data, )
 
    action_priority = (timeout, )
-   requires = ['sys.schedule']
+   
 
 
    test_kwargs = {'data': "data_to_forward"}

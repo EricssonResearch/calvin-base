@@ -38,6 +38,9 @@ class FileReader(Actor):
     - direction: out
       help: Each token is a line of text, or EOSToken.
       name: out
+    requires:
+    - io.filereader
+    - io.filesize
     """
 
     @manage([])
@@ -93,7 +96,7 @@ class FileReader(Actor):
         return (EOSToken(), )
 
     action_priority = (open_file, file_not_found, read, eof)
-    requires = ['io.filereader', 'io.filesize']
+    
 
     test_calvinsys = {
         'io.filereader': {'read': ['the quick brown fox jumped over the lazy dog']},

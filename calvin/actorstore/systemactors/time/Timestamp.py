@@ -28,6 +28,8 @@ class Timestamp(Actor):
     - direction: out
       help: floating point number
       name: timestamp
+    requires:
+    - time
     """
 
     @manage([])
@@ -45,7 +47,7 @@ class Timestamp(Actor):
         return (self.time.timestamp(),)
 
     action_priority = (action,)
-    requires = ['time']
+    
 
 
     test_set = [

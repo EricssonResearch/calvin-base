@@ -25,6 +25,8 @@ class LogError(Actor):
     - direction: in
       help: data to be logged
       name: data
+    requires:
+    - log.error
     """
 
     def exception_handler(self, action_function, args):
@@ -42,7 +44,7 @@ class LogError(Actor):
         calvinsys.write(self.log, data)
 
     action_priority = (write, )
-    requires = ["log.error"]
+    
 
 
     test_calvinsys = {'log.error': {'write': ['a', 'b', 'c', 'd']}}

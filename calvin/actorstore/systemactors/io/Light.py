@@ -26,6 +26,8 @@ class Light(Actor):
     - direction: in
       help: true if light should be on, false if turned off
       name: 'on'
+    requires:
+    - io.light
     """
 
     @manage(include = ["light"])
@@ -38,7 +40,7 @@ class Light(Actor):
         calvinsys.write(self.light, 1 if on else 0)
 
     action_priority = (light, )
-    requires = ["io.light"]
+    
 
 
     test_calvinsys = {'io.light': {'write': [1, 0, 1, 0]}}

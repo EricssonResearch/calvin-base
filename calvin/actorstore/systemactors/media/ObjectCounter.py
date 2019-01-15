@@ -28,6 +28,8 @@ class ObjectCounter(Actor) :
     - direction: out
       help: number of objects found in image
       name: objects
+    requires:
+    - image.objectdetection
     """
 
     @manage([])
@@ -52,7 +54,7 @@ class ObjectCounter(Actor) :
         return (objects, )
 
     action_priority = (analyze, report )
-    requires = ['image.objectdetection']
+    
 
 
     test_calvinsys = {'image.objectdetection': {'read': ["dummy_data_read"],

@@ -29,6 +29,8 @@ class Sink(Actor):
     - direction: in
       help: a list of json structures to be saved
       name: data
+    requires:
+    - data.sink
     """
 
     @manage([])
@@ -41,4 +43,4 @@ class Sink(Actor):
         calvinsys.write(self.sink, data)
 
     action_priority = (write,)
-    requires = ['data.sink']
+    

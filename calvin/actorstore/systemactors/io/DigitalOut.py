@@ -26,6 +26,8 @@ class DigitalOut(Actor):
     - direction: in
       help: 1/0
       name: state
+    requires:
+    - io.digitalout
     """
 
     @manage()
@@ -54,7 +56,7 @@ class DigitalOut(Actor):
         calvinsys.write(self._pin, 1 if state else 0)
 
     action_priority = (write_pin, )
-    requires = ["io.digitalout"]
+    
 
 
     test_calvinsys = {'io.digitalout': {'write': [1, 0, 1, 0]}}

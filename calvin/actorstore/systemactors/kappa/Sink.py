@@ -29,6 +29,8 @@ class Sink(Actor):
     - direction: in
       help: Any token
       name: in
+    requires:
+    - kappa
     """
 
     def exception_handler(self, action, args):
@@ -61,4 +63,4 @@ class Sink(Actor):
         }
     ]
 
-    requires = ['kappa']
+    

@@ -26,6 +26,8 @@ class Buzzer(Actor):
     - direction: in
       help: true/false for on/off
       name: 'on'
+    requires:
+    - io.buzzer
     """
 
     @manage([])
@@ -48,7 +50,7 @@ class Buzzer(Actor):
         calvinsys.write(self.buzzer, bool(on))
 
     action_priority = (turn_on_off, )
-    requires = ["io.buzzer"]
+    
 
 
     test_calvinsys = {'io.buzzer': {'write': [True, False, True, False]}}

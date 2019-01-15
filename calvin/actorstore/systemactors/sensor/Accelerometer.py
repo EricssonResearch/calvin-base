@@ -26,6 +26,8 @@ class Accelerometer(Actor):
     - direction: out
       help: Acceleration as a dict with the x,y, and z directions.
       name: acceleration
+    requires:
+    - io.accelerometer
     """
 
     @manage(['level', 'period'])
@@ -40,7 +42,7 @@ class Accelerometer(Actor):
         return (level,)
 
     action_priority = (read_measurement,)
-    requires = ['io.accelerometer']
+    
 
     test_kwargs = {'period': 10}
     test_calvinsys = {'io.accelerometer': {'read': [10, 12, 0, 5]}}

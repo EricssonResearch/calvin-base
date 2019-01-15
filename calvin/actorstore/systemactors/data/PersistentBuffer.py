@@ -34,6 +34,10 @@ class PersistentBuffer(Actor):
     - direction: out
       help: catching up of buffered data, list
       name: buffered
+    requires:
+    - buffer.persistent
+    - json
+    - sys.timer.once
     """
 
     def exception_handler(self, action, args):
@@ -94,4 +98,4 @@ class PersistentBuffer(Actor):
 
     action_priority = (logger, receive, passthrough, push_data, pop_data)
 
-    requires = ['buffer.persistent', 'json', 'sys.timer.once']
+    

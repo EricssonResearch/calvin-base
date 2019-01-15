@@ -24,6 +24,8 @@ class Counter(Actor):
     - direction: out
       help: Integer
       name: integer
+    requires:
+    - sys.schedule
     """
 
     @manage(['count', 'stopped', 'schedule'])
@@ -42,7 +44,7 @@ class Counter(Actor):
         return (self.count, )
 
     action_priority = (cnt,)
-    requires = ['sys.schedule']
+    
 
 
     def report(self, **kwargs):

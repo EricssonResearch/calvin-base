@@ -26,6 +26,8 @@ class DigitalIn(Actor):
     - direction: out
       help: 1/0 when edge goes high/low
       name: state
+    requires:
+    - io.digitalin
     """
 
     @manage()
@@ -55,7 +57,7 @@ class DigitalIn(Actor):
         return (1 if state else 0,)
 
     action_priority = (read_pin, )
-    requires = ["io.digitalin"]
+    
 
 
     test_calvinsys = {'io.digitalin': {'read': [1,0,1,0]}}

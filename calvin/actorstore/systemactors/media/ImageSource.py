@@ -32,6 +32,8 @@ class ImageSource(Actor):
     - direction: out
       help: generated image
       name: b64image
+    requires:
+    - image.source
     """
 
     @manage(exclude=["_cam"])
@@ -59,7 +61,7 @@ class ImageSource(Actor):
         calvinsys.write(self._cam, None)
 
     action_priority = (fetch_image, send_image)
-    requires = ['image.source']
+    
 
 
     test_calvinsys = {'image.source': {'read': [1,0,1,0,0,1,0,1],

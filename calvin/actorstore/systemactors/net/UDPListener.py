@@ -25,19 +25,19 @@ class UDPListener(Actor):
     """
     documentation:
     - Listen for UDP messages on a given port.
-    - |
-      Control port takes control commands of the form (uri only applicable for connect.)
-      {
-          "command" : "listen"/"stop",
-          "uri": "udp://<ipv4 address>:<port>"
-      }
+    - "Control port takes control commands of the form (uri only applicable for connect.)\n\
+      {\n    \"command\" : \"listen\"/\"stop\",\n    \"uri\": \"udp://<ipv4 address>:<port>\"\
+      \n}\n"
     ports:
     - direction: in
-      name: control_in
       help: JSON containing host & port to listen to.
+      name: control_in
     - direction: out
+      help: Data received on the UDP port will be sent as tokens.
       name: data_out
-      help : Data received on the UDP port will be sent as tokens.
+    requires:
+    - network.udplistener
+    - regexp
     """
 
     @manage(['host', 'port'])
@@ -99,7 +99,7 @@ class UDPListener(Actor):
         self.listener = None
 
     action_priority = (control, receive)
-    requires = ['network.udplistener', 'regexp']
+    
 
 
     test_set = [

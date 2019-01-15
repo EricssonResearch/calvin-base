@@ -24,6 +24,8 @@ class Switch(Actor):
     - direction: out
       help: 0/1 according to switch state
       name: state
+    requires:
+    - io.switch
     """
 
     @manage([])
@@ -50,7 +52,7 @@ class Switch(Actor):
         return (state,)
 
     action_priority = (action, )
-    requires = ['io.switch']
+    
 
 
     test_calvinsys = {'io.switch': {'read': [1,0,1,0]}}

@@ -36,6 +36,9 @@ class TCPClient(Actor):
     - direction: out
       help: Data received on the TCP connection will be sent as tokens.
       name: data_out
+    requires:
+    - network.socketclient
+    - regexp
     """
 
     @manage(['address', 'port', 'mode', 'delimiter'])
@@ -112,7 +115,7 @@ class TCPClient(Actor):
         self.EOST_token_received = True
 
     action_priority = (control, receive, send)
-    requires = ['network.socketclient', 'regexp']
+    
 
 
     test_set = [

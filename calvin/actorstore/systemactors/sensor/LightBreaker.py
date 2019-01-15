@@ -24,6 +24,8 @@ class LightBreaker(Actor):
     - direction: out
       help: state true=closed, false=open
       name: open
+    requires:
+    - io.lightbreaker
     """
 
     @manage(include=[])
@@ -51,7 +53,7 @@ class LightBreaker(Actor):
         return (True if value else False,)
 
     action_priority = (state_change, )
-    requires = ['io.lightbreaker']
+    
 
 
     test_calvinsys = {'io.lightbreaker': {'read': [True, False, True, False]}}

@@ -25,6 +25,8 @@ class LogWarning(Actor):
     - direction: in
       help: data to be logged
       name: data
+    requires:
+    - log.warning
     """
 
     def exception_handler(self, action_function, args):
@@ -42,7 +44,7 @@ class LogWarning(Actor):
         calvinsys.write(self.log, data)
 
     action_priority = (write, )
-    requires = ["log.warning"]
+    
 
 
     test_calvinsys = {'log.warning': {'write': ['a', 'b', 'c', 'd']}}

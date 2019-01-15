@@ -32,6 +32,8 @@ class Source(Actor):
     - direction: out
       help: description of parameter as shown above
       name: parameter
+    requires:
+    - data.source
     """
 
     @manage([])
@@ -47,5 +49,5 @@ class Source(Actor):
         return (param, )
 
     action_priority = (send_data,)
-    requires = ['data.source']
+    
 

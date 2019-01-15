@@ -34,6 +34,8 @@ class FakeShadow(Actor):
     - direction: out
       help: the same token
       name: token
+    requires:
+    - mock.shadow
     """
     @manage(['dump', 'last', 'node_id', 'jumps', 'index'])
     def init(self, dump):
@@ -65,7 +67,7 @@ class FakeShadow(Actor):
         return self.last
 
     action_priority = (donothing, )
-    requires = ['mock.shadow']
+    
 
     # test_set = [
     #     {

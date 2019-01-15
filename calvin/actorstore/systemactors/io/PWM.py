@@ -26,6 +26,8 @@ class PWM(Actor):
     - direction: in
       help: new dutycycle
       name: dutycycle
+    requires:
+    - io.pwm
     """
 
     @manage(["dutycycle"])
@@ -63,7 +65,7 @@ class PWM(Actor):
             calvinsys.write(self.pwm, self.dutycycle)
 
     action_priority = (set_dutycycle, )
-    requires = ["io.pwm"]
+    
 
 
     test_calvinsys = {'io.pwm': {'write': [1, 99, 0, 100]}}

@@ -31,6 +31,8 @@ class PublicAttribute(Actor):
     - direction: out
       help: The given attribute of this runtime, or null
       name: value
+    requires:
+    - sys.attribute.public
     """
 
     @manage(["attribute", "registry"])
@@ -47,7 +49,7 @@ class PublicAttribute(Actor):
         return (attribute,)
 
     action_priority = (read,)
-    requires = ["sys.attribute.public"]
+    
 
 
     test_kwargs = {'attribute': "runtime.attribute"}

@@ -29,6 +29,8 @@ class Pushbullet(Actor):
     - direction: in
       help: A message
       name: message
+    requires:
+    - web.pushbullet.channel.post
     """
 
     @manage(["title"])
@@ -57,7 +59,7 @@ class Pushbullet(Actor):
         calvinsys.write(self._pb, {"message": message, "title": self.title})
 
     action_priority = (post_update,)
-    requires = ['web.pushbullet.channel.post']
+    
 
 
     test_kwargs = {'title': "Some Title"}

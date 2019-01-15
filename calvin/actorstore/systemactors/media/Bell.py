@@ -30,6 +30,8 @@ class Bell(Actor):
     - direction: in
       help: any token triggers the bell.
       name: trigger
+    requires:
+    - notify.bell
     """
 
     @manage([])
@@ -51,7 +53,7 @@ class Bell(Actor):
         calvinsys.write(self._bell, None)
 
     action_priority = (signal, )
-    requires = ['notify.bell']
+    
 
 
     test_calvinsys = {'notify.bell': {'write': [None, None, None, None]}}

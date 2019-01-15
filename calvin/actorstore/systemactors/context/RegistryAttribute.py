@@ -31,6 +31,8 @@ class RegistryAttribute(Actor):
     - direction: out
       help: The given attribute of this runtime, or null
       name: value
+    requires:
+    - sys.attribute.indexed
     """
 
     @manage(["attribute", "registry"])
@@ -48,7 +50,7 @@ class RegistryAttribute(Actor):
         return (value,)
 
     action_priority = (read,)
-    requires = ["sys.attribute.indexed"]
+    
 
 
     test_kwargs = {'attribute': "runtime.attribute"}

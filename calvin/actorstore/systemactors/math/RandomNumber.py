@@ -31,6 +31,8 @@ class RandomNumber(Actor):
     - direction: out
       help: Random number in range [lower ... upper)
       name: number
+    requires:
+    - math.random
     """
 
     @manage(['lower', 'upper'])
@@ -51,7 +53,7 @@ class RandomNumber(Actor):
         return self.rng.random_number(lower=self.lower, upper=self.upper),
 
     action_priority = (action, )
-    requires = ['math.random']
+    
 
 
     test_kwargs = {'lower': 1.0, 'upper': 1.0}

@@ -36,6 +36,8 @@ class Iterate(Actor):
     - direction: out
       help: index of item (or key if input is dictionary)
       name: index
+    requires:
+    - copy
     """
 
     @manage(['data', 'has_data', 'index'])
@@ -106,7 +108,7 @@ class Iterate(Actor):
         return (res, 0)
 
     action_priority = (produce_listitem, produce_dictitem, produce_stringitem, produce_plainitem, consume)
-    requires = ['copy']
+    
 
 
     test_args = []

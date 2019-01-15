@@ -32,6 +32,8 @@ class LocalWeather(Actor):
     - direction: out
       help: weather at preconfigured city, or null on error
       name: forecast
+    requires:
+    - weather.local
     """
 
     @manage([])
@@ -66,7 +68,7 @@ class LocalWeather(Actor):
         return (forecast,)
 
     action_priority = (start_forecast, finish_forecast,)
-    requires = ['weather.local']
+    
 
 
     test_calvinsys = {'weather.local': {'read': ["sunny"],

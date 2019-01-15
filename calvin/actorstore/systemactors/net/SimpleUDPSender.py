@@ -29,6 +29,8 @@ class SimpleUDPSender(Actor):
     - direction: in
       help: Each received token will be sent to address set via control port
       name: data
+    requires:
+    - network.socketclient
     """
 
     @manage(['address', 'port'])
@@ -50,7 +52,7 @@ class SimpleUDPSender(Actor):
         calvinsys.write(self.sender, token)
 
     action_priority = (send, )
-    requires = ['network.socketclient']
+    
 
 
 #    TBD: Reenable test after updating to use new calvinsys API

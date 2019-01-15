@@ -38,6 +38,8 @@ class Format(Actor):
     - direction: out
       help: Formatted string
       name: text
+    requires:
+    - regexp
     """
 
     REGEX = r"{(.+?)}"
@@ -65,7 +67,7 @@ class Format(Actor):
         return (retval, )
 
     action_priority = (action, )
-    requires = ['regexp']
+    
 
 
     test_args = [r"{huey.dewey.louie} \{huey.dewey.louie\}"]

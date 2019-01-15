@@ -30,6 +30,8 @@ class Init(Actor):
     - direction: out
       help: Data given as parameter followed by data from in port
       name: out
+    requires:
+    - sys.schedule
     """
 
     @manage(['data', 'schedule'])
@@ -51,7 +53,7 @@ class Init(Actor):
         return (data,)
 
     action_priority = (passthrough, initial_action)
-    requires = ['sys.schedule']
+    
 
     test_kwargs = {'data': 0}
     test_calvinsys = {'sys.schedule': {'read': ["dummy_data_read"]}}

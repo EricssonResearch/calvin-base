@@ -25,19 +25,19 @@ class UDPSender(Actor):
     """
     documentation:
     - Send all incoming tokens to given address/port over UDP
-    - |
-      Control port takes control commands of the form (uri only applicable for connect.)
-      {
-          "command" : "connect"/"disconnect",
-          "uri": "udp://<address>:<port>"
-      }
+    - "Control port takes control commands of the form (uri only applicable for connect.)\n\
+      {\n    \"command\" : \"connect\"/\"disconnect\",\n    \"uri\": \"udp://<address>:<port>\"\
+      \n}\n"
     ports:
     - direction: in
-      name: data_in
       help: Each received token will be sent to address set via control port
+      name: data_in
     - direction: in
-      name: control_in
       help: Control port
+      name: control_in
+    requires:
+    - network.socketclient
+    - regexp
     """
 
     @manage(['address', 'port'])
@@ -105,7 +105,7 @@ class UDPSender(Actor):
         self.sender = None
 
     action_priority = (control, send)
-    requires = ['network.socketclient', 'regexp']
+    
 
 
     test_set = [

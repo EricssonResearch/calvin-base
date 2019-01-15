@@ -34,6 +34,8 @@ class Watchdog(Actor):
     - direction: out
       help: true iff timeout seconds has passed without tokens on inport
       name: timeout
+    requires:
+    - sys.timer.once
     """
 
     @manage(['timeout'])
@@ -62,7 +64,7 @@ class Watchdog(Actor):
         return (data, )
 
     action_priority = (timeout, passthrough)
-    requires = ['sys.timer.once']
+    
 
 
 #    TBD: Reenable test after updating to use new calvinsys API

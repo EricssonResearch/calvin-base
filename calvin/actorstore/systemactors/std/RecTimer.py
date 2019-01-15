@@ -29,6 +29,8 @@ class RecTimer(Actor):
     - direction: out
       help: anything
       name: token
+    requires:
+    - sys.timer.repeating
     """
 
     @manage(['timer', 'delay', 'started'])
@@ -51,4 +53,4 @@ class RecTimer(Actor):
         return (token, )
 
     action_priority = (start_timer, passthrough)
-    requires = ['sys.timer.repeating']
+    

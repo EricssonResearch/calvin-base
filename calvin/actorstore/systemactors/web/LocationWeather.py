@@ -33,6 +33,8 @@ class LocationWeather(Actor):
     - direction: out
       help: weather at given city, or null on error
       name: forecast
+    requires:
+    - weather
     """
 
     @manage([])
@@ -66,7 +68,7 @@ class LocationWeather(Actor):
         return (forecast,)
 
     action_priority = (start_forecast, finish_forecast,)
-    requires = ['weather']
+    
 
 
     test_calvinsys = {'weather': {'read': ["sunny"],

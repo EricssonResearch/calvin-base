@@ -29,6 +29,8 @@ class TriggeredRelativeHumidity(Actor):
     - direction: out
       help: The measured humidity in percent
       name: percent
+    requires:
+    - io.humidity
     """
 
     @manage([])
@@ -57,7 +59,7 @@ class TriggeredRelativeHumidity(Actor):
         return (humidity,)
 
     action_priority = (deliver, measure,)
-    requires = ['io.humidity']
+    
 
 
     test_calvinsys = {'io.humidity': {'read': [50, 40],

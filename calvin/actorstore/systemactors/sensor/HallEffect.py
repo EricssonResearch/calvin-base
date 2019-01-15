@@ -24,6 +24,8 @@ class HallEffect(Actor):
     - direction: out
       help: true if magnetic field present, false otherwise
       name: state
+    requires:
+    - io.hallswitch
     """
 
     @manage(include=[])
@@ -51,7 +53,7 @@ class HallEffect(Actor):
         return (True if value else False,)
 
     action_priority = (state_change, )
-    requires = ['io.hallswitch']
+    
 
 
     test_calvinsys = {'io.hallswitch': {'read': [True, False, True, False]}}

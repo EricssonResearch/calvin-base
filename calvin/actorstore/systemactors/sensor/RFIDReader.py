@@ -30,6 +30,9 @@ class RFIDReader(Actor):
     - direction: out
       help: '{"cardno": uid, "data": <data>, "timestamp": <timestamp>}'
       name: data
+    requires:
+    - time
+    - io.rfid
     """
 
 
@@ -46,7 +49,7 @@ class RFIDReader(Actor):
 
     action_priority = (read_card,)
 
-    requires = ['time', 'io.rfid']
+    
 
 
 #    TBD: Reenable test after updating to use new calvinsys API

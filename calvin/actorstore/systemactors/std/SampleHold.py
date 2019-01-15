@@ -35,6 +35,8 @@ class SampleHold(Actor):
     - direction: out
       help: The currently held token, or the 'default' argument if not sampled yet.
       name: out
+    requires:
+    - copy
     """
 
     @manage(['held', 'immutable'])
@@ -62,7 +64,7 @@ class SampleHold(Actor):
         return (self.current(), )
 
     action_priority = (action,)
-    requires = ['copy']
+    
 
 
     test_args = [-1]

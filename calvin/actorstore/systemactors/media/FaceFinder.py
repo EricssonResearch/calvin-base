@@ -28,6 +28,8 @@ class FaceFinder(Actor) :
     - direction: out
       help: New image with all detected faces marked
       name: b64image
+    requires:
+    - image.facefinding
     """
 
     @manage([])
@@ -52,7 +54,7 @@ class FaceFinder(Actor) :
         return (image, )
 
     action_priority = (analyze, report)
-    requires = ['image.facefinding']
+    
 
 
     test_calvinsys = {'image.facefinding': {'read': ["dummy_data_read"],

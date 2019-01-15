@@ -28,6 +28,8 @@ class DelayToken(Actor):
     - direction: out
       help: anything
       name: token
+    requires:
+    - sys.timer.once
     """
 
     @manage(['delay', 'timers'])
@@ -52,7 +54,7 @@ class DelayToken(Actor):
         return (item['token'], )
 
     action_priority = (timeout, token_available)
-    requires = ['sys.timer.once']
+    
 
 
     test_kwargs = {'delay': 20}

@@ -35,6 +35,8 @@ class Items(Actor):
     - direction: out
       help: items of list in order
       name: item
+    requires:
+    - copy
     """
 
 
@@ -76,7 +78,7 @@ class Items(Actor):
         return (res, )
 
     action_priority = (produce_item, consume_list)
-    requires = ['copy']
+    
 
 
     test_args = []

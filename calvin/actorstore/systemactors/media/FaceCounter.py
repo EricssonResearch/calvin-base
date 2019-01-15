@@ -28,6 +28,8 @@ class FaceCounter(Actor) :
     - direction: out
       help: number of faces found in image
       name: objects
+    requires:
+    - image.facedetection
     """
 
     @manage([])
@@ -52,7 +54,7 @@ class FaceCounter(Actor) :
         return (objects, )
 
     action_priority = (analyze, report )
-    requires = ['image.facedetection']
+    
 
 
     test_calvinsys = {'image.facedetection': {'read': ["dummy_data_read"],

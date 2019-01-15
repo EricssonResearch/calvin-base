@@ -26,6 +26,8 @@ class Knob(Actor):
     - direction: out
       help: clockwise or anti-clockwise
       name: direction
+    requires:
+    - io.knob
     """
 
     @manage([])
@@ -52,7 +54,7 @@ class Knob(Actor):
         return (calvinsys.read(self._knob),)
 
     action_priority = (trigger, )
-    requires = ['io.knob']
+    
 
 
     test_calvinsys = {'io.knob': {'read': [-1, 1, 0, 1]}}

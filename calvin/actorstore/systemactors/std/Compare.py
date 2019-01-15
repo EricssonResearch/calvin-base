@@ -36,6 +36,8 @@ class Compare(Actor):
     - direction: out
       help: true or false according to result of 'a' REL 'b'
       name: result
+    requires:
+    - math.arithmetic.eval
     """
     @manage(['rel'])
     def init(self, rel):
@@ -54,7 +56,7 @@ class Compare(Actor):
         return (bool(self.relation(x, y)), )
 
     action_priority = ( test, )
-    requires = ['math.arithmetic.eval']
+    
 
 
     test_args = ['=']

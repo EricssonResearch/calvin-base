@@ -29,6 +29,8 @@ class ImageSink(Actor):
     - direction: in
       help: base64 encoded jpg
       name: b64image
+    requires:
+    - image.render
     """
 
     @manage(exclude=["_sink"])
@@ -51,7 +53,7 @@ class ImageSink(Actor):
 
 
     action_priority = (render_image, )
-    requires = ['image.render']
+    
 
 
     test_calvinsys = {'image.render': {'write': ["dummy_data"]}}

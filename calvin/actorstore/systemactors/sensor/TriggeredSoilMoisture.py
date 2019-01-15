@@ -28,6 +28,8 @@ class TriggeredSoilMoisture(Actor):
     - direction: out
       help: moisture level, in percent
       name: level
+    requires:
+    - io.soilmoisture
     """
 
     @manage(exclude=['level'])
@@ -61,7 +63,7 @@ class TriggeredSoilMoisture(Actor):
         return (level,)
 
     action_priority = (read_measurement, trigger_measurement)
-    requires = ['io.soilmoisture']
+    
 
 
     test_calvinsys = {'io.soilmoisture': {'read': [50, 40],

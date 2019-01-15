@@ -24,6 +24,8 @@ class TiltSwitch(Actor):
     - direction: out
       help: state true=closed, false=open
       name: open
+    requires:
+    - io.tiltswitch
     """
 
     @manage(include=[])
@@ -51,7 +53,7 @@ class TiltSwitch(Actor):
         return (True if value else False,)
 
     action_priority = (state_change, )
-    requires = ['io.tiltswitch']
+    
 
 
     test_calvinsys = {'io.tiltswitch': {'read': [True,False,True,False]}}

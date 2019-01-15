@@ -28,6 +28,9 @@ class Temperature(Actor):
     - direction: out
       help: temperature, in centigrade
       name: centigrade
+    requires:
+    - io.temperature
+    - sys.timer.once
     """
 
     @manage(['period', 'timer', 'temperature'])
@@ -53,7 +56,7 @@ class Temperature(Actor):
         calvinsys.write(self.temperature, True)
 
     action_priority = (read_measurement, start_measurement)
-    requires = ['io.temperature', 'sys.timer.once']
+    
 
 
     test_kwargs = {'period': 10}

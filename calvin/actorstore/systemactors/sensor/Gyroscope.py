@@ -26,6 +26,8 @@ class Gyroscope(Actor):
       help: Rotation around the x,y and z axis. Is returned as a dict with the x,y, and
         z keys.
       name: rotation
+    requires:
+    - io.gyroscope
     """
 
     @manage(['level', 'period'])
@@ -40,7 +42,7 @@ class Gyroscope(Actor):
         return (level,)
 
     action_priority = (read_measurement,)
-    requires = ['io.gyroscope']
+    
 
     test_kwargs = {'period': 10}
     test_calvinsys = {'io.gyroscope': {'read': [{'x': 90, 'y': 180, 'z': 45}]}}

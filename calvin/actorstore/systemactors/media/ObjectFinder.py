@@ -28,6 +28,8 @@ class ObjectFinder(Actor) :
     - direction: out
       help: New image with all detected objects marked
       name: b64image
+    requires:
+    - image.objectfinding
     """
 
     @manage([])
@@ -52,7 +54,7 @@ class ObjectFinder(Actor) :
         return (image, )
 
     action_priority = (analyze, report)
-    requires = ['image.objectfinding']
+    
 
 
     test_calvinsys = {'image.objectfinding': {'read': ["dummy_data_read"],

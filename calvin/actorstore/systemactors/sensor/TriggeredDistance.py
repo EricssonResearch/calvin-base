@@ -31,6 +31,8 @@ class TriggeredDistance(Actor):
     - direction: out
       help: distance, in meters
       name: meters
+    requires:
+    - io.distance
     """
 
     @manage([])
@@ -66,7 +68,7 @@ class TriggeredDistance(Actor):
         calvinsys.write(self._distance, True)
 
     action_priority = (read_measurement, trigger_measurement)
-    requires = ['io.distance']
+    
 
 
     test_calvinsys = {'io.distance': {'read': [10, 12, 0, 5],

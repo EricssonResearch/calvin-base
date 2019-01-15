@@ -31,6 +31,8 @@ class TriggeredPressure(Actor):
     - direction: out
       help: atmospheric pressure, in millibars
       name: mbar
+    requires:
+    - io.pressure
     """
 
     @manage(['pressure'])
@@ -49,7 +51,7 @@ class TriggeredPressure(Actor):
         calvinsys.write(self.pressure, True)
 
     action_priority = (read_measurement, trigger_measurement)
-    requires = ['io.pressure']
+    
 
 
     test_calvinsys = {'io.pressure': {'read': [20, 14],

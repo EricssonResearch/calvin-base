@@ -21,12 +21,15 @@ class CountTimer(Actor):
 
     """
     documentation:
-    - Produce a counter token on the output every period seconds and for steps times, using a timer.
-        
+    - Produce a counter token on the output every period seconds and for steps times,
+      using a timer.
     ports:
-    - name: integer
-      direction: out
+    - direction: out
       help: Integer counter
+      name: integer
+    requires:
+    - sys.timer.once
+    - sys.timer.repeating
     """
 
     @manage()
@@ -73,7 +76,7 @@ class CountTimer(Actor):
         return self.count - self.start
 
     action_priority = (step_no_periodic, step_periodic, stop)
-    requires = ['sys.timer.once', 'sys.timer.repeating']
+    
 
 
     test_calvinsys = {'sys.timer.once': {'read': ["dummy", "dummy", "dummy"],

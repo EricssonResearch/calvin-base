@@ -28,6 +28,8 @@ class ServoMotor(Actor):
     - direction: in
       help: set servo to given angle
       name: angle
+    requires:
+    - io.servomotor
     """
 
     @manage([])
@@ -44,7 +46,7 @@ class ServoMotor(Actor):
         calvinsys.write(self._servo, angle)
 
     action_priority = (set_angle, )
-    requires = ["io.servomotor"]
+    
 
 
     test_calvinsys = {'io.servomotor': {'write': [90, -90, 90, 180, -45]}}

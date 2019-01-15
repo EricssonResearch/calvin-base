@@ -31,6 +31,8 @@ class RuntimeName(Actor):
     - direction: out
       help: A string denoting the name of this runtime, or null
       name: value
+    requires:
+    - sys.attribute.indexed
     """
 
     @manage(["registry"])
@@ -46,7 +48,7 @@ class RuntimeName(Actor):
         return (attr,)
 
     action_priority = (read,)
-    requires = ["sys.attribute.indexed"]
+    
 
 
     test_calvinsys = {'sys.attribute.indexed': {'read': ["runtime.attribute"],

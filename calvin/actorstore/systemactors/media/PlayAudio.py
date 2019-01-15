@@ -26,6 +26,8 @@ class PlayAudio(Actor):
     - direction: in
       help: starts playing file when true
       name: play
+    requires:
+    - media.audio
     """
 
     @manage(['player'])
@@ -39,4 +41,4 @@ class PlayAudio(Actor):
             calvinsys.write(self.player, None)
 
     action_priority = (play, )
-    requires =  ['media.audio']
+    

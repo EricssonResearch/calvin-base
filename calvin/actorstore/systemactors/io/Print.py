@@ -20,11 +20,12 @@ class Print(Actor):
     """
     documentation:
     - Print data to standard out of runtime. Note that what constitutes standard out varies.
-
     ports:
-    - name: token
-      direction: in 
+    - direction: in
       help: data to write
+      name: token
+    requires:
+    - io.stdout
     """
 
     def exception_handler(self, action, args):
@@ -41,7 +42,7 @@ class Print(Actor):
         calvinsys.write(self.stdout, data)
 
     action_priority = (write, )
-    requires = ['io.stdout']
+    
 
 
     test_calvinsys = {'io.stdout': {'write': ["This", "is", "a", "print"]}}

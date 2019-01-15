@@ -29,6 +29,8 @@ class Datetime(Actor):
     - direction: out
       help: dictionary
       name: datetime
+    requires:
+    - time
     """
 
     @manage([])
@@ -46,7 +48,7 @@ class Datetime(Actor):
         return (self.time.datetime(),)
 
     action_priority = (action,)
-    requires = ['time']
+    
 
 
     test_set = [

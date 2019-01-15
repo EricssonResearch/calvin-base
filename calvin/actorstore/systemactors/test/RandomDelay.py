@@ -28,6 +28,9 @@ class RandomDelay(Actor):
     - direction: out
       help: anything
       name: token
+    requires:
+    - sys.timer.once
+    - math.random
     """
 
     @manage(['timers'])
@@ -54,4 +57,4 @@ class RandomDelay(Actor):
         return (item['token'], )
 
     action_priority = (timeout, token_available)
-    requires = ['sys.timer.once', 'math.random']
+    

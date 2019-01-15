@@ -24,8 +24,7 @@ class ToString(Actor):
     """
     documentation:
     - Transform data to JSON-string
-    - Exception tokens will value is supplied
-      through the 'exception_output' argument.
+    - Exception tokens will value is supplied through the 'exception_output' argument.
     ports:
     - direction: in
       help: any kind of token
@@ -33,6 +32,8 @@ class ToString(Actor):
     - direction: out
       help: JSON-formatted string
       name: string
+    requires:
+    - json
     """
 
     def exception_handler(self, action, args):
@@ -55,7 +56,7 @@ class ToString(Actor):
         return (self.json.tostring(value),)
 
     action_priority = (dump,)
-    requires = ['json']
+    
 
 
     test_set = [

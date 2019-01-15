@@ -25,6 +25,8 @@ class StandardIn(Actor):
     - direction: out
       help: Each token is a line of text, or EOSToken.
       name: out
+    requires:
+    - io.stdin
     """
 
     @manage([])
@@ -49,7 +51,7 @@ class StandardIn(Actor):
         return (line, )
 
     action_priority = (read, )
-    requires = ['io.stdin']
+    
     
     test_calvinsys = {'io.stdin': {'read': ['the', 'quick', 'brown', 'fox', 'jumped', 'over', 'the', 'lazy', 'dog']}}
     test_set = [

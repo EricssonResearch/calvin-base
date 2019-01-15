@@ -28,6 +28,9 @@ class Distance(Actor):
     - direction: out
       help: distance, in meters
       name: meters
+    requires:
+    - io.distance
+    - sys.timer.repeating
     """
 
     @manage(['period', 'distance', 'timer'])
@@ -49,7 +52,7 @@ class Distance(Actor):
         calvinsys.write(self.distance, True)
 
     action_priority = (read_measurement, start_measurement)
-    requires = ['io.distance', 'sys.timer.repeating']
+    
 
 
     test_kwargs = {'period': 10}
