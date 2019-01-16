@@ -39,7 +39,7 @@ class Print(Actor):
     @stateguard(lambda self: calvinsys.can_write(self.stdout))
     @condition(action_input=['token'])
     def write(self, data):
-        calvinsys.write(self.stdout, data)
+        calvinsys.write(self.stdout, "{}".format(data))
 
     action_priority = (write, )
     

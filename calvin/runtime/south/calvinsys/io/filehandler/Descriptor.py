@@ -45,6 +45,10 @@ class Descriptor(base_calvinsys_object.BaseCalvinsysObject):
             "mode": {
                 "description": "Mode (r, w)",
                 "type": "string"
+            },
+            "newline": {
+                "description": "Add newline",
+                "type": "boolean"
             }
         },
         "description": "Read and write from and to a file",
@@ -69,7 +73,7 @@ class Descriptor(base_calvinsys_object.BaseCalvinsysObject):
         "description": "Read data"
     }
 
-    def init(self, basedir, filename, mode, **kwargs):
+    def init(self, basedir, filename, mode, newline=False, **kwargs):
         path = os.path.join(basedir, filename)
 
         if '..' in filename:
@@ -83,6 +87,7 @@ class Descriptor(base_calvinsys_object.BaseCalvinsysObject):
 
         self.fd = filedescriptor.FD(self.actor, self.calvinsys.scheduler_wakeup, path, mode)
         self.mode = mode
+        self.newline = newline
 
     def can_write(self):
         if "w" in self.mode:
@@ -90,7 +95,10 @@ class Descriptor(base_calvinsys_object.BaseCalvinsysObject):
         return False
 
     def write(self, data=None):
-        self.fd.write(data)
+        if self.newline:
+            self.fd.writeLine(data)
+        else:
+            self.fd.write(data)
 
     def can_read(self):
         if "r" in self.mode and self.fd.hasData():
