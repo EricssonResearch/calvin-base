@@ -25,9 +25,12 @@ class UDPListener(Actor):
     """
     documentation:
     - Listen for UDP messages on a given port.
-    - "Control port takes control commands of the form (uri only applicable for connect.)\n\
-      {\n    \"command\" : \"listen\"/\"stop\",\n    \"uri\": \"udp://<ipv4 address>:<port>\"\
-      \n}\n"
+    - |
+      Control port takes control commands of the form (uri only applicable for connect.)
+      {
+          "command" : "listen"/"stop",
+          "uri": "udp://<ipv4 address>:<port>"
+      }
     ports:
     - direction: in
       help: JSON containing host & port to listen to.

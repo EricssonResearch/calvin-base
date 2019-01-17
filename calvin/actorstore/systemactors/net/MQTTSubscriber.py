@@ -25,7 +25,8 @@ class MQTTSubscriber(Actor):
     """
     documentation:
     - Subscribe to given topics (list of mqtt ), output messages on message-port
-    - 'Arguments:
+    - |
+      Arguments:
     
       hostname: <ip/name of mqtt broker>,
     
@@ -33,13 +34,18 @@ class MQTTSubscriber(Actor):
     
       topics: <list of topics to subscribe to>
     
-      '
-    - "settings is a dictionary with optional arguments\n{\n    \"tls\": {\n        \"\
-      ca_certs\": <ca certs>, \"certfile\": <certfile>, \"keyfile\": <keyfile>,\n    \
-      \    \"tls_version\": <tls version>, \"ciphers\": <ciphers>\n    },\n    \"auth\"\
-      : { \"username\": <username \"password\": <password> },\n    \"will\": { \"topic\"\
-      : <topic>, \"payload\": <payload> },\n    \"transport\": <tcp or websocket>,\n \
-      \   \"client_id\": <id of this mqtt client>\n}\n"
+    - |
+      settings is a dictionary with optional arguments
+      {
+          "tls": {
+              "ca_certs": <ca certs>, "certfile": <certfile>, "keyfile": <keyfile>,
+              "tls_version": <tls version>, "ciphers": <ciphers>
+          },
+          "auth": { "username": <username "password": <password> },
+          "will": { "topic": <topic>, "payload": <payload> },
+          "transport": <tcp or websocket>,
+          "client_id": <id of this mqtt client>
+      }
     ports:
     - direction: out
       help: dictionary with keys "topic" and "payload"

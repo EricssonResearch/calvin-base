@@ -25,20 +25,26 @@ class MQTTPublisher(Actor):
     """
     documentation:
     - Publish all incoming messages to given broker"
-    - 'Arguments:
+    - |
+      Arguments:
     
       hostname: <ip/name of of mqtt broker>,
     
       port: <port to use on mqtt broker>,
     
-      '
-    - "Settings is a dictionary with optional arguments.\n{\n    \"tls\": {\n        \"\
-      ca_certs\": <ca certs>, \"certfile\": <certfile>, \"keyfile\": <keyfile>, \n   \
-      \     \"tls_version\": <tls version>, \"ciphers\": <ciphers>\n    },\n    \"auth\"\
-      : { \"username\": <username \"password\": <password> },\n    \"will\": { \"topic\"\
-      : <topic>, \"payload\": <payload> },\n    \"transport\": <tcp or websocket>,\n \
-      \   \"client_id\": <id of this mqtt client>\n    \"topic\": <prefix all outgoing\
-      \ message topics with this>\n}\n"
+    - | 
+      Settings is a dictionary with optional arguments.
+      {
+          "tls": {
+              "ca_certs": <ca certs>, "certfile": <certfile>, "keyfile": <keyfile>, 
+              "tls_version": <tls version>, "ciphers": <ciphers>
+          },
+          "auth": { "username": <username "password": <password> },
+          "will": { "topic": <topic>, "payload": <payload> },
+          "transport": <tcp or websocket>,
+          "client_id": <id of this mqtt client>
+          "topic": <prefix all outgoing message topics with this>
+      }
     ports:
     - direction: in
       help: topic of message
