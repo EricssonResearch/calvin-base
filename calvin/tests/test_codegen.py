@@ -22,6 +22,9 @@ import os
 # import difflib
 import collections
 import pytest
+import subprocess
+import shlex
+
 
 def absolute_filename(filename):
     return os.path.join(os.path.dirname(__file__), filename)
@@ -97,16 +100,12 @@ def ordered(obj):
     else:
         return obj
 
+
 test_list = [os.path.basename(x)[:-7] for x in glob.glob("{}/*.calvin".format(absolute_filename('codegen')))]
 
 @pytest.mark.parametrize("test", test_list)
-def testCalvinScriptCodegen(test):
+def testCalvinScriptCodegen(actorstore, test):
     code, it, ref = codegen(test)
     assert it.error_count == 0
     compare(ordered(code), ordered(ref))
 
-# @pytest.mark.parametrize("test", test_list)
-# def testCalvinScriptDeploygen(test):
-#     code, it, ref = ds_codegen(test)
-#     assert it.error_count == 0
-#     compare(ordered(code), ordered(ref))
