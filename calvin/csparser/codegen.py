@@ -6,18 +6,8 @@ from visitor import Visitor, search_tree
 from calvin.csparser.port_property_syntax import port_property_data
 
 # FIXME: External dependency to be removed
-from calvin.actorstore.store import GlobalStore
+from calvin.actorstore.signature import signature
 
-
-def _create_signature(actor_type, metadata):
-    # Create the actor signature to be able to look it up in the GlobalStore if neccessary
-    signature_desc = {
-        'is_primitive': True,
-        'actor_type': actor_type,
-        'inports': [port['name'] for port in metadata['ports'] if port['direction'] == 'in'],
-        'outports': [port['name'] for port in metadata['ports'] if port['direction'] == 'out']
-    }
-    return GlobalStore.actor_signature(signature_desc)
 
 def _is_local_component(actor_type):
     return '.' not in actor_type
@@ -70,8 +60,6 @@ def _lookup(node, issue_tracker):
             raise("BAD STORE")
         res = r.json()
         metadata = res['properties']
-        # metadata = DocumentationStore().metadata(node.actor_type)
-        # print metadata
         if not metadata['is_known']:
             reason = "Not validating actor type: '{}'".format(node.actor_type)
             issue_tracker.add_warning(reason, node)
@@ -645,7 +633,7 @@ class AppInfo(Visitor):
         value = {}
         value['actor_type'] = node.actor_type
         value['args'] = _arguments(node, self.issue_tracker)
-        value['signature'] = _create_signature(node.actor_type, node.metadata)
+        value['signature'] = signature(node.metadata)
 
         self.app_info['actors'][node.ident] = value
 
