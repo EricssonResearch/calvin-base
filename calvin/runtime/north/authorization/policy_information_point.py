@@ -15,7 +15,6 @@
 # limitations under the License.
 
 from datetime import datetime
-from calvin.actorstore.store import GlobalStore
 from calvin.utilities import dynops
 from calvin.utilities.calvinlogger import get_logger
 
@@ -38,7 +37,8 @@ class PolicyInformationPoint(object):
         }
         self.node = node
         self.request = request
-        self.actorstore = GlobalStore(node=node)
+        # self.actorstore = GlobalStore(node=node)
+        self.actorstore = None # FIXME: To get stuff running for now
         self.actor_desc = None
 
     def get_attribute_value(self, attribute_type, attribute):

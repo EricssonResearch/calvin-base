@@ -20,7 +20,7 @@ import json
 import yaml
 import jsonschema
 from jsonschema.exceptions import ValidationError
-from calvin.actorstore.newstore import Store
+from calvin.actorstore.store import Store
 from calvin.actorstore.signature import signature
 import hashlib
 
@@ -86,6 +86,7 @@ def test_valid_docstring(actor_file):
     except ValidationError:
         result = False
     assert result
+
     
 @pytest.mark.parametrize('actor_file', actor_files())
 def test_valid_docstring(store, actor_file):

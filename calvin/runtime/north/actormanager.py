@@ -15,7 +15,6 @@
 # limitations under the License.
 
 import random
-# from calvin.actorstore.store import ActorStore
 from calvin.utilities import dynops
 from calvin.utilities.requirement_matching import ReqMatch
 from calvin.runtime.south.async import async
@@ -316,7 +315,6 @@ class ActorManager(object):
         
     def lookup_and_verify(self, actor_type, security=None):
         """Lookup and verify actor in actor store."""
-        # found, is_primitive, actor_def, signer = ActorStore(security=security).lookup(actor_type)
         found, is_primitive, actor_def, signer = self.new_actorstore_lookup(actor_type)
         if not found or not is_primitive:
             raise Exception("Not known actor type: %s" % actor_type)

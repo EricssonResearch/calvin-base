@@ -22,7 +22,7 @@ from calvin.utilities.calvin_callback import CalvinCB
 from calvin.actor import actorport
 from calvin.actor.actor import ShadowActor
 from calvin.utilities import calvinconfig
-from calvin.actorstore.store import GlobalStore
+# from calvin.actorstore.store import GlobalStore
 from calvin.utilities.security import Security, security_enabled
 from calvin.utilities import dynops
 from calvin.requests import calvinresponse
@@ -711,7 +711,7 @@ class Storage(object):
         # Fill the index
         self._add_node_index(node)
         # Store all actors on this node in storage
-        GlobalStore(node=node, security=Security(node) if security_enabled() else None, verify=False).export()
+        # GlobalStore(node=node, security=Security(node) if security_enabled() else None, verify=False).export()
         # If node is an authentication server, store information about it in storage
         _sec_conf = _conf.get('security', 'security_conf')
         if _sec_conf and 'authentication' in _sec_conf:

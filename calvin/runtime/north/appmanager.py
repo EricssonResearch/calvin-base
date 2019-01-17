@@ -22,7 +22,7 @@ from calvin.utilities import calvinlogger
 from calvin.runtime.north.plugins.requirements import req_operations
 import calvin.requests.calvinresponse as response
 from calvin.utilities import calvinuuid
-from calvin.actorstore.store import ActorStore, GlobalStore
+# from calvin.actorstore.store import ActorStore, GlobalStore
 from calvin.runtime.south.async import async
 from calvin.utilities.security import Security
 from calvin.utilities.requirement_matching import ReqMatch
@@ -594,7 +594,7 @@ class Deployer(object):
         self.app_info = deployable["app_info"]
         self.deploy_info = deployable["deploy_info"]
         self.sec = security
-        self.actorstore = ActorStore(security=self.sec)
+        # self.actorstore = ActorStore(security=self.sec)
         self.actor_map = {}
         self.replication_map = {}
         self.actor_connections = {}
@@ -765,7 +765,8 @@ class Deployer(object):
                 if self._requires_counter >= len(self.app_info['actors']):
                     self._wait_for_all_connections_and_requires()
             try:
-                GlobalStore(node=self.node).global_signature_lookup(actor._signature, cb=_desc_cb)
+                raise Exception("FIXME: GlobalStore.global_signature_lookup")
+                # GlobalStore(node=self.node).global_signature_lookup(actor._signature, cb=_desc_cb)
             except:
                 _log.exception("actor instanciate GlobalStore exception")
                 self._requires_counter += 1

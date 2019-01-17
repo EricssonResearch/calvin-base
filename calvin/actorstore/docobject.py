@@ -334,7 +334,7 @@ if __name__ == '__main__':
             print "%s:\n-----------------------" % (formatter.__name__,)
             print formatter()
 
-    from newstore import Store, Pathinfo
+    from store import Store, Pathinfo
     s = Store()
     
     metadata = s.get_metadata('io.Print')
