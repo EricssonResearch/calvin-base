@@ -30,10 +30,12 @@ from calvin.runtime.north.calvinsys import get_calvinsys
 from calvin.runtime.north.calvinlib import get_calvinlib
 import re
 import itertools
+from calvin.runtime.north.storage_clients import LocalRegistry, NullRegistryClient, RegistryClient
 
 _log = calvinlogger.get_logger(__name__)
 _conf = calvinconfig.get()
 
+                    
 class Storage(object):
 
     """
@@ -42,8 +44,9 @@ class Storage(object):
     """
 
     def __init__(self, node, override_storage=None):
-        self.localstore = {}
-        self.localstore_sets = {}
+        self.localstorage = LocalRegistry()
+        # self.localstore = {}
+        # self.localstore_sets = {}
         self.started = False
         self.node = node
         storage_type = _conf.get('global', 'storage_type')
@@ -53,9 +56,11 @@ class Storage(object):
         self.tunnel = {}
         self.starting = storage_type != 'local'
         if override_storage:
+            raise Exception("Who dare to call with override_storage set?!")
             self.storage = override_storage
         else:
-            self.storage = storage_factory.get(storage_type, node)
+            self.storage = storage_factory.get(storage_type, None)
+            # self.storage = node if storage_type == 'local' else RegistryClient() 
         self.flush_delayedcall = None
         self.reset_flush_timeout()
 
@@ -153,6 +158,10 @@ class Storage(object):
             name = fp.name
         return name
 
+#
+# Start of primitive methods
+#
+
     def start(self, iface='', cb=None):
         """ Start storage
         """
@@ -230,11 +239,7 @@ class Storage(object):
         """
         _log.debug("Set key %s, value %s" % (prefix + key, value))
 
-        if prefix + key in self.localstore_sets:
-            del self.localstore_sets[prefix + key]
-
-        # Always save locally
-        self.localstore[prefix + key] = value
+        self.localstorage.set(prefix + key, value)
         if self.started:
             self.storage.set(key=prefix + key, value=value, cb=CalvinCB(func=self.set_cb, org_key=key, org_value=value, org_cb=cb))
         elif cb:
@@ -257,10 +262,7 @@ class Storage(object):
         if not cb:
             return
 
-        if prefix + key in self.localstore:
-            value = self.localstore[prefix + key]
-            async.DelayedCall(0, cb, key=key, value=value)
-        else:
+        if not self.localstorage.set(prefix + key, cb):    
             try:
                 self.storage.get(key=prefix + key, cb=CalvinCB(func=self.get_cb, org_cb=cb, org_key=key))
             except:
@@ -296,20 +298,17 @@ class Storage(object):
             Value is False when value has been deleted and
             None if never set (this is current behaviour and might change).
         """
-        if it:
-            if prefix + key in self.localstore:
-                value = self.localstore[prefix + key]
-                _log.analyze(self.node.id, "+", {'value': value, 'key': key})
-                it.append((key, value) if include_key else value)
-            else:
-                try:
-                    self.storage.get(key=prefix + key,
-                                     cb=CalvinCB(func=self.get_iter_cb, it=it, org_key=key, include_key=include_key))
-                except:
-                    if self.started:
-                        _log.analyze(self.node.id, "+", {'value': 'FailedElement', 'key': key})
-                        _log.error("Failed to get: %s" % key)
-                    it.append((key, dynops.FailedElement) if include_key else dynops.FailedElement)
+        if not it:
+            return
+        if not self.localstorage.get_iter(prefix + key, it, include_key):
+            try:
+                self.storage.get(key=prefix + key,
+                                 cb=CalvinCB(func=self.get_iter_cb, it=it, org_key=key, include_key=include_key))
+            except:
+                if self.started:
+                    _log.analyze(self.node.id, "+", {'value': 'FailedElement', 'key': key})
+                    _log.error("Failed to get: %s" % key)
+                it.append((key, dynops.FailedElement) if include_key else dynops.FailedElement)
 
     def get_concat_cb(self, key, value, org_cb, org_key, local_list):
         """ get callback
@@ -340,14 +339,7 @@ class Storage(object):
         """
         if not cb:
             return
-
-        if prefix + key in self.localstore_sets:
-            _log.analyze(self.node.id, "+ GET LOCAL", None)
-            value = self.localstore_sets[prefix + key]
-            # Return the set that we intended to append since that's all we have until it is synced
-            local_list = list(value['+'])
-        else:
-            local_list = []
+        local_list = self.localstorage.get_concat(prefix + key)    
         try:
             self.storage.get_concat(key=prefix + key,
                                     cb=CalvinCB(func=self.get_concat_cb, org_cb=cb, org_key=key, local_list=local_list))
@@ -385,14 +377,7 @@ class Storage(object):
             value indicate success.
         """
         _log.debug("Append key %s, value %s" % (prefix + key, value))
-        # Keep local storage for sets updated until confirmed
-        if (prefix + key) in self.localstore_sets:
-            # Append value items
-            self.localstore_sets[prefix + key]['+'] |= set(value)
-            # Don't remove value items any more
-            self.localstore_sets[prefix + key]['-'] -= set(value)
-        else:
-            self.localstore_sets[prefix + key] = {'+': set(value), '-': set([])}
+        self.localstorage.append(prefix + key, value)
 
         if self.started:
             self.storage.append(key=prefix + key, value=list(self.localstore_sets[prefix + key]['+']),
@@ -431,14 +416,7 @@ class Storage(object):
         """
         _log.debug("Remove key %s, value %s" % (prefix + key, value))
         # Keep local storage for sets updated until confirmed
-        if (prefix + key) in self.localstore_sets:
-            # Don't append value items any more
-            self.localstore_sets[prefix + key]['+'] -= set(value)
-            # Remove value items
-            self.localstore_sets[prefix + key]['-'] |= set(value)
-        else:
-            self.localstore_sets[prefix + key] = {'+': set([]), '-': set(value)}
-
+        self.localstorage.remove(prefix + key, value)
         if self.started:
             self.storage.remove(key=prefix + key, value=list(self.localstore_sets[prefix + key]['-']),
                                 cb=CalvinCB(func=self.remove_cb, org_key=key, org_value=value, org_cb=cb))
@@ -456,16 +434,14 @@ class Storage(object):
             value indicate success.
         """
         _log.debug("Deleting key %s" % prefix + key)
-        if prefix + key in self.localstore:
-            del self.localstore[prefix + key]
-        if (prefix + key) in self.localstore_sets:
-            del self.localstore_sets[prefix + key]
+        self.localstorage.delete(prefix + key)
         if self.started:
             self.storage.delete(prefix + key, cb)
         else:
             if cb:
                 cb(key, calvinresponse.CalvinResponse(True))
 
+    # FIXME: How and when and by whom is this used? Where does it belong?
     def _index_strings(self, index, root_prefix_level):
         # Make the list of index levels that should be used
         # The index string must been escaped with \/ and \\ for / and \ within levels, respectively
@@ -522,14 +498,8 @@ class Storage(object):
         # Make sure we send in a list as value
         value = list(value) if isinstance(value, (list, set, tuple)) else [value]
 
-        if key in self.localstore_sets:
-            # Append value items
-            self.localstore_sets[key]['+'] |= set(value)
-            # Don't remove value items any more
-            self.localstore_sets[key]['-'] -= set(value)
-        else:
-            self.localstore_sets[key] = {'+': set(value), '-': set([])}
-
+        self.localstorage.append(key, value)
+        
         if self.started:
             self.storage.add_index(prefix="index-", indexes=indexes, value=value,
                 cb=CalvinCB(self.add_index_cb, org_cb=cb, index_items=indexes, org_value=value))
@@ -650,9 +620,7 @@ class Storage(object):
         _log.debug("get index %s" % (index))
         indexes = self._index_strings(index, root_prefix_level)
         # Collect a value set from all key-indexes that include the indexes, always compairing full index levels
-        local_values = set(itertools.chain(
-            *(v['+'] for k, v in self.localstore_sets.items()
-                if all(map(lambda x, y: False if x is None else True if y is None else x==y, k, indexes)))))
+        local_values = self.localstorage.get_indices(indexes)
         if self.started:
             self.storage.get_index(prefix="index-", index=indexes,
                 cb=CalvinCB(self.get_index_cb, org_cb=cb, index_items=indexes, local_values=local_values))
@@ -694,6 +662,10 @@ class Storage(object):
         self.get_index(index=index, root_prefix_level=root_prefix_level,
             cb=CalvinCB(self.get_index_iter_cb, it=it, include_key=include_key, org_key=org_key))
         return it
+
+#    
+# Secondary methods (using the above methods) 
+#
 
     ### Calvin object handling ###
 
