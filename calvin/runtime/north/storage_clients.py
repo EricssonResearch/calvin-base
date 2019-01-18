@@ -104,12 +104,10 @@ class LocalRegistry(StorageBase):
     
     def remove(self, key, value, cb=None):
         if key in self.localstore_sets:
-            # Don't append value items any more
             self.localstore_sets[key]['+'] -= set(value)
-            # Remove value items
             self.localstore_sets[key]['-'] |= set(value)
         else:
-            self.localstore_sets[key] = {'+': set([]), '-': set(value)}
+            self.localstore_sets[key] = {'+': set([]), '-': set(value)}            
             
     def delete(self, key, cb=None):
         if key in self.localstore:
@@ -117,13 +115,51 @@ class LocalRegistry(StorageBase):
         if key in self.localstore_sets:
             del self.localstore_sets[key]
             
-    def get_indices(self, indices):
+## Additional methods
+
+    def _get_indices(self, indices):
         # Collect a value set from all key-indexes that include the indexes, always compairing full index levels
         local_values = set(itertools.chain(
             *(v['+'] for k, v in self.localstore_sets.items()
                 if all(map(lambda x, y: False if x is None else True if y is None else x==y, k, indices)))))
         return local_values        
         
+    def _delete_key(self, key):
+        if key in self.localstore:
+            del self.localstore[key]
+        
+    def _set_key_value(self, key, value):
+        self.localstore[key] = value
+        
+    def _update_sets(self, key, op1, op2):    
+        if key not in self.localstore_sets:
+            return   
+        if self.localstore_sets[key][op1]:
+            self.localstore_sets[key][op2] = set([])
+        else:
+            del self.localstore_sets[key]
+
+    def _update_sets_add(self, key):
+        self._update_sets(key, '-', '+')    
+    
+    def _update_sets_remove(self, key):    
+        self._update_sets(key, '+', '-')    
+            
+    def _update_sets_index(self, key, value, op):
+        if key not in self.localstore_sets:
+            return
+        self.localstore_sets[key][op] -= set(value)
+        if not self.localstore_sets[key]['-'] and not self.localstore_sets[key]['+']:
+            del self.localstore_sets[key]
+
+    def _update_sets_add_index(self, key, value):
+        self._update_sets_index(key, value, '+')
+    
+    def _update_sets_remove_index(self, key, value):
+        self._update_sets_index(key, value, '-')
+                    
+    def _setlist(self, key, op):
+        return list(self.localstore_sets[key][op])       
             
     
         

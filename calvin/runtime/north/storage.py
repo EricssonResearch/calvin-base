@@ -213,15 +213,14 @@ class Storage(object):
         """ set callback, on error store in localstore and retry after flush_timeout
         """
         if value:
-            if key in self.localstore:
-                del self.localstore[key]
-            self.reset_flush_timeout()
+            self.localstorage._delete_key(key)
+            self.reset_flush_timeout() # FIXME: Only if change made?
         else:
             if not silent:
                 _log.error("Failed to store %s" % key)
             if org_key and org_value:
-                if not org_value is None:
-                    self.localstore[key] = org_value
+                if not org_value is None: # WHAT: Cannot store None????
+                    self.localstorage._set_key_value(key, org_value)
 
         if org_cb:
             org_cb(key=key, value=value)
@@ -352,12 +351,8 @@ class Storage(object):
         """ append callback, on error retry after flush_timeout
         """
         if value:
-            if key in self.localstore_sets:
-                if self.localstore_sets[key]['-']:
-                    self.localstore_sets[key]['+'] = set([])
-                else:
-                    del self.localstore_sets[key]
-                self.reset_flush_timeout()
+            self.localstorage._update_sets_add(key)
+            self.reset_flush_timeout() # FIXME: Only if change made?
         else:
             if not silent:
                 _log.warning("Failed to update %s" % key)
@@ -380,7 +375,8 @@ class Storage(object):
         self.localstorage.append(prefix + key, value)
 
         if self.started:
-            self.storage.append(key=prefix + key, value=list(self.localstore_sets[prefix + key]['+']),
+            setlist = self.localstorage._setlist(prefix + key, '+')
+            self.storage.append(key=prefix + key, value=setlist,
                                 cb=CalvinCB(func=self.append_cb, org_key=key, org_value=value, org_cb=cb))
         else:
             if cb:
@@ -390,12 +386,8 @@ class Storage(object):
         """ remove callback, on error retry after flush_timeout
         """
         if value:
-            if key in self.localstore_sets:
-                if self.localstore_sets[key]['+']:
-                    self.localstore_sets[key]['-'] = set([])
-                else:
-                    del self.localstore_sets[key]
-            self.reset_flush_timeout()
+            self.localstorage._update_sets_remove(key)
+            self.reset_flush_timeout() # FIXME: Only if change made?
         else:
             if not silent:
                 _log.warning("Failed to update %s" % key)
@@ -418,7 +410,8 @@ class Storage(object):
         # Keep local storage for sets updated until confirmed
         self.localstorage.remove(prefix + key, value)
         if self.started:
-            self.storage.remove(key=prefix + key, value=list(self.localstore_sets[prefix + key]['-']),
+            setlist = self.localstorage._setlist(prefix + key, '-')
+            self.storage.remove(key=prefix + key, value=setlist,
                                 cb=CalvinCB(func=self.remove_cb, org_key=key, org_value=value, org_cb=cb))
         else:
             if cb:
@@ -461,11 +454,8 @@ class Storage(object):
         key = tuple(index_items)
         if value:
             # Success
-            if key in self.localstore_sets:
-                self.localstore_sets[key]['+'] -= set(org_value)
-                if not self.localstore_sets[key]['-'] and not self.localstore_sets[key]['+']:
-                    del self.localstore_sets[key]
-                self.reset_flush_timeout()
+            self.localstorage._update_sets_add_index(key, org_value)
+            self.reset_flush_timeout() # FIXME: Only if change made?
         else:
             if not silent:
                 _log.warning("Failed to update %s" % key)
@@ -511,11 +501,8 @@ class Storage(object):
         key = tuple(index_items)
         if value:
             # Success
-            if key in self.localstore_sets:
-                self.localstore_sets[key]['-'] -= set(org_value)
-                if not self.localstore_sets[key]['-'] and not self.localstore_sets[key]['+']:
-                    del self.localstore_sets[key]
-                self.reset_flush_timeout()
+            self.localstorage._update_sets_remove_index(key, org_value)
+            self.reset_flush_timeout() # FIXME: Only if change made?
         else:
             if not silent:
                 _log.warning("Failed to update %s" % key)
@@ -550,13 +537,7 @@ class Storage(object):
         # Make sure we send in a list as value
         value = list(value) if isinstance(value, (list, set, tuple)) else [value]
 
-        if key in self.localstore_sets:
-            # Remove value items
-            self.localstore_sets[key]['+'] -= set(value)
-            # Do remove value items
-            self.localstore_sets[key]['-'] |= set(value)
-        else:
-            self.localstore_sets[key] = {'+': set([]), '-': set(value)}
+        self.localstorage.remove(key, value)
 
         if self.started:
             self.storage.remove_index(prefix="index-", indexes=indexes, value=value,
@@ -620,7 +601,7 @@ class Storage(object):
         _log.debug("get index %s" % (index))
         indexes = self._index_strings(index, root_prefix_level)
         # Collect a value set from all key-indexes that include the indexes, always compairing full index levels
-        local_values = self.localstorage.get_indices(indexes)
+        local_values = self.localstorage._get_indices(indexes)
         if self.started:
             self.storage.get_index(prefix="index-", index=indexes,
                 cb=CalvinCB(self.get_index_cb, org_cb=cb, index_items=indexes, local_values=local_values))
