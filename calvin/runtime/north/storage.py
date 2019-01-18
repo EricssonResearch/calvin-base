@@ -59,7 +59,7 @@ class Storage(object):
             raise Exception("Who dare to call with override_storage set?!")
             self.storage = override_storage
         else:
-            self.storage = storage_factory.get(storage_type, None)
+            self.storage = storage_factory.get(storage_type, node)
             # self.storage = node if storage_type == 'local' else RegistryClient() 
         self.flush_delayedcall = None
         self.reset_flush_timeout()
