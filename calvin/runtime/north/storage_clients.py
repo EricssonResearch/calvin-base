@@ -115,7 +115,14 @@ class NullRegistryClient(StorageBase):
     def remove_index(self, prefix, indexes, value, cb):
         # From our point of view, add_index always succeeds
         self._response(cb, True)
-        
+    
+    def get_index(self, prefix, indexes, cb):
+        # The result is actually in the callback cb, as is the original callback
+        # Strangely, this callback has a different behaviour than the rest...
+        callback = cb.kwargs.get('org_cb')
+        if callback:
+            value = list(cb.kwargs['local_values']) 
+            callback(value=value)    
         
     
 
@@ -131,7 +138,7 @@ class LocalRegistry(StorageBase):
         super(LocalRegistry, self).__init__()
         self.localstore = {}
         self.localstore_sets = {}
-    
+            
     def set(self, key, value):
         if key in self.localstore_sets:
             del self.localstore_sets[key]
@@ -190,7 +197,7 @@ class LocalRegistry(StorageBase):
         key = tuple(indexes)
         # Make sure we send in a list as value
         value = list(value) if isinstance(value, (list, set, tuple)) else [value]
-        self.remove(key, value)    
+        self.remove(key, value)   
 
             
 ## Additional methods

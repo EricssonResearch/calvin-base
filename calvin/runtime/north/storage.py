@@ -564,11 +564,8 @@ class Storage(object):
         indexes = self._index_strings(index, root_prefix_level)
         # Collect a value set from all key-indexes that include the indexes, always compairing full index levels
         local_values = self.localstorage._get_indices(indexes)
-        if self.started:
-            self.storage.get_index(prefix="index-", index=indexes,
+        self.storage.get_index(prefix="index-", indexes=indexes,
                 cb=CalvinCB(self.get_index_cb, org_cb=cb, index_items=indexes, local_values=local_values))
-        elif cb:
-            cb(value=list(local_values))
 
     def get_index_iter_cb(self, value, it, org_key, include_key=False):
         _log.debug("get index iter cb key: %s value: %s" % (org_key, value))
