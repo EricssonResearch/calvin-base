@@ -32,7 +32,6 @@ import re
 from calvin.runtime.north.storage_clients import LocalRegistry, NullRegistryClient, RegistryClient
 
 _log = calvinlogger.get_logger(__name__)
-# _conf = calvinconfig.get()
 
                     
 class Storage(object):
@@ -659,7 +658,7 @@ class Storage(object):
         # Store all actors on this node in storage
         # GlobalStore(node=node, security=Security(node) if security_enabled() else None, verify=False).export()
         # If node is an authentication server, store information about it in storage
-        _sec_conf = _conf.get('security', 'security_conf')
+        _sec_conf = self.security_conf
         if _sec_conf and 'authentication' in _sec_conf:
             if ('accept_external_requests' in _sec_conf['authentication'] and
                     _sec_conf['authentication']['accept_external_requests'] ):
@@ -778,7 +777,7 @@ class Storage(object):
         self._remove_super_node(node)
         if node.attributes.get_indexed_public():
             self._delete_node_index(node, cb=cb)
-        _sec_conf = _conf.get('security', 'security_conf')
+        _sec_conf = self.security_conf
         if _sec_conf and ('authorization' in _sec_conf):
             if ('accept_external_requests' in _sec_conf['authorization'] and
                     _sec_conf['authorization']['accept_external_requests'] ):
