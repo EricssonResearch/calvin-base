@@ -82,12 +82,15 @@ class Storage(object):
         if self.flush_timeout < 600:
             self.flush_timeout = self.flush_timeout * 2
         self.flush_delayedcall = None
-        for key in self.localstore:
+
+        # FIXME: localstorage iterable as a stop-gap measure?
+        for key in self.localstorage.localstore:
             _log.debug("Flush key %s: %s" % (key, self.localstore[key]))
             self.storage.set(key=key, value=self.localstore[key],
                              cb=CalvinCB(func=self.set_cb, org_key=None, org_value=None, org_cb=None, silent=True))
 
-        for key, value in self.localstore_sets.iteritems():
+        # FIXME: localstorage_sets iterable as a stop-gap measure?
+        for key, value in self.localstorage.localstore_sets.iteritems():
             if isinstance(key, tuple):
                 self._flush_add_index(key, value['+'])
                 self._flush_remove_index(key, value['-'])

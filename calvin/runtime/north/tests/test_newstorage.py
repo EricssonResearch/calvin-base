@@ -15,7 +15,7 @@ class DummyNode(object):
         
         
 
-@pytest.fixture(scope='module', params=('local',))
+@pytest.fixture(scope='module', params=('local', 'remote'))
 def registry(request):
     
     def cb(*args, **kwargs):
