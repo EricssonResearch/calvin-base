@@ -70,10 +70,10 @@ class Storage(object):
         """ Trigger a flush of internal data
         """
         if self.localstore or self.localstore_sets:
-            if delay is None:
-                delay = self.flush_timeout
-            if self.flush_delayedcall is None:
-                self.flush_delayedcall = async.DelayedCall(delay, self.flush_localdata)
+        if delay is None:
+            delay = self.flush_timeout
+        if self.flush_delayedcall is None:
+            self.flush_delayedcall = async.DelayedCall(delay, self.flush_localdata)
 
     def flush_localdata(self):
         """ Write data in localstore to storage
@@ -158,15 +158,12 @@ class Storage(object):
         """ Start storage
         """
         _log.analyze(self.node.id, "+", None)
-        if self.starting:
-            name = self.node.attributes.get_node_name_as_str() or self.node.id
-            try:
-                self.storage.start(iface=iface, cb=CalvinCB(self.started_cb, org_cb=cb), name=name, nodeid=self.node.id)
-            except:
-                _log.exception("Failed start of storage for name={}, switches to local".format(name))
-        elif cb:
-            async.DelayedCall(0, cb)
-
+        name = self.node.attributes.get_node_name_as_str() or self.node.id
+        # start is handled by the NullRegistryClient and two things can happen here:
+        # 1) if we are in "local" mode, it will call the org_cb, and stay forever in place
+        # 2) for all other modes, it will call started_cb and NullRegistryClient will get replaced by RegistryClient
+        #    handling all communication with the remote registry.
+        self.storage.start(iface=iface, cb=CalvinCB(self.started_cb, org_cb=cb), name=name, nodeid=self.node.id)
         self._init_proxy()
 
     def _init_proxy(self):
@@ -231,10 +228,7 @@ class Storage(object):
         _log.debug("Set key %s, value %s" % (prefix + key, value))
 
         self.localstorage.set(prefix + key, value)
-        if self.started:
-            self.storage.set(key=prefix + key, value=value, cb=CalvinCB(func=self.set_cb, org_key=key, org_value=value, org_cb=cb))
-        elif cb:
-            async.DelayedCall(0, cb, key=key, value=calvinresponse.CalvinResponse(True))
+        self.storage.set(key=prefix + key, value=value, cb=CalvinCB(func=self.set_cb, org_key=key, org_value=value, org_cb=cb))
 
     def get_cb(self, key, value, org_cb, org_key):
         """ get callback
@@ -252,14 +246,11 @@ class Storage(object):
         """
         if not cb:
             return
-
-        if not self.localstorage.set(prefix + key, cb):    
-            try:
-                self.storage.get(key=prefix + key, cb=CalvinCB(func=self.get_cb, org_cb=cb, org_key=key))
-            except:
-                if self.started:
-                    _log.error("Failed to get: %s" % key)
-                async.DelayedCall(0, cb, key=key, value=calvinresponse.CalvinResponse(calvinresponse.NOT_FOUND))
+        try:
+            value = self.localstorage.get(prefix + key)
+            cb(key=key, value=value)
+        except:    
+            self.storage.get(key=prefix + key, cb=CalvinCB(func=self.get_cb, org_cb=cb, org_key=key))
 
     def get_iter_cb(self, key, value, it, org_key, include_key=False):
         """ get callback
@@ -420,11 +411,7 @@ class Storage(object):
         """
         _log.debug("Deleting key %s" % prefix + key)
         self.localstorage.delete(prefix + key)
-        if self.started:
-            self.storage.delete(prefix + key, cb)
-        else:
-            if cb:
-                cb(key, calvinresponse.CalvinResponse(True))
+        self.storage.delete(prefix + key, cb=CalvinCB(func=None, org_key=key, org_cb=cb))
 
     # FIXME: How and when and by whom is this used? Where does it belong?
     def _index_strings(self, index, root_prefix_level):

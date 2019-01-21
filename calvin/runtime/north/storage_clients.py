@@ -16,6 +16,7 @@
 
 from calvin.runtime.north.plugins.storage.storage_base import StorageBase
 # from calvin.utilities import calvinlogger
+from calvin.requests import calvinresponse
 from calvin.runtime.south.async import async
 import itertools
 
@@ -53,6 +54,59 @@ import itertools
   #   self.localstorage.op(args)
   #   self.storage.op(args, nested_callback) # NullClient() unwinds nested_callback and calls callback as DelayedCall
 
+class NullRegistryClient(StorageBase):
+    """Implements start only"""
+    def __init__(self, storage_type):
+        super(NullRegistryClient, self).__init__()
+        self.local_mode = storage_type == 'local'
+
+    def start(self, iface='', cb=None, name=None, nodeid=None):
+        """
+            Starts the service if its nneeded for the storage service
+            cb  is the callback called when the srtart is finished
+        """
+        if self.local_mode:
+            # unwind the CalvinCB and call the original cb
+            print "LOCAL MODE"
+            callback = cb.kwargs.get('org_cb')
+        else:
+            print "REMOTE MODE"
+            callback = cb
+        if callback:
+            callback(True)
+            # async.DelayedCall(0, callback, True)
+    
+    def _response(self, cb, value):
+        callback = cb.kwargs.get('org_cb')
+        if callback:
+            org_key = cb.kwargs['org_key'] 
+            callback(key=org_key, value=value)         
+            # async.DelayedCall(0, cb, key=org_key, value=calvinresponse.CalvinResponse(True))        
+    
+    def set(self, key, value, cb):
+        # Storing has been handled by the LocalRegistry,
+        # cb is CalvinCallback(func=cb, org_key=key, org_value=value, org_cb=cb)
+        # Get org_cb and call that:
+        self._response(cb, calvinresponse.CalvinResponse(True))
+
+    def get(self, key, cb):
+        # Retrieving the value from LocalRegistry has failed, we can't do anything about that
+        # cb is CalvinCallback(func=cb, org_key=key, org_value=value, org_cb=cb)
+        # Get org_cb (known to exist) and call that with failure response:
+        self._response(cb, calvinresponse.CalvinResponse(calvinresponse.NOT_FOUND))
+        
+    def delete(self, key, cb):
+        # From our point of view, delete always succeeds
+        self._response(cb, calvinresponse.CalvinResponse(True))
+
+    
+
+class RegistryClient(StorageBase):
+    """Generic client regardless of storage solution"""
+    def __init__(self):
+        super(RegistryClient, self).__init__()
+
+
 class LocalRegistry(StorageBase):
     """docstring for LocalRegistry"""
     def __init__(self):
@@ -60,30 +114,21 @@ class LocalRegistry(StorageBase):
         self.localstore = {}
         self.localstore_sets = {}
     
-    def set(self, key, value, cb=None):
+    def set(self, key, value):
         if key in self.localstore_sets:
             del self.localstore_sets[key]
         self.localstore[key] = value
     
-    def get(self, key, cb):
-        """Return true if found, false otherwise. Pass value in callback."""
-        try:
-            value = self.localstore[key]
-            async.DelayedCall(0, cb, key=key, value=value)
-            return True
-        except:
-            return False
+    def get(self, key):
+        """Return value if found, raise exception otherwise."""
+        return self.localstore[key]
     
     def get_iter(self, key, it, include_key=False):
-        """Return true if found, false otherwise. Append value to it."""
-        try:
-            value = self.localstore[key]
-            it.append((key, value) if include_key else value)
-            return True
-        except:
-            return False
+        """Append value to iterator, raise exception if value not found"""
+        value = self.localstore[key]
+        it.append((key, value) if include_key else value)
             
-    def get_concat(self, key, cb=None):
+    def get_concat(self, key):
         """Return list"""
         try:
             value = self.localstore_sets[key]
@@ -92,7 +137,7 @@ class LocalRegistry(StorageBase):
         except:
             return []
         
-    def append(self, key, value, cb=None):
+    def append(self, key, value):
         # Keep local storage for sets updated until confirmed
         if key in self.localstore_sets:
             # Append value items
@@ -102,14 +147,14 @@ class LocalRegistry(StorageBase):
         else:
             self.localstore_sets[key] = {'+': set(value), '-': set([])}
     
-    def remove(self, key, value, cb=None):
+    def remove(self, key, value):
         if key in self.localstore_sets:
             self.localstore_sets[key]['+'] -= set(value)
             self.localstore_sets[key]['-'] |= set(value)
         else:
             self.localstore_sets[key] = {'+': set([]), '-': set(value)}            
             
-    def delete(self, key, cb=None):
+    def delete(self, key):
         if key in self.localstore:
             del self.localstore[key]
         if key in self.localstore_sets:
@@ -177,12 +222,3 @@ class LocalRegistry(StorageBase):
          
         
         
-class NullRegistryClient(StorageBase):
-    """Implements start only"""
-    def __init__(self):
-        super(NullRegistryClient, self).__init__()
-                
-class RegistryClient(StorageBase):
-    """Generic client regardless of storage solution"""
-    def __init__(self):
-        super(RegistryClient, self).__init__()
