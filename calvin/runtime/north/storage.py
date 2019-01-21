@@ -14,26 +14,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.runtime.north.plugins.storage import storage_factory
+# from calvin.runtime.north.plugins.storage import storage_factory
 from calvin.csparser.port_property_syntax import list_port_property_capabilities
 from calvin.runtime.south.async import async
 from calvin.utilities import calvinlogger
 from calvin.utilities.calvin_callback import CalvinCB
-from calvin.actor import actorport
+# from calvin.actor import actorport
 from calvin.actor.actor import ShadowActor
 from calvin.utilities import calvinconfig
 # from calvin.actorstore.store import GlobalStore
-from calvin.utilities.security import Security, security_enabled
+# from calvin.utilities.security import Security, security_enabled
 from calvin.utilities import dynops
 from calvin.requests import calvinresponse
 from calvin.runtime.north.calvinsys import get_calvinsys
 from calvin.runtime.north.calvinlib import get_calvinlib
 import re
-import itertools
 from calvin.runtime.north.storage_clients import LocalRegistry, NullRegistryClient, RegistryClient
 
 _log = calvinlogger.get_logger(__name__)
-_conf = calvinconfig.get()
+# _conf = calvinconfig.get()
 
                     
 class Storage(object):
@@ -43,24 +42,21 @@ class Storage(object):
     All functions in this class should be async and never block.
     """
 
-    def __init__(self, node, override_storage=None):
+    def __init__(self, node, storage_type, server=None, security_conf=None, override_storage=None):
         self.localstorage = LocalRegistry()
-        # self.localstore = {}
-        # self.localstore_sets = {}
         self.started = False
         self.node = node
-        storage_type = _conf.get('global', 'storage_type')
-        _log.info("#### STORAGE TYPE %s ####", storage_type)
-        self.proxy = _conf.get('global', 'storage_proxy') if storage_type == 'proxy' else None
-        _log.analyze(self.node.id, "+", {'proxy': self.proxy})
+        self.storage_type = storage_type
+        self.proxy, self.server = (server, None) if storage_type == 'proxy' else (None, server)
+        self.security_conf = security_conf
         self.tunnel = {}
-        self.starting = storage_type != 'local'
+        
         if override_storage:
             raise Exception("Who dare to call with override_storage set?!")
             self.storage = override_storage
         else:
-            self.storage = storage_factory.get(storage_type, node)
-            # self.storage = node if storage_type == 'local' else RegistryClient() 
+            # self.storage = storage_factory.get(storage_type, node)
+            self.storage = NullRegistryClient(storage_type)
         self.flush_delayedcall = None
         self.reset_flush_timeout()
 
