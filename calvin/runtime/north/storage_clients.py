@@ -80,25 +80,43 @@ class NullRegistryClient(StorageBase):
         callback = cb.kwargs.get('org_cb')
         if callback:
             org_key = cb.kwargs['org_key'] 
-            callback(key=org_key, value=value)         
-            # async.DelayedCall(0, cb, key=org_key, value=calvinresponse.CalvinResponse(True))        
+            callback(key=org_key, value=calvinresponse.CalvinResponse(value))
+            # FIXME: Should this be used instead?         
+            # async.DelayedCall(0, callback, key=org_key, value=calvinresponse.CalvinResponse(value))        
     
     def set(self, key, value, cb):
         # Storing has been handled by the LocalRegistry,
         # cb is CalvinCallback(func=cb, org_key=key, org_value=value, org_cb=cb)
         # Get org_cb and call that:
-        self._response(cb, calvinresponse.CalvinResponse(True))
+        self._response(cb, True)
 
     def get(self, key, cb):
         # Retrieving the value from LocalRegistry has failed, we can't do anything about that
         # cb is CalvinCallback(func=cb, org_key=key, org_value=value, org_cb=cb)
         # Get org_cb (known to exist) and call that with failure response:
-        self._response(cb, calvinresponse.CalvinResponse(calvinresponse.NOT_FOUND))
+        self._response(cb, calvinresponse.NOT_FOUND)
         
     def delete(self, key, cb):
         # From our point of view, delete always succeeds
-        self._response(cb, calvinresponse.CalvinResponse(True))
+        self._response(cb, True)
 
+    def append(self, key, value, cb):
+        # From our point of view, append always succeeds
+        self._response(cb, True)
+        
+    def remove(self, key, value, cb):
+        # From our point of view, remove always succeeds
+        self._response(cb, True)
+        
+    def add_index(self, prefix, indexes, value, cb):
+        # From our point of view, add_index always succeeds
+        self._response(cb, True)
+           
+    def remove_index(self, prefix, indexes, value, cb):
+        # From our point of view, add_index always succeeds
+        self._response(cb, True)
+        
+        
     
 
 class RegistryClient(StorageBase):
@@ -153,12 +171,27 @@ class LocalRegistry(StorageBase):
             self.localstore_sets[key]['-'] |= set(value)
         else:
             self.localstore_sets[key] = {'+': set([]), '-': set(value)}            
-            
+
     def delete(self, key):
         if key in self.localstore:
             del self.localstore[key]
         if key in self.localstore_sets:
             del self.localstore_sets[key]
+
+    def add_index(self, indexes, value):
+        # For local cache storage make the indexes the key
+        key = tuple(indexes)
+        # Make sure we send in a list as value
+        value = list(value) if isinstance(value, (list, set, tuple)) else [value]
+        self.append(key, value)
+        
+    def remove_index(self, indexes, value):
+        # For local cache storage make the indexes the key
+        key = tuple(indexes)
+        # Make sure we send in a list as value
+        value = list(value) if isinstance(value, (list, set, tuple)) else [value]
+        self.remove(key, value)    
+
             
 ## Additional methods
 

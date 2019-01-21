@@ -43,11 +43,12 @@ def mock_callback():
 # set(key, value, cb=None):
 # get(key, cb):
 # delete(key, cb=None):
-# FIXME: Add these
-# - get_iter(key, it, include_key=False):
-# - get_concat(key, cb=None):
+# FIXME: Add tests for these
 # - append(key, value, cb=None):
 # - remove(key, value, cb=None):
+# FIXME: Later
+# - get_iter(key, it, include_key=False):
+# - get_concat(key, cb=None):
 
 def test_local_set(localregistry):
     localregistry.set('key', 'value')
@@ -97,6 +98,13 @@ def test_local_delete(localregistry):
 #     note that the key here is without the prefix and
 #     value indicate success.
 # """
+
+# Required for "flush":
+# remove_index
+# add_index
+# remove
+# append
+
 
 def test_set_get(registry, mock_callback):
     registry.set('prefix', 'key', 'value', None)

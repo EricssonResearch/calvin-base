@@ -357,13 +357,9 @@ class Storage(object):
         _log.debug("Append key %s, value %s" % (prefix + key, value))
         self.localstorage.append(prefix + key, value)
 
-        if self.started:
-            setlist = self.localstorage._setlist(prefix + key, '+')
-            self.storage.append(key=prefix + key, value=setlist,
-                                cb=CalvinCB(func=self.append_cb, org_key=key, org_value=value, org_cb=cb))
-        else:
-            if cb:
-                cb(key=key, value=calvinresponse.CalvinResponse(True))
+        setlist = self.localstorage._setlist(prefix + key, '+')
+        self.storage.append(key=prefix + key, value=setlist,
+                            cb=CalvinCB(func=self.append_cb, org_key=key, org_value=value, org_cb=cb))
 
     def remove_cb(self, key, value, org_key, org_value, org_cb, silent=False):
         """ remove callback, on error retry after flush_timeout
@@ -392,13 +388,10 @@ class Storage(object):
         _log.debug("Remove key %s, value %s" % (prefix + key, value))
         # Keep local storage for sets updated until confirmed
         self.localstorage.remove(prefix + key, value)
-        if self.started:
-            setlist = self.localstorage._setlist(prefix + key, '-')
-            self.storage.remove(key=prefix + key, value=setlist,
+
+        setlist = self.localstorage._setlist(prefix + key, '-')
+        self.storage.remove(key=prefix + key, value=setlist,
                                 cb=CalvinCB(func=self.remove_cb, org_key=key, org_value=value, org_cb=cb))
-        else:
-            if cb:
-                cb(key=key, value=calvinresponse.CalvinResponse(True))
 
     def delete(self, prefix, key, cb):
         """ Delete registry key: prefix+key
@@ -462,18 +455,12 @@ class Storage(object):
         _log.debug("add index %s: %s" % (index, value))
         # Get a list of the index levels
         indexes = self._index_strings(index, root_prefix_level)
-        # For local cache storage make the indexes the key
-        key = tuple(indexes)
-        # Make sure we send in a list as value
-        value = list(value) if isinstance(value, (list, set, tuple)) else [value]
 
-        self.localstorage.append(key, value)
+
+        self.localstorage.add_index(indexes=indexes, value=value)
         
-        if self.started:
-            self.storage.add_index(prefix="index-", indexes=indexes, value=value,
+        self.storage.add_index(prefix="index-", indexes=indexes, value=value,
                 cb=CalvinCB(self.add_index_cb, org_cb=cb, index_items=indexes, org_value=value))
-        elif cb:
-            cb(value=calvinresponse.CalvinResponse(True))
 
     def remove_index_cb(self, value, org_value, org_cb, index_items, silent=False):
         _log.debug("remove index cb value:%s, index_items:%s" % (value, index_items))
@@ -511,18 +498,11 @@ class Storage(object):
         _log.debug("remove index %s: %s" % (index, value))
         # Get a list of the index levels
         indexes = self._index_strings(index, root_prefix_level)
-        # For local cache storage make the indexes the key
-        key = tuple(indexes)
-        # Make sure we send in a list as value
-        value = list(value) if isinstance(value, (list, set, tuple)) else [value]
+        
+        self.localstorage.remove_index(indexes=indexes, value=value)
 
-        self.localstorage.remove(key, value)
-
-        if self.started:
-            self.storage.remove_index(prefix="index-", indexes=indexes, value=value,
+        self.storage.remove_index(prefix="index-", indexes=indexes, value=value,
                 cb=CalvinCB(self.remove_index_cb, org_cb=cb, index_items=indexes, org_value=value))
-        elif cb:
-            cb(value=calvinresponse.CalvinResponse(True))
 
     def delete_index(self, index, root_prefix_level=2, cb=None):
         """
