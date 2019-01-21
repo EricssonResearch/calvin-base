@@ -129,18 +129,6 @@ class Storage(object):
         self.storage.remove_index(prefix="index-", indexes=list(key), value=list(value),
             cb=CalvinCB(self.remove_index_cb, org_value=value, org_cb=None, index_items=list(key), silent=True))
 
-    def started_cb(self, *args, **kwargs):
-        """ Called when storage has started, flushes localstore
-        """
-        _log.debug("Storage started!!")
-        if not args[0]:
-            return
-
-        self.started = True
-        self.trigger_flush(0)
-        if kwargs["org_cb"]:
-            async.DelayedCall(0, kwargs["org_cb"], args[0])
-
     def dump(self):
         "Dump the local storage to a temp file"
         import tempfile
@@ -157,6 +145,15 @@ class Storage(object):
 #
 # Start of primitive methods
 #
+    def started_cb(self, *args, **kwargs):
+        """ Called when storage has started, flushes localstore
+        """
+        if not args[0]:
+            return
+        self.storage = RegistryClient()
+        self.trigger_flush(0)
+        if kwargs["org_cb"]:
+            async.DelayedCall(0, kwargs["org_cb"], args[0])
 
     def start(self, iface='', cb=None):
         """ Start storage
