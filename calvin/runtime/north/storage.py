@@ -131,15 +131,29 @@ class Storage(object):
         self.storage.remove_index(prefix="index-", indexes=list(key), value=list(value),
             cb=CalvinCB(self.remove_index_cb, org_value=value, org_cb=None, index_items=list(key), silent=True))
 
+
     def dump(self):
+        "Dump the local storage to a temp file"
+        import tempfile
+        import json
+        data = [ 
+            {str(k): v for k, v in self.localstorage.localstore.items()},
+            {str(k): list(v['+']) for k, v in self.localstorage.localstore_sets.items()}
+        ]
+        with tempfile.NamedTemporaryFile(mode='w', prefix="storage", delete=False) as fp:
+            json.dump(data, fp, indent=4, sort_keys=True)
+        return fp.name
+
+
+    def dump_original(self):
         "Dump the local storage to a temp file"
         import tempfile
         import json
         with tempfile.NamedTemporaryFile(mode='w', prefix="storage", delete=False) as fp:
             fp.write("[")
-            json.dump({str(k): str(v) for k, v in self.localstore.items()}, fp)
+            json.dump({str(k): str(v) for k, v in self.localstorage.localstore.items()}, fp)
             fp.write(", ")
-            json.dump({str(k): list(v['+']) for k, v in self.localstore_sets.items()}, fp)
+            json.dump({str(k): list(v['+']) for k, v in self.localstorage.localstore_sets.items()}, fp)
             fp.write("]")
             name = fp.name
         return name
