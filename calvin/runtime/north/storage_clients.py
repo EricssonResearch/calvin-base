@@ -54,6 +54,22 @@ import itertools
   #   self.localstorage.op(args)
   #   self.storage.op(args, nested_callback) # NullClient() unwinds nested_callback and calls callback as DelayedCall
 
+# FIXME: How and when and by whom is this used? Where does it belong?
+def index_strings(index, root_prefix_level):
+    # Make the list of index levels that should be used
+    # The index string must been escaped with \/ and \\ for / and \ within levels, respectively
+    if isinstance(index, list):
+        items = index
+    else:
+        items = re.split(r'(?<![^\\]\\)/', index.lstrip("/"))
+    if root_prefix_level > 0:
+        root = "/".join(items[:root_prefix_level])
+        del items[:root_prefix_level]
+        items.insert(0, root)
+
+    return items
+
+
 class NullRegistryClient(StorageBase):
     """Implements start only"""
     def __init__(self, storage_type):

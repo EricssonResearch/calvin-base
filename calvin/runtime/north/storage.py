@@ -30,6 +30,7 @@ from calvin.runtime.north.calvinsys import get_calvinsys
 from calvin.runtime.north.calvinlib import get_calvinlib
 import re
 from calvin.runtime.north.storage_clients import LocalRegistry, NullRegistryClient, RegistryClient
+from calvin.runtime.north.storage_clients import index_strings as _index_strings
 
 _log = calvinlogger.get_logger(__name__)
 
@@ -410,20 +411,6 @@ class Storage(object):
         self.localstorage.delete(prefix + key)
         self.storage.delete(prefix + key, cb=CalvinCB(func=None, org_key=key, org_cb=cb))
 
-    # FIXME: How and when and by whom is this used? Where does it belong?
-    def _index_strings(self, index, root_prefix_level):
-        # Make the list of index levels that should be used
-        # The index string must been escaped with \/ and \\ for / and \ within levels, respectively
-        if isinstance(index, list):
-            items = index
-        else:
-            items = re.split(r'(?<![^\\]\\)/', index.lstrip("/"))
-        if root_prefix_level > 0:
-            root = "/".join(items[:root_prefix_level])
-            del items[:root_prefix_level]
-            items.insert(0, root)
-
-        return items
 
     def add_index_cb(self, value, org_value, org_cb, index_items, silent=False):
         _log.debug("add index cb value:%s, index_items:%s" % (value, index_items))
@@ -458,8 +445,7 @@ class Storage(object):
 
         _log.debug("add index %s: %s" % (index, value))
         # Get a list of the index levels
-        indexes = self._index_strings(index, root_prefix_level)
-
+        indexes = _index_strings(index, root_prefix_level)
 
         self.localstorage.add_index(indexes=indexes, value=value)
         
@@ -501,7 +487,7 @@ class Storage(object):
 
         _log.debug("remove index %s: %s" % (index, value))
         # Get a list of the index levels
-        indexes = self._index_strings(index, root_prefix_level)
+        indexes = _index_strings(index, root_prefix_level)
         
         self.localstorage.remove_index(indexes=indexes, value=value)
 
@@ -562,7 +548,7 @@ class Storage(object):
         """
 
         _log.debug("get index %s" % (index))
-        indexes = self._index_strings(index, root_prefix_level)
+        indexes = _index_strings(index, root_prefix_level)
         # Collect a value set from all key-indexes that include the indexes, always compairing full index levels
         local_values = self.localstorage._get_indices(indexes)
         self.storage.get_index(prefix="index-", indexes=indexes,
@@ -596,7 +582,7 @@ class Storage(object):
             all values are appended to the returned dynamic iterable.
         """
         _log.debug("get index iter %s" % (index))
-        indexes = self._index_strings(index, root_prefix_level)
+        indexes = _index_strings(index, root_prefix_level)
         org_key = "/".join(indexes)
         # TODO push also iterable into plugin?
         it = dynops.List()
