@@ -164,7 +164,7 @@ class LocalRegistry(StorageBase):
         super(LocalRegistry, self).__init__()
         self.localstore = {}
         self.localstore_sets = {}
-            
+    
     def dump(self):
         data = [ 
             {str(k): v for k, v in self.localstore.items()},
@@ -233,15 +233,14 @@ class LocalRegistry(StorageBase):
         value = list(value) if isinstance(value, (list, set, tuple)) else [value]
         self.remove(key, value)   
 
-            
-## Additional methods
-
-    def _get_indices(self, indices):
+    def get_index(self, indexes):
         # Collect a value set from all key-indexes that include the indexes, always compairing full index levels
         local_values = set(itertools.chain(
             *(v['+'] for k, v in self.localstore_sets.items()
-                if all(map(lambda x, y: False if x is None else True if y is None else x==y, k, indices)))))
-        return local_values        
+                if all(map(lambda x, y: False if x is None else True if y is None else x==y, k, indexes)))))
+        return local_values       
+            
+## Additional methods
         
     def _delete_key(self, key):
         if key in self.localstore:

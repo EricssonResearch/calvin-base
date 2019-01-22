@@ -550,7 +550,7 @@ class Storage(object):
         _log.debug("get index %s" % (index))
         indexes = _index_strings(index, root_prefix_level)
         # Collect a value set from all key-indexes that include the indexes, always compairing full index levels
-        local_values = self.localstorage._get_indices(indexes)
+        local_values = self.localstorage.get_index(indexes)
         self.storage.get_index(prefix="index-", indexes=indexes,
                 cb=CalvinCB(self.get_index_cb, org_cb=cb, index_items=indexes, local_values=local_values))
 
