@@ -43,7 +43,6 @@ class Storage(object):
 
     def __init__(self, node, storage_type, server=None, security_conf=None, override_storage=None):
         self.localstorage = LocalRegistry()
-        self.started = False
         self.node = node
         self.storage_type = storage_type
         self.proxy, self.server = (server, None) if storage_type == 'proxy' else (None, server)
@@ -55,7 +54,7 @@ class Storage(object):
             self.storage = override_storage
         else:
             # self.storage = storage_factory.get(storage_type, node)
-            self.storage = NullRegistryClient(storage_type)
+            self.storage = NullRegistryClient(self.storage_type)
         self.flush_delayedcall = None
         self.reset_flush_timeout()
 
@@ -206,12 +205,8 @@ class Storage(object):
     def stop(self, cb=None):
         """ Stop storage
         """
-        _log.analyze(self.node.id, "+", {'started': self.started})
-        if self.started:
-            self.storage.stop(cb=cb)
-        elif cb:
-            cb()
-        self.started = False
+        self.storage.stop(cb=cb)
+        self.storage = NullRegistryClient(self.storage_type)
 
     ### Storage operations ###
 
@@ -299,15 +294,14 @@ class Storage(object):
         """
         if not it:
             return
-        if not self.localstorage.get_iter(prefix + key, it, include_key):
-            try:
-                self.storage.get(key=prefix + key,
-                                 cb=CalvinCB(func=self.get_iter_cb, it=it, org_key=key, include_key=include_key))
-            except:
-                if self.started:
-                    _log.analyze(self.node.id, "+", {'value': 'FailedElement', 'key': key})
-                    _log.error("Failed to get: %s" % key)
-                it.append((key, dynops.FailedElement) if include_key else dynops.FailedElement)
+
+        try:
+            value = self.localstorage.get(prefix + key)
+            it.append((prefix + key, value) if include_key else value)
+        except:
+            pass
+        self.storage.get(key=prefix + key,
+                         cb=CalvinCB(func=self.get_iter_cb, it=it, org_key=key, include_key=include_key))
 
     def get_concat_cb(self, key, value, org_cb, org_key, local_list):
         """ get callback
@@ -338,14 +332,10 @@ class Storage(object):
         """
         if not cb:
             return
+
         local_list = self.localstorage.get_concat(prefix + key)    
-        try:
-            self.storage.get_concat(key=prefix + key,
-                                    cb=CalvinCB(func=self.get_concat_cb, org_cb=cb, org_key=key, local_list=local_list))
-        except:
-            if self.started:
-                _log.error("Failed to get: %s" % key, exc_info=True)
-            async.DelayedCall(0, cb, key=key, value=local_list)
+        self.storage.get_concat(key=prefix + key,
+                                cb=CalvinCB(func=self.get_concat_cb, org_cb=cb, org_key=key, local_list=local_list))
 
     def append_cb(self, key, value, org_key, org_value, org_cb, silent=False):
         """ append callback, on error retry after flush_timeout

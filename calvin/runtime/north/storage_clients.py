@@ -115,6 +115,16 @@ class NullRegistryClient(StorageBase):
     def remove_index(self, prefix, indexes, value, cb):
         # From our point of view, add_index always succeeds
         self._response(cb, True)
+
+    def get_concat(self, key, cb):
+        # The result is actually in the callback cb, as is the original callback
+        # Strangely, this callback has a different behaviour than the rest...
+        callback = cb.kwargs.get('org_cb')
+        if callback:
+            value = cb.kwargs.get('local_list')
+            org_key = cb.kwargs['org_key']
+            callback(key=org_key, value=value)
+            # async.DelayedCall(0, cb, key=key, value=local_list)
     
     def get_index(self, prefix, indexes, cb):
         # The result is actually in the callback cb, as is the original callback
@@ -122,7 +132,7 @@ class NullRegistryClient(StorageBase):
         callback = cb.kwargs.get('org_cb')
         if callback:
             value = list(cb.kwargs['local_values']) 
-            callback(value=value)    
+            callback(value=value)
         
     
 
@@ -148,10 +158,11 @@ class LocalRegistry(StorageBase):
         """Return value if found, raise exception otherwise."""
         return self.localstore[key]
     
-    def get_iter(self, key, it, include_key=False):
-        """Append value to iterator, raise exception if value not found"""
-        value = self.localstore[key]
-        it.append((key, value) if include_key else value)
+    # # FIXME: This might not be required to implement here, see Storage.get_iter
+    # def get_iter(self, key, it, include_key=False):
+    #     """Append value to iterator, raise exception if value not found"""
+    #     value = self.localstore[key]
+    #     it.append((key, value) if include_key else value)
             
     def get_concat(self, key):
         """Return list"""
