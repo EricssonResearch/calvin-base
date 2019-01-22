@@ -135,10 +135,7 @@ class Storage(object):
         "Dump the local storage to a temp file"
         import tempfile
         import json
-        data = [ 
-            {str(k): v for k, v in self.localstorage.localstore.items()},
-            {str(k): list(v['+']) for k, v in self.localstorage.localstore_sets.items()}
-        ]
+        data = self.localstorage.dump()
         with tempfile.NamedTemporaryFile(mode='w', prefix="storage", delete=False) as fp:
             json.dump(data, fp, indent=4, sort_keys=True)
         return fp.name

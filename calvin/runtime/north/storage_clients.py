@@ -149,6 +149,13 @@ class LocalRegistry(StorageBase):
         self.localstore = {}
         self.localstore_sets = {}
             
+    def dump(self):
+        data = [ 
+            {str(k): v for k, v in self.localstore.items()},
+            {str(k): list(v['+']) for k, v in self.localstore_sets.items()}
+        ]
+        return data   
+            
     def set(self, key, value):
         if key in self.localstore_sets:
             del self.localstore_sets[key]
