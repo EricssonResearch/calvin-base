@@ -19,6 +19,7 @@ from calvin.runtime.north.plugins.storage.storage_base import StorageBase
 from calvin.requests import calvinresponse
 from calvin.runtime.south.async import async
 import itertools
+import re
 
 
 # _log = calvinlogger.get_logger(__name__)
@@ -56,6 +57,9 @@ import itertools
 
 # FIXME: How and when and by whom is this used? Where does it belong?
 def index_strings(index, root_prefix_level):
+    # Add default behaviour here to make it less fragile.
+    if root_prefix_level is None:
+        root_prefix_level = 2
     # Make the list of index levels that should be used
     # The index string must been escaped with \/ and \\ for / and \ within levels, respectively
     if isinstance(index, list):

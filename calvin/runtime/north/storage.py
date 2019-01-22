@@ -28,7 +28,6 @@ from calvin.utilities import dynops
 from calvin.requests import calvinresponse
 from calvin.runtime.north.calvinsys import get_calvinsys
 from calvin.runtime.north.calvinlib import get_calvinlib
-import re
 from calvin.runtime.north.storage_clients import LocalRegistry, NullRegistryClient, RegistryClient
 from calvin.runtime.north.storage_clients import index_strings as _index_strings
 
@@ -427,7 +426,7 @@ class Storage(object):
             org_cb(value=value)
         self.trigger_flush()
 
-    def add_index(self, index, value, root_prefix_level=2, cb=None):
+    def add_index(self, index, value, root_prefix_level=None, cb=None):
         """
         Add single value (e.g. a node id) or list to a set stored in registry
         later retrivable for each level of the index.
@@ -467,7 +466,7 @@ class Storage(object):
             org_cb(value=value)
         self.trigger_flush()
 
-    def remove_index(self, index, value, root_prefix_level=2, cb=None):
+    def remove_index(self, index, value, root_prefix_level=None, cb=None):
         """
         Remove single value (e.g. a node id) or list from a set stored in registry
         index: The multilevel key:
@@ -494,7 +493,7 @@ class Storage(object):
         self.storage.remove_index(prefix="index-", indexes=indexes, value=value,
                 cb=CalvinCB(self.remove_index_cb, org_cb=cb, index_items=indexes, org_value=value))
 
-    def delete_index(self, index, root_prefix_level=2, cb=None):
+    def delete_index(self, index, root_prefix_level=None, cb=None):
         """
         Delete index entry in registry - this have the semantics of
         remove_index(index, get_index(index)) - NOT IMPLEMENTED since never used
@@ -526,7 +525,7 @@ class Storage(object):
         if org_cb:
             org_cb(value=list(value))
 
-    def get_index(self, index, root_prefix_level=2, cb=None):
+    def get_index(self, index, root_prefix_level=None, cb=None):
         """
         Get multiple values from the registry stored at the index level or
         below it in hierarchy.
@@ -560,7 +559,7 @@ class Storage(object):
             it.extend([(org_key, v) for v in value] if include_key else value)
         it.final()
 
-    def get_index_iter(self, index, include_key=False, root_prefix_level=2):
+    def get_index_iter(self, index, include_key=False, root_prefix_level=None):
         """
         Get multiple values from the registry stored at the index level or
         below it in hierarchy.
