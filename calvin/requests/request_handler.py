@@ -78,7 +78,7 @@ class RT(object):
         self.control_uri = control_uri
 
 
-class RequestHandler(object):
+class RequestBase(object):
 
     def __init__(self, verify=True):
         self.future_responses = []
@@ -140,6 +140,41 @@ class RequestHandler(object):
     def _delete(self, rt, timeout, async, path, data=None):
         req = session if async else requests
         return self._send(rt, timeout, req.delete, path, data)
+
+    def async_response(self, response):
+        try:
+            self.future_responses.remove(response)
+        except Exception as e:
+            _log.warning("Async responce exception %s", e)
+            _log.debug("Async responce exception %s", e, exc_info=True)
+            pass
+        r = response.result()
+        return self.check_response(r, response._calvin_success, response._calvin_key)
+
+    def async_barrier(self):
+        fr = self.future_responses[:]
+        exceptions = []
+        for r in fr:
+            try:
+                self.async_response(r)
+            except Exception as e:
+                exceptions.append(e)
+        if exceptions:
+            raise Exception(max(exceptions))
+        
+
+class RequestHandler(RequestBase):
+    """docstring for RequestHandler"""
+    def __init__(self, verify=True):
+        super(RequestHandler, self).__init__(verify)        
+
+    # FIXME: Shouldn't this be part of the RequestBase class?
+    def __getattr__(self, name):
+        if name.startswith("async_"):
+            func = name[6:]
+            return partial(getattr(self, func), async=True)
+        else:
+            raise AttributeError("Unknown request handler attribute %s" % name)
 
     def get_node_id(self, rt, timeout=DEFAULT_TIMEOUT, async=False):
         r = self._get(rt, timeout, async, NODE_ID)
@@ -354,34 +389,6 @@ class RequestHandler(object):
     def dump_storage(self, rt, timeout=DEFAULT_TIMEOUT, async=False):
         r = self._get(rt, timeout, async, "/dumpstorage")
         return self.check_response(r)
-
-    def async_response(self, response):
-        try:
-            self.future_responses.remove(response)
-        except Exception as e:
-            _log.warning("Async responce exception %s", e)
-            _log.debug("Async responce exception %s", e, exc_info=True)
-            pass
-        r = response.result()
-        return self.check_response(r, response._calvin_success, response._calvin_key)
-
-    def async_barrier(self):
-        fr = self.future_responses[:]
-        exceptions = []
-        for r in fr:
-            try:
-                self.async_response(r)
-            except Exception as e:
-                exceptions.append(e)
-        if exceptions:
-            raise Exception(max(exceptions))
-
-    def __getattr__(self, name):
-        if name.startswith("async_"):
-            func = name[6:]
-            return partial(getattr(self, func), async=True)
-        else:
-            raise AttributeError("Unknown request handler attribute %s" % name)
 
     def sign_csr_request(self, rt, csr, timeout=DEFAULT_TIMEOUT, async=False):
         data = {'csr': csr}

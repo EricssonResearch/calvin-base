@@ -57,7 +57,7 @@ def test_get_calvincontrol_returns_xxx():
     assert control == get_calvincontrol()
 
 @pytest.mark.parametrize("url, match, handler", [
-    ("GET /actor_doc HTTP/1", None, "handle_get_actor_doc"),
+#    ("GET /actor_doc HTTP/1", None, "handle_get_actor_doc"),
     ("POST /log HTTP/1", None, "handle_post_log"),
     ("DELETE /log/{trace_id} HTTP/1", ["trace_id"], "handle_delete_log"),
     ("GET /log/{trace_id} HTTP/1", ["trace_id"], "handle_get_log"),
