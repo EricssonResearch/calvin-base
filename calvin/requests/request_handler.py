@@ -65,19 +65,6 @@ AUTHENTICATION_GROUPS_DB = '/authentication/groups_db'
 PROXY_PEER_ABOLISH = '/proxy/{}/migrate'
 
 
-def get_runtime(value):
-    if isinstance(value, basestring):
-        return RT(value)
-    else:
-        return value
-
-
-class RT(object):
-
-    def __init__(self, control_uri):
-        self.control_uri = control_uri
-
-
 class RequestBase(object):
 
     def __init__(self, verify=True):
@@ -117,29 +104,28 @@ class RequestBase(object):
             self.future_responses.append(response)
             return response
 
-    def _send(self, rt, timeout, send_func, path, data=None):
-        rt = get_runtime(rt)
-        _log.debug("Sending request %s, %s, %s", send_func, rt.control_uri + path, json.dumps(data))
+    def _send(self, host, timeout, send_func, path, data=None):
+        _log.debug("Sending request %s, %s, %s", send_func, host + path, json.dumps(data))
         if data is None:
-            return send_func(rt.control_uri + path, timeout=timeout, auth=self.credentials, verify=self.verify)
+            return send_func(host + path, timeout=timeout, auth=self.credentials, verify=self.verify)
         # FIXME: Don't do data=json.dumps(data) since that is done implicitly by requests
-        return send_func(rt.control_uri + path, timeout=timeout, data=json.dumps(data), auth=self.credentials, verify=self.verify)
+        return send_func(host + path, timeout=timeout, data=json.dumps(data), auth=self.credentials, verify=self.verify)
 
-    def _get(self, rt, timeout, async, path, headers="", data=None):
+    def _get(self, host, timeout, async, path, headers="", data=None):
         req = session if async else requests
-        return self._send(rt, timeout, req.get, path, data)
+        return self._send(host, timeout, req.get, path, data)
 
-    def _post(self, rt, timeout, async, path, data=None):
+    def _post(self, host, timeout, async, path, data=None):
         req = session if async else requests
-        return self._send(rt, timeout, req.post, path, data)
+        return self._send(host, timeout, req.post, path, data)
 
-    def _put(self, rt, timeout, async, path, data=None):
+    def _put(self, host, timeout, async, path, data=None):
         req = session if async else requests
-        return self._send(rt, timeout, req.put, path, data)
+        return self._send(host, timeout, req.put, path, data)
 
-    def _delete(self, rt, timeout, async, path, data=None):
+    def _delete(self, host, timeout, async, path, data=None):
         req = session if async else requests
-        return self._send(rt, timeout, req.delete, path, data)
+        return self._send(host, timeout, req.delete, path, data)
 
     def async_response(self, response):
         try:
@@ -161,7 +147,21 @@ class RequestBase(object):
                 exceptions.append(e)
         if exceptions:
             raise Exception(max(exceptions))
+
+
         
+def get_runtime(value):
+    if isinstance(value, basestring):
+        return RT(value)
+    else:
+        return value
+
+
+class RT(object):
+    
+    def __init__(self, control_uri):
+        self.control_uri = control_uri
+
 
 class RequestHandler(RequestBase):
     """docstring for RequestHandler"""
@@ -175,6 +175,10 @@ class RequestHandler(RequestBase):
             return partial(getattr(self, func), async=True)
         else:
             raise AttributeError("Unknown request handler attribute %s" % name)
+            
+    def _send(self, rt, timeout, send_func, path, data=None):
+        rt = get_runtime(rt)
+        RequestBase._send(self, rt.control_uri, timeout, send_func, path, data)    
 
     def get_node_id(self, rt, timeout=DEFAULT_TIMEOUT, async=False):
         r = self._get(rt, timeout, async, NODE_ID)
