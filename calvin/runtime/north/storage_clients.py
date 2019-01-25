@@ -104,6 +104,9 @@ class NullRegistryClient(StorageBase):
             # FIXME: Should this be used instead?         
             # async.DelayedCall(0, callback, key=org_key, value=calvinresponse.CalvinResponse(value))        
     
+    #
+    # Remaining methods will only pass on the callback on behalf of the preceeding LocalStorage operation
+    #
     def set(self, key, value, cb):
         # Storing has been handled by the LocalRegistry,
         # cb is CalvinCallback(func=cb, org_key=key, org_value=value, org_cb=cb)
@@ -155,13 +158,6 @@ class NullRegistryClient(StorageBase):
             callback(value=value)
         
     
-
-class RegistryClient(StorageBase):
-    """Generic client regardless of storage solution"""
-    def __init__(self):
-        super(RegistryClient, self).__init__()
-
-
 class LocalRegistry(StorageBase):
     """docstring for LocalRegistry"""
     def __init__(self):
@@ -201,16 +197,19 @@ class LocalRegistry(StorageBase):
             return []
         
     def append(self, key, value):
+        if not isinstance(value, (list, set, tuple)):
+            raise TypeError("Argument 'value' is not list, set, or tuple")
         # Keep local storage for sets updated until confirmed
         if key in self.localstore_sets:
             # Append value items
             self.localstore_sets[key]['+'] |= set(value)
-            # Don't remove value items any more
             self.localstore_sets[key]['-'] -= set(value)
         else:
             self.localstore_sets[key] = {'+': set(value), '-': set([])}
     
     def remove(self, key, value):
+        if not isinstance(value, (list, set, tuple)):
+            raise TypeError("Argument 'value' is not list, set, or tuple")
         if key in self.localstore_sets:
             self.localstore_sets[key]['+'] -= set(value)
             self.localstore_sets[key]['-'] |= set(value)
@@ -223,25 +222,32 @@ class LocalRegistry(StorageBase):
         if key in self.localstore_sets:
             del self.localstore_sets[key]
 
-    def add_index(self, indexes, value):
+    def add_index(self, prefix, indexes, value):
+        if not isinstance(indexes, (list, set, tuple)):
+            raise TypeError("Argument 'indexes' is not list, set, or tuple")
         # For local cache storage make the indexes the key
-        key = tuple(indexes)
+        key = (prefix,) + tuple(indexes)
         # Make sure we send in a list as value
         value = list(value) if isinstance(value, (list, set, tuple)) else [value]
         self.append(key, value)
         
-    def remove_index(self, indexes, value):
+    def remove_index(self, prefix, indexes, value):
+        if not isinstance(indexes, (list, set, tuple)):
+            raise TypeError("Argument 'indexes' is not list, set, or tuple")
         # For local cache storage make the indexes the key
-        key = tuple(indexes)
+        key = (prefix,) + tuple(indexes)
         # Make sure we send in a list as value
         value = list(value) if isinstance(value, (list, set, tuple)) else [value]
         self.remove(key, value)   
 
-    def get_index(self, indexes):
+    def get_index(self, prefix, indexes):
+        if not isinstance(indexes, (list, set, tuple)):
+            raise TypeError("Argument 'indexes' is not list, set, or tuple")
+        key = (prefix,) + tuple(indexes)    
         # Collect a value set from all key-indexes that include the indexes, always compairing full index levels
         local_values = set(itertools.chain(
             *(v['+'] for k, v in self.localstore_sets.items()
-                if all(map(lambda x, y: False if x is None else True if y is None else x==y, k, indexes)))))
+                if all(map(lambda x, y: False if x is None else True if y is None else x==y, k, key)))))
         return local_values       
             
 ## Additional methods
