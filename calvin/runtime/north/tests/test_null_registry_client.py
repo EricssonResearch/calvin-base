@@ -107,7 +107,11 @@ def test_forwarding(registry, org_cb, call):
 
 #
 # Test: methods not following the same pattern as above
-#  
+#
+@pytest.mark.skip(reason="Add test when first remote client has been added")
+def test_start(registry):
+    assert False
+
 def test_get_concat(registry, org_cb):
     local_list=[1,2,3]
     registry.get_concat('key', cb=CalvinCB(func=None, org_key='key', local_list=local_list, org_cb=org_cb))
