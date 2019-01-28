@@ -140,6 +140,53 @@ class RESTRegistryClient(StorageBase):
         self._delete(path, _response_cb)
         
     
+    def add_index(self, prefix, indexes, value, cb):
+        if not isinstance(indexes, (list, set, tuple)):
+            raise TypeError("Argument 'indexes' is not list, set, or tuple")
+        path = '/add_index/'
+        data = {
+            'prefix': prefix,
+            'indexes': indexes,
+            'value': value,
+        } 
+        def _response_cb(f):
+            resp = f.result()
+            cb(value=calvinresponse.CalvinResponse(resp.status_code))
+        self._post(path, data, _response_cb)
+        
+            
+    def remove_index(self, prefix, indexes, value, cb):
+        if not isinstance(indexes, (list, set, tuple)):
+            raise TypeError("Argument 'indexes' is not list, set, or tuple")
+        path = '/remove_index/'
+        data = {
+            'prefix': prefix,
+            'indexes': indexes,
+            'value': value,
+        } 
+        def _response_cb(f):
+            resp = f.result()
+            cb(value=calvinresponse.CalvinResponse(resp.status_code))
+        self._post(path, data, _response_cb)
+            
+
+    def get_index(self, prefix, indexes, cb):
+        if not isinstance(indexes, (list, set, tuple)):
+            raise TypeError("Argument 'indexes' is not list, set, or tuple")
+        path = '/get_index/'
+        data = {
+            'prefix': prefix,
+            'indexes': indexes,
+        } 
+        def _response_cb(f):
+            resp = f.result()
+            value = resp.json() if resp.status_code == 200 else calvinresponse.CalvinResponse(resp.status_code)
+            cb(value=value)
+        self._post(path, data, _response_cb)
+            
+        
+        
+    
         
 
 
