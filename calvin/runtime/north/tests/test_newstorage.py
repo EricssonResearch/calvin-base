@@ -1,9 +1,15 @@
+import os
+import shlex
+import subprocess
+import time
+
 import pytest
 from mock import Mock
 from calvin.runtime.north.storage import Storage
 from calvin.runtime.north.storage_clients import LocalRegistry
 from calvin.requests import calvinresponse
 # from calvin.runtime.south.async import async
+from concurrent.futures import wait
 
 
 class DummyNode(object):
@@ -15,7 +21,7 @@ class DummyNode(object):
         
         
 
-@pytest.fixture(scope='module', params=('local', 'remote'))
+@pytest.fixture(scope='module', params=('local', 'remote', ))
 def registry(request):
     
     def cb(*args, **kwargs):
@@ -109,16 +115,38 @@ def test_local_delete(localregistry):
 def test_set_get(registry, mock_callback):
     registry.set('prefix', 'key', 'value', None)
     registry.get('prefix', 'key', mock_callback)
+    registry.barrier()
     mock_callback.assert_called_with(key='key', value='value')
 
 def test_get_fail(registry, mock_callback):
-    registry.get('prefix', 'key', mock_callback)
+    future = registry.get('prefix', 'key', mock_callback)
+    registry.barrier()
     mock_callback.assert_called_with(key='key', value='value')
+    
+def test_get_external(registry, mock_callback):
+    future = registry.get('', 'external_key', mock_callback)
+    registry.barrier()
+    mock_callback.assert_called_with(key='external_key', value='external_value')
+    
 
 def test_delete(registry, mock_callback):
     registry.set('prefix', 'key', 'value', None)
-    registry.delete('prefix', 'key', mock_callback)
-    mock_callback.assert_called_with(key='key', value=calvinresponse.CalvinResponse(True))
+    future = registry.delete('prefix', 'key', mock_callback)
+    registry.barrier()
+    
+# def test_latestart(registry, mock_callback):
+#     registry.set('prefix', 'key1', 'value1', None)
+#     registry.set('prefix', 'key2', 'value2', None)
+#     registry.set('prefix', 'key3', 'value3', None)
+#     print registry.localstorage.dump()
+#     registry.start()
+#     print registry.localstorage.dump()
+#     registry.get('prefix', 'key1', mock_callback)
+#     mock_callback.assert_called_with(key='key1', value='value1')
+    
+    
+    
+        
     
 
 #
@@ -126,4 +154,32 @@ def test_delete(registry, mock_callback):
 #
 # Run a remote client with a LocalRegistry object as dB
 #
+
+def _start_process(cmd):
+    args = shlex.split(cmd)
+    process = subprocess.Popen(args)
+    return process
+
+def _start_registry():
+    os.putenv("FLASK_APP", "/Users/eperspe/Source/calvin-base/calvin/runtime/north/registry_app.py")
+    return _start_process("flask run --port 4998")
+
+def _stop_registry(proc):
+    proc.terminate()
+
+# FIXTURE: actorstore
+# Setup actorstore for the duration of the test module
+@pytest.yield_fixture(scope="module")
+def remote_registry():
+    # Setup
+    reg_proc = _start_registry()
+    time.sleep(1)
+    # Run tests
+    yield
+    # Teardown
+    _stop_registry(reg_proc)
+    
+# def test_remote_registry(remote_registry):
+#     assert True
+    
 

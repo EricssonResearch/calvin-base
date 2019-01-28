@@ -17,6 +17,7 @@
 from calvin.runtime.north.plugins.storage.storage_base import StorageBase
 # from calvin.utilities import calvinlogger
 from calvin.requests import calvinresponse
+from calvin.requests.request_handler import RequestBase
 from calvin.runtime.south.async import async
 import itertools
 import re
@@ -73,6 +74,76 @@ def index_strings(index, root_prefix_level):
 
     return items
 
+        
+                
+
+class RESTRegistryClient(StorageBase):
+    
+    from requests_futures.sessions import FuturesSession
+    session = FuturesSession(max_workers=10)
+    
+    def __init__(self):
+        super(RESTRegistryClient, self).__init__()
+        self.host = "http://localhost:4998"
+        self.futures = []
+
+    def barrier(self):
+        from concurrent.futures import wait
+        wait(self.futures, timeout=5)
+    
+    def _request(self, op, path, data=None, cb=None):
+        uri = self.host + path
+        if op == 'post':
+            f = self.session.post(uri, json=data)
+        elif op == 'get':
+            f = self.session.get(uri)
+        elif op == 'delete':
+            f = self.session.delete(uri)
+        else:
+            raise ValueError("Operation must be one of 'get', 'post', or 'delete'")
+        self.futures.append(f)
+        if cb:
+            f.add_done_callback(cb)
+        
+    def _post(self, path, data, cb):
+        self._request('post', path, data, cb)
+        
+    def _get(self, path, cb):
+        self._request('get', path, cb=cb)
+    
+    def _delete(self, path, cb):
+        self._request('delete', path, cb=cb)
+    
+    
+    def set(self, key, value, cb):
+        # cb is CalvinCallback(func=cb, org_key=key, org_value=value, org_cb=cb)
+        def _response_cb(f):
+            resp = f.result()
+            cb(key=key, value=calvinresponse.CalvinResponse(resp.status_code))
+        path = '/storage/'+key
+        data = {'value':value} 
+        self._post(path, data, _response_cb)
+        
+    def get(self, key, cb):
+        def _response_cb(f):
+            resp = f.result()
+            value = resp.json() if resp.status_code == 200 else calvinresponse.CalvinResponse(resp.status_code)
+            cb(key=key, value=value)
+        path = '/storage/'+key
+        self._get(path, _response_cb)
+                
+    def delete(self, key, cb):
+        def _response_cb(f):
+            resp = f.result()
+            cb(key=key, value=calvinresponse.CalvinResponse(resp.status_code))
+        path = '/storage/'+key
+        self._delete(path, _response_cb)
+        
+    
+        
+
+
+
 
 class NullRegistryClient(StorageBase):
     """Implements start only"""
@@ -80,7 +151,7 @@ class NullRegistryClient(StorageBase):
         super(NullRegistryClient, self).__init__()
         self.local_mode = storage_type == 'local'
 
-    def start(self, iface='', cb=None, name=None, nodeid=None):
+    def start(self, iface='', name=None, nodeid=None, cb=None):
         """
             Starts the service if its nneeded for the storage service
             cb  is the callback called when the srtart is finished
@@ -138,7 +209,7 @@ class NullRegistryClient(StorageBase):
     def remove_index(self, prefix, indexes, value, cb):
         # From our point of view, add_index always succeeds
         self._response(cb, True)
-
+    
     def get_concat(self, key, cb):
         # The result is actually in the callback cb, as is the original callback
         # Strangely, this callback has a different behaviour than the rest...
@@ -148,7 +219,7 @@ class NullRegistryClient(StorageBase):
             org_key = cb.kwargs['org_key']
             callback(key=org_key, value=value)
             # async.DelayedCall(0, cb, key=key, value=local_list)
-    
+
     def get_index(self, prefix, indexes, cb):
         # The result is actually in the callback cb, as is the original callback
         # Strangely, this callback has a different behaviour than the rest...
