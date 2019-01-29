@@ -119,20 +119,23 @@ def test_set_get(registry, mock_callback):
     mock_callback.assert_called_with(key='key', value='value')
 
 def test_get_fail(registry, mock_callback):
-    future = registry.get('prefix', 'key', mock_callback)
+    registry.delete('prefix', 'key', None)
     registry.barrier()
-    mock_callback.assert_called_with(key='key', value='value')
+    registry.get('prefix', 'key', mock_callback)
+    registry.barrier()
+    mock_callback.assert_called_with(key='key', value={u'result': u'value'})
     
-def test_get_external(registry, mock_callback):
-    future = registry.get('', 'external_key', mock_callback)
-    registry.barrier()
-    mock_callback.assert_called_with(key='external_key', value='external_value')
+# def test_get_external(registry, mock_callback):
+#     registry.get('', 'external_key', mock_callback)
+#     registry.barrier()
+#     mock_callback.assert_called_with(key='external_key', value=calvinresponse.CalvinResponse(data='external_value'))
     
 
 def test_delete(registry, mock_callback):
     registry.set('prefix', 'key', 'value', None)
-    future = registry.delete('prefix', 'key', mock_callback)
+    registry.delete('prefix', 'key', mock_callback)
     registry.barrier()
+    mock_callback.assert_called_with(key='key', value='value')
     
 # def test_latestart(registry, mock_callback):
 #     registry.set('prefix', 'key1', 'value1', None)
