@@ -22,9 +22,6 @@ api = [
     ('get', 'key'), 
     ('set', 'key', 'value'),
     ('delete', 'key'), 
-    ('get_concat', 'key'), 
-    ('append', 'key', ('value',)),
-    ('remove', 'key', ('value',)), 
     ('add_index', 'prefix', ('indexes',), 'value'),
     ('get_index', 'prefix', ('indexes',)), 
     ('remove_index', 'prefix', ('indexes',), 'value'), 
@@ -83,36 +80,36 @@ def test_delete(registry):
     registry.delete('key')
     
 #
-# Test set manipulation: append, get_concat, remove,  
+# Test internal set manipulation: _append, _remove,  
 #
 def test_append(registry):
-    registry.append('key', ('value',))
+    registry._append('key', ('value',))
     assert registry.localstore_sets['key']['+'] == set(['value'])
     assert registry.localstore_sets['key']['-'] == set()
     
 def test_append_bad_value(registry):
     with pytest.raises(TypeError):
-        registry.append('key', 'value')
+        registry._append('key', 'value')
         
-def test_get_concat_fail(registry):
-    assert registry.get_concat('key') == []
-    
-def test_get_concat(registry):
-    registry.localstore_sets['key'] = {'+': set(['value']), '-': set()}
-    assert registry.get_concat('key') == ['value']
+# def test_get_concat_fail(registry):
+#     assert registry.get_concat('key') == []
+#
+# def test_get_concat(registry):
+#     registry.localstore_sets['key'] = {'+': set(['value']), '-': set()}
+#     assert registry.get_concat('key') == ['value']
 
 def test_remove(registry):
     registry.localstore_sets['key'] = {'+': set(['value']), '-': set()}
-    registry.remove('key', ('value',))
+    registry._remove('key', ('value',))
     assert registry.localstore_sets['key']['+'] == set()
     assert registry.localstore_sets['key']['-'] == set(['value'])
-    assert registry.get_concat('key') == []
+#    assert registry.get_concat('key') == []
     # Deleting non-present key should not raise exception    
-    registry.remove('key', ('value',))
+    registry._remove('key', ('value',))
     
 def test_remove_bad_value(registry):
     with pytest.raises(TypeError):    
-        registry.remove('key', 'value')
+        registry._remove('key', 'value')
         
     
 #

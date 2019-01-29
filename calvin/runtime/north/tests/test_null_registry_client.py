@@ -42,9 +42,6 @@ def org_cb():
 # set(self, key, value, cb=None):
 # get(self, key, cb=None):
 # delete(self, key, cb=None):
-# append(self, key, value, cb=None):
-# get_concat(self, key, cb=None):
-# remove(self, key, value, cb=None):
 # add_index(self, prefix, indexes, value, cb=None):
 # get_index(self, prefix, indexes, cb=None):
 # remove_index(self, prefix, indexes, value, cb=None):
@@ -52,14 +49,11 @@ standard_api = [
     ('get', 'key', calvinresponse.NOT_FOUND),
     ('set', 'key', 'value', calvinresponse.OK),
     ('delete', 'key', calvinresponse.OK),
-    ('append', 'key', ('value',), calvinresponse.OK),
-    ('remove', 'key', ('value',), calvinresponse.OK),
     ('add_index', 'prefix', ('indexes',), 'value', calvinresponse.OK),
     ('remove_index', 'prefix', ('indexes',), 'value', calvinresponse.OK),
 ]
 nonstandard_api = [
     ('start', 'iface', 'name', 'nodeid', None),
-    ('get_concat', 'key', None),
     ('get_index', 'prefix', ('indexes',), None),    
 ]
 api = standard_api + nonstandard_api
@@ -111,15 +105,6 @@ def test_forwarding(registry, org_cb, call):
 @pytest.mark.skip(reason="Add test when first remote client has been added")
 def test_start(registry):
     assert False
-
-def test_get_concat(registry, org_cb):
-    local_list=[1,2,3]
-    registry.get_concat('key', cb=CalvinCB(func=None, org_key='key', local_list=local_list, org_cb=org_cb))
-    org_cb.assert_once()
-    _, kwargs = org_cb.get_args()
-    assert kwargs['key'] == 'key'
-    assert type(kwargs['value']) is list
-    assert kwargs['value'] == local_list
    
 def test_get_index(registry, org_cb):
     local_values=[1,2,3]
