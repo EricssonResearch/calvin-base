@@ -28,13 +28,13 @@ from calvin.utilities import dynops
 from calvin.requests import calvinresponse
 from calvin.runtime.north.calvinsys import get_calvinsys
 from calvin.runtime.north.calvinlib import get_calvinlib
-from calvin.runtime.north.storage_clients import LocalRegistry, NullRegistryClient, RegistryClient
+from calvin.runtime.north.storage_clients import LocalRegistry, NullRegistryClient, RESTRegistryClient
 from calvin.runtime.north.storage_clients import index_strings as _index_strings
 
 _log = calvinlogger.get_logger(__name__)
 
                     
-class Storage(object):
+class PrivateStorage(object):
 
     """
     Storage helper functions.
@@ -68,7 +68,7 @@ class Storage(object):
     def trigger_flush(self, delay=None):
         """ Trigger a flush of internal data
         """
-        if self.localstore or self.localstore_sets:
+        # if self.localstore or self.localstore_sets:
         if delay is None:
             delay = self.flush_timeout
         if self.flush_delayedcall is None:
@@ -83,13 +83,12 @@ class Storage(object):
         self.flush_delayedcall = None
 
         # FIXME: localstorage iterable as a stop-gap measure?
-        for key in self.localstorage.localstore:
-            _log.debug("Flush key %s: %s" % (key, self.localstore[key]))
-            self.storage.set(key=key, value=self.localstore[key],
-                             cb=CalvinCB(func=self.set_cb, org_key=None, org_value=None, org_cb=None, silent=True))
+        for key in self.localstorage.localstore.keys():
+            _log.debug("Flush key %s: " % (key,))
+            self.storage.set(key=key, value=self.localstorage.get(key), cb=CalvinCB(func=self.set_cb, org_key=None, org_value=None, org_cb=None, silent=True))
 
         # FIXME: localstorage_sets iterable as a stop-gap measure?
-        for key, value in self.localstorage.localstore_sets.iteritems():
+        for key, value in self.localstorage.localstore_sets.items():
             if isinstance(key, tuple):
                 self._flush_add_index(key, value['+'])
                 self._flush_remove_index(key, value['-'])
@@ -162,7 +161,7 @@ class Storage(object):
         """
         if not args[0]:
             return
-        self.storage = RegistryClient()
+        self.storage = RESTRegistryClient()
         self.trigger_flush(0)
         if kwargs["org_cb"]:
             async.DelayedCall(0, kwargs["org_cb"], args[0])
@@ -205,20 +204,22 @@ class Storage(object):
         self.storage.stop(cb=cb)
         self.storage = NullRegistryClient(self.storage_type)
 
+    def barrier(self):
+        self.storage.barrier()
+    
     ### Storage operations ###
 
     def set_cb(self, key, value, org_key, org_value, org_cb, silent=False):
         """ set callback, on error store in localstore and retry after flush_timeout
         """
+        print "set_cb:", key, value, org_key, org_value, org_cb
         if value:
             self.localstorage._delete_key(key)
             self.reset_flush_timeout() # FIXME: Only if change made?
-        else:
-            if not silent:
-                _log.error("Failed to store %s" % key)
-            if org_key and org_value:
-                if not org_value is None: # WHAT: Cannot store None????
-                    self.localstorage._set_key_value(key, org_value)
+        # else:
+        #     if org_key and org_value:
+        #         if not org_value is None: # WHAT: Cannot store None????
+        #             self.localstorage._set_key_value(key, org_value)
 
         if org_cb:
             org_cb(key=key, value=value)
@@ -446,7 +447,7 @@ class Storage(object):
         # Get a list of the index levels
         indexes = _index_strings(index, root_prefix_level)
 
-        self.localstorage.add_index(indexes=indexes, value=value)
+        self.localstorage.add_index(prefix="index-", indexes=indexes, value=value)
         
         self.storage.add_index(prefix="index-", indexes=indexes, value=value,
                 cb=CalvinCB(self.add_index_cb, org_cb=cb, index_items=indexes, org_value=value))
@@ -488,7 +489,7 @@ class Storage(object):
         # Get a list of the index levels
         indexes = _index_strings(index, root_prefix_level)
         
-        self.localstorage.remove_index(indexes=indexes, value=value)
+        self.localstorage.remove_index(prefix="index-", indexes=indexes, value=value)
 
         self.storage.remove_index(prefix="index-", indexes=indexes, value=value,
                 cb=CalvinCB(self.remove_index_cb, org_cb=cb, index_items=indexes, org_value=value))
@@ -549,7 +550,7 @@ class Storage(object):
         _log.debug("get index %s" % (index))
         indexes = _index_strings(index, root_prefix_level)
         # Collect a value set from all key-indexes that include the indexes, always compairing full index levels
-        local_values = self.localstorage.get_index(indexes)
+        local_values = self.localstorage.get_index(prefix="index-", indexes=indexes)
         self.storage.get_index(prefix="index-", indexes=indexes,
                 cb=CalvinCB(self.get_index_cb, org_cb=cb, index_items=indexes, local_values=local_values))
 
@@ -589,6 +590,7 @@ class Storage(object):
             cb=CalvinCB(self.get_index_iter_cb, it=it, include_key=include_key, org_key=org_key))
         return it
 
+class Storage(PrivateStorage):
 #    
 # Secondary methods (using the above methods) 
 #

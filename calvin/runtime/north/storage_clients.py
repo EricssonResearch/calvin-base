@@ -198,6 +198,9 @@ class NullRegistryClient(StorageBase):
         super(NullRegistryClient, self).__init__()
         self.local_mode = storage_type == 'local'
 
+    def barrier(self):
+        pass
+        
     def start(self, iface='', name=None, nodeid=None, cb=None):
         """
             Starts the service if its nneeded for the storage service
