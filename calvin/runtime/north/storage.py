@@ -96,21 +96,50 @@ class PrivateStorage(object):
                 self._flush_append(key, value['+'])
                 self._flush_remove(key, value['-'])
 
+
+    #
+    # These callbacks or now only used during flush, and ALWAYS with org_cb = None
+    #
+    def append_cb(self, key, value, org_key, org_value, org_cb, silent=False):
+        """ append callback, on error retry after flush_timeout
+        """
+        if value:
+            self.localstorage._update_sets_add(key)
+            self.reset_flush_timeout() # FIXME: Only if change made?
+        # else:
+        #     if not silent:
+        #         _log.warning("Failed to update %s" % key)
+
+        # if org_cb:
+        #     org_cb(key=org_key, value=value)
+        self.trigger_flush()
+
+    def remove_cb(self, key, value, org_key, org_value, org_cb, silent=False):
+        """ remove callback, on error retry after flush_timeout
+        """
+        if value:
+            self.localstorage._update_sets_remove(key)
+            self.reset_flush_timeout() # FIXME: Only if change made?
+        # else:
+        #     if not silent:
+        #         _log.warning("Failed to update %s" % key)
+
+        # if org_cb:
+        #     org_cb(key=org_key, value=value)
+        self.trigger_flush()
+
     def _flush_append(self, key, value):
-        if not value:
-            return
+        if not value: return
 
         _log.debug("Flush append on key %s: %s" % (key, list(value)))
-        self.storage.append(key=key, value=list(value),
-                            cb=CalvinCB(func=self.append_cb, org_key=None, org_value=None, org_cb=None, silent=True))
+        self.storage._append(key=key, value=list(value), cb=CalvinCB(func=self.append_cb, org_key=None, org_value=None, org_cb=None, silent=True))
 
     def _flush_remove(self, key, value):
         if not value:
             return
 
         _log.debug("Flush remove on key %s: %s" % (key, list(value)))
-        self.storage.remove(key=key, value=list(value),
-                            cb=CalvinCB(func=self.remove_cb, org_key=None, org_value=None, org_cb=None, silent=True))
+        self.storage._remove(key=key, value=list(value), cb=CalvinCB(func=self.remove_cb, org_key=None, org_value=None, org_cb=None, silent=True))
 
 
     def _flush_add_index(self, key, value):
@@ -183,9 +212,9 @@ class PrivateStorage(object):
         # We are not proxy client, so we can be proxy bridge/master
         self._proxy_cmds = {'GET': self.get,
                             'SET': self.set,
-                            'GET_CONCAT': self.get_concat,
-                            'APPEND': self.append,
-                            'REMOVE': self.remove,
+                            # 'GET_CONCAT': self.get_concat, # FIXME: Remove from API
+                            # 'APPEND': self.append,         # FIXME: Remove from API
+                            # 'REMOVE': self.remove,         # FIXME: Remove from API
                             'DELETE': self.delete,
                             'REPLY': self._proxy_reply,
                             'ADD_INDEX': self.add_index,
@@ -300,103 +329,6 @@ class PrivateStorage(object):
             pass
         self.storage.get(key=prefix + key,
                          cb=CalvinCB(func=self.get_iter_cb, it=it, org_key=key, include_key=include_key))
-
-    def get_concat_cb(self, key, value, org_cb, org_key, local_list):
-        """ get callback
-        """
-        if calvinresponse.isnotfailresponse(value):
-            if isinstance(value, (list, tuple, set)):
-                org_cb(org_key, list(set(value + local_list)))
-            else:
-                org_cb(org_key, local_list)
-        else:
-            org_cb(org_key, local_list)
-
-    def get_concat(self, prefix, key, cb):
-        """ Get multiple values for registry key: prefix+key,
-            union of locally added but not yet distributed values
-            and values added by others.
-            It is assumed that the prefix and key are strings,
-            the sum has to be an immutable object.
-            Callback cb with signature cb(key=key, value=<retrived values>)
-            note that the key here is without the prefix.
-            Values are returned as a list.
-
-            The registry can be eventually consistent,
-            e.g. a removal of a value might only have reached part of a
-            distributed registry and hence still be part of returned
-            list of values, it may also miss values added by others but
-            not yet distributed.
-        """
-        if not cb:
-            return
-
-        local_list = self.localstorage.get_concat(prefix + key)    
-        self.storage.get_concat(key=prefix + key,
-                                cb=CalvinCB(func=self.get_concat_cb, org_cb=cb, org_key=key, local_list=local_list))
-
-    def append_cb(self, key, value, org_key, org_value, org_cb, silent=False):
-        """ append callback, on error retry after flush_timeout
-        """
-        if value:
-            self.localstorage._update_sets_add(key)
-            self.reset_flush_timeout() # FIXME: Only if change made?
-        else:
-            if not silent:
-                _log.warning("Failed to update %s" % key)
-
-        if org_cb:
-            org_cb(key=org_key, value=value)
-        self.trigger_flush()
-
-    def append(self, prefix, key, value, cb):
-        """ Add multiple values value to registry key: prefix+key,
-            the stored values are a set, i.e. unordered without duplicates.
-            It is assumed that the prefix and key are strings,
-            the sum has to be an immutable object.
-            value is a list, tuple or set of values.
-            Callback cb with signature cb(key=key, value=True/False)
-            note that the key here is without the prefix and
-            value indicate success.
-        """
-        _log.debug("Append key %s, value %s" % (prefix + key, value))
-        self.localstorage.append(prefix + key, value)
-
-        setlist = self.localstorage._setlist(prefix + key, '+')
-        self.storage.append(key=prefix + key, value=setlist,
-                            cb=CalvinCB(func=self.append_cb, org_key=key, org_value=value, org_cb=cb))
-
-    def remove_cb(self, key, value, org_key, org_value, org_cb, silent=False):
-        """ remove callback, on error retry after flush_timeout
-        """
-        if value:
-            self.localstorage._update_sets_remove(key)
-            self.reset_flush_timeout() # FIXME: Only if change made?
-        else:
-            if not silent:
-                _log.warning("Failed to update %s" % key)
-
-        if org_cb:
-            org_cb(key=org_key, value=value)
-        self.trigger_flush()
-
-    def remove(self, prefix, key, value, cb):
-        """ Remove multiple values value from registry key: prefix+key,
-            the stored values are a set, i.e. unordered without duplicates.
-            It is assumed that the prefix and key are strings,
-            the sum has to be an immutable object.
-            value is a list, tuple or set of values.
-            Callback cb with signature cb(key=key, value=True/False)
-            note that the key here is without the prefix and
-            value indicate success.
-        """
-        _log.debug("Remove key %s, value %s" % (prefix + key, value))
-        # Keep local storage for sets updated until confirmed
-        self.localstorage.remove(prefix + key, value)
-
-        setlist = self.localstorage._setlist(prefix + key, '-')
-        self.storage.remove(key=prefix + key, value=setlist,
-                                cb=CalvinCB(func=self.remove_cb, org_key=key, org_value=value, org_cb=cb))
 
     def delete(self, prefix, key, cb):
         """ Delete registry key: prefix+key

@@ -243,14 +243,6 @@ class NullRegistryClient(StorageBase):
     def delete(self, key, cb):
         # From our point of view, delete always succeeds
         self._response(cb, True)
-
-    def append(self, key, value, cb):
-        # From our point of view, append always succeeds
-        self._response(cb, True)
-        
-    def remove(self, key, value, cb):
-        # From our point of view, remove always succeeds
-        self._response(cb, True)
         
     def add_index(self, prefix, indexes, value, cb):
         # From our point of view, add_index always succeeds
@@ -260,16 +252,6 @@ class NullRegistryClient(StorageBase):
         # From our point of view, add_index always succeeds
         self._response(cb, True)
     
-    def get_concat(self, key, cb):
-        # The result is actually in the callback cb, as is the original callback
-        # Strangely, this callback has a different behaviour than the rest...
-        callback = cb.kwargs.get('org_cb')
-        if callback:
-            value = cb.kwargs.get('local_list')
-            org_key = cb.kwargs['org_key']
-            callback(key=org_key, value=value)
-            # async.DelayedCall(0, cb, key=key, value=local_list)
-
     def get_index(self, prefix, indexes, cb):
         # The result is actually in the callback cb, as is the original callback
         # Strangely, this callback has a different behaviour than the rest...
@@ -301,41 +283,6 @@ class LocalRegistry(StorageBase):
     def get(self, key):
         """Return value if found, raise exception otherwise."""
         return self.localstore[key]
-    
-    # # FIXME: This might not be required to implement here, see Storage.get_iter
-    # def get_iter(self, key, it, include_key=False):
-    #     """Append value to iterator, raise exception if value not found"""
-    #     value = self.localstore[key]
-    #     it.append((key, value) if include_key else value)
-            
-    def get_concat(self, key):
-        """Return list"""
-        try:
-            value = self.localstore_sets[key]
-            # Return the set that we intended to append since that's all we have until it is synced
-            return list(value['+'])
-        except:
-            return []
-        
-    def append(self, key, value):
-        if not isinstance(value, (list, set, tuple)):
-            raise TypeError("Argument 'value' is not list, set, or tuple")
-        # Keep local storage for sets updated until confirmed
-        if key in self.localstore_sets:
-            # Append value items
-            self.localstore_sets[key]['+'] |= set(value)
-            self.localstore_sets[key]['-'] -= set(value)
-        else:
-            self.localstore_sets[key] = {'+': set(value), '-': set([])}
-    
-    def remove(self, key, value):
-        if not isinstance(value, (list, set, tuple)):
-            raise TypeError("Argument 'value' is not list, set, or tuple")
-        if key in self.localstore_sets:
-            self.localstore_sets[key]['+'] -= set(value)
-            self.localstore_sets[key]['-'] |= set(value)
-        else:
-            self.localstore_sets[key] = {'+': set([]), '-': set(value)}            
 
     def delete(self, key):
         if key in self.localstore:
@@ -350,7 +297,7 @@ class LocalRegistry(StorageBase):
         key = (prefix,) + tuple(indexes)
         # Make sure we send in a list as value
         value = list(value) if isinstance(value, (list, set, tuple)) else [value]
-        self.append(key, value)
+        self._append(key, value)
         
     def remove_index(self, prefix, indexes, value):
         if not isinstance(indexes, (list, set, tuple)):
@@ -359,7 +306,7 @@ class LocalRegistry(StorageBase):
         key = (prefix,) + tuple(indexes)
         # Make sure we send in a list as value
         value = list(value) if isinstance(value, (list, set, tuple)) else [value]
-        self.remove(key, value)   
+        self._remove(key, value)
 
     def get_index(self, prefix, indexes):
         if not isinstance(indexes, (list, set, tuple)):
@@ -380,6 +327,26 @@ class LocalRegistry(StorageBase):
     def _set_key_value(self, key, value):
         self.localstore[key] = value
         
+    def _append(self, key, value):
+        if not isinstance(value, (list, set, tuple)):
+            raise TypeError("Argument 'value' is not list, set, or tuple")
+        # Keep local storage for sets updated until confirmed
+        if key in self.localstore_sets:
+            # Append value items
+            self.localstore_sets[key]['+'] |= set(value)
+            self.localstore_sets[key]['-'] -= set(value)
+        else:
+            self.localstore_sets[key] = {'+': set(value), '-': set([])}
+
+    def _remove(self, key, value):
+        if not isinstance(value, (list, set, tuple)):
+            raise TypeError("Argument 'value' is not list, set, or tuple")
+        if key in self.localstore_sets:
+            self.localstore_sets[key]['+'] -= set(value)
+            self.localstore_sets[key]['-'] |= set(value)
+        else:
+            self.localstore_sets[key] = {'+': set([]), '-': set(value)}
+
     def _update_sets(self, key, op1, op2):    
         if key not in self.localstore_sets:
             return   
