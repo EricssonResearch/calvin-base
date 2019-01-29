@@ -28,7 +28,7 @@ from calvin.utilities import dynops
 from calvin.requests import calvinresponse
 from calvin.runtime.north.calvinsys import get_calvinsys
 from calvin.runtime.north.calvinlib import get_calvinlib
-from calvin.runtime.north.storage_clients import LocalRegistry, NullRegistryClient, RESTRegistryClient
+from calvin.runtime.north.storage_clients import LocalRegistry, NullRegistryClient, registry
 from calvin.runtime.north.storage_clients import index_strings as _index_strings
 
 _log = calvinlogger.get_logger(__name__)
@@ -190,7 +190,7 @@ class PrivateStorage(object):
         """
         if not args[0]:
             return
-        self.storage = RESTRegistryClient()
+        self.storage = registry(self.storage_type)
         self.trigger_flush(0)
         if kwargs["org_cb"]:
             async.DelayedCall(0, kwargs["org_cb"], args[0])

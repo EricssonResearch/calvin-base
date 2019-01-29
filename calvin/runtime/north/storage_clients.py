@@ -56,6 +56,18 @@ import re
   #   self.localstorage.op(args)
   #   self.storage.op(args, nested_callback) # NullClient() unwinds nested_callback and calls callback as DelayedCall
 
+def registry(kind):
+    all_kinds = {
+        'debug': DebugRegistryClient,
+        'rest': RESTRegistryClient,
+        'local': NullRegistryClient,
+    }
+    class_ = all_kinds.get(kind.lower())
+    if not class_:
+        raise ValueError("Unknown registry type '{}', must be one of: {}".format(kind, ",".join(all_kinds.keys())))
+    return class_()
+    
+
 # FIXME: How and when and by whom is this used? Where does it belong?
 def index_strings(index, root_prefix_level):
     # Add default behaviour here to make it less fragile.
@@ -260,7 +272,7 @@ class NullRegistryClient(StorageBase):
             value = list(cb.kwargs['local_values']) 
             callback(value=value)
         
-    
+
 class LocalRegistry(StorageBase):
     """docstring for LocalRegistry"""
     def __init__(self):
@@ -378,6 +390,25 @@ class LocalRegistry(StorageBase):
         return list(self.localstore_sets[key][op])       
             
     
+class DebugRegistryClient(LocalRegistry):
+
+    def set(self, key, value, cb):
+        super(DebugRegistryClient, self).set(key, value)
+    
+    def get(self, key):
+        return super(DebugRegistryClient, self).get(key)
+
+    def delete(self, key):
+        super(DebugRegistryClient, self).delete(key)
+        
+    def add_index(self, prefix, indexes, value):
+        super(DebugRegistryClient, self).add_index(prefix, indexes, value)
+        
+    def remove_index(self, prefix, indexes, value):
+        super(DebugRegistryClient, self).remove_index(prefix, indexes, value)
+
+    def get_index(self, prefix, indexes):
+        return super(DebugRegistryClient, self).get_index(prefix, indexes)
         
         
         
