@@ -195,6 +195,7 @@ class PrivateStorage(object):
         if kwargs["org_cb"]:
             async.DelayedCall(0, kwargs["org_cb"], args[0])
 
+    # FIXME: Remove iface arg
     def start(self, iface='', cb=None):
         """ Start storage
         """
@@ -225,6 +226,7 @@ class PrivateStorage(object):
             self.node.proto.register_tunnel_handler('storage', CalvinCB(self.tunnel_request_handles))
         except:
             # OK, then skip being a proxy server
+            # FIXME: Set to None?
             pass
 
     def stop(self, cb=None):
