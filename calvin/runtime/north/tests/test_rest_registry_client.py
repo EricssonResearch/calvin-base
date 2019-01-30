@@ -31,7 +31,7 @@ def _stop_registry(proc):
 
 # FIXTURE: actorstore
 # Setup actorstore for the duration of the test module
-@pytest.yield_fixture(scope="function")
+@pytest.yield_fixture(scope="module")
 def remote_registry():
     # Setup
     reg_proc = _start_registry()
@@ -87,7 +87,7 @@ def test_service_storage(remote_registry, session, host):
         
     response = requests.get(host+"/storage/foo")
     assert response.status_code == 200
-    assert response.json() == {'result': 'FOO'}
+    assert response.json() == 'FOO'
     
     response = requests.delete(host+"/storage/foo")
     assert response.status_code == 200
@@ -104,7 +104,7 @@ def test_set(remote_registry, registry, host, org_cb):
     # response = requests.get(host+"/dumpstorage")
     response = requests.get(host+"/storage/key")
     assert response.status_code == 200
-    assert response.json() == {'result': 'value'}
+    assert response.json() == 'value'
 
 
 def test_get(remote_registry, registry, host, org_cb):
@@ -115,7 +115,7 @@ def test_get(remote_registry, registry, host, org_cb):
     # response = requests.get(host+"/dumpstorage")
     response = requests.get(host+"/storage/key")
     assert response.status_code == 200
-    assert response.json() == {'result': 'value'}
+    assert response.json() == 'value'
     
 def test_delete(remote_registry, registry, host, org_cb):
     registry.set('key', 'value', cb=CalvinCB(func=Mock(), org_key='key', org_value='value', org_cb=None))
@@ -135,13 +135,14 @@ def test_bad_index(remote_registry, registry, host, org_cb):
     with pytest.raises(TypeError):    
         registry.remove_index('indexes', 'value')
         
-def test_add_index(remote_registry, registry, host, org_cb):
-    registry.add_index(('index1', 'index2'), 'value', cb=CalvinCB(func=Mock(), org_key='key', org_value='value', org_cb=None))
-    registry.add_index(('index1', 'index2'), ('value1', 'value2'), cb=CalvinCB(func=org_cb, org_key='key', org_value='value', org_cb=None))
-    registry.barrier()
-    response = requests.get(host+"/dumpstorage")
-    org_cb.assert_once()
-    args, kwargs = org_cb.get_args()
+# Since the registry is the same for the whole module, get and set must be tested in the same function below
+# def test_add_index(remote_registry, registry, host, org_cb):
+#     registry.add_index(('index1', 'index2'), 'value', cb=CalvinCB(func=Mock(), org_key='key', org_value='value', org_cb=None))
+#     registry.add_index(('index1', 'index2'), ('value1', 'value2'), cb=CalvinCB(func=org_cb, org_key='key', org_value='value', org_cb=None))
+#     registry.barrier()
+#     response = requests.get(host+"/dumpstorage")
+#     org_cb.assert_once()
+#     args, kwargs = org_cb.get_args()
 
 def test_get_index(remote_registry, registry, host, org_cb):
     registry.add_index(('index1', 'index2'), ('value1', 'value2'), cb=CalvinCB(func=Mock(), org_key='key', org_value='value', org_cb=None))
@@ -153,9 +154,9 @@ def test_get_index(remote_registry, registry, host, org_cb):
     args, kwargs = org_cb.get_args()
     print args, kwargs
     assert 'value' in kwargs
-    assert 'result' in kwargs['value']
+    # assert 'result' in kwargs['value']
     # assert kwargs['value']['result'] == ['value1', 'value2']
-    result = kwargs['value']['result']
+    result = kwargs['value']
     assert 'value1' in result and 'value2' in result
     assert len(result) == 2
     assert set(('value1', 'value2')) == set(result)
@@ -171,8 +172,8 @@ def test_remove_index(remote_registry, registry, host, org_cb):
     org_cb.assert_once()
     args, kwargs = org_cb.get_args()
     assert 'value' in kwargs
-    assert 'result' in kwargs['value']
-    result = kwargs['value']['result']
+    # assert 'result' in kwargs['value']
+    result = kwargs['value']
     assert 'value2' in result
     assert len(result) == 1
     assert set(('value2',)) == set(result)

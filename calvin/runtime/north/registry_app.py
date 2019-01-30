@@ -43,7 +43,7 @@ def storage(key):
     # GET
     try:
         value = reg.get(key)
-        return jsonify({"result":value})
+        return jsonify(value)
     except:
         abort(404)
 
@@ -113,7 +113,7 @@ def get_index():
         print "Exception", e
         abort(400)
     value = list(reg.get_index(data['indexes']))
-    return jsonify({"result":value})
+    return jsonify(value)
 
 # #
 # # Indexed key/value
