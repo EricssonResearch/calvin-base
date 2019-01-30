@@ -147,7 +147,7 @@ class PrivateStorage(object):
             return
 
         _log.debug("Flush add_index on %s: %s" % (key, list(value)))
-        self.storage.add_index(prefix="index-", indexes=list(key), value=list(value),
+        self.storage.add_index(indexes=list(key), value=list(value),
             cb=CalvinCB(self.add_index_cb, org_value=value, org_cb=None, index_items=list(key), silent=True))
 
     def _flush_remove_index(self, key, value):
@@ -155,7 +155,7 @@ class PrivateStorage(object):
             return
 
         _log.debug("Flush remove_index on %s: %s" % (key, list(value)))
-        self.storage.remove_index(prefix="index-", indexes=list(key), value=list(value),
+        self.storage.remove_index(indexes=list(key), value=list(value),
             cb=CalvinCB(self.remove_index_cb, org_value=value, org_cb=None, index_items=list(key), silent=True))
 
 
@@ -377,9 +377,9 @@ class PrivateStorage(object):
         # Get a list of the index levels
         indexes = _index_strings(index, root_prefix_level)
 
-        self.localstorage.add_index(prefix="index-", indexes=indexes, value=value)
+        self.localstorage.add_index(indexes=indexes, value=value)
         
-        self.storage.add_index(prefix="index-", indexes=indexes, value=value,
+        self.storage.add_index(indexes=indexes, value=value,
                 cb=CalvinCB(self.add_index_cb, org_cb=cb, index_items=indexes, org_value=value))
 
     def remove_index_cb(self, value, org_value, org_cb, index_items, silent=False):
@@ -419,9 +419,9 @@ class PrivateStorage(object):
         # Get a list of the index levels
         indexes = _index_strings(index, root_prefix_level)
         
-        self.localstorage.remove_index(prefix="index-", indexes=indexes, value=value)
+        self.localstorage.remove_index(indexes=indexes, value=value)
 
-        self.storage.remove_index(prefix="index-", indexes=indexes, value=value,
+        self.storage.remove_index(indexes=indexes, value=value,
                 cb=CalvinCB(self.remove_index_cb, org_cb=cb, index_items=indexes, org_value=value))
 
     def delete_index(self, index, root_prefix_level=None, cb=None):
@@ -480,8 +480,8 @@ class PrivateStorage(object):
         _log.debug("get index %s" % (index))
         indexes = _index_strings(index, root_prefix_level)
         # Collect a value set from all key-indexes that include the indexes, always compairing full index levels
-        local_values = self.localstorage.get_index(prefix="index-", indexes=indexes)
-        self.storage.get_index(prefix="index-", indexes=indexes,
+        local_values = self.localstorage.get_index(indexes=indexes)
+        self.storage.get_index(indexes=indexes,
                 cb=CalvinCB(self.get_index_cb, org_cb=cb, index_items=indexes, local_values=local_values))
 
     def get_index_iter_cb(self, value, it, org_key, include_key=False):

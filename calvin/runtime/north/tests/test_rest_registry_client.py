@@ -31,7 +31,7 @@ def _stop_registry(proc):
 
 # FIXTURE: actorstore
 # Setup actorstore for the duration of the test module
-@pytest.yield_fixture(scope="module")
+@pytest.yield_fixture(scope="function")
 def remote_registry():
     # Setup
     reg_proc = _start_registry()
@@ -129,28 +129,29 @@ def test_delete(remote_registry, registry, host, org_cb):
 
 def test_bad_index(remote_registry, registry, host, org_cb):
     with pytest.raises(TypeError):    
-        registry.add_index('prefix', 'indexes', 'value')
+        registry.add_index('indexes', 'value')
     with pytest.raises(TypeError):    
-        registry.get_index('prefix', 'indexes', 'value')
+        registry.get_index('indexes', 'value')
     with pytest.raises(TypeError):    
-        registry.remove_index('prefix', 'indexes', 'value')
+        registry.remove_index('indexes', 'value')
         
 def test_add_index(remote_registry, registry, host, org_cb):
-    registry.add_index('prefix1', ('index1', 'index2'), 'value', cb=CalvinCB(func=Mock(), org_key='key', org_value='value', org_cb=None))
-    registry.add_index('prefix2', ('index1', 'index2'), ('value1', 'value2'), cb=CalvinCB(func=org_cb, org_key='key', org_value='value', org_cb=None))
+    registry.add_index(('index1', 'index2'), 'value', cb=CalvinCB(func=Mock(), org_key='key', org_value='value', org_cb=None))
+    registry.add_index(('index1', 'index2'), ('value1', 'value2'), cb=CalvinCB(func=org_cb, org_key='key', org_value='value', org_cb=None))
     registry.barrier()
     response = requests.get(host+"/dumpstorage")
     org_cb.assert_once()
     args, kwargs = org_cb.get_args()
 
 def test_get_index(remote_registry, registry, host, org_cb):
-    registry.add_index('prefix2', ('index1', 'index2'), ('value1', 'value2'), cb=CalvinCB(func=Mock(), org_key='key', org_value='value', org_cb=None))
+    registry.add_index(('index1', 'index2'), ('value1', 'value2'), cb=CalvinCB(func=Mock(), org_key='key', org_value='value', org_cb=None))
     registry.barrier()
-    registry.get_index('prefix2', ('index1', 'index2'), cb=CalvinCB(func=org_cb, org_key='key', org_value='value', org_cb=None))
+    registry.get_index(('index1', 'index2'), cb=CalvinCB(func=org_cb, org_key='key', org_value='value', org_cb=None))
     registry.barrier()
     response = requests.get(host+"/dumpstorage")
     org_cb.assert_once()
     args, kwargs = org_cb.get_args()
+    print args, kwargs
     assert 'value' in kwargs
     assert 'result' in kwargs['value']
     # assert kwargs['value']['result'] == ['value1', 'value2']
@@ -160,11 +161,11 @@ def test_get_index(remote_registry, registry, host, org_cb):
     assert set(('value1', 'value2')) == set(result)
     
 def test_remove_index(remote_registry, registry, host, org_cb):
-    registry.add_index('prefix2', ('index1', 'index2'), ('value1', 'value2'), cb=CalvinCB(func=Mock(), org_key='key', org_value='value', org_cb=None))
+    registry.add_index(('index1', 'index2'), ('value1', 'value2'), cb=CalvinCB(func=Mock(), org_key='key', org_value='value', org_cb=None))
     registry.barrier()
-    registry.remove_index('prefix2', ('index1', 'index2'), ('value1',), cb=CalvinCB(func=Mock(), org_key='key', org_value='value', org_cb=None))
+    registry.remove_index(('index1', 'index2'), ('value1',), cb=CalvinCB(func=Mock(), org_key='key', org_value='value', org_cb=None))
     registry.barrier()
-    registry.get_index('prefix2', ('index1', 'index2'), cb=CalvinCB(func=org_cb, org_key='key', org_value='value', org_cb=None))
+    registry.get_index(('index1', 'index2'), cb=CalvinCB(func=org_cb, org_key='key', org_value='value', org_cb=None))
     registry.barrier()
     response = requests.get(host+"/dumpstorage")
     org_cb.assert_once()
@@ -175,6 +176,9 @@ def test_remove_index(remote_registry, registry, host, org_cb):
     assert 'value2' in result
     assert len(result) == 1
     assert set(('value2',)) == set(result)
+    
+    
+# FIXME: Add tests for failed request    
     
     #
     # print response.json()

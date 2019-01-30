@@ -78,11 +78,11 @@ def storage(key):
 @app.route('/add_index/', methods=['POST'])
 def add_index():
     data = request.get_json()
-    valid_request = data and 'prefix' in data and 'indexes' in data and 'value' in data
+    valid_request = data and 'indexes' in data and 'value' in data
     if not valid_request:
         abort(400)
     try:
-        reg.add_index(data['prefix'], data['indexes'], data['value'])
+        reg.add_index(data['indexes'], data['value'])
     except Exception as e:
         print "Exception", e
         abort(400)
@@ -91,11 +91,11 @@ def add_index():
 @app.route('/remove_index/', methods=['POST'])
 def remove_index():
     data = request.get_json()
-    valid_request = data and 'prefix' in data and 'indexes' in data and 'value' in data
+    valid_request = data and 'indexes' in data and 'value' in data
     if not valid_request:
         abort(400)
     try:
-        reg.remove_index(data['prefix'], data['indexes'], data['value'])
+        reg.remove_index(data['indexes'], data['value'])
     except Exception as e:
         print "Exception", e
         abort(400)
@@ -104,15 +104,15 @@ def remove_index():
 @app.route('/get_index/', methods=['POST'])
 def get_index():
     data = request.get_json()
-    valid_request = data and 'prefix' in data and 'indexes' in data
+    valid_request = data and 'indexes' in data
     if not valid_request:
         abort(400)
     try:
-        reg.get_index(data['prefix'], data['indexes'])
+        reg.get_index(data['indexes'])
     except Exception as e:
         print "Exception", e
         abort(400)
-    value = list(reg.get_index(data['prefix'], data['indexes']))
+    value = list(reg.get_index(data['indexes']))
     return jsonify({"result":value})
 
 # #

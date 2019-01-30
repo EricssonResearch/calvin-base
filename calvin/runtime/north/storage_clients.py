@@ -152,12 +152,11 @@ class RESTRegistryClient(StorageBase):
         self._delete(path, _response_cb)
         
     
-    def add_index(self, prefix, indexes, value, cb):
+    def add_index(self, indexes, value, cb):
         if not isinstance(indexes, (list, set, tuple)):
             raise TypeError("Argument 'indexes' is not list, set, or tuple")
         path = '/add_index/'
         data = {
-            'prefix': prefix,
             'indexes': indexes,
             'value': value,
         } 
@@ -167,12 +166,11 @@ class RESTRegistryClient(StorageBase):
         self._post(path, data, _response_cb)
         
             
-    def remove_index(self, prefix, indexes, value, cb):
+    def remove_index(self, indexes, value, cb):
         if not isinstance(indexes, (list, set, tuple)):
             raise TypeError("Argument 'indexes' is not list, set, or tuple")
         path = '/remove_index/'
         data = {
-            'prefix': prefix,
             'indexes': indexes,
             'value': value,
         } 
@@ -182,12 +180,11 @@ class RESTRegistryClient(StorageBase):
         self._post(path, data, _response_cb)
             
 
-    def get_index(self, prefix, indexes, cb):
+    def get_index(self, indexes, cb):
         if not isinstance(indexes, (list, set, tuple)):
             raise TypeError("Argument 'indexes' is not list, set, or tuple")
         path = '/get_index/'
         data = {
-            'prefix': prefix,
             'indexes': indexes,
         } 
         def _response_cb(f):
@@ -256,15 +253,15 @@ class NullRegistryClient(StorageBase):
         # From our point of view, delete always succeeds
         self._response(cb, True)
         
-    def add_index(self, prefix, indexes, value, cb):
+    def add_index(self, indexes, value, cb):
         # From our point of view, add_index always succeeds
         self._response(cb, True)
            
-    def remove_index(self, prefix, indexes, value, cb):
+    def remove_index(self, indexes, value, cb):
         # From our point of view, add_index always succeeds
         self._response(cb, True)
     
-    def get_index(self, prefix, indexes, cb):
+    def get_index(self, indexes, cb):
         # The result is actually in the callback cb, as is the original callback
         # Strangely, this callback has a different behaviour than the rest...
         callback = cb.kwargs.get('org_cb')
@@ -298,28 +295,28 @@ class LocalRegistry(StorageBase):
         if key in self.localstore:
             del self.localstore[key]
 
-    def add_index(self, prefix, indexes, value):
+    def add_index(self, indexes, value):
         if not isinstance(indexes, (list, set, tuple)):
             raise TypeError("Argument 'indexes' is not list, set, or tuple")
         # For local cache storage make the indexes the key
-        key = (prefix,) + tuple(indexes)
+        key = tuple(indexes)
         # Make sure we send in a list as value
         value = list(value) if isinstance(value, (list, set, tuple)) else [value]
         self._append(key, value)
         
-    def remove_index(self, prefix, indexes, value):
+    def remove_index(self, indexes, value):
         if not isinstance(indexes, (list, set, tuple)):
             raise TypeError("Argument 'indexes' is not list, set, or tuple")
         # For local cache storage make the indexes the key
-        key = (prefix,) + tuple(indexes)
+        key = tuple(indexes)
         # Make sure we send in a list as value
         value = list(value) if isinstance(value, (list, set, tuple)) else [value]
         self._remove(key, value)
 
-    def get_index(self, prefix, indexes):
+    def get_index(self, indexes):
         if not isinstance(indexes, (list, set, tuple)):
             raise TypeError("Argument 'indexes' is not list, set, or tuple")
-        key = (prefix,) + tuple(indexes)    
+        key = tuple(indexes)    
         # Collect a value set from all key-indexes that include the indexes, always compairing full index levels
         local_values = set(itertools.chain(
             *(v['+'] for k, v in self.localstore_sets.items()
@@ -395,16 +392,16 @@ class DebugRegistryClient(LocalRegistry):
         super(DebugRegistryClient, self).delete(key)
         self._response(cb, True)
         
-    def add_index(self, prefix, indexes, value, cb):
-        super(DebugRegistryClient, self).add_index(prefix, indexes, value)
+    def add_index(self, indexes, value, cb):
+        super(DebugRegistryClient, self).add_index(indexes, value)
         self._response(cb, True)
         
-    def remove_index(self, prefix, indexes, value, cb):
-        super(DebugRegistryClient, self).remove_index(prefix, indexes, value)
+    def remove_index(self, indexes, value, cb):
+        super(DebugRegistryClient, self).remove_index(indexes, value)
         self._response(cb, True)
 
-    def get_index(self, prefix, indexes, cb):
-        retval = super(DebugRegistryClient, self).get_index(prefix, indexes)
+    def get_index(self, indexes, cb):
+        retval = super(DebugRegistryClient, self).get_index(indexes)
         self._response(cb, retval)
         
          

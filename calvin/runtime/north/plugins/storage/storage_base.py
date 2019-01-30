@@ -68,25 +68,13 @@ class StorageBase(object):
         """
         raise NotImplementedError()
 
-    def get_concat(self, key, cb=None):
-        """
-            Gets a value from the storage
-        """
+    def add_index(self, indexes, value, cb=None):
         raise NotImplementedError()
 
-    def append(self, key, value, cb=None):
+    def remove_index(self, indexes, value, cb=None):
         raise NotImplementedError()
 
-    def remove(self, key, value, cb=None):
-        raise NotImplementedError()
-
-    def add_index(self, prefix, indexes, value, cb=None):
-        raise NotImplementedError()
-
-    def remove_index(self, prefix, indexes, value, cb=None):
-        raise NotImplementedError()
-
-    def get_index(self, prefix, index, cb=None):
+    def get_index(self, index, cb=None):
         raise NotImplementedError()
 
     def bootstrap(self, addrs, cb=None):

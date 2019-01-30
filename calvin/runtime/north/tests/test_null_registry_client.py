@@ -49,12 +49,12 @@ standard_api = [
     ('get', 'key', calvinresponse.NOT_FOUND),
     ('set', 'key', 'value', calvinresponse.OK),
     ('delete', 'key', calvinresponse.OK),
-    ('add_index', 'prefix', ('indexes',), 'value', calvinresponse.OK),
-    ('remove_index', 'prefix', ('indexes',), 'value', calvinresponse.OK),
+    ('add_index', ('indexes',), 'value', calvinresponse.OK),
+    ('remove_index', ('indexes',), 'value', calvinresponse.OK),
 ]
 nonstandard_api = [
     ('start', 'iface', 'name', 'nodeid', None),
-    ('get_index', 'prefix', ('indexes',), None),    
+    ('get_index', ('indexes',), None),    
 ]
 api = standard_api + nonstandard_api
 
@@ -108,7 +108,7 @@ def test_start(registry):
    
 def test_get_index(registry, org_cb):
     local_values=[1,2,3]
-    registry.get_index('prefix1', ('index1', 'index2'), cb=CalvinCB(func=None, org_key='key', local_values=local_values, org_cb=org_cb))
+    registry.get_index(('index1', 'index2'), cb=CalvinCB(func=None, org_key='key', local_values=local_values, org_cb=org_cb))
     org_cb.assert_once()
     _, kwargs = org_cb.get_args()
     # assert kwargs['key'] == 'key'
