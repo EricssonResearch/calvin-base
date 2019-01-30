@@ -243,7 +243,6 @@ class PrivateStorage(object):
     def set_cb(self, key, value, org_key, org_value, org_cb, silent=False):
         """ set callback, on error store in localstore and retry after flush_timeout
         """
-        print "set_cb:", key, value, org_key, org_value, org_cb
         if value:
             self.localstorage.delete(key)
             self.reset_flush_timeout() # FIXME: Only if change made?
