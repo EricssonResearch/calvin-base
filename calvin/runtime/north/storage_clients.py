@@ -395,19 +395,19 @@ class DebugRegistryClient(LocalRegistry):
     def set(self, key, value, cb):
         super(DebugRegistryClient, self).set(key, value)
     
-    def get(self, key):
+    def get(self, key, cb):
         return super(DebugRegistryClient, self).get(key)
 
-    def delete(self, key):
+    def delete(self, key, cb):
         super(DebugRegistryClient, self).delete(key)
         
-    def add_index(self, prefix, indexes, value):
+    def add_index(self, prefix, indexes, value, cb):
         super(DebugRegistryClient, self).add_index(prefix, indexes, value)
         
-    def remove_index(self, prefix, indexes, value):
+    def remove_index(self, prefix, indexes, value, cb):
         super(DebugRegistryClient, self).remove_index(prefix, indexes, value)
 
-    def get_index(self, prefix, indexes):
+    def get_index(self, prefix, indexes, cb):
         return super(DebugRegistryClient, self).get_index(prefix, indexes)
         
         
