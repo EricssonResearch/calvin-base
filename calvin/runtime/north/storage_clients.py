@@ -288,8 +288,6 @@ class LocalRegistry(StorageBase):
         return data   
             
     def set(self, key, value):
-        if key in self.localstore_sets:
-            del self.localstore_sets[key]
         self.localstore[key] = value
     
     def get(self, key):
@@ -299,8 +297,6 @@ class LocalRegistry(StorageBase):
     def delete(self, key):
         if key in self.localstore:
             del self.localstore[key]
-        if key in self.localstore_sets:
-            del self.localstore_sets[key]
 
     def add_index(self, prefix, indexes, value):
         if not isinstance(indexes, (list, set, tuple)):
@@ -331,13 +327,6 @@ class LocalRegistry(StorageBase):
         return local_values       
             
 ## Additional methods
-        
-    def _delete_key(self, key):
-        if key in self.localstore:
-            del self.localstore[key]
-        
-    def _set_key_value(self, key, value):
-        self.localstore[key] = value
         
     def _append(self, key, value):
         if not isinstance(value, (list, set, tuple)):
@@ -385,9 +374,6 @@ class LocalRegistry(StorageBase):
     
     def _update_sets_remove_index(self, key, value):
         self._update_sets_index(key, value, '-')
-                    
-    def _setlist(self, key, op):
-        return list(self.localstore_sets[key][op])       
             
     
 class DebugRegistryClient(LocalRegistry):

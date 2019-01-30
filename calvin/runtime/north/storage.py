@@ -245,12 +245,8 @@ class PrivateStorage(object):
         """
         print "set_cb:", key, value, org_key, org_value, org_cb
         if value:
-            self.localstorage._delete_key(key)
+            self.localstorage.delete(key)
             self.reset_flush_timeout() # FIXME: Only if change made?
-        # else:
-        #     if org_key and org_value:
-        #         if not org_value is None: # WHAT: Cannot store None????
-        #             self.localstorage._set_key_value(key, org_value)
 
         if org_cb:
             org_cb(key=key, value=value)
