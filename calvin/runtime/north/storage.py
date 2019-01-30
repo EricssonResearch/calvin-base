@@ -85,7 +85,7 @@ class PrivateStorage(object):
         # FIXME: localstorage iterable as a stop-gap measure?
         for key in self.localstorage.localstore.keys():
             _log.debug("Flush key %s: " % (key,))
-            self.storage.set(key=key, value=self.localstorage.get(key), cb=CalvinCB(func=self.set_cb, org_key=None, org_value=None, org_cb=None, silent=True))
+            self.storage.set(key=key, value=self.localstorage.get(key), cb=CalvinCB(func=self.set_cb, key=key, org_key=None, org_value=None, org_cb=None, silent=True))
 
         # FIXME: localstorage_sets iterable as a stop-gap measure?
         for key, value in self.localstorage.localstore_sets.items():

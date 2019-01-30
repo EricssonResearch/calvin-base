@@ -378,34 +378,34 @@ class LocalRegistry(StorageBase):
     
 class DebugRegistryClient(LocalRegistry):
 
+    def _response(self, cb, value):
+        cb(value=calvinresponse.CalvinResponse(value))
+        # FIXME: Should this be used instead?
+        # async.DelayedCall(0, callback, key=org_key, value=calvinresponse.CalvinResponse(value))
+
     def set(self, key, value, cb):
         super(DebugRegistryClient, self).set(key, value)
-    
+        self._response(cb, True)
+
     def get(self, key, cb):
-        return super(DebugRegistryClient, self).get(key)
+        retval = super(DebugRegistryClient, self).get(key)
+        self._response(cb, retval)
 
     def delete(self, key, cb):
         super(DebugRegistryClient, self).delete(key)
+        self._response(cb, True)
         
     def add_index(self, prefix, indexes, value, cb):
         super(DebugRegistryClient, self).add_index(prefix, indexes, value)
+        self._response(cb, True)
         
     def remove_index(self, prefix, indexes, value, cb):
         super(DebugRegistryClient, self).remove_index(prefix, indexes, value)
+        self._response(cb, True)
 
     def get_index(self, prefix, indexes, cb):
-        return super(DebugRegistryClient, self).get_index(prefix, indexes)
-        
-        
-        
-                
-
-            
-            
-            
-            
-        
-            
+        retval = super(DebugRegistryClient, self).get_index(prefix, indexes)
+        self._response(cb, retval)
         
          
         
