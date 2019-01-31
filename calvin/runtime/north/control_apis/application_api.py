@@ -30,6 +30,9 @@ from calvin.utilities.replication_defs import PRE_CHECK, REPLICATION_STATUS
 
 _log = get_logger(__name__)
 
+# FIXME: Which ones are needed? Which ones should be in debug API? 
+
+# USED BY: GUI, CSWEB, CSCONTROL
 @handler(method="GET", path="/applications")
 @authentication_decorator
 def handle_get_applications(self, handle, connection, match, data, hdr):
@@ -41,6 +44,7 @@ def handle_get_applications(self, handle, connection, match, data, hdr):
     """
     self.send_response(handle, connection, json.dumps(self.node.app_manager.list_applications()))
 
+# USED BY: GUI, CSWEB, CSCONTROL
 @handler(method="DELETE", path="/application/{application_id}")
 @authentication_decorator
 def handle_del_application(self, handle, connection, match, data, hdr):
@@ -66,6 +70,7 @@ def handle_del_application_cb(self, handle, connection, status=None):
     self.send_response(handle, connection, data, status=status.status)
 
 
+# DEPRECATED
 @handler(method="POST", path="/actor")
 @authentication_decorator
 def handle_new_actor(self, handle, connection, match, data, hdr):
@@ -97,6 +102,7 @@ def handle_new_actor(self, handle, connection, match, data, hdr):
         handle, connection, None if actor_id is None else json.dumps({'actor_id': actor_id}), status=status)
 
 
+# USED BY: GUI, CSCONTROL
 @handler(method="GET", path="/actors")
 @authentication_decorator
 def handle_get_actors(self, handle, connection, match, data, hdr):
@@ -110,6 +116,7 @@ def handle_get_actors(self, handle, connection, match, data, hdr):
     self.send_response(
         handle, connection, json.dumps(actors))
 
+# DEPRECATED
 @handler(method="DELETE", path="/actor/{actor_id}")
 @authentication_decorator
 def handle_del_actor(self, handle, connection, match, data, hdr):
@@ -139,7 +146,7 @@ def _actor_report(self, handle, connection, match, data, hdr):
         status = calvinresponse.NOT_FOUND
     self.send_response(handle, connection, None if report is None else json.dumps(report, default=repr), status=status)
 
-
+# DEPRECATED: Perhaps used in Kappa?
 @handler(method="GET", path="/actor/{actor_id}/report")
 @authentication_decorator
 def handle_get_actor_report(self, handle, connection, match, data, hdr):
@@ -151,7 +158,7 @@ def handle_get_actor_report(self, handle, connection, match, data, hdr):
     """
     self._actor_report(handle, connection, match, data, hdr)
 
-
+# DEPRECATED
 @handler(method="POST", path="/actor/{actor_id}/report")
 @authentication_decorator
 def handle_post_actor_report(self, handle, connection, match, data, hdr):
@@ -178,6 +185,7 @@ def handle_actor_migrate_lookup_peer_cb(self, key, value, handle, connection, ac
     else:
         self.send_response(handle, connection, None, status=calvinresponse.NOT_FOUND)
 
+# USED BY: GUI, CSWEB, CSCONTROL
 @handler(method="POST", path="/actor/{actor_id}/migrate")
 @authentication_decorator
 def handle_actor_migrate(self, handle, connection, match, data, hdr):
@@ -236,6 +244,7 @@ def actor_migrate_cb(self, handle, connection, status, *args, **kwargs):
     """
     self.send_response(handle, connection, None, status=status.status)
 
+# DEPRECATED
 @handler(method="POST", path="/actor/{actor_id}/disable")
 @authentication_decorator
 def handle_actor_disable(self, handle, connection, match, data, hdr):
@@ -252,6 +261,7 @@ def handle_actor_disable(self, handle, connection, match, data, hdr):
         status = calvinresponse.NOT_FOUND
     self.send_response(handle, connection, None, status)
 
+# USED BY: CSWEB
 @handler(method="POST", path="/actor/{replication_id}/replicate")
 @authentication_decorator
 def handle_actor_replicate(self, handle, connection, match, data, hdr):
@@ -289,6 +299,7 @@ def handle_actor_replicate(self, handle, connection, match, data, hdr):
 def handle_actor_replicate_cb(self, handle, connection, status):
     self.send_response(handle, connection, json.dumps(status.data), status=status.status)
 
+# USED BY: GUI, CSWEB
 @handler(method="GET", path="/actor/{actor_id}/port/{port_id}/state")
 @authentication_decorator
 def handle_get_port_state(self, handle, connection, match, data, hdr):
@@ -305,6 +316,7 @@ def handle_get_port_state(self, handle, connection, match, data, hdr):
         status = calvinresponse.NOT_FOUND
     self.send_response(handle, connection, json.dumps(state), status)
 
+# DEPRECATED
 @handler(method="POST", path="/connect")
 @authentication_decorator
 def handle_connect(self, handle, connection, match, data, hdr):
@@ -340,6 +352,7 @@ def handle_connect(self, handle, connection, match, data, hdr):
         peer_port_id=data.get("peer_port_id"),
         cb=CalvinCB(self.handle_connect_cb, handle, connection))
 
+# DEPRECATED
 @register
 def handle_connect_cb(self, handle, connection, **kwargs):
     status = kwargs.get('status', None)
@@ -348,6 +361,7 @@ def handle_connect_cb(self, handle, connection, **kwargs):
                        status=status.status)
     _log.debug("Handle connect finnished")
 
+# DEPRECATED
 @handler(method="POST", path="/set_port_property")
 @authentication_decorator
 def handle_set_port_property(self, handle, connection, match, data, hdr):
@@ -388,7 +402,7 @@ def handle_set_port_property(self, handle, connection, match, data, hdr):
     self.send_response(handle, connection, None, status=status.status)
 
 
-
+# DEPRECATED
 # FIXME: This was compile_script_check_security but now we only get deployable 
 #        => we just need to check integrity according to policy
 def check_security(data, cb, security=None, content=None, verify=True, node=None, signature=None):
@@ -466,6 +480,7 @@ def check_security(data, cb, security=None, content=None, verify=True, node=None
 
 
 # FIXME: Check integrity according to policy
+# USED BY: GUI, CSWEB, CSCONTROL
 @handler(method="POST", path="/deploy")
 @authentication_decorator
 def handle_deploy(self, handle, connection, match, data, hdr):
@@ -528,6 +543,7 @@ def handle_deploy_cb(self, handle, connection, status, deployer, **kwargs):
         self.send_response(handle, connection, None, status=status.status)
 
 
+# USED BY: GUI, CSWEB, CSCONTROL
 @handler(method="POST", path="/application/{application_id}/migrate")
 @authentication_decorator
 def handle_post_application_migrate(self, handle, connection, match, data, hdr):
@@ -567,6 +583,7 @@ def handle_post_application_migrate_cb(self, handle, connection, status, **kwarg
     _log.analyze(self.node.id, "+ MIGRATED", {'status': status.status})
     self.send_response(handle, connection, None, status=status.status)
 
+# DEPRECATED
 @handler(method="POST", path="/disconnect")
 @authentication_decorator
 def handle_disconnect(self, handle, connection, match, data, hdr):
@@ -603,6 +620,7 @@ def handle_disconnect(self, handle, connection, match, data, hdr):
                        port_dir=port_dir, port_id=port_id, terminate=terminate,
                        callback=CalvinCB(self.handle_disconnect_cb, handle, connection))
 
+# DEPRECATED
 @register
 def handle_disconnect_cb(self, handle, connection, **kwargs):
     status = kwargs.get('status', None)

@@ -26,8 +26,11 @@ from calvin.runtime.north.calvinlib import get_calvinlib
 
 _log = get_logger(__name__)
 
-#Can't be access controlled, as it is needed to find authorization server
-#    @authentication_decorator
+# FIXME: Which ones are needed?
+
+# USED BY: CSWEB, CSCONTROL
+# Can't be access controlled, as it is needed to find authorization server
+# @authentication_decorator
 @handler(method="GET", path="/id")
 def handle_get_node_id(self, handle, connection, match, data, hdr):
     """
@@ -39,6 +42,7 @@ def handle_get_node_id(self, handle, connection, match, data, hdr):
     self.send_response(handle, connection, json.dumps({'id': self.node.id}))
 
 
+# USED BY: GUI, CSWEB
 @handler(method="GET", path="/capabilities")
 def handle_get_node_capabilities(self, handle, connection, match, data, hdr):
     """
@@ -50,6 +54,7 @@ def handle_get_node_capabilities(self, handle, connection, match, data, hdr):
     self.send_response(handle, connection, json.dumps(get_calvinsys().list_capabilities() + get_calvinlib().list_capabilities()))
 
 
+# USED BY: CSCONTROL
 @handler(method="POST", path="/peer_setup")
 def handle_peer_setup(self, handle, connection, match, data, hdr):
     """
@@ -71,7 +76,7 @@ def handle_peer_setup_cb(self, handle, connection, status=None, peer_node_ids=No
         data = None
     self.send_response(handle, connection, data, status=status.status)
 
-
+# USED BY: CSWEB, CSCONTROL
 @handler(method="GET", path="/nodes")
 @authentication_decorator
 def handle_get_nodes(self, handle, connection, match, data, hdr):
@@ -84,6 +89,7 @@ def handle_get_nodes(self, handle, connection, match, data, hdr):
     self.send_response(handle, connection, json.dumps(self.node.network.list_links()))
 
 
+# USED BY: CSWEB, CSCONTROL
 @handler(method="DELETE", path="/node", optional=["/now", "/migrate", "/clean"])
 @authentication_decorator
 def handle_quit(self, handle, connection, match, data, hdr):
@@ -108,6 +114,7 @@ def handle_quit(self, handle, connection, match, data, hdr):
     self.send_response(handle, connection, None, status=calvinresponse.ACCEPTED)
 
 
+# DEPRECATED: What is this supposed to do?
 @handler(method="OPTIONS", path=r"/{path}")
 @authentication_decorator
 def handle_options(self, handle, connection, match, data, hdr):

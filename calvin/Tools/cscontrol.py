@@ -103,6 +103,7 @@ def control_actors(args):
         if not args.id:
             raise Exception("No actor id given")
         return req_handler.get_actor(args.node, args.id)
+    # DEPRECATED: Remove
     elif args.cmd == 'delete':
         if not args.id:
             raise Exception("No actor id given")

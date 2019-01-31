@@ -22,6 +22,9 @@ from calvin.runtime.north.control_apis.authentication import authentication_deco
 
 _log = get_logger(__name__)
 
+# FIXME: Only handle_post_certificate_signing_request seem to be used?
+
+# USED BY: CSMANAGE
 # No authentication decorator, this is called by the runtimes when deployed
 # without a certificate
 @handler(method="POST", path="/certificate_authority/certificate_signing_request")

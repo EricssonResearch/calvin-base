@@ -19,6 +19,7 @@ from calvin.requests import calvinresponse
 import calvin.runtime.south.calvinsys.ui.uicalvinsys as ui
 from routes import handler
 
+# USED BY: GUI
 @handler(method="GET", path="/uicalvinsys/{uuid}")
 def handle_get_uicalvinsys(self, handle, connection, match, data, hdr):
     """
@@ -28,6 +29,7 @@ def handle_get_uicalvinsys(self, handle, connection, match, data, hdr):
     """
     self.send_response(handle, connection, json.dumps(ui.ui_definitions()), status=calvinresponse.OK)
 
+# USED BY: GUI
 @handler(method="POST", path="/uicalvinsys")
 def handle_post_uicalvinsys(self, handle, connection, match, data, hdr):
     """

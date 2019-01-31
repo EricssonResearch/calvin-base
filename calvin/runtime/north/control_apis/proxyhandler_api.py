@@ -22,6 +22,9 @@ from calvin.utilities.calvinlogger import get_logger
 
 _log = get_logger(__name__)
 
+# FIXME: Which ones are needed?
+
+# USED BY: CSWEB
 @handler(method="GET", path="/proxy/{node_id}/capabilities")
 def handle_get_proxy_capabilities(self, handle, connection, match, data, hdr):
     """
@@ -38,6 +41,7 @@ def handle_get_proxy_capabilities(self, handle, connection, match, data, hdr):
     self.send_response(handle, connection,
             json.dumps(data) if status == calvinresponse.OK else None, status=status)
 
+# USED BY: CSWEB
 @handler(method="DELETE", path="/proxy/{node_id}", optional=["/now", "/migrate", "/clean"])
 def handle_delete_proxy(self, handle, connection, match, data, hdr):
     """

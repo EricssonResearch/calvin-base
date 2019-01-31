@@ -57,11 +57,13 @@ DISCONNECT = '/disconnect'
 INDEX_PATH_RPL = '/index/{}?root_prefix_level={}'
 INDEX_PATH = '/index/{}'
 STORAGE_PATH = '/storage/{}'
+
 CSR_REQUEST = '/certificate_authority/certificate_signing_request'
 ENROLLMENT_PASSWORD = '/certificate_authority/certificate_enrollment_password/{}'
 AUTHENTICATION = '/authentication'
 AUTHENTICATION_USERS_DB = '/authentication/users_db'
 AUTHENTICATION_GROUPS_DB = '/authentication/groups_db'
+
 PROXY_PEER_ABOLISH = '/proxy/{}/migrate'
 
 
@@ -180,14 +182,17 @@ class RequestHandler(RequestBase):
         rt = get_runtime(rt)
         RequestBase._send(self, rt.control_uri, timeout, send_func, path, data)    
 
+    # cscontrol, nodecontrol
     def get_node_id(self, rt, timeout=DEFAULT_TIMEOUT, async=False):
         r = self._get(rt, timeout, async, NODE_ID)
         return self.check_response(r, key="id")
 
+    # cscontrol, nodecontrol
     def get_node(self, rt, node_id, timeout=DEFAULT_TIMEOUT, async=False):
         r = self._get(rt, timeout, async, NODE_PATH.format(node_id))
         return self.check_response(r)
 
+    # cscontrol
     def quit(self, rt, method=None, timeout=DEFAULT_TIMEOUT, async=False):
         if method is None:
             r = self._delete(rt, timeout, async, NODE)
@@ -195,10 +200,12 @@ class RequestHandler(RequestBase):
             r = self._delete(rt, timeout, async, NODE_PATH.format(method))
         return self.check_response(r)
 
+    # cscontrol
     def get_nodes(self, rt, timeout=DEFAULT_TIMEOUT, async=False):
         r = self._get(rt, timeout, async, NODES)
         return self.check_response(r)
 
+    # cscontrol
     def peer_setup(self, rt, *peers, **kwargs):
         timeout = kwargs.get('timeout', DEFAULT_TIMEOUT)
         async = kwargs.get('async', False)
@@ -210,6 +217,7 @@ class RequestHandler(RequestBase):
         r = self._post(rt, timeout, async, PEER_SETUP, data)
         return self.check_response(r)
 
+    # DEPRECATED: Remove
     def new_actor(self, rt, actor_type, actor_name, credentials=None, timeout=DEFAULT_TIMEOUT, async=False):
         data = {
             'actor_type': actor_type,
@@ -220,6 +228,7 @@ class RequestHandler(RequestBase):
         r = self._post(rt, timeout, async, ACTOR, data)
         return self.check_response(r, key='actor_id')
 
+    # DEPRECATED: Remove
     def new_actor_wargs(self, rt, actor_type, actor_name, args=None, deploy_args=None, timeout=DEFAULT_TIMEOUT,
                         async=False, **kwargs):
         data = {'actor_type': actor_type, 'deploy_args': deploy_args}
@@ -241,10 +250,12 @@ class RequestHandler(RequestBase):
         r = self._get(rt, timeout, async, ACTORS)
         return self.check_response(r)
 
+    # DEPRECATED: Remove
     def delete_actor(self, rt, actor_id, timeout=DEFAULT_TIMEOUT, async=False):
         r = self._delete(rt, timeout, async, ACTOR_PATH.format(actor_id))
         return self.check_response(r)
 
+    # DEPRECATED: Remove
     def connect(self, rt, actor_id, port_name, peer_node_id, peer_actor_id, peer_port_name, timeout=DEFAULT_TIMEOUT,
                 async=False):
         data = {
@@ -259,6 +270,7 @@ class RequestHandler(RequestBase):
         r = self._post(rt, timeout, async, CONNECT, data)
         return self.check_response(r)
 
+    # DEPRECATED: Remove
     def disconnect(self, rt, actor_id=None, port_name=None, port_dir=None, port_id=None, terminate=None,
                    timeout=DEFAULT_TIMEOUT, async=False):
         data = {
@@ -271,17 +283,20 @@ class RequestHandler(RequestBase):
         r = self._post(rt, timeout, async, DISCONNECT, data)
         return self.check_response(r)
 
+    # DEPRECATED: Remove
     def disable(self, rt, actor_id, timeout=DEFAULT_TIMEOUT, async=False):
         path = ACTOR_DISABLE.format(actor_id)
         r = self._post(rt, timeout, async, path)
         return self.check_response(r)
 
+    # cscontrol
     def migrate(self, rt, actor_id, dst_id, timeout=DEFAULT_TIMEOUT, async=False):
         data = {'peer_node_id': dst_id}
         path = ACTOR_MIGRATE.format(actor_id)
         r = self._post(rt, timeout, async, path, data)
         return self.check_response(r)
 
+    # cscontrol
     def replicate(self, rt, replication_id=None, dst_id=None, dereplicate=False, exhaust=False, requirements=None, timeout=DEFAULT_TIMEOUT, async=False):
         data = {}
         if dst_id:
@@ -298,6 +313,7 @@ class RequestHandler(RequestBase):
         r = self._post(rt, timeout, async, path, data)
         return self.check_response(r)
 
+    # cscontrol
     def migrate_use_req(self, rt, actor_id, requirements, extend=False, move=False, timeout=DEFAULT_TIMEOUT,
                         async=False):
         data = {'requirements': requirements, 'extend': extend, 'move': move}
@@ -305,6 +321,7 @@ class RequestHandler(RequestBase):
         r = self._post(rt, timeout, async, path, data)
         return self.check_response(r)
 
+    # cscontrol
     def migrate_app_use_req(self, rt, application_id, deploy_info=None, move=False, timeout=DEFAULT_TIMEOUT,
                             async=False):
         data = {'deploy_info': deploy_info, "move": move}
@@ -312,11 +329,13 @@ class RequestHandler(RequestBase):
         r = self._post(rt, timeout, async, path, data)
         return self.check_response(r)
 
+    # DEPRECATED: Remove
     def get_port(self, rt, actor_id, port_id, timeout=DEFAULT_TIMEOUT, async=False):
         path = ACTOR_PORT.format(actor_id, port_id)
         r = self._get(rt, timeout, async, path)
         return self.check_response(r)
 
+    # DEPRECATED: Remove
     def set_port_property(self, rt, actor_id, port_type, port_name, port_property=None, value=None,
                             port_properties=None, port_id=None,
                             timeout=DEFAULT_TIMEOUT, async=False):
@@ -333,6 +352,7 @@ class RequestHandler(RequestBase):
         r = self._post(rt, timeout, async, SET_PORT_PROPERTY, data)
         return self.check_response(r)
 
+    # kappa
     def report(self, rt, actor_id, kwargs=None, timeout=DEFAULT_TIMEOUT, async=False):
         path = ACTOR_REPORT.format(actor_id)
         if kwargs:
@@ -341,22 +361,27 @@ class RequestHandler(RequestBase):
             r = self._get(rt, timeout, async, path)
         return self.check_response(r)
 
+    # cscontrol
     def get_applications(self, rt, timeout=DEFAULT_TIMEOUT, async=False):
         r = self._get(rt, timeout, async, APPLICATIONS)
         return self.check_response(r)
 
+    # cscontrol
     def get_application(self, rt, application_id, timeout=DEFAULT_TIMEOUT, async=False):
         r = self._get(rt, timeout, async, APPLICATION_PATH.format(application_id))
         return self.check_response(r)
 
+    # cscontrol
     def delete_application(self, rt, application_id, timeout=DEFAULT_TIMEOUT, async=False):
         r = self._delete(rt, timeout, async, APPLICATION_PATH.format(application_id))
         return self.check_response(r)
 
+    # cscontrol
     def deploy(self, rt, deployable, timeout=DEFAULT_TIMEOUT, async=False):
         r = self._post(rt, timeout, False, DEPLOY, data=deployable)
         return self.check_response(r)
 
+    # DEPRECATED: Remove
     def add_index(self, rt, index, value, root_prefix_level=None, timeout=DEFAULT_TIMEOUT, async=False):
         data = {'value': value}
         if root_prefix_level is not None:
@@ -365,6 +390,7 @@ class RequestHandler(RequestBase):
         r = self._post(rt, timeout, async, path, data)
         return self.check_response(r)
 
+    # DEPRECATED: Remove
     def remove_index(self, rt, index, value, root_prefix_level=None, timeout=DEFAULT_TIMEOUT, async=False):
         data = {'value': value}
         if root_prefix_level is not None:
@@ -373,6 +399,7 @@ class RequestHandler(RequestBase):
         r = self._delete(rt, timeout, async, path, data)
         return self.check_response(r)
 
+    # cscontrol, utilities.security, utilities.runtime_credentials
     def get_index(self, rt, index, root_prefix_level=None, timeout=DEFAULT_TIMEOUT, async=False):
         if root_prefix_level is None:
             r = self._get(rt, timeout, async, INDEX_PATH.format(index))
@@ -380,31 +407,37 @@ class RequestHandler(RequestBase):
             r = self._get(rt, timeout, async, INDEX_PATH_RPL.format(index, root_prefix_level))
         return self.check_response(r)
 
+    # DEPRECATED: Remove
     def get_storage(self, rt, key, timeout=DEFAULT_TIMEOUT, async=False):
         r = self._get(rt, timeout, async, STORAGE_PATH.format(key))
         return self.check_response(r)
 
+    # DEPRECATED: Remove
     def set_storage(self, rt, key, value, timeout=DEFAULT_TIMEOUT, async=False):
         data = {'value': value}
         path = STORAGE_PATH.format(key)
         r = self._post(rt, timeout, async, path, data)
         return self.check_response(r)
 
+    # DEPRECATED: Remove
     def dump_storage(self, rt, timeout=DEFAULT_TIMEOUT, async=False):
         r = self._get(rt, timeout, async, "/dumpstorage")
         return self.check_response(r)
 
+    # csruntime
     def sign_csr_request(self, rt, csr, timeout=DEFAULT_TIMEOUT, async=False):
         data = {'csr': csr}
         r = self._post(rt, timeout, async, CSR_REQUEST, data=data['csr'])
         return self.check_response(r)
 
+    # DEPRECATED: Remove
     def set_enrollment_password(self, rt, node_name, enrollment_password, timeout=DEFAULT_TIMEOUT, async=False):
         import base64
         data = {'enrollment_password':enrollment_password}
         r = self._put(rt, timeout, async, ENROLLMENT_PASSWORD.format(node_name), data=data)
         return self.check_response(r)
 
+    # csmanage
     def get_enrollment_password(self, rt, node_name, timeout=DEFAULT_TIMEOUT, async=False):
         r = self._get(rt, timeout, async, ENROLLMENT_PASSWORD.format(node_name))
         result = self.check_response(r)
@@ -414,6 +447,7 @@ class RequestHandler(RequestBase):
             _log.error("Failed to fetch enrollment password")
             return None
 
+    # DEPRECATED: Remove
     def get_users_db(self, rt, timeout=DEFAULT_TIMEOUT, async=False):
         r = self._get(rt, timeout, async, AUTHENTICATION_USERS_DB)
         result = self.check_response(r)
@@ -423,11 +457,13 @@ class RequestHandler(RequestBase):
             _log.error("Failed to fetch users_db")
             return None
 
+    # DEPRECATED: Remove
     def post_users_db(self, rt, users_db, timeout=DEFAULT_TIMEOUT, async=False):
         data = {'users_db': users_db}
         r = self._put(rt, timeout, async, AUTHENTICATION_USERS_DB, data=data)
         return self.check_response(r)
 
+    # DEPRECATED: Remove
     def abolish_proxy_peer(self, rt, peer_id, timeout=DEFAULT_TIMEOUT, async=False):
         r = self._delete(rt, timeout, async, PROXY_PEER_ABOLISH.format(peer_id))
         return self.check_response(r)
