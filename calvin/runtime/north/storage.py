@@ -15,7 +15,7 @@
 # limitations under the License.
 
 # from calvin.runtime.north.plugins.storage import storage_factory
-from calvin.csparser.port_property_syntax import list_port_property_capabilities
+from calvin.actor.port_property_syntax import list_port_property_capabilities
 from calvin.runtime.south.async import async
 from calvin.utilities import calvinlogger
 from calvin.utilities.calvin_callback import CalvinCB

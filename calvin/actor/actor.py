@@ -29,7 +29,7 @@ import calvin.requests.calvinresponse as response
 from calvin.runtime.south.async import async
 from calvin.runtime.north.plugins.authorization_checks import check_authorization_plugin_list
 from calvin.utilities.calvin_callback import CalvinCB
-from calvin.csparser.port_property_syntax import get_port_property_capabilities, get_port_property_runtime
+from calvin.actor.port_property_syntax import get_port_property_capabilities, get_port_property_runtime
 from calvin.runtime.north.calvinsys import get_calvinsys
 from calvin.runtime.north.calvinlib import get_calvinlib
 

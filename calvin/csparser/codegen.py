@@ -3,7 +3,7 @@ import astnode as ast
 import astprint
 from parser import calvin_parse
 from visitor import Visitor, search_tree
-from calvin.csparser.port_property_syntax import port_property_data
+from calvin.actor.port_property_syntax import port_property_data
 
 # FIXME: External dependency to be removed
 from  calvin.utilities.actor_signature import signature
