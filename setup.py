@@ -36,8 +36,6 @@ setup(name='er-calvin',
       ],
       install_requires=[
         'colorlog==2.6.1',
-        'rpcudp==1.0',
-        'kademlia==0.5',
         'ply==3.8',
         'Twisted==15.5.0',
         'requests>=2.9.1',
