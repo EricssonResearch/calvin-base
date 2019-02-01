@@ -6,7 +6,7 @@ import time
 import pytest
 from mock import MagicMock, Mock
 from calvin.utilities.calvin_callback import CalvinCB
-from calvin.runtime.north.storage_clients import RESTRegistryClient
+from calvin.runtime.north.plugins.storage.storage_clients import RESTRegistryClient
 import calvin.requests.calvinresponse as calvinresponse
 import requests
 from requests_futures.sessions import FuturesSession
@@ -23,7 +23,7 @@ def _start_process(cmd):
     return process
 
 def _start_registry():
-    os.putenv("FLASK_APP", "/Users/eperspe/Source/calvin-base/calvin/runtime/north/registry_app.py")
+    os.putenv("FLASK_APP", "calvinservices/registry/registry_app.py")
     return _start_process("flask run --port 4998")
 
 def _stop_registry(proc):

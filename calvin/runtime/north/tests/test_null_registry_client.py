@@ -1,7 +1,7 @@
 import pytest
 from mock import MagicMock, Mock
 from calvin.utilities.calvin_callback import CalvinCB
-from calvin.runtime.north.storage_clients import NullRegistryClient
+from calvin.runtime.north.plugins.storage.storage_clients import NullRegistryClient
 import calvin.requests.calvinresponse as calvinresponse
 
 @pytest.fixture()

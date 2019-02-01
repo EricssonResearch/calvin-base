@@ -1,5 +1,5 @@
 import pytest
-from calvin.runtime.north.storage_clients import LocalRegistry
+from calvin.runtime.north.plugins.storage.storage_clients import LocalRegistry
 
 
 @pytest.fixture()
