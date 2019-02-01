@@ -21,7 +21,7 @@ import yaml
 import jsonschema
 from jsonschema.exceptions import ValidationError
 from calvin.actorstore.store import Store
-from calvin.actorstore.signature import signature
+from  calvin.utilities.actor_signature import signature
 import hashlib
 
 

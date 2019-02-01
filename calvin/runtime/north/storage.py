@@ -22,7 +22,6 @@ from calvin.utilities.calvin_callback import CalvinCB
 # from calvin.actor import actorport
 from calvin.actor.actor import ShadowActor
 from calvin.utilities import calvinconfig
-# from calvin.actorstore.store import GlobalStore
 # from calvin.utilities.security import Security, security_enabled
 from calvin.utilities import dynops
 from calvin.requests import calvinresponse

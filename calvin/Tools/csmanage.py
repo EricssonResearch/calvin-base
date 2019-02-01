@@ -21,7 +21,6 @@ import os
 import glob
 import shutil
 import json
-from calvin.actorstore import store
 from calvin.utilities import certificate
 from calvin.utilities import certificate_authority
 from calvin.utilities import runtime_credentials
@@ -29,8 +28,12 @@ from calvin.utilities import code_signer
 from calvin.utilities.utils import get_home
 from calvin.utilities.attribute_resolver import AttributeResolver
 from calvin.utilities import calvinuuid
-from calvin.actorstore.store import ActorStore, install_component
 from calvin.csparser.codegen import calvin_components
+# from calvin.actorstore.store import ActorStore, install_component
+
+# FIXME: Stubbing out this until we have added component handling to store
+def install_component(*args):
+    pass
 
 def parse_args():
     long_desc = """Manage the host's actor store and credentials"""
@@ -146,8 +149,8 @@ def parse_args():
                            help='overwrite file that exists at destination')
     cmd_cs_sign.add_argument('--dir', metavar='<dir>', type=str, default="",
                            help='security directory, defaults to ~/.calvin/security')
-    cmd_cs_sign.add_argument('--nsfile', metavar='<ns.sub-ns.actor>', action='append', default=[],
-                           help='namespaced store path to actor or components, can be repeated')
+    # cmd_cs_sign.add_argument('--nsfile', metavar='<ns.sub-ns.actor>', action='append', default=[],
+    #                        help='namespaced store path to actor or components, can be repeated')
 
     cmd_cs_sign.set_defaults(func=manage_cs_sign)
 
@@ -475,10 +478,10 @@ def manage_cs_sign(args):
             if not exist:
                 raise Exception("The file path supplied is not an existing file")
             files.extend(glob.glob(f))
-    if args.nsfile:
-        store = ActorStore()
-        for m in args.nsfile:
-            files.extend(store.actor_paths(m))
+    # if args.nsfile:
+    #     store = ActorStore()
+    #     for m in args.nsfile:
+    #         files.extend(store.actor_paths(m))
     # Filter out any files not *.calvin, *.py
     files = [f for f in files if f.endswith(('.calvin', '.py')) and not f.endswith('__init__.py')]
     if not files:

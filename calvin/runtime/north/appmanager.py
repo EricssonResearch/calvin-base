@@ -22,7 +22,6 @@ from calvin.utilities import calvinlogger
 from calvin.runtime.north.plugins.requirements import req_operations
 import calvin.requests.calvinresponse as response
 from calvin.utilities import calvinuuid
-# from calvin.actorstore.store import ActorStore, GlobalStore
 from calvin.runtime.south.async import async
 from calvin.utilities.security import Security
 from calvin.utilities.requirement_matching import ReqMatch

@@ -1,9 +1,11 @@
 import os
 import sys
 import json
+import inspect # import cleandoc, getargs
+
 import jsonschema
 import yaml
-import inspect # import cleandoc, getargs
+
 # from __future__ import print_function
 
 # Stand-alone actorstore
