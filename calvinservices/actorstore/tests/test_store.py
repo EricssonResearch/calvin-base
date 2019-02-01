@@ -14,15 +14,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pytest
 import os
 import json
+import hashlib
+
+import pytest
 import yaml
 import jsonschema
 from jsonschema.exceptions import ValidationError
-from calvin.actorstore.store import Store
-from  calvin.utilities.actor_signature import signature
-import hashlib
+from calvinservices.actorstore.store import Store
+from calvin.utilities.actor_signature import signature
 
 
 # Helpers
