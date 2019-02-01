@@ -20,9 +20,9 @@ import sys
 import json
 import argparse
 from cspreprocess import Preprocessor
-from calvin.csparser.dscodegen import calvin_dscodegen
-from calvin.csparser.codegen import calvin_codegen
-from calvin.csparser.parser import printable_ir
+from calvinservices.csparser.dscodegen import calvin_dscodegen
+from calvinservices.csparser.codegen import calvin_codegen
+from calvinservices.csparser.parser import printable_ir
 from calvin.utilities import code_signer
 
 def appname_from_filename(filename):

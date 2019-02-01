@@ -81,10 +81,10 @@ setup(name='er-calvin',
               'cscontrol=calvin.Tools.cscontrol:main',
               'csdocs=calvin.Tools.calvindoc:main',
               'cssysdocs=calvin.Tools.calvinsysdoc:main',
-              'cscompile=calvin.Tools.cscompiler:main',
+              'cscompile=calvinservices.csparser.cscompiler:main',
               'csmanage=calvin.Tools.csmanage:main',
               'csweb=calvin.Tools.www.csweb:main',
-              'csviz=calvin.Tools.csviz:main'
+              'csviz=calvinservices.csparser.csviz:main'
           ]
       }
       )
