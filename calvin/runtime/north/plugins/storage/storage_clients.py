@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.runtime.north.plugins.storage.storage_base import StorageBase
+from storage_base import StorageBase
 # from calvin.utilities import calvinlogger
 from calvin.requests import calvinresponse
 from calvin.requests.request_handler import RequestBase
@@ -65,28 +65,7 @@ def registry(kind):
     class_ = all_kinds.get(kind.lower())
     if not class_:
         raise ValueError("Unknown registry type '{}', must be one of: {}".format(kind, ",".join(all_kinds.keys())))
-    return class_()
-    
-
-# FIXME: How and when and by whom is this used? Where does it belong?
-def index_strings(index, root_prefix_level):
-    # Add default behaviour here to make it less fragile.
-    if root_prefix_level is None:
-        root_prefix_level = 2
-    # Make the list of index levels that should be used
-    # The index string must been escaped with \/ and \\ for / and \ within levels, respectively
-    if isinstance(index, list):
-        items = index
-    else:
-        items = re.split(r'(?<![^\\]\\)/', index.lstrip("/"))
-    if root_prefix_level > 0:
-        root = "/".join(items[:root_prefix_level])
-        del items[:root_prefix_level]
-        items.insert(0, root)
-
-    return items
-
-        
+    return class_()        
                 
 
 class RESTRegistryClient(StorageBase):

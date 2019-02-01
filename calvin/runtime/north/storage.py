@@ -28,10 +28,27 @@ from calvin.utilities import dynops
 from calvin.requests import calvinresponse
 from calvin.runtime.north.calvinsys import get_calvinsys
 from calvin.runtime.north.calvinlib import get_calvinlib
-from calvin.runtime.north.storage_clients import LocalRegistry, NullRegistryClient, registry
-from calvin.runtime.north.storage_clients import index_strings as _index_strings
+from calvin.runtime.north.plugins.storage.storage_clients import LocalRegistry, NullRegistryClient, registry
 
 _log = calvinlogger.get_logger(__name__)
+
+# FIXME: How and when and by whom is this used? Where does it belong?
+def _index_strings(index, root_prefix_level):
+    # Add default behaviour here to make it less fragile.
+    if root_prefix_level is None:
+        root_prefix_level = 2
+    # Make the list of index levels that should be used
+    # The index string must been escaped with \/ and \\ for / and \ within levels, respectively
+    if isinstance(index, list):
+        items = index
+    else:
+        items = re.split(r'(?<![^\\]\\)/', index.lstrip("/"))
+    if root_prefix_level > 0:
+        root = "/".join(items[:root_prefix_level])
+        del items[:root_prefix_level]
+        items.insert(0, root)
+
+    return items
 
                     
 class PrivateStorage(object):

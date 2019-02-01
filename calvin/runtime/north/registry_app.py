@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from storage_clients import LocalRegistry, index_strings
+from calvin.runtime.north.plugins.storage.storage_clients import LocalRegistry
 from flask import Flask, jsonify, request
 from flask import abort
 
