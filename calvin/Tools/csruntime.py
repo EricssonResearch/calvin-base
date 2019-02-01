@@ -174,37 +174,39 @@ def set_config_from_args(args):
             _conf.set("ARGUMENTS", arg, getattr(args, arg))
 
 def discover(timeout=2, retries=5):
-    import struct
-    from calvin.runtime.south.storage.twistedimpl.dht.service_discovery_ssdp import SSDPServiceDiscovery,\
-                                                                                            SERVICE_UUID,\
-                                                                                            CA_SERVICE_UUID,\
-                                                                                            SSDP_ADDR,\
-                                                                                            SSDP_PORT,\
-                                                                                            MS_CA
-    _log.info("discover")
-    message = MS_CA
-    socket.setdefaulttimeout(timeout)
-    responses = {}
-    attempt=0
-    while attempt in range(retries) and not bool(responses):
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
-        ttl = struct.pack('b', 1)
-        sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl)
-        try:
-            sent = sock.sendto(message, (SSDP_ADDR, SSDP_PORT))
-            while True:
-                try:
-                    data, server = sock.recvfrom(1000)
-                except socket.timeout:
-                    time.sleep(5)
-                    break
-                else:
-                    responses[server] = data
-                    _log.debug("Received {} from {}".format(data, server))
-        finally:
-            _log.debug("Closing socket")
-            sock.close()
-    return responses.values()
+    return []
+# def discover(timeout=2, retries=5):
+#     import struct
+#     from calvin.runtime.south.storage.twistedimpl.dht.service_discovery_ssdp import SSDPServiceDiscovery,\
+#                                                                                             SERVICE_UUID,\
+#                                                                                             CA_SERVICE_UUID,\
+#                                                                                             SSDP_ADDR,\
+#                                                                                             SSDP_PORT,\
+#                                                                                             MS_CA
+#     _log.info("discover")
+#     message = MS_CA
+#     socket.setdefaulttimeout(timeout)
+#     responses = {}
+#     attempt=0
+#     while attempt in range(retries) and not bool(responses):
+#         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+#         ttl = struct.pack('b', 1)
+#         sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl)
+#         try:
+#             sent = sock.sendto(message, (SSDP_ADDR, SSDP_PORT))
+#             while True:
+#                 try:
+#                     data, server = sock.recvfrom(1000)
+#                 except socket.timeout:
+#                     time.sleep(5)
+#                     break
+#                 else:
+#                     responses[server] = data
+#                     _log.debug("Received {} from {}".format(data, server))
+#         finally:
+#             _log.debug("Closing socket")
+#             sock.close()
+#     return responses.values()
 
 def runtime_certificate(rt_attributes):
     import copy
