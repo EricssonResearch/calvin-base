@@ -15,7 +15,7 @@ Actually, we should consider making CalvinGUI, CSWeb and cscontrol equal in term
 | registry_api     | GET /actor/' + actor_id + '/port/' + port_id             |                      |     |   X   |        |      |        | Accessor: storage.get_port        |
 | registry_api     | GET "/index/"                                            | .get_index           |     |   X   |   X    |      |        |                                   |
 | registry_api     | GET /index/replicas/actors/                              |                      |     |   X   |        |      |        |                                   |
-| registry_api     | GET "/index/node/attribute/node_name"                    |                      |  X  |       |        |      |        |                                   |
+| registry_api     | GET "/index/node/attribute/node_name"                    |                      |  X  |       |        |      |        | To runtime api                    |
 |                  |                                                          |                      |     |       |        |      |        |                                   |
 | application_api  | POST "/actor/" + actorID + "/migrate"                    | .migrate             |  X  |   X   |   X    |      |        |                                   |
 | application_api  | POST "/actor/" + actorID + "/replicate"                  |                      |     |   X   |        |      |        |                                   |
@@ -31,7 +31,7 @@ Actually, we should consider making CalvinGUI, CSWeb and cscontrol equal in term
 | runtime_api      | GET /id                                                  | .get_node_id         |     |   X   |   X    |      |   X    |                                   |
 | runtime_api      | GET /nodes                                               | .get_nodes           |     |   X   |   X    |      |        |                                   |
 | runtime_api      | DELETE /node/ + method                                   | .quit                |     |   X   |   X    |      |        |                                   |
-| runtime_api      | POST /peer_setup                                         | .peer_setup          |     |       |   X    |      |        |                                   |
+| runtime_api      | POST /peer_setup                                         | .peer_setup          |     |       |   X    |      |        | Deprecated. Pre-dates registry    |
 |                  |                                                          |                      |     |       |        |      |        |                                   |
 | uicalvinsys_api  | POST "/uicalvinsys"                                      |                      |  X  |       |        |      |        |                                   |
 | uicalvinsys_api  | GET "/uicalvinsys/" + appID                              |                      |  X  |       |        |      |        |                                   |
