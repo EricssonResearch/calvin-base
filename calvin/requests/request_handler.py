@@ -217,76 +217,12 @@ class RequestHandler(RequestBase):
         r = self._post(rt, timeout, async, PEER_SETUP, data)
         return self.check_response(r)
 
-    # DEPRECATED: Remove
-    def new_actor(self, rt, actor_type, actor_name, credentials=None, timeout=DEFAULT_TIMEOUT, async=False):
-        data = {
-            'actor_type': actor_type,
-            'args': {'name': actor_name},
-            'deploy_args': {'credentials': credentials} if credentials else None
-        }
-
-        r = self._post(rt, timeout, async, ACTOR, data)
-        return self.check_response(r, key='actor_id')
-
-    # DEPRECATED: Remove
-    def new_actor_wargs(self, rt, actor_type, actor_name, args=None, deploy_args=None, timeout=DEFAULT_TIMEOUT,
-                        async=False, **kwargs):
-        data = {'actor_type': actor_type, 'deploy_args': deploy_args}
-
-        if args is None:
-            kwargs['name'] = actor_name
-            data['args'] = kwargs
-        else:
-            data['args'] = args
-
-        r = self._post(rt, timeout, async, ACTOR, data)
-        return self.check_response(r, key='actor_id')
-
     def get_actor(self, rt, actor_id, timeout=DEFAULT_TIMEOUT, async=False):
         r = self._get(rt, timeout, async, ACTOR_PATH.format(actor_id))
         return self.check_response(r)
 
     def get_actors(self, rt, timeout=DEFAULT_TIMEOUT, async=False):
         r = self._get(rt, timeout, async, ACTORS)
-        return self.check_response(r)
-
-    # DEPRECATED: Remove
-    def delete_actor(self, rt, actor_id, timeout=DEFAULT_TIMEOUT, async=False):
-        r = self._delete(rt, timeout, async, ACTOR_PATH.format(actor_id))
-        return self.check_response(r)
-
-    # DEPRECATED: Remove
-    def connect(self, rt, actor_id, port_name, peer_node_id, peer_actor_id, peer_port_name, timeout=DEFAULT_TIMEOUT,
-                async=False):
-        data = {
-            'actor_id': actor_id,
-            'port_name': port_name,
-            'port_dir': 'in',
-            'peer_node_id': peer_node_id,
-            'peer_actor_id': peer_actor_id,
-            'peer_port_name': peer_port_name,
-            'peer_port_dir': 'out'
-        }
-        r = self._post(rt, timeout, async, CONNECT, data)
-        return self.check_response(r)
-
-    # DEPRECATED: Remove
-    def disconnect(self, rt, actor_id=None, port_name=None, port_dir=None, port_id=None, terminate=None,
-                   timeout=DEFAULT_TIMEOUT, async=False):
-        data = {
-            'actor_id': actor_id,
-            'port_name': port_name,
-            'port_dir': port_dir,
-            'port_id': port_id,
-            'terminate': terminate
-        }
-        r = self._post(rt, timeout, async, DISCONNECT, data)
-        return self.check_response(r)
-
-    # DEPRECATED: Remove
-    def disable(self, rt, actor_id, timeout=DEFAULT_TIMEOUT, async=False):
-        path = ACTOR_DISABLE.format(actor_id)
-        r = self._post(rt, timeout, async, path)
         return self.check_response(r)
 
     # cscontrol
@@ -329,29 +265,6 @@ class RequestHandler(RequestBase):
         r = self._post(rt, timeout, async, path, data)
         return self.check_response(r)
 
-    # DEPRECATED: Remove
-    def get_port(self, rt, actor_id, port_id, timeout=DEFAULT_TIMEOUT, async=False):
-        path = ACTOR_PORT.format(actor_id, port_id)
-        r = self._get(rt, timeout, async, path)
-        return self.check_response(r)
-
-    # DEPRECATED: Remove
-    def set_port_property(self, rt, actor_id, port_type, port_name, port_property=None, value=None,
-                            port_properties=None, port_id=None,
-                            timeout=DEFAULT_TIMEOUT, async=False):
-        data = {
-            'actor_id': actor_id,
-            'port_type': port_type,
-            'port_name': port_name,
-            'port_property': port_property,
-            'value': value,
-            'port_properties': port_properties
-        }
-        if port_id is not None:
-            data['port_id'] = port_id
-        r = self._post(rt, timeout, async, SET_PORT_PROPERTY, data)
-        return self.check_response(r)
-
     # kappa
     def report(self, rt, actor_id, kwargs=None, timeout=DEFAULT_TIMEOUT, async=False):
         path = ACTOR_REPORT.format(actor_id)
@@ -381,24 +294,6 @@ class RequestHandler(RequestBase):
         r = self._post(rt, timeout, False, DEPLOY, data=deployable)
         return self.check_response(r)
 
-    # DEPRECATED: Remove
-    def add_index(self, rt, index, value, root_prefix_level=None, timeout=DEFAULT_TIMEOUT, async=False):
-        data = {'value': value}
-        if root_prefix_level is not None:
-            data['root_prefix_level'] = root_prefix_level
-        path = INDEX_PATH.format(index)
-        r = self._post(rt, timeout, async, path, data)
-        return self.check_response(r)
-
-    # DEPRECATED: Remove
-    def remove_index(self, rt, index, value, root_prefix_level=None, timeout=DEFAULT_TIMEOUT, async=False):
-        data = {'value': value}
-        if root_prefix_level is not None:
-            data['root_prefix_level'] = root_prefix_level
-        path = INDEX_PATH.format(index)
-        r = self._delete(rt, timeout, async, path, data)
-        return self.check_response(r)
-
     # cscontrol, utilities.security, utilities.runtime_credentials
     def get_index(self, rt, index, root_prefix_level=None, timeout=DEFAULT_TIMEOUT, async=False):
         if root_prefix_level is None:
@@ -407,34 +302,10 @@ class RequestHandler(RequestBase):
             r = self._get(rt, timeout, async, INDEX_PATH_RPL.format(index, root_prefix_level))
         return self.check_response(r)
 
-    # DEPRECATED: Remove
-    def get_storage(self, rt, key, timeout=DEFAULT_TIMEOUT, async=False):
-        r = self._get(rt, timeout, async, STORAGE_PATH.format(key))
-        return self.check_response(r)
-
-    # DEPRECATED: Remove
-    def set_storage(self, rt, key, value, timeout=DEFAULT_TIMEOUT, async=False):
-        data = {'value': value}
-        path = STORAGE_PATH.format(key)
-        r = self._post(rt, timeout, async, path, data)
-        return self.check_response(r)
-
-    # DEPRECATED: Remove
-    def dump_storage(self, rt, timeout=DEFAULT_TIMEOUT, async=False):
-        r = self._get(rt, timeout, async, "/dumpstorage")
-        return self.check_response(r)
-
     # csruntime
     def sign_csr_request(self, rt, csr, timeout=DEFAULT_TIMEOUT, async=False):
         data = {'csr': csr}
         r = self._post(rt, timeout, async, CSR_REQUEST, data=data['csr'])
-        return self.check_response(r)
-
-    # DEPRECATED: Remove
-    def set_enrollment_password(self, rt, node_name, enrollment_password, timeout=DEFAULT_TIMEOUT, async=False):
-        import base64
-        data = {'enrollment_password':enrollment_password}
-        r = self._put(rt, timeout, async, ENROLLMENT_PASSWORD.format(node_name), data=data)
         return self.check_response(r)
 
     # csmanage
@@ -447,23 +318,7 @@ class RequestHandler(RequestBase):
             _log.error("Failed to fetch enrollment password")
             return None
 
-    # DEPRECATED: Remove
-    def get_users_db(self, rt, timeout=DEFAULT_TIMEOUT, async=False):
-        r = self._get(rt, timeout, async, AUTHENTICATION_USERS_DB)
-        result = self.check_response(r)
-        if 'users_db' in result:
-            return result['users_db']
-        else:
-            _log.error("Failed to fetch users_db")
-            return None
-
-    # DEPRECATED: Remove
-    def post_users_db(self, rt, users_db, timeout=DEFAULT_TIMEOUT, async=False):
-        data = {'users_db': users_db}
-        r = self._put(rt, timeout, async, AUTHENTICATION_USERS_DB, data=data)
-        return self.check_response(r)
-
-    # DEPRECATED: Remove
+    # DEPRECATED: In tests only
     def abolish_proxy_peer(self, rt, peer_id, timeout=DEFAULT_TIMEOUT, async=False):
         r = self._delete(rt, timeout, async, PROXY_PEER_ABOLISH.format(peer_id))
         return self.check_response(r)

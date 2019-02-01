@@ -54,28 +54,6 @@ def handle_get_node_capabilities(self, handle, connection, match, data, hdr):
     self.send_response(handle, connection, json.dumps(get_calvinsys().list_capabilities() + get_calvinlib().list_capabilities()))
 
 
-# USED BY: CSCONTROL
-@handler(method="POST", path="/peer_setup")
-def handle_peer_setup(self, handle, connection, match, data, hdr):
-    """
-    POST /peer_setup
-    Add calvin nodes to network
-    Body: {"peers: ["calvinip://<address>:<port>", ...] }
-    Response status code: OK or SERVICE_UNAVAILABLE
-    Response: {<peer control uri>: [<peer node id>, <per peer status>], ...}
-    """
-    _log.analyze(self.node.id, "+", data)
-    self.node.peersetup(data['peers'], cb=CalvinCB(self.handle_peer_setup_cb, handle, connection))
-
-@register
-def handle_peer_setup_cb(self, handle, connection, status=None, peer_node_ids=None):
-    _log.analyze(self.node.id, "+", status.encode())
-    if peer_node_ids:
-        data = json.dumps({k: (v[0], v[1].status) for k, v in peer_node_ids.items()})
-    else:
-        data = None
-    self.send_response(handle, connection, data, status=status.status)
-
 # USED BY: CSWEB, CSCONTROL
 @handler(method="GET", path="/nodes")
 @authentication_decorator

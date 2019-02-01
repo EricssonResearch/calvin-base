@@ -103,11 +103,6 @@ def control_actors(args):
         if not args.id:
             raise Exception("No actor id given")
         return req_handler.get_actor(args.node, args.id)
-    # DEPRECATED: Remove
-    elif args.cmd == 'delete':
-        if not args.id:
-            raise Exception("No actor id given")
-        return req_handler.delete_actor(args.node, args.id)
     elif args.cmd == 'migrate':
         if not args.id or not args.peer_node:
             raise Exception("No actor or peer given")
@@ -142,8 +137,6 @@ def control_nodes(args):
         return req_handler.get_node(args.node, args.id)
     elif args.cmd == 'list':
         return req_handler.get_nodes(args.node)
-    elif args.cmd == 'add':
-        return req_handler.peer_setup(args.node, *(args.peerlist + [ args.id ]))
     elif args.cmd == 'stop':
         try:
             return req_handler.quit(args.node)
@@ -191,16 +184,13 @@ def parse_args():
     cmd_id.set_defaults(func=control_id)
 
     # parser for nodes cmd
-    node_commands = ['info', 'list', 'add', 'stop']
+    node_commands = ['info', 'list', 'stop']
 
     cmd_nodes = cmdparsers.add_parser('nodes', help='handle node peers')
     cmd_nodes.add_argument('cmd', metavar='<command>', choices=node_commands, type=str,
                            help="one of %s" % ", ".join(node_commands))
     info_group = cmd_nodes.add_argument_group('info')
     info_group.add_argument('id', metavar='<node id>', nargs='?', help="id of node to get info about")
-    list_group = cmd_nodes.add_argument_group('add')
-    list_group.add_argument('peerlist', metavar='<peer>', nargs='*', default=[],
-                            help="list of peers of the form calvinip://<address>:<port>")
     cmd_nodes.set_defaults(func=control_nodes)
 
 
@@ -212,7 +202,7 @@ def parse_args():
 
 
     # parsers for actor commands
-    actor_commands = ['info', 'list', 'delete', 'migrate']
+    actor_commands = ['info', 'list', 'migrate']
     cmd_actor = cmdparsers.add_parser('actor', help="handle actors on node")
     cmd_actor.add_argument('cmd', metavar="<command>", choices=actor_commands, type=str,
                            help="one of %s" % (", ".join(actor_commands)))

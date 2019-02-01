@@ -15,6 +15,7 @@
 # limitations under the License.
 
 import json
+
 from calvin.requests import calvinresponse
 from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities.calvin_callback import CalvinCB
@@ -30,7 +31,6 @@ from calvin.utilities.replication_defs import PRE_CHECK, REPLICATION_STATUS
 
 _log = get_logger(__name__)
 
-# FIXME: Which ones are needed? Which ones should be in debug API? 
 
 # USED BY: GUI, CSWEB, CSCONTROL
 @handler(method="GET", path="/applications")
@@ -69,39 +69,6 @@ def handle_del_application_cb(self, handle, connection, status=None):
         data = None
     self.send_response(handle, connection, data, status=status.status)
 
-
-# DEPRECATED
-@handler(method="POST", path="/actor")
-@authentication_decorator
-def handle_new_actor(self, handle, connection, match, data, hdr):
-    """
-    POST /actor
-    Create a new actor
-    NOTE: this should only be allowed for testing purposes as it allows bypassing application signature
-    verification.
-    Body:
-    {
-        "actor_type:" <type of actor>,
-        "args" : { "name": <name of actor>, <actor argument>:<value>, ... }
-        "deploy_args" : {"app_id": <application id>, "app_name": <application name>} (optional)
-    }
-    Response status code: OK or INTERNAL_ERROR
-    Response: {"actor_id": <actor-id>}
-    """
-    try:
-        actor_id = self.node.new(actor_type=data['actor_type'], args=data['args'],
-                                 security=self.security,
-                                 access_decision=True,
-                                 deploy_args=data['deploy_args'])
-        status = calvinresponse.OK
-    except:
-        _log.exception("Failed when creating actor %s" % data['actor_type'])
-        actor_id = None
-        status = calvinresponse.INTERNAL_ERROR
-    self.send_response(
-        handle, connection, None if actor_id is None else json.dumps({'actor_id': actor_id}), status=status)
-
-
 # USED BY: GUI, CSCONTROL
 @handler(method="GET", path="/actors")
 @authentication_decorator
@@ -115,24 +82,6 @@ def handle_get_actors(self, handle, connection, match, data, hdr):
     actors = self.node.am.list_actors()
     self.send_response(
         handle, connection, json.dumps(actors))
-
-# DEPRECATED
-@handler(method="DELETE", path="/actor/{actor_id}")
-@authentication_decorator
-def handle_del_actor(self, handle, connection, match, data, hdr):
-    """
-    DELETE /actor/{actor-id}
-    Delete actor
-    Response status code: OK or NOT_FOUND
-    Response: none
-    """
-    try:
-        self.node.am.destroy(match.group(1))
-        status = calvinresponse.OK
-    except:
-        _log.exception("Destroy actor failed")
-        status = calvinresponse.NOT_FOUND
-    self.send_response(handle, connection, None, status=status)
 
 @register
 def _actor_report(self, handle, connection, match, data, hdr):
@@ -158,7 +107,7 @@ def handle_get_actor_report(self, handle, connection, match, data, hdr):
     """
     self._actor_report(handle, connection, match, data, hdr)
 
-# DEPRECATED
+# DEPRECATED: Perhaps used in Kappa?
 @handler(method="POST", path="/actor/{actor_id}/report")
 @authentication_decorator
 def handle_post_actor_report(self, handle, connection, match, data, hdr):
@@ -244,23 +193,6 @@ def actor_migrate_cb(self, handle, connection, status, *args, **kwargs):
     """
     self.send_response(handle, connection, None, status=status.status)
 
-# DEPRECATED
-@handler(method="POST", path="/actor/{actor_id}/disable")
-@authentication_decorator
-def handle_actor_disable(self, handle, connection, match, data, hdr):
-    """
-    POST /actor/{actor-id}/disable
-    DEPRECATED. Disables an actor
-    Response status code: OK or NOT_FOUND
-    Response: none
-    """
-    try:
-        self.node.am.disable(match.group(1))
-        status = calvinresponse.OK
-    except:
-        status = calvinresponse.NOT_FOUND
-    self.send_response(handle, connection, None, status)
-
 # USED BY: CSWEB
 @handler(method="POST", path="/actor/{replication_id}/replicate")
 @authentication_decorator
@@ -315,169 +247,6 @@ def handle_get_port_state(self, handle, connection, match, data, hdr):
     except:
         status = calvinresponse.NOT_FOUND
     self.send_response(handle, connection, json.dumps(state), status)
-
-# DEPRECATED
-@handler(method="POST", path="/connect")
-@authentication_decorator
-def handle_connect(self, handle, connection, match, data, hdr):
-    """
-    POST /connect
-    Connect actor ports
-    Body:
-    {
-        "actor_id" : <actor-id>,
-        "port_name": <port-name>,
-        "port_dir": <in/out>,
-        "peer_node_id": <node-id>,
-        "peer_actor_id": <actor-id>,
-        "peer_port_name": <port-name>,
-        "peer_port_dir": <out/in>
-    }
-    Response status code: OK, BAD_REQUEST, INTERNAL_ERROR or NOT_FOUND
-    Response: {"peer_port_id": <peer port id>}
-    """
-    # FIXME: The long and winding construct should be replaced by the more concise:
-    #        self.node.connect(**data, cb=CalvinCB(self.handle_connect_cb, handle, connection))
-    self.node.connect(
-        actor_id=data.get("actor_id"),
-        port_name=data.get("port_name"),
-        port_dir=data.get("port_dir"),
-        port_properties=data.get("port_properties"),
-        port_id=data.get("port_id"),
-        peer_node_id=data.get("peer_node_id"),
-        peer_actor_id=data.get("peer_actor_id"),
-        peer_port_name=data.get("peer_port_name"),
-        peer_port_dir=data.get("peer_port_dir"),
-        peer_port_properties=data.get("peer_port_properties"),
-        peer_port_id=data.get("peer_port_id"),
-        cb=CalvinCB(self.handle_connect_cb, handle, connection))
-
-# DEPRECATED
-@register
-def handle_connect_cb(self, handle, connection, **kwargs):
-    status = kwargs.get('status', None)
-    peer_port_id = kwargs.get('peer_port_id', None)
-    self.send_response(handle, connection, json.dumps({'peer_port_id': peer_port_id}) if status else None,
-                       status=status.status)
-    _log.debug("Handle connect finnished")
-
-# DEPRECATED
-@handler(method="POST", path="/set_port_property")
-@authentication_decorator
-def handle_set_port_property(self, handle, connection, match, data, hdr):
-    """
-    POST /set_port_property
-    Sets a property of the port.
-    Body:
-    {
-        "actor_id" : <actor-id>,
-        "port_type": <in/out>,
-        "port_name": <port-name>,
-        "port_id": <port-id>, optionally instead of the above identifiers
-        "port_property": <property-name as string>
-        "value" : <property value>
-    }
-    Response status code: OK, BAD_REQUEST or NOT_FOUND
-    Response: none
-    """
-    try:
-        if data.get("port_properties") is None:
-            status = self.node.pm.set_port_property(
-                port_id=data.get("port_id"),
-                actor_id=data.get("actor_id"),
-                port_dir=data.get("port_type"),
-                port_name=data.get("port_name"),
-                port_property=data.get("port_property"),
-                value=data.get("value"))
-        else:
-            status = self.node.pm.set_port_properties(
-                port_id=data.get("port_id"),
-                actor_id=data.get("actor_id"),
-                port_dir=data.get("port_type"),
-                port_name=data.get("port_name"),
-                **data.get("port_properties"))
-    except:
-        _log.exception("Failed setting port property")
-        status = calvinresponse.CalvinResponse(calvinresponse.NOT_FOUND)
-    self.send_response(handle, connection, None, status=status.status)
-
-
-# DEPRECATED
-# FIXME: This was compile_script_check_security but now we only get deployable 
-#        => we just need to check integrity according to policy
-def check_security(data, cb, security=None, content=None, verify=True, node=None, signature=None):
-    """
-    'credentials' are optional security credentials(?)
-    'verify' is deprecated and will be removed
-    'node' is the runtime performing security check(?)
-    'cb' is a CalvinCB callback
-
-    N.B. If callback 'cb' is given, this method calls cb(deployable, errors, warnings) and returns None
-    N.B. If callback 'cb' is given, and method runs to completion, cb is called with additional parameter 'security' (?)
-    """
-    def _exit_with_error(callback):
-        """Helper method to generate a proper error"""
-        it = IssueTracker()
-        it.add_error("UNAUTHORIZED", info={'status':401})
-        callback({}, it)
-        return
-
-    # FIXME: data -> deployable, and app_info mandatory
-    def _handle_policy_decision(data, appname, verify, access_decision, org_cb, security=None):
-        if not access_decision:
-            _log.error("Access denied")
-            # This error reason is detected in calvin control and gives proper REST response
-            _exit_with_error(org_cb)
-            return
-        if 'app_info' not in data and 'script' in data:
-            deployable, issuetracker = compile_script(data['script'], appname)
-        elif 'app_info' in data:
-            deployable = data['app_info']
-            issuetracker = IssueTracker()
-        else:
-            _log.error("Neither app_info or script supplied")
-            # This error reason is detected in calvin control and gives proper REST response
-            _exit_with_error(org_cb)
-            return
-        org_cb(deployable, issuetracker, security=security)
-
-    #
-    # Actual code for compile_script
-    #
-    # FIXME: if node is None we bypass security even if enabled. Is that the intention?
-    if security_enabled():
-        # FIXME: If cb is None, we will return from this method with None instead of a tuple, failing silently
-        if security:
-            sec = security
-        else:
-            sec = Security(node)
-
-
-        verified, signer = sec.verify_signature_content(content, "application")
-        if not verified:
-            # Verification not OK if sign or cert not OK.
-            _log.error("Failed application verification")
-            # This error reason is detected in calvin control and gives proper REST response
-            _exit_with_error(cb)
-            return
-        sec.check_security_policy(
-            CalvinCB(_handle_policy_decision, data, appname, verify, security=security, org_cb=cb),
-            element_type = "application",
-            element_value = signer
-        )
-        return
-
-    #
-    # We get here if node is None, or security is disabled
-    #
-    # This used to be
-    # _handle_policy_decision(data, filename, verify, access_decision=True, security=None, org_cb=cb)
-    # but since _handle_policy_decision is called with access_decision=True, security=None only compile_script would be called
-    if 'app_info' in data:
-        deployable = data['app_info']
-        issuetracker = IssueTracker()
-    cb(deployable, issuetracker, security=None)
-
 
 # FIXME: Check integrity according to policy
 # USED BY: GUI, CSWEB, CSCONTROL
@@ -583,46 +352,3 @@ def handle_post_application_migrate_cb(self, handle, connection, status, **kwarg
     _log.analyze(self.node.id, "+ MIGRATED", {'status': status.status})
     self.send_response(handle, connection, None, status=status.status)
 
-# DEPRECATED
-@handler(method="POST", path="/disconnect")
-@authentication_decorator
-def handle_disconnect(self, handle, connection, match, data, hdr):
-    """
-    POST /disconnect
-    Disconnect a port.
-    If port fields are empty, all ports of the actor are disconnected
-    Body:
-    {
-        "actor_id": <actor-id>,
-        "port_name": <port-name>,
-        "port_dir": <in/out>,
-        "port_id": <port-id>
-    }
-    Response status code: OK, INTERNAL_ERROR or NOT_FOUND
-    Response: none
-    """
-    actor_id = data.get('actor_id', None)
-    port_name = data.get('port_name', None)
-    port_dir = data.get('port_dir', None)
-    port_id = data.get('port_id', None)
-    # Convert type of disconnect as string to enum value
-    # Allowed values TEMPORARY, TERMINATE, EXHAUST
-    terminate = data.get('terminate', "TEMPORARY")
-    try:
-        terminate = DISCONNECT.__getattribute__(DISCONNECT, terminate)
-    except:
-        terminate = DISCONNECT.TEMPORARY
-
-    _log.debug("disconnect(actor_id=%s, port_name=%s, port_dir=%s, port_id=%s)" %
-               (actor_id if actor_id else "", port_name if port_name else "",
-                port_dir if port_dir else "", port_id if port_id else ""))
-    self.node.pm.disconnect(actor_id=actor_id, port_name=port_name,
-                       port_dir=port_dir, port_id=port_id, terminate=terminate,
-                       callback=CalvinCB(self.handle_disconnect_cb, handle, connection))
-
-# DEPRECATED
-@register
-def handle_disconnect_cb(self, handle, connection, **kwargs):
-    status = kwargs.get('status', None)
-    _log.analyze(self.node.id, "+ DISCONNECTED", {'status': status.status}, tb=True)
-    self.send_response(handle, connection, None, status=status.status)
