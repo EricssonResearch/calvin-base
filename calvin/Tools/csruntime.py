@@ -217,7 +217,7 @@ def runtime_certificate(rt_attributes):
     from calvin.utilities import runtime_credentials
     from calvin.utilities import certificate
     from calvin.utilities import certificate_authority
-    from calvin.runtime.south.storage.twistedimpl.dht.service_discovery_ssdp import parse_http_response
+
     global _conf
     global _log
     _conf = calvinconfig.get()
@@ -273,9 +273,9 @@ def runtime_certificate(rt_attributes):
                         if not responses:
                             _log.error("No responses received")
                         for response in responses:
-                            cmd, headers = parse_http_response(response)
-                            if 'location' in headers:
-                                ca_control_uri, ca_node_id = headers['location'].split('/node/')
+                            location = response.headers.get('location')
+                            if location:
+                                ca_control_uri, ca_node_id = location.split('/node/')
                                 ca_control_uris.append(ca_control_uri)
                                 _log.debug("CA control_uri={}, node_id={}".format(ca_control_uri, ca_node_id))
                     else:
