@@ -1,2 +1,0 @@
-#!/bin/bash
-py.test --twisted --runslow --runinteractive test_dht_server.py -s & 
