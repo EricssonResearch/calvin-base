@@ -2,7 +2,7 @@ import pytest
 import unittest
 import types
 import inspect
-from calvin.csparser.parser import calvin_parse
+from calvinservices.csparser.parser import calvin_parse
 
 class TestBase(unittest.TestCase):
 

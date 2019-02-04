@@ -24,9 +24,9 @@ from copy import deepcopy
 from functools import partial
 from requests.exceptions import Timeout
 from calvin.requests.request_handler import RequestHandler, RT
-from calvin.csparser import cscompile as compiler
-from calvin.Tools import cscompiler as compile_tool
-from calvin.Tools import deployer  # FIXME: Remove
+from calvinservices.csparser import cscompile as compiler
+from calvinservices.csparser import cscompiler as compile_tool
+from calvinservices.csparser import deployer  # FIXME: Remove
 from calvin.utilities.nodecontrol import dispatch_node, dispatch_storage_node
 from calvin.utilities.security import Security
 from calvin.utilities import certificate

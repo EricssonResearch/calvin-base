@@ -19,11 +19,11 @@ import time
 import pytest
 import os
 
-from calvin.csparser import cscompile as compiler
+from calvinservices.csparser import cscompile as compiler
 from calvin.utilities import calvinlogger
 from calvin.requests.request_handler import RequestHandler
 from . import helpers
-from calvin.csparser.dscodegen import calvin_dscodegen
+from calvinservices.csparser.dscodegen import calvin_dscodegen
 
 
 _log = calvinlogger.get_logger(__name__)

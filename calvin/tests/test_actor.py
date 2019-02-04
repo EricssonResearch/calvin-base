@@ -29,7 +29,7 @@ pytestmark = pytest.mark.unittest
 
 def create_actor(node):
     actor_manager = ActorManager(node)
-    actor_id = actor_manager.new('std.Identity', {})
+    actor_id = actor_manager.new('std.Identity', {"dump":False})
     actor = actor_manager.actors[actor_id]
     actor.inports['token'].set_queue(queue.fanout_fifo.FanoutFIFO({'queue_length': 4, 'direction': "in"}, {}))
     actor.inports['token'].queue.add_reader(actor.inports['token'].id, {})

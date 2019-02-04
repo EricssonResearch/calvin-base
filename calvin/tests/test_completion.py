@@ -2,7 +2,7 @@ import pytest
 import unittest
 import types
 import inspect
-from calvin.csparser.complete import Completion
+from calvinservices.csparser.complete import Completion
 
 class TestBase(unittest.TestCase):
 

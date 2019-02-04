@@ -4,7 +4,7 @@ from mock import Mock
 from calvin.runtime.north import scheduler
 from calvin.runtime.north.plugins.port import queue
 from calvin.runtime.north.plugins.port.endpoint import LocalOutEndpoint, LocalInEndpoint
-from calvin.csparser.codegen import calvin_codegen
+from calvinservices.csparser.codegen import calvin_codegen
 
 
 def create_actor(kind, args):

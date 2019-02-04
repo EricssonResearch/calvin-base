@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.csparser.codegen import calvin_codegen
+from calvinservices.csparser.codegen import calvin_codegen
 import unittest
 import json
 import difflib

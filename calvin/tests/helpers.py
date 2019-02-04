@@ -5,7 +5,7 @@ from calvin.utilities import calvinlogger
 from calvin.requests.request_handler import RT
 from calvin.requests.request_handler import RequestHandler
 from calvin.requests import calvinresponse
-from calvin.Tools import cscompiler
+from calvinservices.csparser import cscompiler
 import os
 import time
 import multiprocessing

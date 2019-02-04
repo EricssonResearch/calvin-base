@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.Tools.cscompiler import compile_file
+from calvinservices.csparser.cscompiler import compile_file
 import unittest
 import json
 import glob

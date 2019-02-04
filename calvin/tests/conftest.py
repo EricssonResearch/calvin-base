@@ -32,8 +32,13 @@ def _start_process(cmd):
     process = subprocess.Popen(args)
     return process
 
+
+
 def _start_actorstore():
-    os.putenv("FLASK_APP", "calvinservices/actorstore/store_app.py")
+    this_dir = file_dir()
+    app_path = os.path.abspath(this_dir + "/../../" + "calvinservices/actorstore/store_app.py")
+    print app_path
+    os.putenv("FLASK_APP", app_path)
     return _start_process("flask run --port 4999")
 
 def _stop_actorstore(proc):

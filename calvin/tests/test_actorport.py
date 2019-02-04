@@ -29,7 +29,7 @@ pytestmark = pytest.mark.unittest
 
 def create_actor(node):
     actor_manager = ActorManager(node)
-    actor_id = actor_manager.new('std.Identity', {})
+    actor_id = actor_manager.new('std.Identity', {"dump":False})
     actor = actor_manager.actors[actor_id]
     return actor
 
