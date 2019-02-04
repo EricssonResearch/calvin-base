@@ -100,6 +100,7 @@ class RequestBase(object):
             # When failed raise exception
             raise Exception("%d%s" % (response.status_code, ("\n" + repr(response.text)) if response.text else ""))
         else:
+            # FIXME: Don't just assume it's a future
             # We have a async Future just return it
             response._calvin_key = key
             response._calvin_success = success
@@ -110,7 +111,7 @@ class RequestBase(object):
         _log.debug("Sending request %s, %s, %s", send_func, host + path, json.dumps(data))
         if data is None:
             return send_func(host + path, timeout=timeout, auth=self.credentials, verify=self.verify)
-        # FIXME: Don't do data=json.dumps(data) since that is done implicitly by requests
+            # FIXME: Don't do data=json.dumps(data) since that is done implicitly by requests
         return send_func(host + path, timeout=timeout, data=json.dumps(data), auth=self.credentials, verify=self.verify)
 
     def _get(self, host, timeout, async, path, headers="", data=None):
@@ -180,7 +181,7 @@ class RequestHandler(RequestBase):
             
     def _send(self, rt, timeout, send_func, path, data=None):
         rt = get_runtime(rt)
-        RequestBase._send(self, rt.control_uri, timeout, send_func, path, data)    
+        return RequestBase._send(self, rt.control_uri, timeout, send_func, path, data)    
 
     # cscontrol, nodecontrol
     def get_node_id(self, rt, timeout=DEFAULT_TIMEOUT, async=False):
