@@ -1,5 +1,20 @@
-# Calvin
+# Calvin-3
 
+**This is work in progress, don't expect it to work any time soon!**
+
+That said, this is a branch that is bringing major changes to Calvin:
+
+- Moving to Python3
+- Dropping Twisted in favour of asyncio
+- Moving lots of functionality into stand-alone services or tools (e.g. compiler, actor store, registry)
+- New, stricter format for actor definitions (implementation remains the same)
+- Temporarily disabled support for CalvinConstrained
+- Temporarily disabled support for transports other than calvinip (i.e. bluetooth, fcm)
+
+One of the consequences is that the information on the wiki is not always relevant for this branch, you will need to read the code (and commit comments) to use it.
+
+
+ 
 ## What is this?
 
 Calvin is an application environment that lets things talk to things. It comprises of both a development framework for IoT application developers, and a runtime environment which handles the running application. Calvin is based on the fundamental idea that application development should be simple and fun. There should be no unnecessary impediments between an idea and its implementation, and an app developer should not have to worry about communication protocols or hardware specifics (but will not stop you from doing it if you want to.)
