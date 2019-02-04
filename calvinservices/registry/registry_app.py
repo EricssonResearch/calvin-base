@@ -23,7 +23,7 @@ from calvin.runtime.north.plugins.storage.storage_clients import LocalRegistry
 
 app = Flask(__name__)
 
-reg = LocalRegistry()
+reg = LocalRegistry(None)
 
 # API for these methods
 # - set(self, key, value) - PUT

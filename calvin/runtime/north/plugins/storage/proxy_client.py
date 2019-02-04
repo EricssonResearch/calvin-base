@@ -26,9 +26,10 @@ _conf = calvinconfig.get()
 _log = calvinlogger.get_logger(__name__)
 
 
-class StorageProxy(StorageBase):
+class ProxyRegistryClient(StorageBase):
     """ Implements a storage that asks a master node, this is the client class"""
     def __init__(self, node):
+        super(ProxyRegistryClient, self).__init__()
         self.master_uri = _conf.get('global', 'storage_proxy')
         self.max_retries = _conf.get('global', 'storage_retries') or -1
         self.retries = 0
@@ -36,16 +37,20 @@ class StorageProxy(StorageBase):
         self.tunnel = None
         self.replies = {}
         _log.info("PROXY init for %s", self.master_uri)
-        super(StorageProxy, self).__init__()
-
+        self._start()
+        
     def start(self, iface='', network='', bootstrap=[], cb=None, name=None, nodeid=None):
+        pass    
+
+    def _start(self, iface='', network='', bootstrap=[], cb=None, name=None, nodeid=None):
         """
             Starts the service if its needed for the storage service
             cb  is the callback called when the start is finished
         """
         from urlparse import urlparse
         import socket
-        _log.info("PROXY start")
+        print "PROXY start", iface, network, bootstrap, cb, name, nodeid
+        print "master_uri:", self.master_uri
         o=urlparse(self.master_uri)
         fqdn = socket.getfqdn(o.hostname)
         self._server_node_name = fqdn.decode('unicode-escape')
@@ -126,6 +131,8 @@ class StorageProxy(StorageBase):
             self.replies.pop(payload['msg_uuid'])(**kwargs)
 
     def send(self, cmd, msg, cb):
+        if not self.tunnel:
+            return
         msg_id = calvinuuid.uuid("MSGID")
         if cb:
             self.replies[msg_id] = cb
@@ -150,35 +157,35 @@ class StorageProxy(StorageBase):
         _log.analyze(self.node.id, "+ CLIENT", {'key': key})
         self.send(cmd='DELETE',msg={'key':key}, cb=cb)
 
-    def get_concat(self, key, cb=None):
-        """
-            Gets a value from the storage
-        """
-        _log.analyze(self.node.id, "+ CLIENT", {'key': key})
-        self.send(cmd='GET_CONCAT',msg={'key':key}, cb=cb)
+    # def get_concat(self, key, cb=None):
+    #     """
+    #         Gets a value from the storage
+    #     """
+    #     _log.analyze(self.node.id, "+ CLIENT", {'key': key})
+    #     self.send(cmd='GET_CONCAT',msg={'key':key}, cb=cb)
+    #
+    # def append(self, key, value, cb=None):
+    #     _log.analyze(self.node.id, "+ CLIENT", {'key': key, 'value': value})
+    #     self.send(cmd='APPEND',msg={'key':key, 'value': value}, cb=cb)
+    #
+    # def remove(self, key, value, cb=None):
+    #     _log.analyze(self.node.id, "+ CLIENT", {'key': key, 'value': value})
+    #     self.send(cmd='REMOVE',msg={'key':key, 'value': value}, cb=cb)
 
-    def append(self, key, value, cb=None):
-        _log.analyze(self.node.id, "+ CLIENT", {'key': key, 'value': value})
-        self.send(cmd='APPEND',msg={'key':key, 'value': value}, cb=cb)
-
-    def remove(self, key, value, cb=None):
-        _log.analyze(self.node.id, "+ CLIENT", {'key': key, 'value': value})
-        self.send(cmd='REMOVE',msg={'key':key, 'value': value}, cb=cb)
-
-    def add_index(self, prefix, indexes, value, cb=None):
+    def add_index(self, indexes, value, cb=None):
         _log.analyze(self.node.id, "+ CLIENT", {'indexes': indexes, 'value': value})
-        self.send(cmd='ADD_INDEX',msg={'prefix': prefix, 'index': indexes, 'value': value}, cb=cb)
+        self.send(cmd='ADD_INDEX', msg={'index': indexes, 'value': value}, cb=cb)
 
-    def remove_index(self, prefix, indexes, value, cb=None):
+    def remove_index(self, indexes, value, cb=None):
         _log.analyze(self.node.id, "+ CLIENT", {'indexes': indexes, 'value': value})
-        self.send(cmd='REMOVE_INDEX',msg={'prefix': prefix, 'index': indexes, 'value': value}, cb=cb)
+        self.send(cmd='REMOVE_INDEX',msg={'index': indexes, 'value': value}, cb=cb)
 
-    def get_index(self, prefix, index, cb=None):
-        _log.analyze(self.node.id, "+ CLIENT", {'index': index})
-        self.send(cmd='GET_INDEX',msg={'prefix': prefix, 'index': index}, cb=cb)
+    def get_index(self, indexes, cb=None):
+        _log.analyze(self.node.id, "+ CLIENT", {'index': indexes})
+        self.send(cmd='GET_INDEX',msg={'index': indexes}, cb=cb)
 
-    def bootstrap(self, addrs, cb=None):
-        _log.analyze(self.node.id, "+ CLIENT", None)
+    # def bootstrap(self, addrs, cb=None):
+    #     _log.analyze(self.node.id, "+ CLIENT", None)
 
     def stop(self, cb=None):
         _log.analyze(self.node.id, "+ CLIENT", None)

@@ -28,6 +28,7 @@ from calvin.requests import calvinresponse
 from calvin.runtime.north.calvinsys import get_calvinsys
 from calvin.runtime.north.calvinlib import get_calvinlib
 from calvin.runtime.north.plugins.storage.storage_clients import LocalRegistry, NullRegistryClient, registry
+from storage_proxyserver import StorageProxyServer
 
 _log = calvinlogger.get_logger(__name__)
 
@@ -58,19 +59,21 @@ class PrivateStorage(object):
     """
 
     def __init__(self, node, storage_type, server=None, security_conf=None, override_storage=None):
-        self.localstorage = LocalRegistry()
+        print storage_type
+        self.localstorage = LocalRegistry(node)
         self.node = node
         self.storage_type = storage_type
         self.proxy, self.server = (server, None) if storage_type == 'proxy' else (None, server)
         self.security_conf = security_conf
-        self.tunnel = {}
+        self.storage_proxy_server = None
+
         
         if override_storage:
             raise Exception("Who dare to call with override_storage set?!")
             self.storage = override_storage
         else:
             # self.storage = storage_factory.get(storage_type, node)
-            self.storage = NullRegistryClient(self.storage_type)
+            self.storage = NullRegistryClient(node, self.storage_type) 
         self.flush_delayedcall = None
         self.reset_flush_timeout()
 
@@ -206,7 +209,7 @@ class PrivateStorage(object):
         """
         if not args[0]:
             return
-        self.storage = registry(self.storage_type)
+        self.storage = registry(self.node, self.storage_type)
         self.trigger_flush(0)
         if kwargs["org_cb"]:
             async.DelayedCall(0, kwargs["org_cb"], args[0])
@@ -222,28 +225,9 @@ class PrivateStorage(object):
         # 2) for all other modes, it will call started_cb and NullRegistryClient will get replaced by RegistryClient
         #    handling all communication with the remote registry.
         self.storage.start(iface=iface, cb=CalvinCB(self.started_cb, org_cb=cb), name=name, nodeid=self.node.id)
-        self._init_proxy()
+        if self.storage_type != 'proxy':
+            self.storage_proxy_server = StorageProxyServer(self.node, self)
 
-    def _init_proxy(self):
-        _log.analyze(self.node.id, "+ SERVER", None)
-        # We are not proxy client, so we can be proxy bridge/master
-        self._proxy_cmds = {'GET': self.get,
-                            'SET': self.set,
-                            # 'GET_CONCAT': self.get_concat, # FIXME: Remove from API
-                            # 'APPEND': self.append,         # FIXME: Remove from API
-                            # 'REMOVE': self.remove,         # FIXME: Remove from API
-                            'DELETE': self.delete,
-                            'REPLY': self._proxy_reply,
-                            'ADD_INDEX': self.add_index,
-                            'REMOVE_INDEX': self.remove_index,
-                            'GET_INDEX': self.get_index
-                            }
-        try:
-            self.node.proto.register_tunnel_handler('storage', CalvinCB(self.tunnel_request_handles))
-        except:
-            # OK, then skip being a proxy server
-            # FIXME: Set to None?
-            pass
 
     def stop(self, cb=None):
         """ Stop storage
@@ -913,60 +897,3 @@ class Storage(PrivateStorage):
 
     ### Storage proxy server ###
 
-    def tunnel_request_handles(self, tunnel):
-        """ Incoming tunnel request for storage proxy server"""
-        # TODO check if we want a tunnel first
-        _log.analyze(self.node.id, "+ SERVER", {'tunnel_id': tunnel.id})
-        self.tunnel[tunnel.peer_node_id] = tunnel
-        tunnel.register_tunnel_down(CalvinCB(self.tunnel_down, tunnel))
-        tunnel.register_tunnel_up(CalvinCB(self.tunnel_up, tunnel))
-        tunnel.register_recv(CalvinCB(self.tunnel_recv_handler, tunnel))
-        # We accept it by returning True
-        return True
-
-    def tunnel_down(self, tunnel):
-        """ Callback that the tunnel is not accepted or is going down """
-        _log.analyze(self.node.id, "+ SERVER", {'tunnel_id': tunnel.id})
-        # We should always return True which sends an ACK on the destruction of the tunnel
-        return True
-
-    def tunnel_up(self, tunnel):
-        """ Callback that the tunnel is working """
-        _log.analyze(self.node.id, "+ SERVER", {'tunnel_id': tunnel.id})
-        # We should always return True which sends an ACK on the destruction of the tunnel
-        return True
-
-    def _proxy_reply(self, cb, *args, **kwargs):
-        # Should not get any replies to the server but log it just in case
-        _log.analyze(self.node.id, "+ SERVER", {args: args, 'kwargs': kwargs})
-
-    def tunnel_recv_handler(self, tunnel, payload):
-        """ Gets called when a storage client request"""
-        _log.debug("Storage proxy request %s" % payload)
-        _log.analyze(self.node.id, "+ SERVER", {'payload': payload})
-        if 'cmd' in payload and payload['cmd'] in self._proxy_cmds:
-            # Call this nodes storage methods, which could be local or DHT,
-            # prefix is empty since that is already in the key (due to these calls come from the storage plugin level).
-            kwargs = {k: v for k, v in payload.iteritems() if k in ('key', 'value', 'prefix', 'index')}
-            kwargs.setdefault('prefix', "")
-            if payload['cmd'].endswith("_INDEX"):
-                kwargs.pop('prefix')
-                kwargs['root_prefix_level'] = 0
-                dummykey = {'key': None}
-            else:
-                dummykey = {}
-            self._proxy_cmds[payload['cmd']](cb=CalvinCB(self._proxy_send_reply, tunnel=tunnel,
-                                                         msgid=payload['msg_uuid'], **dummykey), **kwargs)
-        else:
-            _log.error("Unknown storage proxy request %s" % payload['cmd'] if 'cmd' in payload else "")
-
-    def _proxy_send_reply(self, key, value, tunnel, msgid):
-        _log.analyze(self.node.id, "+ SERVER", {'msgid': msgid, 'key': key, 'value': value})
-        # When a CalvinResponse send it on key 'response' instead of 'value'
-        status = isinstance(value, calvinresponse.CalvinResponse)
-        svalue = value.encode() if status else value
-        response = 'response' if status else 'value'
-        kwargs = {'cmd': 'REPLY', 'msg_uuid': msgid, response: svalue}
-        if key is not None:
-            kwargs['key'] = key
-        tunnel.send(kwargs)

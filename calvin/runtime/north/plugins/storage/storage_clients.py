@@ -14,14 +14,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from storage_base import StorageBase
-# from calvin.utilities import calvinlogger
-from calvin.requests import calvinresponse
-from calvin.requests.request_handler import RequestBase
-from calvin.runtime.south.async import async
 import itertools
 import re
 
+from storage_base import StorageBase
+from calvin.requests import calvinresponse
+from calvin.requests.request_handler import RequestBase
+from calvin.runtime.south.async import async
+from proxy_client import ProxyRegistryClient
 
 # _log = calvinlogger.get_logger(__name__)
 # _conf = calvinconfig.get()
@@ -56,16 +56,16 @@ import re
   #   self.localstorage.op(args)
   #   self.storage.op(args, nested_callback) # NullClient() unwinds nested_callback and calls callback as DelayedCall
 
-def registry(kind):
+def registry(node, kind):
     all_kinds = {
         'debug': DebugRegistryClient,
         'rest': RESTRegistryClient,
-        'local': NullRegistryClient,
+        'proxy': ProxyRegistryClient,
     }
     class_ = all_kinds.get(kind.lower())
     if not class_:
         raise ValueError("Unknown registry type '{}', must be one of: {}".format(kind, ",".join(all_kinds.keys())))
-    return class_()        
+    return class_(node)        
                 
 
 class RESTRegistryClient(StorageBase):
@@ -73,7 +73,7 @@ class RESTRegistryClient(StorageBase):
     from requests_futures.sessions import FuturesSession
     session = FuturesSession(max_workers=10)
     
-    def __init__(self):
+    def __init__(self, node):
         super(RESTRegistryClient, self).__init__()
         self.host = "http://localhost:4998"
         self.futures = []
@@ -182,7 +182,7 @@ class RESTRegistryClient(StorageBase):
 
 class NullRegistryClient(StorageBase):
     """Implements start only"""
-    def __init__(self, storage_type):
+    def __init__(self, node, storage_type):
         super(NullRegistryClient, self).__init__()
         self.local_mode = storage_type == 'local'
 
@@ -251,7 +251,7 @@ class NullRegistryClient(StorageBase):
 
 class LocalRegistry(StorageBase):
     """docstring for LocalRegistry"""
-    def __init__(self):
+    def __init__(self, node):
         super(LocalRegistry, self).__init__()
         self.localstore = {}
         self.localstore_sets = {}
