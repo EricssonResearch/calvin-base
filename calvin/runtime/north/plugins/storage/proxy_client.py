@@ -27,8 +27,11 @@ _log = calvinlogger.get_logger(__name__)
 
 
 class ProxyRegistryClient(StorageBase):
-    """ Implements a storage that asks a master node, this is the client class"""
-    def __init__(self, node):
+    """
+    Implements a storage that asks a master node, this is the client class
+    args: node (for tunnel), host (master uri) 
+    """
+    def __init__(self, node, host):
         super(ProxyRegistryClient, self).__init__()
         self.master_uri = _conf.get('global', 'storage_proxy')
         self.max_retries = _conf.get('global', 'storage_retries') or -1
@@ -39,23 +42,23 @@ class ProxyRegistryClient(StorageBase):
         _log.info("PROXY init for %s", self.master_uri)
         self._start()
         
-    def start(self, iface='', network='', bootstrap=[], cb=None, name=None, nodeid=None):
-        pass    
+    # def start(self, iface='', network='', bootstrap=[], cb=None, name=None, nodeid=None):
+    #     pass
 
-    def _start(self, iface='', network='', bootstrap=[], cb=None, name=None, nodeid=None):
+    def _start(self):
         """
             Starts the service if its needed for the storage service
             cb  is the callback called when the start is finished
         """
         from urlparse import urlparse
         import socket
-        print "PROXY start", iface, network, bootstrap, cb, name, nodeid
+        print "PROXY start"
         print "master_uri:", self.master_uri
         o=urlparse(self.master_uri)
         fqdn = socket.getfqdn(o.hostname)
         self._server_node_name = fqdn.decode('unicode-escape')
         self.node.network.join([self.master_uri],
-                               callback=CalvinCB(self._start_link_cb, org_cb=cb),
+                               callback=CalvinCB(self._start_link_cb, org_cb=None),
                                corresponding_server_node_names=[self._server_node_name])
 
     def _got_link(self, master_id, org_cb):
@@ -187,7 +190,7 @@ class ProxyRegistryClient(StorageBase):
     # def bootstrap(self, addrs, cb=None):
     #     _log.analyze(self.node.id, "+ CLIENT", None)
 
-    def stop(self, cb=None):
-        _log.analyze(self.node.id, "+ CLIENT", None)
-        if cb:
-            cb()
+    # def stop(self, cb=None):
+    #     _log.analyze(self.node.id, "+ CLIENT", None)
+    #     if cb:
+    #         cb()

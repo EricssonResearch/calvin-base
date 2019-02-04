@@ -56,7 +56,7 @@ from proxy_client import ProxyRegistryClient
   #   self.localstorage.op(args)
   #   self.storage.op(args, nested_callback) # NullClient() unwinds nested_callback and calls callback as DelayedCall
 
-def registry(node, kind):
+def registry(kind, node, host):
     all_kinds = {
         'debug': DebugRegistryClient,
         'rest': RESTRegistryClient,
@@ -65,15 +65,17 @@ def registry(node, kind):
     class_ = all_kinds.get(kind.lower())
     if not class_:
         raise ValueError("Unknown registry type '{}', must be one of: {}".format(kind, ",".join(all_kinds.keys())))
-    return class_(node)        
+    print "Instantiating {}({}, {})".format(class_.__name__, node, host)   
+    return class_(node, host)        
                 
 
 class RESTRegistryClient(StorageBase):
-    
+    '''arg: host = "http://localhost:4998"'''
     from requests_futures.sessions import FuturesSession
     session = FuturesSession(max_workers=10)
     
-    def __init__(self, node):
+    def __init__(self, node, host):
+        # UNUSED: node
         super(RESTRegistryClient, self).__init__()
         self.host = "http://localhost:4998"
         self.futures = []
@@ -172,38 +174,32 @@ class RESTRegistryClient(StorageBase):
             cb(value=value)
         self._post(path, data, _response_cb)
             
-        
-        
-    
-        
-
-
-
 
 class NullRegistryClient(StorageBase):
-    """Implements start only"""
-    def __init__(self, node, storage_type):
+    """args: - """
+    def __init__(self, node=None, host=None):
+        # UNUSED: node, host
         super(NullRegistryClient, self).__init__()
-        self.local_mode = storage_type == 'local'
+        # self.local_mode = storage_type == 'local'
 
     def barrier(self):
         pass
         
-    def start(self, iface='', name=None, nodeid=None, cb=None):
-        """
-            Starts the service if its nneeded for the storage service
-            cb  is the callback called when the srtart is finished
-        """
-        if self.local_mode:
-            # unwind the CalvinCB and call the original cb
-            print "LOCAL MODE"
-            callback = cb.kwargs.get('org_cb')
-        else:
-            print "REMOTE MODE"
-            callback = cb
-        if callback:
-            callback(True)
-            # async.DelayedCall(0, callback, True)
+    # def start(self, iface='', name=None, nodeid=None, cb=None):
+    #     """
+    #         Starts the service if its nneeded for the storage service
+    #         cb  is the callback called when the srtart is finished
+    #     """
+    #     if self.local_mode:
+    #         # unwind the CalvinCB and call the original cb
+    #         print "LOCAL MODE"
+    #         callback = cb.kwargs.get('org_cb')
+    #     else:
+    #         print "REMOTE MODE"
+    #         callback = cb
+    #     if callback:
+    #         callback(True)
+    #         # async.DelayedCall(0, callback, True)
     
     def _response(self, cb, value):
         callback = cb.kwargs.get('org_cb')
@@ -250,8 +246,9 @@ class NullRegistryClient(StorageBase):
         
 
 class LocalRegistry(StorageBase):
-    """docstring for LocalRegistry"""
-    def __init__(self, node):
+    """args: -"""
+    def __init__(self, node=None, host=None):
+        # UNUSED: node, host 
         super(LocalRegistry, self).__init__()
         self.localstore = {}
         self.localstore_sets = {}
@@ -353,7 +350,9 @@ class LocalRegistry(StorageBase):
             
     
 class DebugRegistryClient(LocalRegistry):
-
+    """
+    LocalRegistry with callbacks to emulate remote clients
+    """
     def _response(self, cb, value):
         cb(value=calvinresponse.CalvinResponse(value))
         # FIXME: Should this be used instead?

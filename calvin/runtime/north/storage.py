@@ -58,22 +58,17 @@ class PrivateStorage(object):
     All functions in this class should be async and never block.
     """
 
-    def __init__(self, node, storage_type, server=None, security_conf=None, override_storage=None):
-        print storage_type
-        self.localstorage = LocalRegistry(node)
+    def __init__(self, node, storage_type, server=None, security_conf=None):
         self.node = node
+        self.localstorage = LocalRegistry()
+        self.storage = NullRegistryClient() 
+
         self.storage_type = storage_type
-        self.proxy, self.server = (server, None) if storage_type == 'proxy' else (None, server)
+        self.storage_host = server
         self.security_conf = security_conf
+
         self.storage_proxy_server = None
 
-        
-        if override_storage:
-            raise Exception("Who dare to call with override_storage set?!")
-            self.storage = override_storage
-        else:
-            # self.storage = storage_factory.get(storage_type, node)
-            self.storage = NullRegistryClient(node, self.storage_type) 
         self.flush_delayedcall = None
         self.reset_flush_timeout()
 
@@ -204,18 +199,18 @@ class PrivateStorage(object):
 #
 # Start of primitive methods
 #
-    def started_cb(self, *args, **kwargs):
-        """ Called when storage has started, flushes localstore
-        """
-        if not args[0]:
-            return
-        self.storage = registry(self.node, self.storage_type)
-        self.trigger_flush(0)
-        if kwargs["org_cb"]:
-            async.DelayedCall(0, kwargs["org_cb"], args[0])
+    # def started_cb(self, *args, **kwargs):
+    #     """ Called when storage has started, flushes localstore
+    #     """
+    #     if not args[0]:
+    #         return
+        # self.storage = registry(self.node, self.storage_type)
+        # self.trigger_flush(0)
+        # if kwargs["org_cb"]:
+        #     async.DelayedCall(0, kwargs["org_cb"], args[0])
 
     # FIXME: Remove iface arg
-    def start(self, iface='', cb=None):
+    def start(self, cb=None):
         """ Start storage
         """
         _log.analyze(self.node.id, "+", None)
@@ -224,15 +219,21 @@ class PrivateStorage(object):
         # 1) if we are in "local" mode, it will call the org_cb, and stay forever in place
         # 2) for all other modes, it will call started_cb and NullRegistryClient will get replaced by RegistryClient
         #    handling all communication with the remote registry.
-        self.storage.start(iface=iface, cb=CalvinCB(self.started_cb, org_cb=cb), name=name, nodeid=self.node.id)
+        # self.storage.start(iface=iface, cb=CalvinCB(self.started_cb, org_cb=cb), name=name, nodeid=self.node.id)
+        if self.storage_type != 'local':
+            self.storage = registry(self.storage_type, self.node, self.storage_host)        
         if self.storage_type != 'proxy':
             self.storage_proxy_server = StorageProxyServer(self.node, self)
+
+        self.trigger_flush(0)
+        if cb:
+            async.DelayedCall(0, cb, True)
 
 
     def stop(self, cb=None):
         """ Stop storage
         """
-        self.storage.stop(cb=cb)
+        # self.storage.stop(cb=cb)
         self.storage = NullRegistryClient(self.storage_type)
 
     def barrier(self):
@@ -599,7 +600,7 @@ class Storage(PrivateStorage):
             We will have 4 classes: 0-3 with class 3 most super.
             It is possible to search for a class or higher
         """
-        if self.proxy is not None:
+        if self.storage_type != 'proxy':
             node.super_node_class = 1
         else:
             node.super_node_class = 0

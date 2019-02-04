@@ -25,31 +25,14 @@ class StorageBase(object):
             cb:  The callback function/object thats callaed when request is done
 
         The callback is as follows:
-            start/stop:
-                status: True or False
             set:
                 key: The key set
                 status: True or False
             get:
                 key: The key
                 value: The returned value
-            append:
-                key: The key
-                status: True or False
-            bootstrap:
-                status: List of True and/or false:s
 
     """
-    def __init__(self, node=None):
-        pass
-
-    def start(self, iface='', network='', bootstrap=[], cb=None):
-        """
-            Starts the service if its nneeded for the storage service
-            cb  is the callback called when the srtart is finished
-        """
-        raise NotImplementedError()
-
     def set(self, key, value, cb=None):
         """
             Set a key, value pair in the storage
@@ -77,8 +60,3 @@ class StorageBase(object):
     def get_index(self, index, cb=None):
         raise NotImplementedError()
 
-    def bootstrap(self, addrs, cb=None):
-        raise NotImplementedError()
-
-    def stop(self, cb=None):
-        raise NotImplementedError()
