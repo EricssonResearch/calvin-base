@@ -15,11 +15,13 @@
 # limitations under the License.
 
 import os
+
 import ply.lex as lex
 import ply.yacc as yacc
+
 import calvin_rules
-from calvin_rules import tokens as calvin_tokens
 import astnode as ast
+from calvin_rules import tokens as calvin_tokens
 from astprint import BraceFormatter
 from calvin.utilities.issuetracker import IssueTracker
 
