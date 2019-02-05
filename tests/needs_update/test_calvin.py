@@ -23,7 +23,7 @@ from collections import Counter
 
 from calvin.utilities import calvinconfig
 # from calvin.csparser import cscompile as compiler
-from calvin.Tools import cscompiler as compile_tool
+from calvinservices.csparser import cscompiler as compile_tool
 # from calvin.Tools import deployer # FIXME: Remove
 from calvin.utilities import calvinlogger
 from calvin.requests.request_handler import RequestHandler
@@ -206,7 +206,7 @@ def rt_order(request):
     return [globals()[p] for p in request.param]
 
 
-@pytest.mark.essential
+@pytest.mark.skip
 @pytest.mark.slow
 class TestAdvancedConnectDisconnect(object):
 
@@ -438,7 +438,7 @@ class TestAdvancedConnectDisconnect(object):
         request_handler.delete_actor(rt1, src)
         request_handler.delete_actor(rt2, snk)
 
-@pytest.mark.essential
+@pytest.mark.skip
 @pytest.mark.slow
 class TestLocalConnectDisconnect(CalvinTestBase):
 
@@ -590,7 +590,7 @@ class TestLocalConnectDisconnect(CalvinTestBase):
         request_handler.delete_actor(rt, snk)
 
 
-@pytest.mark.essential
+@pytest.mark.skip
 @pytest.mark.slow
 class TestRemoteConnection(CalvinTestBase):
 
@@ -696,7 +696,7 @@ class TestRemoteConnection(CalvinTestBase):
         request_handler.delete_actor(rt, src1)
         request_handler.delete_actor(rt, src2)
 
-@pytest.mark.essential
+@pytest.mark.skip
 @pytest.mark.slow
 class TestActorMigration(CalvinTestBase):
 

@@ -14,11 +14,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# FIXME: Rewrite
+# FIXME: Need actorstore
+
 import unittest
 import pytest
 from mock import Mock, patch
 
-from calvin.tests import DummyNode
+from tests import DummyNode # FIXME: Make common fixture
 from calvin.runtime.north.actormanager import ActorManager
 from calvin.runtime.north.plugins.port import queue
 

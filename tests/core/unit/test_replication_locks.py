@@ -17,7 +17,7 @@
 import pytest
 import unittest
 import time
-from calvin.tests import DummyNode
+from tests import DummyNode
 
 from calvin.runtime.north.replicationmanager import ReplicationData, ReplicationManager
 

@@ -14,17 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvinservices.csparser.codegen import calvin_codegen
-import unittest
-import json
-import difflib
-import os
 import pytest
 
-def absolute_filename(filename):
-    import os.path
-    return os.path.join(os.path.dirname(__file__), filename)
-
+from calvinservices.csparser.codegen import calvin_codegen
 
 def parse(test, source_text=None, verify=True):
     deployable, issuetracker = calvin_codegen(source_text, test, verify=verify)
@@ -32,7 +24,6 @@ def parse(test, source_text=None, verify=True):
     warnings = issuetracker.warnings(sort_key='reason')
 
     return deployable, errors, warnings
-
 
 def testCheckSimpleScript(actorstore):
     script = """

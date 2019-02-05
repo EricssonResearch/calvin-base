@@ -14,16 +14,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# FIXME: Rewrite
+
 from calvin.requests import calvinresponse
 from calvin.utilities import calvinuuid
 from calvin.runtime.north import storage
 from calvin.runtime.north import appmanager
 from calvin.runtime.south.async import threads
 from calvin.utilities.calvin_callback import CalvinCB
-from calvin.tests import DummyNode
-from calvin.tests.helpers_twisted import create_callback, wait_for
+from tests import DummyNode
+from tests.helpers_twisted import create_callback, wait_for
 from calvin.utilities import calvinconfig
-import calvin.tests
+import tests
 import Queue
 import pytest
 import time

@@ -14,8 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvinservices.csparser.dscodegen import calvin_dscodegen
 import pytest
+
+from calvinservices.csparser.dscodegen import calvin_dscodegen
 
 
 tests = [

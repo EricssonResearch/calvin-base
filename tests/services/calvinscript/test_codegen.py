@@ -14,16 +14,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvinservices.csparser.cscompiler import compile_file
-import unittest
+import os
 import json
 import glob
-import os
-# import difflib
 import collections
+
 import pytest
-import subprocess
-import shlex
+
+from calvinservices.csparser.cscompiler import compile_file
 
 
 def absolute_filename(filename):

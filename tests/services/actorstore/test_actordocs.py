@@ -1,11 +1,12 @@
-import pytest
-import unittest
 import json
+
+import pytest
+
 from calvin.utilities.docgen import DocumentationStore
 
 
 @pytest.fixture(scope='module')
-def docstore():
+def docstore(actorstore):
     ds = DocumentationStore()
     return ds
 
