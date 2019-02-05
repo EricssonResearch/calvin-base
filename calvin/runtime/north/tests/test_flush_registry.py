@@ -76,7 +76,7 @@ def test_sanity(registry, testdata):
     registry.localstorage.localstore_sets = deepcopy(ref_sets)
     # Call start on registry to trigger change
     # from registry.localstorage --> registry.storage
-    registry.start(None, cb)
+    registry.start(cb)
     # As a consequence, registry.storage should now be
     # a DebugRegistryClient, a subclass of LocalRegistry that
     # allow us to easily examine the outcome of the flush operation

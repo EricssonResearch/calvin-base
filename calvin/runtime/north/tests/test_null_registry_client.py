@@ -6,7 +6,7 @@ import calvin.requests.calvinresponse as calvinresponse
 
 @pytest.fixture()
 def registry():
-    r = NullRegistryClient(storage_type = 'local')
+    r = NullRegistryClient()
     return r
 
 @pytest.fixture()
@@ -53,7 +53,6 @@ standard_api = [
     ('remove_index', ('indexes',), 'value', calvinresponse.OK),
 ]
 nonstandard_api = [
-    ('start', 'iface', 'name', 'nodeid', None),
     ('get_index', ('indexes',), None),    
 ]
 api = standard_api + nonstandard_api
@@ -63,8 +62,6 @@ api = standard_api + nonstandard_api
 # bootstrap(self, addrs, cb=None):
 # stop(self, cb=None):
 prohibited = [
-    ('stop', ''),
-    ('bootstrap', ''),
 ]
 
 @pytest.mark.parametrize('call', api)
@@ -78,12 +75,12 @@ def test_api_present(registry, mock_cb, call):
     kwargs = dict(zip([arg[0] if isinstance(arg, (tuple, list, set)) else arg for arg in args], args))
     method(cb=mock_cb, **kwargs)
 
-@pytest.mark.parametrize('call', prohibited)
-def test_api_not_present(registry, call):
-    name, args = call[0], tuple(call[1:])
-    method = getattr(registry, name)
-    with pytest.raises(NotImplementedError):
-        method(*args)
+# @pytest.mark.parametrize('call', prohibited)
+# def test_api_not_present(registry, call):
+#     name, args = call[0], tuple(call[1:])
+#     method = getattr(registry, name)
+#     with pytest.raises(NotImplementedError):
+#         method(*args)
 
 #
 # Test: methods following the same pattern (return CalvinResponse)

@@ -33,9 +33,6 @@ api = [
 # bootstrap(self, addrs, cb=None):
 # stop(self, cb=None):
 prohibited = [
-    ('start', ''),
-    ('stop', ''),
-    ('bootstrap', ''),
 ]
 
 @pytest.mark.parametrize('call', api)
@@ -49,12 +46,12 @@ def test_api_present(registry, call):
     kwargs = dict(zip([arg[0] if isinstance(arg, (tuple, list, set)) else arg for arg in args], args))
     method(**kwargs)
 
-@pytest.mark.parametrize('call', prohibited)
-def test_api_not_present(registry, call):
-    name, args = call[0], tuple(call[1:])
-    method = getattr(registry, name)
-    with pytest.raises(NotImplementedError):
-        method(*args)
+# @pytest.mark.parametrize('call', prohibited)
+# def test_api_not_present(registry, call):
+#     name, args = call[0], tuple(call[1:])
+#     method = getattr(registry, name)
+#     with pytest.raises(NotImplementedError):
+#         method(*args)
 
 #
 # Test: set, get, delete

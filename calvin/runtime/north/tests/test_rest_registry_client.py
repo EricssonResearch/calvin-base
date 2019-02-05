@@ -43,13 +43,14 @@ def remote_registry():
     
 
 @pytest.fixture()
-def registry():
-    r = RESTRegistryClient()
-    return r
-    
-@pytest.fixture()
 def host():
     return "http://localhost:4998"    
+
+@pytest.fixture()
+def registry(host):
+    r = RESTRegistryClient(None, host)
+    return r
+    
     
 @pytest.fixture(scope='module')
 def session():  
