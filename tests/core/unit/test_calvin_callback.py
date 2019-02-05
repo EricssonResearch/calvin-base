@@ -19,8 +19,6 @@ from mock import Mock
 
 from calvin.utilities.calvin_callback import CalvinCB, CalvinCBGroup, CalvinCBClass
 
-pytestmark = pytest.mark.unittest
-
 
 def test_call_callback():
     func = Mock()

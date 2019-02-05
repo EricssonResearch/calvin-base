@@ -21,11 +21,17 @@ import subprocess
 import time
 
 import pytest
+from mock import Mock
+
+from calvin.utilities import calvinuuid
 
 
 ##################################
 # Begin new system setup fixures #
 ##################################
+
+def _file_dir():
+    return os.path.dirname(os.path.realpath(__file__))
 
 def _start_process(cmd):
     args = shlex.split(cmd)
@@ -33,7 +39,7 @@ def _start_process(cmd):
     return process
 
 def _start_actorstore():
-    this_dir = file_dir()
+    this_dir = _file_dir()
     app_path = os.path.abspath(this_dir + "/../" + "calvinservices/actorstore/store_app.py")
     print app_path
     os.putenv("FLASK_APP", app_path)
@@ -55,7 +61,7 @@ def _stop_runtime(proc):
 # FIXME: Is this too fragile?
 @pytest.fixture(scope='module')
 def file_dir():
-    return os.path.dirname(os.path.realpath(__file__))
+    return _file_dir()
 
 
 # FIXTURE: working_dir
@@ -103,6 +109,30 @@ def single_runtime_system(file_dir, working_dir, patch_config):
 @pytest.fixture(scope='module')
 def patch_config(file_dir, working_dir):
     pass
+    
+    
+#
+# Methods previously spread over multiple files, copy-pasted, etc.
+#    
+
+class _DummyNode:
+    def __init__(self):
+        self.id = calvinuuid.uuid("NODE")
+        self.control_uri = "http://localhost:5001"
+        self.pm = Mock()
+        self.storage = Mock()
+        self.control = Mock()
+        # self.attributes = attribute_resolver.AttributeResolver({})
+
+@pytest.fixture(scope='module')
+def dummy_node():
+    return _DummyNode()
+
+@pytest.fixture(scope='module')
+def dummy_peer_node():
+    return _DummyNode()         
+            
+        
 
 ##################################
 # End new system setup fixures   #

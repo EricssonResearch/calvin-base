@@ -15,16 +15,31 @@
 # limitations under the License.
 
 import pytest
-
 from mock import Mock
-from calvin.tests import DummyNode, TestPort
+
+from calvin.actor.actor import Actor
 from calvin.runtime.north.actormanager import ActorManager
 from calvin.runtime.north.plugins.port.endpoint import LocalOutEndpoint, LocalInEndpoint
-from calvin.actor.actor import Actor
 from calvin.runtime.north.plugins.port import queue
 from calvin.runtime.north.calvinsys import get_calvinsys
+from calvin.runtime.north.plugins.port.queue.fanout_fifo import FanoutFIFO
+from calvin.utilities import calvinuuid
 
-pytestmark = pytest.mark.unittest
+class DummyPort:
+
+    def __init__(self, name, direction):
+        self.id = calvinuuid.uuid("PORT")
+        self.name = name
+        self.direction = direction
+        self.peers = None
+        self.properties = {}
+        self.queue = FanoutFIFO({'queue_length': 4, 'direction': direction}, {})
+
+    def is_connected(self):
+        return True
+
+    def get_peers(self):
+        return self.peers
 
 
 def create_actor(node):
@@ -38,9 +53,9 @@ def create_actor(node):
 
 
 @pytest.fixture
-def actor():
+def actor(actorstore, dummy_node):
     get_calvinsys()._node = Mock()
-    return create_actor(DummyNode())
+    return create_actor(dummy_node)
 
 
 @pytest.mark.parametrize("inport_ret_val,outport_ret_val,expected", [
@@ -91,26 +106,23 @@ def test_enabled(actor):
     assert not actor.enabled()
 
 
-def test_connections():
-    node = DummyNode()
-    node.id = "node_id"
-    actor = create_actor(node)
+def test_connections(actor, dummy_node):
     inport = actor.inports['token']
     outport = actor.outports['token']
 
-    in_peer_port = TestPort("x", "out")
-    out_peer_port = TestPort("y", "in")
+    in_peer_port = DummyPort("x", "out")
+    out_peer_port = DummyPort("y", "in")
     out_peer_port.queue.add_reader(out_peer_port.id, {})
     in_peer_port.queue.add_reader(inport.id, {})
 
     inport.attach_endpoint(LocalInEndpoint(inport, in_peer_port))
     outport.attach_endpoint(LocalOutEndpoint(outport, out_peer_port))
 
-    assert actor.connections(node) == {
+    assert actor.connections(dummy_node) == {
         'actor_id': actor.id,
         'actor_name': actor.name,
-        'inports': {inport.id: [(node, in_peer_port.id)]},
-        'outports': {outport.id: [(node, out_peer_port.id)]}
+        'inports': {inport.id: [(dummy_node, in_peer_port.id)]},
+        'outports': {outport.id: [(dummy_node, out_peer_port.id)]}
     }
 
 

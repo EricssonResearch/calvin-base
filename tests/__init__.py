@@ -2,7 +2,6 @@
 from mock import Mock
 
 from calvin.utilities import calvinuuid
-from calvin.runtime.north.plugins.port.queue.fanout_fifo import FanoutFIFO
 from calvin.utilities import attribute_resolver
 
 class SerMock(Mock):
@@ -59,18 +58,3 @@ class TestActor:
         self.outports = outports
         self._replication_id = _DummyRepSet()
 
-class TestPort:
-
-    def __init__(self, name, direction):
-        self.id = calvinuuid.uuid("PORT")
-        self.name = name
-        self.direction = direction
-        self.peers = None
-        self.properties = {}
-        self.queue = FanoutFIFO({'queue_length': 4, 'direction': direction}, {})
-
-    def is_connected(self):
-        return True
-
-    def get_peers(self):
-        return self.peers

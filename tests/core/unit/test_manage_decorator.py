@@ -14,7 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import unittest
+import pytest
+
 from calvin.actor.actor import manage
 
 # @manage()                     # Manage every instance variable known upon completion of __init__
@@ -41,55 +42,48 @@ class Dummy(Base):
         self.bar = True
 
 
-class ManageTests(unittest.TestCase):
+@pytest.fixture
+def dummy_actor():
+    return Dummy()
+            
 
-    def setUp(self):
-        self.d = Dummy()
+def test1(dummy_actor):
+    assert set(('id', 'name')) == dummy_actor._managed
 
-    def tearDown(self):
-        pass
+def test2(dummy_actor):
+    manage(['xxx'])(dummy_actor.init)()
+    assert 'xxx' in dummy_actor._managed
 
-    def test1(self):
-        assert set(('id', 'name')) == self.d._managed
+def test3(dummy_actor):
+    incl = ['xxx', 'yyy']
+    manage(incl)(dummy_actor.init)()
+    assert set(incl) <= dummy_actor._managed
 
-    def test2(self):
-        manage(['xxx'])(self.d.init)()
-        assert 'xxx' in self.d._managed
+def test4(dummy_actor):
+    manage(exclude=[])(dummy_actor.init)()
+    assert len(dummy_actor._managed) == 4
 
-    def test3(self):
-        incl = ['xxx', 'yyy']
-        manage(incl)(self.d.init)()
-        assert set(incl) <= self.d._managed
+def test5(dummy_actor):
+    manage()(dummy_actor.init)()
+    assert len(dummy_actor._managed) == 4
 
-    def test4(self):
-        manage(exclude=[])(self.d.init)()
-        assert len(self.d._managed) == 4
+def test6(dummy_actor):
+    manage(exclude=['foo'])(dummy_actor.init)()
+    assert len(dummy_actor._managed) == 3
 
-    def test5(self):
-        manage()(self.d.init)()
-        assert len(self.d._managed) == 4
+def test7(dummy_actor):
+    manage(include=['foo'], exclude=['foo'])(dummy_actor.init)()
+    assert len(dummy_actor._managed) == 3
 
-    def test6(self):
-        manage(exclude=['foo'])(self.d.init)()
-        assert len(self.d._managed) == 3
+def test8(dummy_actor):
+    manage(include=['foo'], exclude=['foo'])(dummy_actor.init)()
+    assert dummy_actor._managed == set(('id', 'name', 'foo'))
 
-    def test7(self):
-        manage(include=['foo'], exclude=['foo'])(self.d.init)()
-        assert len(self.d._managed) == 3
+def test9(dummy_actor):
+    manage(exclude=['id'])(dummy_actor.init)()
+    assert 'id' in dummy_actor._managed
 
-    def test8(self):
-        manage(include=['foo'], exclude=['foo'])(self.d.init)()
-        assert self.d._managed == set(('id', 'name', 'foo'))
+def test10(dummy_actor):
+    manage(include=[])(dummy_actor.init)()
+    assert dummy_actor._managed == set(('id', 'name'))
 
-    def test9(self):
-        manage(exclude=['id'])(self.d.init)()
-        assert 'id' in self.d._managed
-
-    def test10(self):
-        manage(include=[])(self.d.init)()
-        assert self.d._managed == set(('id', 'name'))
-
-
-
-if __name__ == '__main__':
-    unittest.main()

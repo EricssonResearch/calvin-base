@@ -14,14 +14,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pytest
 import json
 
+import pytest
 from mock import patch, Mock
 
 from calvin.utilities import calvinlogger
-
-pytestmark = pytest.mark.unittest
 
 
 @patch('calvin.utilities.calvinlogger.logging')

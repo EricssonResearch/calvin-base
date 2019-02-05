@@ -17,14 +17,11 @@
 import pytest
 from mock import Mock, call
 
-from calvin.runtime.north.actormanager import ActorManager
-from tests import DummyNode
-from calvin.runtime.north.plugins.port.endpoint import LocalOutEndpoint, LocalInEndpoint
 from calvin.actor.actorport import InPort, OutPort
+from calvin.runtime.north.actormanager import ActorManager
+from calvin.runtime.north.plugins.port.endpoint import LocalOutEndpoint, LocalInEndpoint
 from calvin.runtime.north.plugins.port import queue
 from calvin.runtime.north.plugins.port.endpoint.common import Endpoint
-
-pytestmark = pytest.mark.unittest
 
 
 def create_actor(node):
@@ -35,23 +32,35 @@ def create_actor(node):
 
 
 @pytest.fixture
-def actor():
-    return create_actor(DummyNode())
+def actor(dummy_node):
+    return create_actor(dummy_node)
 
 
 @pytest.fixture
-def inport():
-    return InPort("inport", actor())
+def inport(actor):
+    return InPort("inport", actor)
 
 
 @pytest.fixture
-def outport():
-    return OutPort("outport", actor())
+def outport(actor):
+    return OutPort("outport", actor)
 
-
-def test_attach_endpoint_to_inport(inport, outport):
+    
+@pytest.fixture
+def portpairs(dummy_node):
+    actor1 = create_actor(dummy_node)
+    actor2 = create_actor(dummy_node)
+    return (
+        InPort("inport", actor1), OutPort("outport", actor1),
+        InPort("inport", actor2), OutPort("outport", actor2)
+    )
+    
+    
+def test_attach_endpoint_to_inport(portpairs):
+    inport, outport, _, first_outport = portpairs
+    assert inport.owner == outport.owner
+    assert inport.owner != first_outport.owner
     inport.owner.did_connect = Mock()
-    first_outport = OutPort("out", actor())
     first_endpoint = LocalInEndpoint(inport, first_outport)
     first_endpoint._fifo_mismatch_fix = Mock() #  Skip fifo mismatch fixing
     endpoint = LocalInEndpoint(inport, outport)
@@ -79,9 +88,9 @@ def test_detach_endpoint_from_inport(inport, outport):
     assert not inport.is_connected_to(outport.id)
 
 
-def test_attach_endpoint_to_outport(inport, outport):
+def test_attach_endpoint_to_outport(portpairs):
+    inport, outport, first_inport, _ = portpairs
     outport.owner.did_connect = Mock()
-    first_inport = InPort("out", actor())
     first_endpoint = LocalOutEndpoint(outport, first_inport)
     first_endpoint._fifo_mismatch_fix = Mock() #  Skip fifo mismatch fixing
     endpoint = LocalOutEndpoint(outport, inport)

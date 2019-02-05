@@ -19,9 +19,6 @@ from mock import Mock, patch
 
 from calvin.runtime.north.calvincontrol import get_calvincontrol, CalvinControl
 from calvin.utilities import calvinuuid
-from calvin.runtime.north.control_apis.routes import path_regex
-
-pytestmark = pytest.mark.unittest
 
 
 def calvincontrol():
