@@ -89,7 +89,7 @@ class CalvinConfig(object):
                 'comment': 'User definable section',
                 'actor_paths': ['systemactors'],
                 'framework': 'twistedimpl',
-                'storage_type': 'dht', # supports dht, securedht, sql, local, and proxy
+                'storage_type': 'local', # supports dht, securedht, sql, local, and proxy
                 'storage_proxy': None,
                 'storage_sql': {},  # For SQL, should have the kwargs to connect + db-name. Defaults to insecure local
                 'capabilities_blacklist': [],
