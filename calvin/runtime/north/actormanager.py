@@ -278,6 +278,7 @@ class ActorManager(object):
     def class_factory(self, src, metadata, actor_type):
         co = compile(src, actor_type, 'exec')
         import calvin.actor.actor as caa
+        import calvin.utilities.calvinlogger as clog
         namespace = {
             'Actor':caa.Actor, 
             'manage':caa.manage, 
@@ -285,6 +286,8 @@ class ActorManager(object):
             'stateguard':caa.stateguard, 
             'calvinsys':caa.calvinsys,
             'calvinlib':caa.calvinlib, 
+            'get_logger':clog.get_logger,
+            'get_actor_logger':clog.get_actor_logger,
         }
         exec(co, namespace)
         _, name = actor_type.split('.') 

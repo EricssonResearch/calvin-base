@@ -1057,35 +1057,6 @@ class TestCalvinScript(CalvinTestBase):
         self.assert_lists_equal(expected, actual)
         helpers.destroy_app(d)
 
-    def testDestroyAppWithLocalActors(self):
-        script = """
-      src : std.CountTimer()
-      snk : test.Sink(store_tokens=1, quiet=1)
-      src.integer > snk.token
-    """
-
-        rt = self.rt1
-        deployable, errors, warnings = self.compile_script(script, "simple")
-        d = helpers.Deployer(rt, deployable)
-
-        deploy_app(d)
-        app_id = d.app_id
-
-        src = d.actor_map['simple:src']
-        snk = d.actor_map['simple:snk']
-
-        applications = request_handler.get_applications(rt)
-        assert app_id in applications
-
-        helpers.destroy_app(d)
-
-        applications = request_handler.get_applications(rt)
-        assert app_id not in applications
-
-        actors = request_handler.get_actors(rt)
-        assert src not in actors
-        assert snk not in actors
-
     def testDestroyAppWithMigratedActors(self):
         rt, rt1, rt2 = get_runtime(3)
 
@@ -1534,27 +1505,6 @@ class TestEnabledToEnabledBug(CalvinTestBase):
         request_handler.delete_actor(self.rt1, ity)
         request_handler.delete_actor(self.rt1, snk)
 
-    def test26(self):
-        _log.analyze("TESTRUN", "+", {})
-        # Same as test20
-        script = """
-            src : std.Counter()
-            ity : std.Identity()
-            snk : test.Sink(store_tokens=1, quiet=1)
-
-            src.integer > ity.token
-            ity.token > snk.token
-          """
-        deployable, errors, warnings = self.compile_script(script, "simple")
-        d = helpers.Deployer(self.rt1, deployable)
-        deploy_app(d)
-        snk = d.actor_map['simple:snk']
-
-        actual = actual_tokens(self.rt1, snk, 10)
-        self.assert_lists_equal(range(1,10), actual)
-
-        helpers.destroy_app(d)
-
 
     def test30(self):
         _log.analyze("TESTRUN", "+", {})
@@ -1578,67 +1528,6 @@ class TestEnabledToEnabledBug(CalvinTestBase):
         request_handler.delete_actor(self.rt1, snk1)
         request_handler.delete_actor(self.rt1, snk2)
 
-    def test31(self):
-        # Verify that fanout defined implicitly in scripts is handled correctly
-        _log.analyze("TESTRUN", "+", {})
-        script = """
-            src : std.Counter()
-            snk1 : test.Sink(store_tokens=1, quiet=1)
-            snk2 : test.Sink(store_tokens=1, quiet=1)
-
-            src.integer > snk1.token
-            src.integer > snk2.token
-        """
-        deployable, errors, warnings = self.compile_script(script, "test31")
-        d = helpers.Deployer(self.rt1, deployable)
-        deploy_app(d)
-
-        snk1 = d.actor_map['test31:snk1']
-        snk2 = d.actor_map['test31:snk2']
-        actual1 = actual_tokens(self.rt1, snk1, 10)
-        actual2 = actual_tokens(self.rt1, snk2, 10)
-        expected = list(range(1, 10))
-
-        self.assert_lists_equal(expected, actual1)
-        self.assert_lists_equal(expected, actual2)
-
-        d.destroy()
-
-    def test32(self):
-        # Verify that fanout from component inports is handled correctly
-        _log.analyze("TESTRUN", "+", {})
-        script = """
-            component Foo() in -> a, b{
-              a : std.Identity()
-              b : std.Identity()
-              .in >  a.token
-              .in > b.token
-              a.token > .a
-              b.token > .b
-            }
-
-            snk2 : test.Sink(store_tokens=1, quiet=1)
-            snk1 : test.Sink(store_tokens=1, quiet=1)
-            foo : Foo()
-            req : std.Counter()
-            req.integer > foo.in
-            foo.a > snk1.token
-            foo.b > snk2.token
-        """
-        deployable, errors, warnings = self.compile_script(script, "test32")
-        d = helpers.Deployer(self.rt1, deployable)
-        deploy_app(d)
-
-        snk1 = d.actor_map['test32:snk1']
-        snk2 = d.actor_map['test32:snk2']
-        actual1 = actual_tokens(self.rt1, snk1, 10)
-        actual2 = actual_tokens(self.rt1, snk2, 10)
-        expected = list(range(1, 10))
-
-        self.assert_lists_equal(expected, actual1)
-        self.assert_lists_equal(expected, actual2)
-
-        d.destroy()
 
     def test40(self):
         # Verify round robin port
@@ -1674,6 +1563,7 @@ class TestEnabledToEnabledBug(CalvinTestBase):
 
 
 
+# TODO: Reimplement as actor unit tests
 @pytest.mark.essential
 class TestNullPorts(CalvinTestBase):
 
@@ -1726,6 +1616,7 @@ class TestNullPorts(CalvinTestBase):
         helpers.destroy_app(d)
 
 
+# TODO: Reimplement as actor unit tests
 @pytest.mark.essential
 class TestCompare(CalvinTestBase):
 
@@ -1805,6 +1696,7 @@ class TestCompare(CalvinTestBase):
 
 
 
+# TODO: Reimplement as actor unit tests
 @pytest.mark.essential
 class TestSelect(CalvinTestBase):
 
@@ -2027,6 +1919,7 @@ class TestLineJoin(CalvinTestBase):
 @pytest.mark.essential
 class TestRegex(CalvinTestBase):
 
+    # TODO: Reimplement as actor unit test
     def testRegexMatch(self):
         _log.analyze("TESTRUN", "+", {})
         script = """
@@ -2055,6 +1948,7 @@ class TestRegex(CalvinTestBase):
 
 
 
+    # TODO: Reimplement as actor unit test
     def testRegexNoMatch(self):
         _log.analyze("TESTRUN", "+", {})
         script = """
@@ -2081,6 +1975,7 @@ class TestRegex(CalvinTestBase):
         helpers.destroy_app(d)
 
 
+    # TODO: Reimplement as actor unit test
     def testRegexCapture(self):
         _log.analyze("TESTRUN", "+", {})
         script = """
@@ -2108,6 +2003,7 @@ class TestRegex(CalvinTestBase):
         helpers.destroy_app(d)
 
 
+    # TODO: Reimplement as actor unit test
     def testRegexMultiCapture(self):
         _log.analyze("TESTRUN", "+", {})
         script = """
@@ -2135,6 +2031,7 @@ class TestRegex(CalvinTestBase):
         helpers.destroy_app(d)
 
 
+    # TODO: Reimplement as actor unit test
     def testRegexCaptureNoMatch(self):
         _log.analyze("TESTRUN", "+", {})
         script = """
@@ -2164,6 +2061,7 @@ class TestRegex(CalvinTestBase):
 @pytest.mark.essential
 class TestConstantAsArguments(CalvinTestBase):
 
+    # TODO: Reimplement as compiler test
     def testConstant(self):
         _log.analyze("TESTRUN", "+", {})
         script = """
@@ -2186,6 +2084,7 @@ class TestConstantAsArguments(CalvinTestBase):
 
         helpers.destroy_app(d)
 
+    # TODO: Reimplement as compiler test
     def testConstantRecursive(self):
         _log.analyze("TESTRUN", "+", {})
         script = """
@@ -2213,6 +2112,7 @@ class TestConstantAsArguments(CalvinTestBase):
 @pytest.mark.essential
 class TestConstantOnPort(CalvinTestBase):
 
+    # TODO: Reimplement as compiler test
     def testLiteralOnPort(self):
         _log.analyze("TESTRUN", "+", {})
         script = """
@@ -2234,6 +2134,7 @@ class TestConstantOnPort(CalvinTestBase):
 
         helpers.destroy_app(d)
 
+    # TODO: Reimplement as compiler test
     def testConstantOnPort(self):
         _log.analyze("TESTRUN", "+", {})
         script = """
@@ -2255,6 +2156,7 @@ class TestConstantOnPort(CalvinTestBase):
 
         helpers.destroy_app(d)
 
+    # TODO: Reimplement as compiler test
     def testConstantRecursiveOnPort(self):
         _log.analyze("TESTRUN", "+", {})
         script = """
@@ -2281,6 +2183,7 @@ class TestConstantOnPort(CalvinTestBase):
 @pytest.mark.essential
 class TestConstantAndComponents(CalvinTestBase):
 
+    # TODO: Reimplement as compiler test
     def testLiteralOnCompPort(self):
         _log.analyze("TESTRUN", "+", {})
         script = """
@@ -2307,6 +2210,7 @@ class TestConstantAndComponents(CalvinTestBase):
 
         helpers.destroy_app(d)
 
+    # TODO: Reimplement as compiler test
     def testConstantOnCompPort(self):
         _log.analyze("TESTRUN", "+", {})
         script = """
@@ -2334,6 +2238,7 @@ class TestConstantAndComponents(CalvinTestBase):
 
         helpers.destroy_app(d)
 
+    # TODO: Reimplement as compiler test
     def testStringConstantOnCompPort(self):
         _log.analyze("TESTRUN", "+", {})
         script = """
@@ -2365,6 +2270,7 @@ class TestConstantAndComponents(CalvinTestBase):
 @pytest.mark.essential
 class TestConstantAndComponentsArguments(CalvinTestBase):
 
+    # TODO: Reimplement as compiler test
     def testComponentArgument(self):
         _log.analyze("TESTRUN", "+", {})
         script = """
@@ -2390,6 +2296,7 @@ class TestConstantAndComponentsArguments(CalvinTestBase):
 
         helpers.destroy_app(d)
 
+    # TODO: Reimplement as compiler test
     def testComponentConstantArgument(self):
         _log.analyze("TESTRUN", "+", {})
         script = """
@@ -2417,6 +2324,7 @@ class TestConstantAndComponentsArguments(CalvinTestBase):
         helpers.destroy_app(d)
 
 
+    # TODO: Reimplement as compiler test
     def testComponentConstantArgumentDirect(self):
         _log.analyze("TESTRUN", "+", {})
         script = """
@@ -2443,6 +2351,7 @@ class TestConstantAndComponentsArguments(CalvinTestBase):
 
         helpers.destroy_app(d)
 
+    # TODO: Reimplement as compiler test
     def testComponentArgumentAsImplicitActor(self):
         _log.analyze("TESTRUN", "+", {})
         script = """
@@ -2469,6 +2378,7 @@ class TestConstantAndComponentsArguments(CalvinTestBase):
 
         helpers.destroy_app(d)
 
+    # TODO: Reimplement as compiler test
     def testComponentConstantArgumentAsImplicitActor(self):
         _log.analyze("TESTRUN", "+", {})
         script = """
@@ -2498,6 +2408,7 @@ class TestConstantAndComponentsArguments(CalvinTestBase):
 @pytest.mark.essential
 class TestConstantifyOnPort(CalvinTestBase):
 
+    # TODO: Reimplement as compiler test
     def testLiteralOnPort(self):
         _log.analyze("TESTRUN", "+", {})
         script = """
@@ -2518,6 +2429,7 @@ class TestConstantifyOnPort(CalvinTestBase):
 
         d.destroy()
 
+    # TODO: Reimplement as compiler test
     def testLiteralOnPortlist(self):
         _log.analyze("TESTRUN", "+", {})
         script = """
@@ -2544,6 +2456,7 @@ class TestConstantifyOnPort(CalvinTestBase):
 
         d.destroy()
 
+    # TODO: Reimplement as compiler test
     def testLiteralsOnPortlist(self):
         _log.analyze("TESTRUN", "+", {})
         script = """
@@ -2569,6 +2482,7 @@ class TestConstantifyOnPort(CalvinTestBase):
 
         d.destroy()
 
+    # TODO: Reimplement as compiler test
     def testConstantsOnPortlist(self):
         _log.analyze("TESTRUN", "+", {})
         script = """
@@ -2596,6 +2510,7 @@ class TestConstantifyOnPort(CalvinTestBase):
 
         d.destroy()
 
+    # TODO: Reimplement as compiler test
     def testLiteralOnComponentInPort(self):
         _log.analyze("TESTRUN", "+", {})
         script = """
@@ -4131,216 +4046,3 @@ class TestDeployScript(CalvinTestBase):
 
         self.assert_lists_equal(expected, actual)
         helpers.delete_app(request_handler, rt, response['application_id'])
-
-class TestPortmappingScript(CalvinTestBase):
-
-    def _run_test(self, script, minlen):
-        rt = self.rt1
-        response = helpers.deploy_script(request_handler, "simple", script, rt)
-        snk = response['actor_map']['simple:snk']
-        wait_for_tokens(rt, snk, minlen)
-        actual = actual_tokens(rt, snk)
-        helpers.delete_app(request_handler, rt, response['application_id'])
-        return actual
-
-    def testSimple(self):
-        script = r"""
-        dummy : std.Constantify(constant=42)
-        cdict : flow.CollectCompleteDict(mapping={"dummy":&dummy.out})
-        snk : test.Sink(store_tokens=1, quiet=1)
-
-        1 > dummy.in
-        dummy.out > cdict.token
-        cdict.dict > snk.token
-        """
-
-        expected = [{u'dummy': 42}]*5
-        actual = self._run_test(script, len(expected))
-        self.assert_lists_equal(expected, actual)
-
-    def testMapAlternate(self):
-        script = r"""
-        snk : test.Sink(store_tokens=1, quiet=1)
-        input: std.Counter()
-        alt: flow.Alternate(order=[&out1.out, &out2.out, &out3.out])
-        out1 : text.PrefixString(prefix="tag-1:")
-        out2 : text.PrefixString(prefix="tag-2:")
-        out3 : text.PrefixString(prefix="tag-3:")
-        input.integer > out1.in
-        input.integer > out2.in
-        input.integer > out3.in
-        out1.out > alt.token
-        out2.out > alt.token
-        out3.out > alt.token
-        alt.token > snk.token
-        """
-        expected = [
-            "tag-1:1",
-            "tag-2:1",
-            "tag-3:1",
-            "tag-1:2",
-            "tag-2:2",
-            "tag-3:2",
-            "tag-1:3",
-            "tag-2:3",
-            "tag-3:3",
-            "tag-1:4",
-            "tag-2:4",
-            "tag-3:4"
-        ]
-        actual = self._run_test(script, len(expected))
-        self.assert_lists_equal(expected, actual)
-
-    def testMapDealternate(self):
-        script = r"""
-        snk : test.Sink(store_tokens=1, quiet=1)
-        input: std.Counter()
-        switch: flow.Dealternate(order=[&out3.in, &out1.in, &out2.in])
-        out1 : text.PrefixString(prefix="tag-1:")
-        out2 : text.PrefixString(prefix="tag-2:")
-        out3 : text.PrefixString(prefix="tag-3:")
-        collect : flow.Alternate(order=[&out1.out, &out2.out, &out3.out])
-        input.integer > switch.token
-        switch.token > out1.in
-        switch.token > out2.in
-        switch.token > out3.in
-        out1.out > collect.token
-        out2.out > collect.token
-        out3.out > collect.token
-        collect.token > snk.token
-        """
-        expected = [
-            "tag-1:2",
-            "tag-2:3",
-            "tag-3:1",
-            "tag-1:5",
-            "tag-2:6",
-            "tag-3:4",
-            "tag-1:8",
-            "tag-2:9",
-            "tag-3:7"
-        ]
-        actual = self._run_test(script, len(expected))
-        self.assert_lists_equal(expected, actual)
-
-
-    def testMapDispatchCollect(self):
-        script = r"""
-        snk : test.Sink(store_tokens=1, quiet=1)
-        input: std.Counter()
-        disp : flow.Dispatch()
-        coll : flow.Collect()
-        tag1: text.PrefixString(prefix="tag1-")
-        tag2: text.PrefixString(prefix="tag2-")
-        tag3: text.PrefixString(prefix="tag3-")
-
-        input.integer > disp.token
-        disp.token > tag1.in
-        disp.token > tag2.in
-        disp.token > tag3.in
-        tag1.out > coll.token
-        tag2.out > coll.token
-        tag3.out > coll.token
-        coll.token > snk.token
-        """
-        actual = self._run_test(script, 50)
-        pairs = [x.split('-') for x in actual]
-        tags = [p[0] for p in pairs]
-        values = [int(p[1]) for p in pairs]
-        assert (set(values) == set(range(1, len(actual)+1)))
-        print tags
-        assert set(tags) == set(["tag1", "tag2", "tag3"])
-
-    def testMapDispatchDict(self):
-        script = r"""
-        snk : test.Sink(store_tokens=1, quiet=1)
-        dd : flow.DispatchDict(mapping={"t1": &tag1.in, "t2": &tag2.in, "t3": &tag3.in})
-        tag1: text.PrefixString(prefix="tag-1:")
-        tag2: text.PrefixString(prefix="tag-2:")
-        tag3: text.PrefixString(prefix="tag-3:")
-        coll : flow.Alternate(order=[&tag1.out, &tag2.out, &tag3.out])
-        {"t1": 1, "t2": 2, "t3": 3} > dd.dict
-        dd.token > tag1.in
-        dd.token > tag2.in
-        dd.token > tag3.in
-        dd.default > voidport
-        tag1.out > coll.token
-        tag2.out > coll.token
-        tag3.out > coll.token
-        coll.token > snk.token
-        """
-
-        expected = [
-            "tag-1:1",
-            "tag-2:2",
-            "tag-3:3",
-            "tag-1:1",
-            "tag-2:2",
-            "tag-3:3",
-            "tag-1:1",
-            "tag-2:2",
-            "tag-3:3",
-        ]
-        actual = self._run_test(script, len(expected))
-        self.assert_lists_equal(expected, actual)
-
-    def testMapCollectCompleteDict(self):
-        script = r"""
-        snk : test.Sink(store_tokens=1, quiet=1)
-        dd : flow.DispatchDict(mapping={"t1": &tag1.in, "t2": &tag2.in, "t3": &tag3.in})
-        tag1: text.PrefixString(prefix="tag-1:")
-        tag2: text.PrefixString(prefix="tag-2:")
-        tag3: text.PrefixString(prefix="tag-3:")
-        cd : flow.CollectCompleteDict(mapping={"t1": &tag2.out, "t2": &tag3.out, "t3": &tag1.out})
-        {"t1": 1, "t2": 2, "t3": 3} > dd.dict
-        dd.token > tag1.in
-        dd.token > tag2.in
-        dd.token > tag3.in
-        dd.default > voidport
-        tag1.out > cd.token
-        tag2.out > cd.token
-        tag3.out > cd.token
-        cd.dict > snk.token
-        """
-        actual = self._run_test(script, 50)
-        expected = [{u't2': 'tag-3:3', u't3': 'tag-1:1', u't1': 'tag-2:2'}]*len(actual)
-        self.assert_lists_equal(expected, actual)
-
-    @pytest.mark.xfail
-    def testMapComponentPort(self):
-        script = r"""
-        component Dummy() in -> out {
-            identity : std.Identity()
-            .in > identity.token
-            identity.token > .out
-        }
-        snk : test.Sink(store_tokens=1, quiet=1)
-        dummy : Dummy()
-        cdict : flow.CollectCompleteDict(mapping={"dummy":&dummy.out})
-        1 > dummy.in
-        dummy.out > cdict.token
-        cdict.dict > snk.token
-        """
-        actual = self._run_test(script, 10)
-        expected = [{u'dummy': 1}]*len(actual)
-        self.assert_lists_equal(expected, actual)
-
-
-    @pytest.mark.xfail
-    def testMapComponentInternalPort(self):
-        script = r"""
-        component Dummy() in -> out {
-            # Works with &foo.token or "foo.token" if constant has label :foo
-            cdict : flow.CollectCompleteDict(mapping={"dummy":&.in})
-
-            .in > cdict.token
-            cdict.dict > .out
-        }
-        snk : test.Sink(store_tokens=1, quiet=1)
-        dummy : Dummy()
-        1 > dummy.in
-        dummy.out > snk.token
-        """
-        actual = self._run_test(script, 10)
-        expected = [{u'dummy': 1}]*len(actual)
-        self.assert_lists_equal(expected, actual)
