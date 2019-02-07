@@ -464,10 +464,11 @@ def run_actor_unittests(aut, actor_type, mock_sys):
             pytest.fail("Failed post condition of test {}".format(test_index))
     
 
+
 def actor_list():
     # return ['std.Sum', 'flow.Init']
     dir_path = os.path.dirname(os.path.realpath(__file__))
-    dir_path = os.path.join(dir_path, "../systemactors")
+    dir_path = os.path.join(dir_path, "../../../calvinservices/actorstore/systemactors")    
     actors = []
     for dirpath, dirnames, filenames in os.walk(dir_path):
         filenames = [os.path.join(dirpath, f) for f in filenames if f.endswith('.py') and f != '__init__.py']

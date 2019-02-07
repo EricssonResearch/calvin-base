@@ -29,7 +29,7 @@ from calvin.utilities.actor_signature import signature
 # Helpers
 def actor_files():
     dir_path = os.path.dirname(os.path.realpath(__file__))
-    dir_path = os.path.join(dir_path, "../systemactors")
+    dir_path = os.path.join(dir_path, "../../../calvinservices/actorstore/systemactors")
     for dirpath, dirnames, filenames in os.walk(dir_path):
         filenames = [os.path.join(dirpath, f) for f in filenames if f.endswith('.py') and f != '__init__.py']
         for f in filenames:
