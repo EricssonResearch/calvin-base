@@ -1,7 +1,7 @@
 {
     "indexed_public": {
         "address": {
-            "city": "London",
+            "locality": "London",
             "country": "GB"
         }
     }
