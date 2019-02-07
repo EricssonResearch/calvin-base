@@ -35,6 +35,38 @@ def log_callback(reply, **kwargs):
     if reply:
         _log.info("%s: %s" % (kwargs['prefix'], reply))
 
+def class_factory(src, metadata, actor_type):
+    co = compile(src, actor_type, 'exec')
+    import calvin.actor.actor as caa
+    import calvin.utilities.calvinlogger as clog
+    import calvin.runtime.north.calvin_token as ctok
+    import copy as ccopy
+    namespace = {
+        'Actor':caa.Actor, 
+        'manage':caa.manage, 
+        'condition':caa.condition, 
+        'stateguard':caa.stateguard, 
+        'calvinsys':caa.calvinsys,
+        'calvinlib':caa.calvinlib, 
+        'get_logger':clog.get_logger,
+        'get_actor_logger':clog.get_actor_logger,
+        'calvinlogger': clog,
+        'EOSToken': ctok.EOSToken,
+        'ExceptionToken': ctok.ExceptionToken,
+        'deepcopy': ccopy.deepcopy,
+    }
+    exec(co, namespace)
+    _, name = actor_type.split('.') 
+    actor_class = namespace[name]
+    # append metadata
+    actor_class.requires = metadata['requires']
+    actor_class.inport_properties = {} # {p: pp for p, pp in inports}
+    actor_class.outport_properties = {} #{p: pp for p, pp in outports}
+    for port in metadata["ports"]:
+        target = actor_class.inport_properties if port['direction'] == "in" else actor_class.outport_properties
+        target[port['name']] = port.get('properties', {})
+    return actor_class
+
 
 class ActorManager(object):
 
@@ -275,32 +307,6 @@ class ActorManager(object):
 
         self.actors[actor_id].disable()
 
-    def class_factory(self, src, metadata, actor_type):
-        co = compile(src, actor_type, 'exec')
-        import calvin.actor.actor as caa
-        import calvin.utilities.calvinlogger as clog
-        namespace = {
-            'Actor':caa.Actor, 
-            'manage':caa.manage, 
-            'condition':caa.condition, 
-            'stateguard':caa.stateguard, 
-            'calvinsys':caa.calvinsys,
-            'calvinlib':caa.calvinlib, 
-            'get_logger':clog.get_logger,
-            'get_actor_logger':clog.get_actor_logger,
-        }
-        exec(co, namespace)
-        _, name = actor_type.split('.') 
-        actor_class = namespace[name]
-        # append metadata
-        actor_class.requires = metadata['requires']
-        actor_class.inport_properties = {} # {p: pp for p, pp in inports}
-        actor_class.outport_properties = {} #{p: pp for p, pp in outports}
-        for port in metadata["ports"]:
-            target = actor_class.inport_properties if port['direction'] == "in" else actor_class.outport_properties
-            target[port['name']] = port.get('properties', {})
-        return actor_class
-
     def new_actorstore_lookup(self, actor_type):
         ns, name = actor_type.split('.') 
         import requests
@@ -310,7 +316,7 @@ class ActorManager(object):
         res = r.json()
         metadata = res['properties']
         src = res['src']
-        actor_def = self.class_factory(src, metadata, actor_type)
+        actor_def = class_factory(src, metadata, actor_type)
         found = True
         is_primitive = True
         signer = None
