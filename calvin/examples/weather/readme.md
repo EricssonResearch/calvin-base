@@ -22,7 +22,7 @@ while `localweather.calvin` will report the weather based on the location of you
 
     $ csruntime --host localhost localweather.calvin
 
-The default is Stockholm, Sweden but this is configurable (for obvious reasons.) The file `attributes.json` sets the location of the runtime to London:
+The default is Stockholm, Sweden but this is configurable (for obvious reasons.) The file `attributes.json` sets the locality (location) of the runtime to London:
 
     $ csruntime --host localhost localweather.calvin --attr-file attributes.json
 
@@ -38,7 +38,7 @@ and
 
     $ csruntime --host localhost ../sensor-kit/humidity.calvin
 
-For this case, the temperature from the location the runtime is located is used, so by changing the city and country code in `attributes.json`, you can have a thermometer placed all over the world
+For this case, the temperature from the location the runtime is located is used, so by changing the locality (city) and country code in `attributes.json`, you can have a thermometer placed all over the world
 
     $ csruntime --host localhost ../sensor-kit/temperature.calvin --attr-file attributes.json
 
