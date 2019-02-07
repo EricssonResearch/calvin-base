@@ -79,8 +79,8 @@ class List(Actor):
 
     action_priority = (produce_list, add_item, add_item_EOS)
 
-    test_args = []
-    test_kwargs = {}
+    
+    test_kwargs = {'n':1, 'pre_list':None, 'post_list':None}
 
     test_set = [
         {
@@ -88,17 +88,17 @@ class List(Actor):
             'outports': {'list': [[1], [2]]},
         },
         {
-            'setup': [lambda self: self.init(n=2)],
+            'setup': [lambda self: self.init(n=2, pre_list=None, post_list=None)],
             'inports': {'item': [1, 2]},
             'outports': {'list': [[1, 2]]},
         },
         {
-            'setup': [lambda self: self.init(n=2, pre_list=[5, 7])],
+            'setup': [lambda self: self.init(n=2, pre_list=[5, 7], post_list=None)],
             'inports': {'item': [1, 2]},
             'outports': {'list': [[5, 7, 1, 2]]},
         },
         {
-            'setup': [lambda self: self.init(n=2, post_list=[5, 7])],
+            'setup': [lambda self: self.init(n=2, pre_list=None, post_list=[5, 7])],
             'inports': {'item': [1, 2]},
             'outports': {'list': [[1, 2, 5, 7]]},
         },
@@ -108,18 +108,18 @@ class List(Actor):
             'outports': {'list': [[8, 9, 1, 2, 5, 7]]},
         },
         {
-            'setup': [lambda self: self.init(n=0)],
+            'setup': [lambda self: self.init(n=0, pre_list=None, post_list=None)],
             'inports': {'item': [1, 2, EOSToken()]},
             'outports': {'list': [[1, 2]]},
         },
         # Error conditions
         {
-            'setup': [lambda self: self.init(n=2)],
+            'setup': [lambda self: self.init(n=2, pre_list=None, post_list=None)],
             'inports': {'item': [1, EOSToken(), 3, 4]},
             'outports': {'list': ['Exception', [3, 4]]},
         },
         {
-            'setup': [lambda self: self.init(n=0)],
+            'setup': [lambda self: self.init(n=0, pre_list=None, post_list=None)],
             'inports': {'item': [1, ExceptionToken(), 3, EOSToken()]},
             'outports': {'list': ['Exception', [3]]},
         },

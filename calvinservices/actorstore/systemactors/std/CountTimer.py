@@ -78,6 +78,7 @@ class CountTimer(Actor):
     action_priority = (step_no_periodic, step_periodic, stop)
     
 
+    test_kwargs = {'sleep': 0.1, 'start': 1, 'steps': 100}
 
     test_calvinsys = {'sys.timer.once': {'read': ["dummy", "dummy", "dummy"],
                                          'write': [0.1, 0.1]},

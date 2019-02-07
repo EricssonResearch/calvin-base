@@ -52,6 +52,7 @@ class Identity(Actor):
 
     action_priority = (donothing, )
 
+    test_kwargs = {'dump': False}
     test_set = [
         {
             'inports': {'token': [1, 2, 3]},

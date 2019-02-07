@@ -82,7 +82,7 @@ class SetValue(Actor):
 
     action_priority = (set_value, )
 
-    test_args = []
+    
     test_kwargs = {}
 
     test_set = [

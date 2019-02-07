@@ -66,10 +66,10 @@ class FiniteCounter(Actor):
         self.stopped = kwargs.get("stopped", self.stopped)
         return self.count
 
-    test_args = []
+    test_kwargs = {'start': 1, 'steps': 3, 'repeat': False, 'replicate_mult': 2, 'stopped': False}
     test_set = [
             {
-            'setup': [lambda self: self.init(steps=3)],
+            'setup': [lambda self: self.init(start=0, steps=3, repeat=False, replicate_mult=2, stopped=False)],
             'inports': {},
             'outports': {'integer': [0, 1, 2, EOSToken().value]}
             },

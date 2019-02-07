@@ -309,7 +309,6 @@ class Actor(object):
         STATUS.MIGRATABLE: [STATUS.READY, STATUS.DENIED]
     }
 
-    test_args = ()
     test_kwargs = {}
 
     @property

@@ -67,7 +67,7 @@ class SampleHold(Actor):
     
 
 
-    test_args = [-1]
+    test_kwargs = {'default': -1}
     test_set = [
         {
             'inports': {'in': [0, 1, 2, 3], 'sample': [False, True, 1, True]},

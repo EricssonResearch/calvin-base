@@ -16,25 +16,22 @@
 
 import importlib
 from functools import partial
+
 from jsonschema import validate
 
 from calvin.utilities import calvinconfig
 from calvin.utilities import calvinlogger
 
 _log = calvinlogger.get_logger(__name__)
-_conf = calvinconfig.get()
-_calvinsys = None
 
-TESTING = False
+_conf = calvinconfig.get()
+
+_calvinsys = None
 
 
 def get_calvinsys():
     """ Returns the calvinsys singleton"""
     global _calvinsys
-    global TESTING
-    if _calvinsys is None and TESTING:
-        from calvin.actorstore.tests.test_actors import MockCalvinSys
-        _calvinsys = MockCalvinSys()
     if _calvinsys is None:
         _calvinsys = CalvinSys()
     return _calvinsys

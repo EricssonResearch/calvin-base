@@ -15,12 +15,11 @@
 # limitations under the License.
 
 from calvin.actor.actor import Actor, manage, condition
-import time  # NEVER DO THIS OUTSIDE OF TEST
 
 class Burn(Actor):
     """
     documentation:
-    - forward a token unchanged and Burns cycles
+    - forward a token unchanged and Burns cycles after duration milliseconds
     ports:
     - direction: in
       help: a token
@@ -28,13 +27,22 @@ class Burn(Actor):
     - direction: out
       help: the same token
       name: token
+    requires:
+    - time
     """
     @manage(['dump', 'last', 'duration'])
     def init(self, dump, duration):
         self.dump = dump
         self.last = None
         self.duration = duration
+        self.setup()
 
+    def did_migrate(self):
+        self.setup()
+
+    def setup(self):
+        self.time = calvinlib.use('time')
+        
     def log(self, data):
         print "%s<%s,%s>: %s" % (self.__class__.__name__, self.name, self.id, data)
 
@@ -44,8 +52,8 @@ class Burn(Actor):
             self.log(input)
         self.last = input
         # Burn cycles until duration passed
-        t = time.time()
-        while time.time() - t < self.duration:
+        t = self.time.timestampms()
+        while self.time.timestampms() - t < self.duration:
             pass
         return (input, )
 
@@ -55,9 +63,10 @@ class Burn(Actor):
 
     action_priority = (donothing, )
 
+    test_kwargs = {'dump': False, 'duration': 1}
     test_set = [
         {
-            'setup': [lambda self: self.init(duration=0.0001)],
+            'setup': [lambda self: self.init(dump=False, duration=1)],
             'inports': {'token': [1, 2, 3]},
             'outports': {'token': [1, 2, 3]}
         }

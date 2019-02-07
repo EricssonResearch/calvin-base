@@ -20,7 +20,7 @@ def _assert_tagged_set(control_api, rt_uri, sink_ids):
         pairs = [x.split('-') for x in actual]
         tags = {p[0] for p in pairs}
         values = sorted([int(p[1]) for p in pairs])
-        assert values == range(1, n_values+1)
+        assert values[:n_values] == range(1, n_values+1)
         assert tags == set(["tag1", "tag2", "tag3"])
 
 

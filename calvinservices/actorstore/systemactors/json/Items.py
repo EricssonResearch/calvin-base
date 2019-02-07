@@ -81,7 +81,7 @@ class Items(Actor):
     
 
 
-    test_args = []
+    
     test_kwargs = {}
     test_set = [
         {

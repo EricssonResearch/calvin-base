@@ -40,7 +40,7 @@ class Length(Actor):
 
     action_priority = (action, )
 
-    test_args = []
+    
     test_kwargs = {}
 
     test_set = [

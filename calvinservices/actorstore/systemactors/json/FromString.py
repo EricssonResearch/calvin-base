@@ -64,7 +64,7 @@ class FromString(Actor):
     action_priority = (load,)
     
 
-
+    test_kwargs = {'exception_output': None}
     test_set = [
         {
             'inports': {'string': ['1']},

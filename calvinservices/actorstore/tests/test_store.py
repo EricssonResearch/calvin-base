@@ -90,8 +90,7 @@ def test_valid_docstring(actor_file):
 
     
 @pytest.mark.parametrize('actor_file', actor_files())
-def test_valid_docstring(store, actor_file):
-    print actor_file
+def test_signature(store, actor_file):
     basepath, _ = os.path.splitext(actor_file)
     _, ns, name = basepath.rsplit('/', 2)
     actor_type = "{}.{}".format(ns, name)

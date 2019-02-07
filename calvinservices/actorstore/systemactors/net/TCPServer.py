@@ -100,14 +100,3 @@ class TCPServer(Actor):
 
     action_priority = (receive, send, setup, start)
     
-
-    test_set = [
-        {
-            'input': {'host': [],
-                      'port': [],
-                      'handle': [],
-                      'token': []},
-            'output': {'handle': [],
-                       'token': []}
-        }
-    ]

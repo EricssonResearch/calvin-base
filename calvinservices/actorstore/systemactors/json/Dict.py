@@ -86,6 +86,7 @@ class Dict(Actor):
     action_priority = (produce_dict, add_entry, add_entry_EOS)
 
 
+    test_kwargs = {'n': 1}
     test_set = [
         {
             'inports': {'key': ["a", "b"], 'value': [1, 2]},

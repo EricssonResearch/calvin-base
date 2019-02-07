@@ -59,7 +59,7 @@ class Compare(Actor):
     
 
 
-    test_args = ['=']
+    test_kwargs = {'rel': '='}
     test_set = [
         {
             'setup': [lambda self: self.init('=')],

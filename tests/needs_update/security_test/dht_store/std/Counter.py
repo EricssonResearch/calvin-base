@@ -38,7 +38,7 @@ class Counter(Actor):
     def report(self):
         return self.count
 
-    test_args = []
+    
     test_set = [
         {'in': {}, 'out': {'integer': [n]}} for n in range(1, 10)
     ]

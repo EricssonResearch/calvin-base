@@ -15,8 +15,6 @@
 # limitations under the License.
 
 
-from collections import defaultdict
-
 from calvin.actor.actor import Actor, manage, condition, stateguard
 from calvin.runtime.north.calvin_token import EOSToken
 
@@ -40,7 +38,7 @@ class WordCount(Actor):
 
     @manage([])
     def init(self):
-        self.word_counts = defaultdict(int)
+        self.word_counts = {}
         self.finished = False
 
     def exception_handler(self, action, args):
@@ -48,7 +46,7 @@ class WordCount(Actor):
 
     @condition(['in'], [])
     def count_word(self, word):
-        self.word_counts[word] = self.word_counts[word] + 1
+        self.word_counts[word] = self.word_counts.setdefault(word, 0) + 1
 
 
     @stateguard(lambda self: self.finished is True)

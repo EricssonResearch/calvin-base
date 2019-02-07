@@ -66,7 +66,7 @@ class Sink(Actor):
             return self.inports['token']._state()
         return self.tokens
 
-    test_kwargs = {'store_tokens': True}
+    test_kwargs = {'store_tokens': True, 'quiet': True, 'active': True}
 
     test_set = [
         {

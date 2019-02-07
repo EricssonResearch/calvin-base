@@ -117,11 +117,3 @@ class TCPClient(Actor):
     action_priority = (control, receive, send)
     
 
-
-    test_set = [
-        {
-            'input': {'data_in': [],
-                      'control_in': []},
-            'output': {'data_out': []}
-        }
-    ]

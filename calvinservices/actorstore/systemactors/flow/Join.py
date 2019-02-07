@@ -49,7 +49,7 @@ class Join(Actor):
 
     action_priority = (port_one, port_two)
 
-    test_args = []
+    
     test_set = [
         {
             'inports': {'token_1': [1, 2], 'token_2': ['a', 'b']},

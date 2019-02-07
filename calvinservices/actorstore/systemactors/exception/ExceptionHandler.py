@@ -79,14 +79,15 @@ class ExceptionHandler(Actor):
 
     action_priority = (produce_with_exception, produce, consume)
 
+    test_kwargs = {'replace': False, 'replacement': None}
     test_set = [
-        {  # normal token
-            'inports': {'token': 42},
-            'outports': {'token': [42], 'status':[]}
-        },
         {  # Exception
             'inports': {'token': ExceptionToken()},
             'outports': {'token': ['End of stream'], 'status':['Exception']}
+        },
+        {  # normal token
+            'inports': {'token': 42},
+            'outports': {'token': [42], 'status':[]}
         },
         {  # Exception
             'inports': {'token': EOSToken()},
@@ -98,7 +99,7 @@ class ExceptionHandler(Actor):
             'outports': {'token': [0, 1, 2, 'EOS', 0, 1, 2, 'EOS', 0, 1, 2], 'status':['End of stream', 'End of stream']}
         },
         {  # Exception with replace (default)
-            'setup': [lambda self: self.init(replace=True)],
+            'setup': [lambda self: self.init(replace=True, replacement=None)],
             'inports': {'token': EOSToken()},
             'outports': {'token': [None], 'status':['End of stream']}
         },

@@ -65,7 +65,7 @@ class Evaluate(Actor):
     
 
 
-    test_args = ['x+y']
+    test_kwargs = {'expr': 'x+y'}
     test_set = [
         {
             'setup': [lambda self: self.init('x * y')],

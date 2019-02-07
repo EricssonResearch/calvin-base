@@ -55,6 +55,8 @@ class Sink(Actor):
         else :
             return None
 
+            
+    test_kwargs = {'buffer_size': 5}
     test_set = [
         {
             'inports': {'in': ['aa', 'ba', 'ca', 'da']},

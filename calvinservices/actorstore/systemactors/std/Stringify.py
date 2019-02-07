@@ -49,12 +49,13 @@ class Stringify(Actor):
 
             return (new_token, )
         except Exception as exc:
-            _log.error("Error %s, cant decode token '%s'", str(exc), repr(input))
+            _log.error("Error %s, can't decode token '%s'", str(exc), repr(input))
 
         return (ExceptionToken("Decode error"),)
 
     action_priority = (stringify, )
 
+    test_kwargs = {'encoding': None}
     test_set = [
         {
             'inports': {'in': [1, 2, 'test']},

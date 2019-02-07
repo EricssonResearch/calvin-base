@@ -52,7 +52,7 @@ class Alternate(Actor):
         
     action_priority = (dispatch, collect)
 
-    test_args = ["tag-1:"]
+    test_kwargs = {"order":["tag-1:"]}
     
     test_set = [
         {

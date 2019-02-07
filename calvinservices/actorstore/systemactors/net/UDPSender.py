@@ -109,11 +109,3 @@ class UDPSender(Actor):
 
     action_priority = (control, send)
     
-
-
-    test_set = [
-        {
-            'input': {'data_in': [],
-                      'control_in': []}
-        }
-    ]

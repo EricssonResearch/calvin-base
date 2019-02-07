@@ -41,7 +41,7 @@ class Collect(Actor):
 
     action_priority = (collect,)
 
-    test_args = []
+    
 
     test_set = [
         {

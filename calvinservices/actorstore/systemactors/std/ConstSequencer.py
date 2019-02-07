@@ -43,7 +43,7 @@ class ConstSequencer(Actor):
 
     action_priority = (constantify, )
 
-    test_args = [[42, 0]]
+    test_kwargs = {'sequence': [42, 0]}
 
     test_set = [
         {

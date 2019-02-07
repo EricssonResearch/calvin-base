@@ -70,7 +70,7 @@ class Format(Actor):
     
 
 
-    test_args = [r"{huey.dewey.louie} \{huey.dewey.louie\}"]
+    test_kwargs = {'fmt': r"{huey.dewey.louie} \{huey.dewey.louie\}"}
     test_set = [
         {
             'inports': {'dict': [{'huey': {'dewey': {'louie': 'gotcha!'}}}]},

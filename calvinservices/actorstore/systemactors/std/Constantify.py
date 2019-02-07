@@ -40,7 +40,7 @@ class Constantify(Actor):
 
     action_priority = (constantify, )
 
-    test_args = [42]
+    test_kwargs = {'constant': 42}
 
     test_set = [
         {

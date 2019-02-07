@@ -82,7 +82,7 @@ class RegexMatch(Actor):
     
 
 
-    test_args = [".* (FLERP).* "]
+    test_kwargs = {'regex': ".* (FLERP).* "}
     test_set = [
         {'inports': {'text': ["This is a test FLERP please ignore"]},
          'outports': {'match': ['FLERP'], 'no_match':[]}

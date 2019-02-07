@@ -49,6 +49,7 @@ class ReplicaIdentity(Actor):
 
     action_priority = (prepend, )
 
+    test_kwargs = {'dump': False}
     test_set = [
         {
             'inports': {'token': [1, 2, 3]},

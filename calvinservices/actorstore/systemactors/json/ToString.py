@@ -58,7 +58,7 @@ class ToString(Actor):
     action_priority = (dump,)
     
 
-
+    test_kwargs = {'exception_output': None}
     test_set = [
         {
             'inports': {'data': [1]},

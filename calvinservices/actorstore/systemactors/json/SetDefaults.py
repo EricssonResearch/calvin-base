@@ -87,7 +87,7 @@ class SetDefaults(Actor):
 
     action_priority = (set_defaults, )
 
-    test_args = []
+    
     test_kwargs = {}
 
     test_set = [

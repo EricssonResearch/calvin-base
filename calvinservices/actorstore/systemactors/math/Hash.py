@@ -62,7 +62,7 @@ class Hash(Actor):
     action_priority = (compute, )
     
 
-    test_args = ['md5']
+    test_kwargs = {'algorithm': 'md5'}
     test_set = [
         {
             'inports': {'string': ["dfgdfgdfsdfsdfsdfsdfsdfg", "d"]},

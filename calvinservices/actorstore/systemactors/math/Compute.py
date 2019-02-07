@@ -64,7 +64,7 @@ class Compute(Actor):
     action_priority = (compute, )
     
 
-    test_args = ['+']
+    test_kwargs = {'op':'+'}
     test_set = [
         {
             'setup': [lambda self: self.init('*')],
