@@ -12,33 +12,13 @@ from calvin.runtime.north.plugins.storage.storage_clients import LocalRegistry, 
 from calvin.requests import calvinresponse
 
 
-class DummyNode(object):
-    """docstring for DummyNode"""
-    def __init__(self, arg):
-        super(DummyNode, self).__init__()
-        self.id = arg
-        self.attributes = Mock()
-
-
 @pytest.fixture()
-def registry():
-    n = DummyNode('testing')
-    r = Storage(n, 'debug')
+def _registry(dummy_node):
+    r = Storage(dummy_node, 'debug')
     return r
 
-
-# @pytest.fixture()
-# def localregistry():
-#     r = LocalRegistry()
-#     return r
-
 @pytest.fixture()
-def mock_callback():
-    mock = Mock()
-    return mock
-
-@pytest.fixture()
-def testdata():
+def _testdata():
 
     def _to_set(o):
         """Convert JSON testdata special dicts to sets"""
@@ -61,81 +41,81 @@ def testdata():
 
     return (_store, _sets)
 
-def test_sanity(registry, testdata):
+def test_sanity(_registry, _testdata):
     def cb(*args, **kwargs):
         # print "START OUTER CALLBACK:", args, kwargs
         pass
     # Keep a reference to the original data
-    ref_store, ref_sets = testdata
+    ref_store, ref_sets = _testdata
     # k, v = ref_sets.popitem()
     # ref_sets = {k:v}
-    assert type(registry.storage) == NullRegistryClient
-    assert type(registry.localstorage) == LocalRegistry
-    # Prep the registry.localstorage (LocalRegistry) with data
-    registry.localstorage.localstore = deepcopy(ref_store)
-    registry.localstorage.localstore_sets = deepcopy(ref_sets)
-    # Call start on registry to trigger change
-    # from registry.localstorage --> registry.storage
-    registry.start(cb)
-    # As a consequence, registry.storage should now be
+    assert type(_registry.storage) == NullRegistryClient
+    assert type(_registry.localstorage) == LocalRegistry
+    # Prep the _registry.localstorage (LocalRegistry) with data
+    _registry.localstorage.localstore = deepcopy(ref_store)
+    _registry.localstorage.localstore_sets = deepcopy(ref_sets)
+    # Call start on _registry to trigger change
+    # from _registry.localstorage --> _registry.storage
+    _registry.start(cb)
+    # As a consequence, _registry.storage should now be
     # a DebugRegistryClient, a subclass of LocalRegistry that
     # allow us to easily examine the outcome of the flush operation
-    assert type(registry.storage) == DebugRegistryClient
+    assert type(_registry.storage) == DebugRegistryClient
 
     # from pprint import pprint
     #
     # print
-    # print "registry.storage.localstore:"
-    # pprint(registry.storage.localstore)
+    # print "_registry.storage.localstore:"
+    # pprint(_registry.storage.localstore)
     # print
     # print "ref_store:"
     # pprint(ref_store)
     # print
-    # print "registry.localstorage.localstore:"
-    # pprint(registry.localstorage.localstore)
+    # print "_registry.localstorage.localstore:"
+    # pprint(_registry.localstorage.localstore)
     #
     #
     # print
-    # print "registry.storage.localstore_sets:"
-    # pprint(registry.storage.localstore_sets)
+    # print "_registry.storage.localstore_sets:"
+    # pprint(_registry.storage.localstore_sets)
     # print
     # print "ref_sets:"
     # pprint(ref_sets)
     # print
-    # print "registry.localstorage.localstore_sets:"
-    # pprint(registry.localstorage.localstore_sets)
+    # print "_registry.localstorage.localstore_sets:"
+    # pprint(_registry.localstorage.localstore_sets)
     #
     # print "\n\nFLUSH!!!\n\n"
 
     # Trigger flush manually
-    registry.flush_localdata()
-    # Now, we can verify that the contents of the registry.storage
+    _registry.flush_localdata()
+    # Now, we can verify that the contents of the _registry.storage
     # is what we expect it to be:
     # print
-    # print "registry.storage.localstore:"
-    # pprint(registry.storage.localstore)
+    # print "_registry.storage.localstore:"
+    # pprint(_registry.storage.localstore)
     # print
     # print "ref_store:"
     # pprint(ref_store)
     # print
-    # print "registry.localstorage.localstore:"
-    # pprint(registry.localstorage.localstore)
-    assert registry.storage.localstore == ref_store
-    assert registry.localstorage.localstore == {}
+    # print "_registry.localstorage.localstore:"
+    # pprint(_registry.localstorage.localstore)
+    assert _registry.storage.localstore == ref_store
+    assert _registry.localstorage.localstore == {}
     
 
 
     # print
-    # print "registry.storage.localstore_sets:"
-    # pprint(registry.storage.localstore_sets)
+    # print "_registry.storage.localstore_sets:"
+    # pprint(_registry.storage.localstore_sets)
     # print
     # print "ref_sets:"
     # pprint(ref_sets)
     # print
-    # print "registry.localstorage.localstore_sets:"
-    # pprint(registry.localstorage.localstore_sets)
-    assert registry.storage.localstore_sets == ref_sets
-    assert registry.localstorage.localstore_sets == {}
+    # print "_registry.localstorage.localstore_sets:"
+    # pprint(_registry.localstorage.localstore_sets)
+    assert _registry.storage.localstore_sets == ref_sets
+    assert _registry.localstorage.localstore_sets == {}
     
 
 
@@ -145,36 +125,10 @@ def test_sanity(registry, testdata):
 
 
 #
-# Testing of storage.py remote API
+# FIXME: Testing of storage.py remote API
 #
 # Run a remote client with a LocalRegistry object as dB
 #
 
-def _start_process(cmd):
-    args = shlex.split(cmd)
-    process = subprocess.Popen(args)
-    return process
-
-def _start_registry():
-    os.putenv("FLASK_APP", "calvinservices/registry/registry_app.py")
-    return _start_process("flask run --port 4998")
-
-def _stop_registry(proc):
-    proc.terminate()
-
-# FIXTURE: actorstore
-# Setup actorstore for the duration of the test module
-@pytest.yield_fixture(scope="module")
-def remote_registry():
-    # Setup
-    reg_proc = _start_registry()
-    time.sleep(1)
-    # Run tests
-    yield
-    # Teardown
-    _stop_registry(reg_proc)
-
-# def test_remote_registry(remote_registry):
-#     assert True
 
 

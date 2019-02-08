@@ -5,35 +5,18 @@ from calvin.runtime.north.plugins.storage.storage_clients import NullRegistryCli
 import calvin.requests.calvinresponse as calvinresponse
 
 @pytest.fixture()
-def registry():
+def _registry():
     r = NullRegistryClient()
     return r
 
 @pytest.fixture()
-def mock_cb():
+def _mock_cb():
     def getitem(name):
         return None
         
     mock = MagicMock()
     mock.__getitem__.side_effect = getitem
     return mock
-
-@pytest.fixture()
-def org_cb():
-    m = Mock()
-    
-    def _once():
-        cal = m.call_args_list
-        assert len(cal) == 1
-        
-    def _args():
-        cal = m.call_args_list
-        args, kwargs = cal[0]
-        return (args, kwargs)    
-            
-    m.assert_once = _once
-    m.get_args = _args
-    return m
 
 
 # Mandatory for NullRegistryClient
@@ -65,20 +48,20 @@ prohibited = [
 ]
 
 @pytest.mark.parametrize('call', api)
-def test_api_present(registry, mock_cb, call):
-    # registry.localstore['key'] = 'value'
+def test_api_present(_registry, _mock_cb, call):
+    # _registry.localstore['key'] = 'value'
     name, args = call[0], tuple(call[1:-1])
-    method = getattr(registry, name)
+    method = getattr(_registry, name)
     # Check calling with required numbers of args
-    method(*args, cb=mock_cb)
+    method(*args, cb=_mock_cb)
     # Check calling with named arguments
     kwargs = dict(zip([arg[0] if isinstance(arg, (tuple, list, set)) else arg for arg in args], args))
-    method(cb=mock_cb, **kwargs)
+    method(cb=_mock_cb, **kwargs)
 
 # @pytest.mark.parametrize('call', prohibited)
-# def test_api_not_present(registry, call):
+# def test_api_not_present(_registry, call):
 #     name, args = call[0], tuple(call[1:])
-#     method = getattr(registry, name)
+#     method = getattr(_registry, name)
 #     with pytest.raises(NotImplementedError):
 #         method(*args)
 
@@ -86,9 +69,9 @@ def test_api_present(registry, mock_cb, call):
 # Test: methods following the same pattern (return CalvinResponse)
 #
 @pytest.mark.parametrize('call', standard_api)
-def test_forwarding(registry, org_cb, call):
+def test_forwarding(_registry, org_cb, call):
     name, args, value = call[0], tuple(call[1:-1]), call[-1]
-    method = getattr(registry, name)
+    method = getattr(_registry, name)
     method(*args, cb=CalvinCB(func=None, org_key='key', org_value='value', org_cb=org_cb))
     org_cb.assert_once()
     _, kwargs = org_cb.get_args()
@@ -100,12 +83,12 @@ def test_forwarding(registry, org_cb, call):
 # Test: methods not following the same pattern as above
 #
 @pytest.mark.skip(reason="Add test when first remote client has been added")
-def test_start(registry):
+def test_start(_registry):
     assert False
    
-def test_get_index(registry, org_cb):
+def test_get_index(_registry, org_cb):
     local_values=[1,2,3]
-    registry.get_index(('index1', 'index2'), cb=CalvinCB(func=None, org_key='key', local_values=local_values, org_cb=org_cb))
+    _registry.get_index(('index1', 'index2'), cb=CalvinCB(func=None, org_key='key', local_values=local_values, org_cb=org_cb))
     org_cb.assert_once()
     _, kwargs = org_cb.get_args()
     # assert kwargs['key'] == 'key'

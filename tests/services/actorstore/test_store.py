@@ -22,7 +22,7 @@ import pytest
 import yaml
 import jsonschema
 from jsonschema.exceptions import ValidationError
-from calvinservices.actorstore.store import Store
+
 from calvin.utilities.actor_signature import signature
 
 
@@ -70,20 +70,14 @@ def signature_old(desc):
     return hashlib.sha256(json.dumps(signature, separators=(',', ':'), sort_keys=True)).hexdigest()
 
 
-@pytest.fixture(scope='module')
-def store():
-    store = Store()
-    return store
-
-
 @pytest.mark.parametrize('actor_file', actor_files())
-def test_valid_docstring(actor_file):
+def test_valid_docstring(actor_file, actor_properties_schema):
     src = read_file(actor_file)
     _, docs, _ = src.split('"""', 2)
     data = yaml.load(docs)
     result = True
     try:
-        jsonschema.validate(data, Store.actor_properties_schema)
+        jsonschema.validate(data, actor_properties_schema)
     except ValidationError:
         result = False
     assert result

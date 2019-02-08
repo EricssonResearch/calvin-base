@@ -23,7 +23,7 @@ def _execute_cmd(cmd):
 
 @pytest.fixture(scope='module')
 def patch_config(file_dir, working_dir):
-    default_config_path = os.path.join(file_dir, "default.conf")
+    default_config_path = os.path.join(file_dir, "tests/default.conf")
     with open(default_config_path, 'r') as fp:
         config = json.load(fp)
 
@@ -49,8 +49,8 @@ def test_store(single_runtime_system):
     assert res.startswith("Module: io")
     
 @pytest.mark.parametrize('script', ['capture_output'])
-def test_compile_start_stop(single_runtime_system, file_dir, working_dir, script):
-    src_path = os.path.join(file_dir, "scripts", script) + ".calvin"
+def test_cscontrol_compile_deploy_delete_cycle(single_runtime_system, file_dir, working_dir, script):
+    src_path = os.path.join(file_dir, "tests/needs_update/scripts", script) + ".calvin"
     deployable_path = os.path.join(working_dir, script) + ".json"
     assert '' == _execute_cmd(("cscompile", "--output", deployable_path, src_path))
     status = json.loads(_execute_cmd("cscontrol http://localhost:5001 deploy " + deployable_path))

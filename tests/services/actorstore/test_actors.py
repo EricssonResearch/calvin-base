@@ -21,7 +21,7 @@ import pytest
 from calvin.runtime.north.calvinsys import CalvinSys
 from calvin.runtime.north.calvinlib import CalvinLib
 from calvin.runtime.north.actormanager import class_factory
-from calvinservices.actorstore.store import Store, Pathinfo 
+from calvinservices.actorstore.store import Pathinfo 
 
 from calvin.runtime.north.calvin_token import Token
 from calvin.runtime.north.plugins.port.endpoint import Endpoint
@@ -479,10 +479,6 @@ def actor_list():
             actors.append(actor_type)
     return actors
 
-@pytest.fixture(scope='module')
-def store():
-    store = Store()
-    return store
 
 @pytest.mark.parametrize('actor_type', actor_list())
 def test_actors(mock_calvinsys, mock_calvinlib, monkeypatch, store, actor_type):

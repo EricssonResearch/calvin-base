@@ -54,6 +54,7 @@ def create_actor(node):
 
 @pytest.fixture
 def actor(actorstore, dummy_node):
+    """FIXME: Generalize test file and merge with services/actorstore tests"""
     get_calvinsys()._node = Mock()
     return create_actor(dummy_node)
 

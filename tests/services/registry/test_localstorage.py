@@ -3,7 +3,7 @@ from calvin.runtime.north.plugins.storage.storage_clients import LocalRegistry
 
 
 @pytest.fixture()
-def registry():
+def _registry():
     r = LocalRegistry()
     return r
 
@@ -36,10 +36,10 @@ prohibited = [
 ]
 
 @pytest.mark.parametrize('call', api)
-def test_api_present(registry, call):
-    registry.localstore['key'] = 'value'
+def test_api_present(_registry, call):
+    _registry.localstore['key'] = 'value'
     name, args = call[0], tuple(call[1:])
-    method = getattr(registry, name)
+    method = getattr(_registry, name)
     # Check calling with required numbers of args
     method(*args)
     # Check calling with named arguments
@@ -47,112 +47,112 @@ def test_api_present(registry, call):
     method(**kwargs)
 
 # @pytest.mark.parametrize('call', prohibited)
-# def test_api_not_present(registry, call):
+# def test_api_not_present(_registry, call):
 #     name, args = call[0], tuple(call[1:])
-#     method = getattr(registry, name)
+#     method = getattr(_registry, name)
 #     with pytest.raises(NotImplementedError):
 #         method(*args)
 
 #
 # Test: set, get, delete
 #
-def test_set(registry):
-    registry.set('key', 'value')
-    assert registry.localstore['key'] == 'value'
+def test_set(_registry):
+    _registry.set('key', 'value')
+    assert _registry.localstore['key'] == 'value'
 
-def test_get_fail(registry):
+def test_get_fail(_registry):
     with pytest.raises(KeyError):
-        _ = registry.get('key')
+        _ = _registry.get('key')
     
-def test_get(registry):
-    registry.localstore['key'] = 'value'
-    assert registry.get('key') == 'value'
+def test_get(_registry):
+    _registry.localstore['key'] = 'value'
+    assert _registry.get('key') == 'value'
 
-def test_delete(registry):
-    registry.localstore['key'] = 'value'
-    assert 'key' in registry.localstore
-    registry.delete('key')
-    assert 'key' not in registry.localstore
+def test_delete(_registry):
+    _registry.localstore['key'] = 'value'
+    assert 'key' in _registry.localstore
+    _registry.delete('key')
+    assert 'key' not in _registry.localstore
     # Deleting non-present key should not raise exception
-    registry.delete('key')
+    _registry.delete('key')
     
 #
 # Test internal set manipulation: _append, _remove,  
 #
-def test_append(registry):
-    registry._append('key', ('value',))
-    assert registry.localstore_sets['key']['+'] == set(['value'])
-    assert registry.localstore_sets['key']['-'] == set()
+def test_append(_registry):
+    _registry._append('key', ('value',))
+    assert _registry.localstore_sets['key']['+'] == set(['value'])
+    assert _registry.localstore_sets['key']['-'] == set()
     
-def test_append_bad_value(registry):
+def test_append_bad_value(_registry):
     with pytest.raises(TypeError):
-        registry._append('key', 'value')
+        _registry._append('key', 'value')
         
-# def test_get_concat_fail(registry):
-#     assert registry.get_concat('key') == []
+# def test_get_concat_fail(_registry):
+#     assert _registry.get_concat('key') == []
 #
-# def test_get_concat(registry):
-#     registry.localstore_sets['key'] = {'+': set(['value']), '-': set()}
-#     assert registry.get_concat('key') == ['value']
+# def test_get_concat(_registry):
+#     _registry.localstore_sets['key'] = {'+': set(['value']), '-': set()}
+#     assert _registry.get_concat('key') == ['value']
 
-def test_remove(registry):
-    registry.localstore_sets['key'] = {'+': set(['value']), '-': set()}
-    registry._remove('key', ('value',))
-    assert registry.localstore_sets['key']['+'] == set()
-    assert registry.localstore_sets['key']['-'] == set(['value'])
-#    assert registry.get_concat('key') == []
+def test_remove(_registry):
+    _registry.localstore_sets['key'] = {'+': set(['value']), '-': set()}
+    _registry._remove('key', ('value',))
+    assert _registry.localstore_sets['key']['+'] == set()
+    assert _registry.localstore_sets['key']['-'] == set(['value'])
+#    assert _registry.get_concat('key') == []
     # Deleting non-present key should not raise exception    
-    registry._remove('key', ('value',))
+    _registry._remove('key', ('value',))
     
-def test_remove_bad_value(registry):
+def test_remove_bad_value(_registry):
     with pytest.raises(TypeError):    
-        registry._remove('key', 'value')
+        _registry._remove('key', 'value')
         
     
 #
 # Test indexed manipulation: add_index, get_index, remove_index
 #
-def test_add_index_bad_index(registry):
+def test_add_index_bad_index(_registry):
     with pytest.raises(TypeError):    
-        registry.add_index('indexes', 'value')
+        _registry.add_index('indexes', 'value')
 
-def test_add_index(registry):
-    registry.add_index(('index1', 'index2'), 'value')
-    registry.add_index(('index1', 'index3'), ('value1', 'value2'))
-    assert registry.localstore_sets[('index1', 'index2')]['+'] == set(['value'])
-    assert registry.localstore_sets[('index1', 'index2')]['-'] == set()
-    assert registry.localstore_sets[('index1', 'index3')]['+'] == set(['value1', 'value2'])
-    assert registry.localstore_sets[('index1', 'index3')]['-'] == set()
+def test_add_index(_registry):
+    _registry.add_index(('index1', 'index2'), 'value')
+    _registry.add_index(('index1', 'index3'), ('value1', 'value2'))
+    assert _registry.localstore_sets[('index1', 'index2')]['+'] == set(['value'])
+    assert _registry.localstore_sets[('index1', 'index2')]['-'] == set()
+    assert _registry.localstore_sets[('index1', 'index3')]['+'] == set(['value1', 'value2'])
+    assert _registry.localstore_sets[('index1', 'index3')]['-'] == set()
 
-def test_get_index_fail(registry):
-    assert registry.get_index(('index1', 'index2')) == set()
+def test_get_index_fail(_registry):
+    assert _registry.get_index(('index1', 'index2')) == set()
 
-def test_get_index(registry):
-    registry.localstore_sets[('index1', 'index2')] = {'+': set(['value']), '-': set()}
-    registry.localstore_sets[('index1', 'index3')] = {'+': set(['value1', 'value2']), '-': set()}
-    assert registry.get_index(('index1', 'index2')) == set(['value'])
-    assert registry.get_index(('index1', 'index3')) == set(('value1', 'value2'))
-    assert registry.get_index(('index1',)) == set(('value', 'value1', 'value2'))
+def test_get_index(_registry):
+    _registry.localstore_sets[('index1', 'index2')] = {'+': set(['value']), '-': set()}
+    _registry.localstore_sets[('index1', 'index3')] = {'+': set(['value1', 'value2']), '-': set()}
+    assert _registry.get_index(('index1', 'index2')) == set(['value'])
+    assert _registry.get_index(('index1', 'index3')) == set(('value1', 'value2'))
+    assert _registry.get_index(('index1',)) == set(('value', 'value1', 'value2'))
     
 
-def test_remove_index(registry):
-    registry.localstore_sets[('index1', 'index2')] = {'+': set(['value']), '-': set()}
-    registry.localstore_sets[('index1', 'index3')] = {'+': set(['value1', 'value2']), '-': set()}
-    registry.remove_index(('index1', 'index2'), 'value')
-    registry.remove_index(('index1', 'index3'), 'value1')
-    assert registry.localstore_sets[('index1', 'index2')] == {'+': set(), '-': set(['value'])}
-    assert registry.localstore_sets[('index1', 'index3')] == {'+': set(['value2']), '-': set(['value1'])}
+def test_remove_index(_registry):
+    _registry.localstore_sets[('index1', 'index2')] = {'+': set(['value']), '-': set()}
+    _registry.localstore_sets[('index1', 'index3')] = {'+': set(['value1', 'value2']), '-': set()}
+    _registry.remove_index(('index1', 'index2'), 'value')
+    _registry.remove_index(('index1', 'index3'), 'value1')
+    assert _registry.localstore_sets[('index1', 'index2')] == {'+': set(), '-': set(['value'])}
+    assert _registry.localstore_sets[('index1', 'index3')] == {'+': set(['value2']), '-': set(['value1'])}
     
-def test_remove_index_nonexisting_value(registry):
-    registry.localstore_sets[('index1', 'index2')] = {'+': set(['value']), '-': set()}
-    registry.remove_index(('index1', 'index2'), 'value1')
-    assert registry.localstore_sets[('index1', 'index2')] == {'+': set(['value']), '-': set(['value1'])}
+def test_remove_index_nonexisting_value(_registry):
+    _registry.localstore_sets[('index1', 'index2')] = {'+': set(['value']), '-': set()}
+    _registry.remove_index(('index1', 'index2'), 'value1')
+    assert _registry.localstore_sets[('index1', 'index2')] == {'+': set(['value']), '-': set(['value1'])}
     
-def test_remove_index_nonexisting_key(registry):
-    registry.localstore_sets[('index1', 'index2')] = {'+': set(['value']), '-': set()}
-    registry.remove_index(('index1', 'index3'), 'value')
-    assert registry.localstore_sets[('index1', 'index2')] == {'+': set(['value']), '-': set()}
-    assert registry.localstore_sets[('index1', 'index3')] == {'+': set(), '-': set(['value'])}
+def test_remove_index_nonexisting_key(_registry):
+    _registry.localstore_sets[('index1', 'index2')] = {'+': set(['value']), '-': set()}
+    _registry.remove_index(('index1', 'index3'), 'value')
+    assert _registry.localstore_sets[('index1', 'index2')] == {'+': set(['value']), '-': set()}
+    assert _registry.localstore_sets[('index1', 'index3')] == {'+': set(), '-': set(['value'])}
 
     
     

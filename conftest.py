@@ -40,21 +40,17 @@ def _start_process(cmd):
     return process
 
 def _start_actorstore():
-    this_dir = _file_dir()
-    app_path = os.path.abspath(this_dir + "/calvinservices/actorstore/store_app.py")
-    print app_path
+    app_path = os.path.abspath(_file_dir() + "/calvinservices/actorstore/store_app.py")
     os.putenv("FLASK_APP", app_path)
     return _start_process("flask run --port 4999")
-
-def _stop_actorstore(proc):
-    proc.terminate()
 
 def _start_runtime():
     # return _start_process("csruntime -n localhost -l calvinconfig:DEBUG")
     return _start_process("csruntime -n localhost")
     
-def _stop_runtime(proc):
-    proc.terminate()  
+def _start_registry():
+    os.putenv("FLASK_APP", "calvinservices/registry/registry_app.py")
+    return _start_process("flask run --port 4998")
 
 
 # FIXTURE: file_dir
@@ -62,35 +58,62 @@ def _stop_runtime(proc):
 # FIXME: Is this too fragile?
 @pytest.fixture(scope='module')
 def file_dir():
+    """
+    Return the POSIX path of the root dir as a string.  
+    FIXME: Fragile, depends on location of this file.
+    """
     return _file_dir()
 
-
 # FIXTURE: working_dir
-# Provide path to a temp dir available for the duration of the test module
 @pytest.fixture(scope='module')
 def working_dir(tmpdir_factory):
+    """Return string with POSIX path to temp dir (module scope)"""
     wdir = tmpdir_factory.mktemp('work')
     wdir = str(wdir)
     return wdir    
 
+@pytest.yield_fixture(scope="module")
+def remote_registry():
+    """
+    Setup registry service for the duration of the test module and 
+    guarantee teardown afterwards (yield fixture). 
+    FIXME: registry uri is hardcoded to "http://localhost:4998"
+    """
+    # Setup
+    reg_proc = _start_registry()
+    time.sleep(1)
+    # Run tests
+    yield
+    # Teardown
+    reg_proc.terminate()
 
 # FIXTURE: actorstore
-# Setup actorstore for the duration of the test module
 @pytest.yield_fixture(scope="module")
 def actorstore():
+    """
+    Setup actorstore for the duration of the test module and 
+    guarantee teardown afterwards (yield fixture). 
+    FIXME: actorstore uri is hardcoded to "http://localhost:4999"
+    """
     # Setup
     as_proc = _start_actorstore()
     time.sleep(1)
     # Run tests
     yield
     # Teardown
-    _stop_actorstore(as_proc)
+    as_proc.terminate()
     
     
 # FIXTURE: single_runtime_system
-# Setup actorstore and runtime for the duration of the test module
 @pytest.yield_fixture(scope="module")
 def single_runtime_system(file_dir, working_dir, patch_config):
+    """
+    Setup actorstore and runtime for the duration of the test module and
+    guarantee teardown afterwards (yield fixture).
+    Runtime defaults to local (internal) registry.
+    FIXME: actorstore uri is hardcoded to "http://localhost:4999"
+    FIXME: runtime uri is hardcoded to "http://localhost:5001"
+    """
     # Setup
     rt_proc = _start_runtime()
     as_proc = _start_actorstore()
@@ -101,16 +124,17 @@ def single_runtime_system(file_dir, working_dir, patch_config):
     yield
     
     # Teardown
-    _stop_actorstore(as_proc)
-    _stop_runtime(rt_proc)
+    rt_proc.terminate()
+    as_proc.terminate()
     
 # FIXTURE: patch_config
-# Override this fixture in test modules to patch the calvin.conf file
-# before starting the runtime. See test_runscripts for example use
 @pytest.fixture(scope='module')
 def patch_config(file_dir, working_dir):
+    """
+    Override this fixture in test modules to patch the calvin.conf file
+    before starting the runtime. See test_runscripts.py for example use.
+    """
     pass
-    
     
 #
 # Methods previously spread over multiple files, copy-pasted, etc.
@@ -123,18 +147,31 @@ class _DummyNode:
         self.pm = Mock()
         self.storage = Mock()
         self.control = Mock()
-        # self.attributes = attribute_resolver.AttributeResolver({})
+        self.attributes = Mock()
 
 @pytest.fixture(scope='module')
 def dummy_node():
+    """
+    A dummy node to pass in when unittesting classes that needs a runtime node.
+    FIXME: Somehow parametrize this to return any number of nodes and drop dummy_peer_node
+    """
     return _DummyNode()
 
 @pytest.fixture(scope='module')
 def dummy_peer_node():
+    """
+    Another dummy node to pass in when unittesting classes that needs a runtime node.
+    """
     return _DummyNode()         
             
 @pytest.fixture(scope='module')
 def control_api():
+    """
+    Provides a simple way to access the control API of a runtime over HTTP.
+    Usage: e.g. control_api.get_node_id("http://localhost:5001")
+    It faithfully reflects the flaws of the control API so check source for 
+    return value format.
+    """
     
     # PATHS
     NODE_PATH = '/node/{}'
