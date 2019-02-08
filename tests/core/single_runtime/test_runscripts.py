@@ -1,28 +1,16 @@
-import pytest
-import subprocess
-import shlex
 import os
 import json
-import shutil
-import time
+
 import py
+import pytest
 
 
 # FIXME: Randomize ports
 # FIXME: Fixture for test list?
 
-# Helpers
-
-
-def _execute_cmd(cmd):
-    if isinstance(cmd, basestring):
-        cmd = shlex.split(cmd)
-    res = subprocess.check_output(cmd)
-    return res.strip()
-
-
 @pytest.fixture(scope='module')
 def patch_config(file_dir, working_dir):
+    """Patch copy of default.conf in temp dir; set env CALVIN_CONFIG to patched file"""
     default_config_path = os.path.join(file_dir, "tests/default.conf")
     with open(default_config_path, 'r') as fp:
         config = json.load(fp)
@@ -38,25 +26,24 @@ def patch_config(file_dir, working_dir):
         json.dump(config, fp)
     os.putenv("CALVIN_CONFIG", config_path)
 
-def test_rt(single_runtime_system):
-    res = _execute_cmd("cscontrol http://localhost:5001 id")
+def test_rt(single_runtime_system, execute_cmd_check_output):
+    res = execute_cmd_check_output("cscontrol http://localhost:5001 id")
     res = res.strip('"')
-    print res
     assert len(res) == 36
     
-def test_store(single_runtime_system):
-    res = _execute_cmd("csdocs io")
+def test_store(single_runtime_system, execute_cmd_check_output):
+    res = execute_cmd_check_output("csdocs io")
     assert res.startswith("Module: io")
     
 @pytest.mark.parametrize('script', ['capture_output'])
-def test_cscontrol_compile_deploy_delete_cycle(single_runtime_system, file_dir, working_dir, script):
+def test_cscontrol_compile_deploy_delete_cycle(single_runtime_system, execute_cmd_check_output, file_dir, working_dir, script):
     src_path = os.path.join(file_dir, "tests/needs_update/scripts", script) + ".calvin"
     deployable_path = os.path.join(working_dir, script) + ".json"
-    assert '' == _execute_cmd(("cscompile", "--output", deployable_path, src_path))
-    status = json.loads(_execute_cmd("cscontrol http://localhost:5001 deploy " + deployable_path))
+    assert '' == execute_cmd_check_output(("cscompile", "--output", deployable_path, src_path))
+    status = json.loads(execute_cmd_check_output("cscontrol http://localhost:5001 deploy " + deployable_path))
     app_id = status["application_id"]
     assert len(app_id) == 36
-    assert '""' == _execute_cmd("cscontrol http://localhost:5001 applications delete " + app_id)
+    assert '""' == execute_cmd_check_output("cscontrol http://localhost:5001 applications delete " + app_id)
     file = py.path.local(os.path.join(working_dir, "stdout.txt"))
     assert file.size() > 100
 

@@ -34,24 +34,65 @@ from calvin.utilities import calvinuuid
 def _file_dir():
     return os.path.dirname(os.path.realpath(__file__))
 
-def _start_process(cmd):
-    args = shlex.split(cmd)
-    process = subprocess.Popen(args)
-    return process
+@pytest.fixture(scope='module')
+def start_process():
+    """
+    Provides function returning process handle to new process given by cmd (string or list).
+    Usage: e.g. start_process("csruntime -n localhost")
+    """
+    def _start_process(cmd):
+        if isinstance(cmd, basestring):
+            cmd = shlex.split(cmd)
+        process = subprocess.Popen(cmd)
+        return process
+    return _start_process
 
-def _start_actorstore():
-    app_path = os.path.abspath(_file_dir() + "/calvinservices/actorstore/store_app.py")
-    os.putenv("FLASK_APP", app_path)
-    return _start_process("flask run --port 4999")
+@pytest.fixture(scope='module')
+def start_actorstore(start_process):
+    """
+    Provides convenience function returning process handle to new actorstore process.
+    Usage: start_actorstore()
+    """    
+    def _start_actorstore():
+        app_path = os.path.abspath(_file_dir() + "/calvinservices/actorstore/store_app.py")
+        os.putenv("FLASK_APP", app_path)
+        return start_process("flask run --port 4999")
+    return _start_actorstore
 
-def _start_runtime():
-    # return _start_process("csruntime -n localhost -l calvinconfig:DEBUG")
-    return _start_process("csruntime -n localhost")
+@pytest.fixture(scope='module')
+def start_runtime(start_process):
+    """
+    Provides convenience function returning process handle to new runtime process.
+    Usage: start_runtime()
+    """
+    def _start_runtime():
+        # return _start_process("csruntime -n localhost -l calvinconfig:DEBUG")
+        return start_process("csruntime -n localhost")
+    return _start_runtime
     
-def _start_registry():
-    os.putenv("FLASK_APP", "calvinservices/registry/registry_app.py")
-    return _start_process("flask run --port 4998")
+@pytest.fixture(scope='module')
+def start_registry(start_process):
+    """
+    Provides convenience function returning process handle to new registry process.
+    Usage: start_registry()
+    """
+    def _start_registry():
+        os.putenv("FLASK_APP", "calvinservices/registry/registry_app.py")
+        return start_process("flask run --port 4998")
+    return _start_registry
 
+@pytest.fixture
+def execute_cmd_check_output():
+    """
+    Provides function returning output on completion of cmd (string or list).
+    Usage: e.g. start_process("csdocs io.Print")
+    """
+    def _execute_cmd(cmd):
+        if isinstance(cmd, basestring):
+            cmd = shlex.split(cmd)
+        res = subprocess.check_output(cmd)
+        return res.strip()
+    return _execute_cmd
 
 # FIXTURE: file_dir
 # Provide the path to the directory where this file resides
@@ -73,14 +114,14 @@ def working_dir(tmpdir_factory):
     return wdir    
 
 @pytest.yield_fixture(scope="module")
-def remote_registry():
+def remote_registry(start_registry):
     """
     Setup registry service for the duration of the test module and 
     guarantee teardown afterwards (yield fixture). 
     FIXME: registry uri is hardcoded to "http://localhost:4998"
     """
     # Setup
-    reg_proc = _start_registry()
+    reg_proc = start_registry()
     time.sleep(1)
     # Run tests
     yield
@@ -89,14 +130,14 @@ def remote_registry():
 
 # FIXTURE: actorstore
 @pytest.yield_fixture(scope="module")
-def actorstore():
+def actorstore(start_actorstore):
     """
     Setup actorstore for the duration of the test module and 
     guarantee teardown afterwards (yield fixture). 
     FIXME: actorstore uri is hardcoded to "http://localhost:4999"
     """
     # Setup
-    as_proc = _start_actorstore()
+    as_proc = start_actorstore()
     time.sleep(1)
     # Run tests
     yield
@@ -106,7 +147,7 @@ def actorstore():
     
 # FIXTURE: single_runtime_system
 @pytest.yield_fixture(scope="module")
-def single_runtime_system(file_dir, working_dir, patch_config):
+def single_runtime_system(file_dir, working_dir, patch_config, start_actorstore, start_runtime):
     """
     Setup actorstore and runtime for the duration of the test module and
     guarantee teardown afterwards (yield fixture).
@@ -115,8 +156,8 @@ def single_runtime_system(file_dir, working_dir, patch_config):
     FIXME: runtime uri is hardcoded to "http://localhost:5001"
     """
     # Setup
-    rt_proc = _start_runtime()
-    as_proc = _start_actorstore()
+    rt_proc = start_runtime()
+    as_proc = start_actorstore()
     # FIXME: Wait for RT to be in listening mode
     time.sleep(2)
         
