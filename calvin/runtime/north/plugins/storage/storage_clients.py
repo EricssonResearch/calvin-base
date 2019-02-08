@@ -205,9 +205,9 @@ class NullRegistryClient(StorageBase):
         callback = cb.kwargs.get('org_cb')
         if callback:
             org_key = cb.kwargs['org_key'] 
-            callback(key=org_key, value=calvinresponse.CalvinResponse(value))
+            # callback(key=org_key, value=calvinresponse.CalvinResponse(value))
             # FIXME: Should this be used instead?         
-            # async.DelayedCall(0, callback, key=org_key, value=calvinresponse.CalvinResponse(value))        
+            async.DelayedCall(0, callback, key=org_key, value=calvinresponse.CalvinResponse(value))        
     
     #
     # Remaining methods will only pass on the callback on behalf of the preceeding LocalStorage operation

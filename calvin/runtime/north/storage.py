@@ -199,15 +199,17 @@ class PrivateStorage(object):
 #
 # Start of primitive methods
 #
-    # def started_cb(self, *args, **kwargs):
-    #     """ Called when storage has started, flushes localstore
-    #     """
-    #     if not args[0]:
-    #         return
+    def started_cb(self, *args, **kwargs):
+        """ Called when storage has started, flushes localstore
+        """
+        # print "started_cb", args, kwargs
+        
+        if not args[0]:
+            return
         # self.storage = registry(self.node, self.storage_type)
-        # self.trigger_flush(0)
-        # if kwargs["org_cb"]:
-        #     async.DelayedCall(0, kwargs["org_cb"], args[0])
+        self.trigger_flush(0)
+        if kwargs["org_cb"]:
+            async.DelayedCall(0, kwargs["org_cb"], args[0])
 
     # FIXME: Remove iface arg
     def start(self, cb=None):
@@ -221,13 +223,15 @@ class PrivateStorage(object):
         #    handling all communication with the remote registry.
         # self.storage.start(iface=iface, cb=CalvinCB(self.started_cb, org_cb=cb), name=name, nodeid=self.node.id)
         if self.storage_type != 'local':
-            self.storage = registry(self.storage_type, self.node, self.storage_host)        
-        if self.storage_type != 'proxy':
+            self.storage = registry(self.storage_type, self.node, self.storage_host)
+        if self.storage_type == 'proxy':         
+            self.storage._start(CalvinCB(self.started_cb, org_cb=cb))
+        else:
             self.storage_proxy_server = StorageProxyServer(self.node, self)
 
-        self.trigger_flush(0)
-        if cb:
-            async.DelayedCall(0, cb, True)
+            self.trigger_flush(0)
+            if cb:
+                async.DelayedCall(0, cb, True)
 
 
     def stop(self, cb=None):

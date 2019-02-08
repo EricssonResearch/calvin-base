@@ -40,12 +40,11 @@ class ProxyRegistryClient(StorageBase):
         self.tunnel = None
         self.replies = {}
         _log.info("PROXY init for %s", self.master_uri)
-        self._start()
         
     # def start(self, iface='', network='', bootstrap=[], cb=None, name=None, nodeid=None):
     #     pass
 
-    def _start(self):
+    def _start(self, tunnel_up_callback):
         """
             Starts the service if its needed for the storage service
             cb  is the callback called when the start is finished
@@ -58,7 +57,7 @@ class ProxyRegistryClient(StorageBase):
         fqdn = socket.getfqdn(o.hostname)
         self._server_node_name = fqdn.decode('unicode-escape')
         self.node.network.join([self.master_uri],
-                               callback=CalvinCB(self._start_link_cb, org_cb=None),
+                               callback=CalvinCB(self._start_link_cb, org_cb=tunnel_up_callback),
                                corresponding_server_node_names=[self._server_node_name])
 
     def _got_link(self, master_id, org_cb):
