@@ -46,6 +46,20 @@ def start_process():
         process = subprocess.Popen(cmd)
         return process
     return _start_process
+    
+@pytest.fixture(scope='module')
+def stop_process():
+    """
+    Utility function to cleanly terminate a process given its process handle
+    Usage: stop_process(proc_handle)
+    """
+    def _stop_process(proc):
+        proc.kill()
+        proc.communicate()
+        proc.wait()        
+        
+    return _stop_process    
+            
 
 @pytest.fixture(scope='module')
 def start_actorstore(start_process):
@@ -63,11 +77,12 @@ def start_actorstore(start_process):
 def start_runtime(start_process):
     """
     Provides convenience function returning process handle to new runtime process.
-    Usage: start_runtime()
+    Usage: start_runtime(calvin_port, control_port)
     """
-    def _start_runtime():
+    def _start_runtime(tunnel_port, control_port):
         # return _start_process("csruntime -n localhost -l calvinconfig:DEBUG")
-        return start_process("csruntime -n localhost")
+        cmd = "csruntime -n localhost -p {} -c {}".format(tunnel_port, control_port)
+        return start_process(cmd)
     return _start_runtime
     
 @pytest.fixture(scope='module')
@@ -144,10 +159,27 @@ def actorstore(start_actorstore):
     # Teardown
     as_proc.terminate()
     
+
+def free_ports():
+    import socket
+    """
+    Determines a free port using sockets.
+    """
+    def _free_socket():
+        free_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        free_socket.bind(('localhost', 0))
+        free_socket.listen(5)
+        return free_socket
+    
+    s1, s2 = _free_socket(), _free_socket()    
+    p1, p2 = s1.getsockname()[1], s2.getsockname()[1]    
+    # port = free_socket.getsockname()[1]
+    s1.close(), s2.close()
+    return (p1, p2)
     
 # FIXTURE: single_runtime_system
 @pytest.yield_fixture(scope="module")
-def single_runtime_system(file_dir, working_dir, patch_config, start_actorstore, start_runtime):
+def single_runtime_system(file_dir, working_dir, patch_config, start_actorstore, start_runtime, stop_process):
     """
     Setup actorstore and runtime for the duration of the test module and
     guarantee teardown afterwards (yield fixture).
@@ -156,17 +188,26 @@ def single_runtime_system(file_dir, working_dir, patch_config, start_actorstore,
     FIXME: runtime uri is hardcoded to "http://localhost:5001"
     """
     # Setup
-    rt_proc = start_runtime()
+    p, c = free_ports()
+    rt_proc = start_runtime(p, c)
     as_proc = start_actorstore()
     # FIXME: Wait for RT to be in listening mode
     time.sleep(2)
         
     # Run tests
-    yield
+    yield "http://localhost:{}".format(c)
     
     # Teardown
-    rt_proc.terminate()
-    as_proc.terminate()
+    # rt_proc.terminate()
+    stop_process(rt_proc)
+    
+    # as_proc.terminate()
+    stop_process(as_proc)
+        
+    
+    
+    
+    
     
 # FIXTURE: patch_config
 @pytest.fixture(scope='module')

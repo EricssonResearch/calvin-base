@@ -226,7 +226,7 @@ testlist = [
 
 @pytest.fixture(scope='module', params=testlist)
 def deploy_application(request, single_runtime_system, control_api):
-    rt_uri = "http://127.0.0.1:5001" # FIXME: This should be part of single_runtime_system properties
+    rt_uri = single_runtime_system
     # expects can be a function
     name, script, sinks, expects = request.param
     if type(expects) in (list, tuple):

@@ -5,8 +5,8 @@ import time
 import pytest
 import requests
 
-@pytest.fixture(scope="module")
-def _proxy_storage_system(start_registry, start_runtime, start_process):
+@pytest.fixture(scope="function")
+def _proxy_storage_system(monkeypatch, start_registry, start_runtime, stop_process):
     """
     Setup actorstore and runtimes for the duration of the test module and
     guarantee teardown afterwards (yield fixture).
@@ -17,25 +17,31 @@ def _proxy_storage_system(start_registry, start_runtime, start_process):
     registry_proc = start_registry()
     # This is the proxy server on port 5000/5001
     # time.sleep(1)
-    os.environ["CALVIN_GLOBAL_STORAGE_TYPE"] = '"rest"'
-    server_rt_proc = start_runtime()
+    # os.environ["CALVIN_GLOBAL_STORAGE_TYPE"] = '"rest"'
+    monkeypatch.setenv("CALVIN_GLOBAL_STORAGE_TYPE", '"rest"')
+    server_rt_proc = start_runtime(5000, 5001)
     # server_rt_proc = start_process("csruntime -n localhost -l ANALYZE -f server.log")
     # time.sleep(1)
-    # This is the proxy server on port 5000/5001
-    os.environ["CALVIN_GLOBAL_STORAGE_TYPE"] = '"proxy"'
-    os.environ["CALVIN_GLOBAL_STORAGE_PROXY"] = '"calvinip://localhost:5000"'
-    client_rt_proc = start_process("csruntime -n localhost -p 5002 -c 5003")
+    # This is the proxy client on port 5002/5003
+    # os.environ["CALVIN_GLOBAL_STORAGE_TYPE"] = '"proxy"'
+    # os.environ["CALVIN_GLOBAL_STORAGE_PROXY"] = '"calvinip://localhost:5000"'
+    monkeypatch.setenv("CALVIN_GLOBAL_STORAGE_TYPE", '"proxy"')
+    monkeypatch.setenv("CALVIN_GLOBAL_STORAGE_PROXY", '"calvinip://localhost:5000"')
+    # client_rt_proc = start_process("csruntime -n localhost -p 5002 -c 5003")
+    client_rt_proc = start_runtime(5002, 5003)
     # client_rt_proc = start_process("csruntime -n localhost -p 5002 -c 5003 -l ANALYZE -f client.log")
-    time.sleep(2)
+    time.sleep(4)
         
     # Run tests
     yield
     
     # Teardown
-    client_rt_proc.terminate()
-    server_rt_proc.terminate()
-    registry_proc.terminate()
-
+    # control_api.quit("http://localhost:{}".format(5003), method="now")
+    # control_api.quit("http://localhost:{}".format(5001), method="now")
+    stop_process(client_rt_proc)
+    stop_process(server_rt_proc)
+    stop_process(registry_proc)
+    
     
 def test_simple(_proxy_storage_system, control_api):
     # We have two runtimes with identical capabilities, 
