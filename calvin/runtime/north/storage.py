@@ -234,6 +234,8 @@ class PrivateStorage(object):
         """
         # self.storage.stop(cb=cb)
         self.storage = NullRegistryClient(self.storage_type)
+        if cb:
+            cb()
 
     def barrier(self):
         self.storage.barrier()

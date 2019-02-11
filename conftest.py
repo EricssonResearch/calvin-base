@@ -255,13 +255,12 @@ def control_api():
         #     return response.status_code, response.json()
         #
         # # cscontrol
-        # def quit(self, rt, method=None):
-        #     if method is None:
-        #         r = self._delete(rt, timeout, async, NODE)
-        #     else:
-        #         r = self._delete(rt, timeout, async, NODE_PATH.format(method))
-        #     return self.check_response(r)
-        #
+        def quit(self, host_uri, method=None):
+            if method is None:
+                response = requests.delete(host_uri + NODE)
+            else:
+                response = requests.delete(host_uri + NODE_PATH.format(method))
+            return response.status_code, None
         
         def get_actor(self, host_uri, actor_id):
             response = requests.get(host_uri + ACTOR_PATH.format(actor_id))

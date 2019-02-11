@@ -212,7 +212,7 @@ class NullRegistryClient(StorageBase):
     def _response(self, cb, value):
         callback = cb.kwargs.get('org_cb')
         if callback:
-            org_key = cb.kwargs['org_key'] 
+            org_key = cb.kwargs.get('org_key', 'NO-SUCH-KEY')
             callback(key=org_key, value=calvinresponse.CalvinResponse(value))
             # FIXME: Should this be used instead?         
             # async.DelayedCall(0, callback, key=org_key, value=calvinresponse.CalvinResponse(value))        
