@@ -14,6 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import re
+
 # from calvin.runtime.north.plugins.storage import storage_factory
 from calvin.actor.port_property_syntax import list_port_property_capabilities
 from calvin.runtime.south.async import async
