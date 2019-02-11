@@ -36,4 +36,4 @@ def get_tasks(actor_type=''):
     return jsonify({'src': src, 'properties':properties})
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=False)

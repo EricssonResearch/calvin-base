@@ -107,7 +107,10 @@ class RESTRegistryClient(StorageBase):
     def _delete(self, path, cb):
         self._request('delete', path, cb=cb)
     
-    
+    def start(self, cb):
+        cb.args_append(True)
+        cb()
+        
     def set(self, key, value, cb):
         # cb is CalvinCallback(func=cb, org_key=key, org_value=value, org_cb=cb)
         def _response_cb(f):
@@ -184,7 +187,12 @@ class NullRegistryClient(StorageBase):
 
     def barrier(self):
         pass
-        
+    
+    def start(self, cb):
+        # Don't trigger flush
+        cb.kwargs['org_key'] = 'placeholder'
+        self._response(cb, True)
+                
     # def start(self, iface='', name=None, nodeid=None, cb=None):
     #     """
     #         Starts the service if its nneeded for the storage service
@@ -205,9 +213,9 @@ class NullRegistryClient(StorageBase):
         callback = cb.kwargs.get('org_cb')
         if callback:
             org_key = cb.kwargs['org_key'] 
-            # callback(key=org_key, value=calvinresponse.CalvinResponse(value))
+            callback(key=org_key, value=calvinresponse.CalvinResponse(value))
             # FIXME: Should this be used instead?         
-            async.DelayedCall(0, callback, key=org_key, value=calvinresponse.CalvinResponse(value))        
+            # async.DelayedCall(0, callback, key=org_key, value=calvinresponse.CalvinResponse(value))        
     
     #
     # Remaining methods will only pass on the callback on behalf of the preceeding LocalStorage operation
@@ -353,10 +361,14 @@ class DebugRegistryClient(LocalRegistry):
     """
     LocalRegistry with callbacks to emulate remote clients
     """
+    
     def _response(self, cb, value):
         cb(value=calvinresponse.CalvinResponse(value))
         # FIXME: Should this be used instead?
         # async.DelayedCall(0, callback, key=org_key, value=calvinresponse.CalvinResponse(value))
+
+    def start(self, cb):
+        self._response(cb, True)
 
     def set(self, key, value, cb):
         super(DebugRegistryClient, self).set(key, value)

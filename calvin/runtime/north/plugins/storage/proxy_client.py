@@ -44,7 +44,7 @@ class ProxyRegistryClient(StorageBase):
     # def start(self, iface='', network='', bootstrap=[], cb=None, name=None, nodeid=None):
     #     pass
 
-    def _start(self, tunnel_up_callback):
+    def start(self, tunnel_up_callback):
         """
             Starts the service if its needed for the storage service
             cb  is the callback called when the start is finished

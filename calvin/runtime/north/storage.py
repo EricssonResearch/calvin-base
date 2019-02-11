@@ -211,7 +211,6 @@ class PrivateStorage(object):
         if kwargs["org_cb"]:
             async.DelayedCall(0, kwargs["org_cb"], args[0])
 
-    # FIXME: Remove iface arg
     def start(self, cb=None):
         """ Start storage
         """
@@ -224,14 +223,10 @@ class PrivateStorage(object):
         # self.storage.start(iface=iface, cb=CalvinCB(self.started_cb, org_cb=cb), name=name, nodeid=self.node.id)
         if self.storage_type != 'local':
             self.storage = registry(self.storage_type, self.node, self.storage_host)
-        if self.storage_type == 'proxy':         
-            self.storage._start(CalvinCB(self.started_cb, org_cb=cb))
-        else:
+        self.storage.start(CalvinCB(self.started_cb, org_cb=cb))
+        
+        if self.storage_type != 'proxy':         
             self.storage_proxy_server = StorageProxyServer(self.node, self)
-
-            self.trigger_flush(0)
-            if cb:
-                async.DelayedCall(0, cb, True)
 
 
     def stop(self, cb=None):

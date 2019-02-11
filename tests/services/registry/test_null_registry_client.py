@@ -36,6 +36,7 @@ standard_api = [
     ('remove_index', ('indexes',), 'value', calvinresponse.OK),
 ]
 nonstandard_api = [
+    ('start', calvinresponse.OK),
     ('get_index', ('indexes',), None),    
 ]
 api = standard_api + nonstandard_api
