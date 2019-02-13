@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Copyright (c) 2015-2019 Ericsson AB
@@ -14,6 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import argparse
 
 from flask import Flask, jsonify, abort
 
@@ -35,5 +37,18 @@ def get_tasks(actor_type=''):
         abort(404)
     return jsonify({'src': src, 'properties':properties})
 
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--host', dest='host', default="localhost", type=str, help='host address')
+    parser.add_argument('--port', dest='port', default=4999, type=int, help='host port')
+    parser.add_argument('--debug', action='store_true', default=False, help='run in debug mode')
+    
+    args = parser.parse_args()
+    
+    app.run(host=args.host, port=args.port, debug=args.debug)
+    
+
 if __name__ == '__main__':
-    app.run(debug=False)
+    main()
+    

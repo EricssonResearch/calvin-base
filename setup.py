@@ -84,7 +84,9 @@ setup(name='er-calvin',
               'cscompile=calvinservices.csparser.cscompiler:main',
               'csmanage=calvin.Tools.csmanage:main',
               'csweb=calvin.Tools.www.csweb:main',
-              'csviz=calvinservices.csparser.csviz:main'
+              'csviz=calvinservices.csparser.csviz:main',
+              'csactorstore=calvinservices.actorstore.store_app:main',
+              'csregistry=calvinservices.registry.registry_app:main',
           ]
       }
       )
