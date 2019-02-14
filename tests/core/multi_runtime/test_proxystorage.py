@@ -6,7 +6,7 @@ import pytest
 import requests
 
 @pytest.fixture(scope="function")
-def _proxy_storage_system(monkeypatch, start_registry, start_runtime, stop_process):
+def _proxy_storage_system(start_registry, start_runtime, stop_process):
     """
     Setup actorstore and runtimes for the duration of the test module and
     guarantee teardown afterwards (yield fixture).
@@ -16,20 +16,9 @@ def _proxy_storage_system(monkeypatch, start_registry, start_runtime, stop_proce
     # REST registry on http://localhost:4998
     registry_proc = start_registry()
     # This is the proxy server on port 5000/5001
-    # time.sleep(1)
-    # os.environ["CALVIN_GLOBAL_STORAGE_TYPE"] = '"rest"'
-    monkeypatch.setenv("CALVIN_GLOBAL_STORAGE_TYPE", '"rest"')
-    server_rt_proc = start_runtime(5000, 5001)
-    # server_rt_proc = start_process("csruntime -n localhost -l ANALYZE -f server.log")
-    # time.sleep(1)
+    server_rt_proc = start_runtime(5000, 5001, {'type': 'rest', 'uri': 'http://localhost:4998'})
     # This is the proxy client on port 5002/5003
-    # os.environ["CALVIN_GLOBAL_STORAGE_TYPE"] = '"proxy"'
-    # os.environ["CALVIN_GLOBAL_STORAGE_PROXY"] = '"calvinip://localhost:5000"'
-    monkeypatch.setenv("CALVIN_GLOBAL_STORAGE_TYPE", '"proxy"')
-    monkeypatch.setenv("CALVIN_GLOBAL_STORAGE_PROXY", '"calvinip://localhost:5000"')
-    # client_rt_proc = start_process("csruntime -n localhost -p 5002 -c 5003")
-    client_rt_proc = start_runtime(5002, 5003)
-    # client_rt_proc = start_process("csruntime -n localhost -p 5002 -c 5003 -l ANALYZE -f client.log")
+    client_rt_proc = start_runtime(5002, 5003, {'type': 'proxy', 'uri': 'calvinip://localhost:5000'})
     time.sleep(4)
         
     # Run tests

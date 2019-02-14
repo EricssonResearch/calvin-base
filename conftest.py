@@ -18,6 +18,7 @@
 import os
 import shlex
 import subprocess
+import json
 import time
 
 import pytest
@@ -79,9 +80,11 @@ def start_runtime(start_process):
     Provides convenience function returning process handle to new runtime process.
     Usage: start_runtime(calvin_port, control_port)
     """
-    def _start_runtime(tunnel_port, control_port):
+    def _start_runtime(tunnel_port, control_port, registry=None):
         # return _start_process("csruntime -n localhost -l calvinconfig:DEBUG")
         cmd = "csruntime -n localhost -p {} -c {}".format(tunnel_port, control_port)
+        if registry:
+            cmd = cmd + " " + "--registry='{}'".format(json.dumps(registry))
         return start_process(cmd)
     return _start_runtime
     
