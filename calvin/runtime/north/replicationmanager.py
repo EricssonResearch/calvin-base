@@ -213,9 +213,12 @@ class LeaderElection(object):
                 return
         elif method == 'registry_central':
             def super_node(value):
+                _log.debug("Replication leader election got suggested super nodes {}".format(value))
                 if calvinresponse.isnotfailresponse(value):
                     if self.node.id in value:
                         cb(status=calvinresponse.OK, leader=self.node.id)
+                    elif not value:
+                        cb(status=calvinresponse.NOT_FOUND, leader=self.node.id)
                     else:
                         cb(status=calvinresponse.OK, leader=value[0])
                 else:

@@ -770,7 +770,7 @@ class Storage(object):
             We will have 4 classes: 0-3 with class 3 most super.
             It is possible to search for a class or higher
         """
-        if self.proxy is not None:
+        if self.proxy is None:
             node.super_node_class = 1
         else:
             node.super_node_class = 0
