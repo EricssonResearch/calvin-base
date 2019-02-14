@@ -1,0 +1,34 @@
+[
+    {
+        "name": "registry",
+        "class": "REGISTRY",
+        "port": 4998,
+        "type": "REST"
+    },
+    {
+        "name": "actorstore",
+        "class": "ACTORSTORE",
+        "port": 4999,
+        "type": "REST"
+    },
+    {
+        "name":  "runtime1",
+        "class": "RUNTIME",
+        "port": 5001,
+        "rt2rt_port": 5000,
+        "registry": "$registry",
+        "actorstore": "$actorstore"
+    },
+    {
+        "name":  "runtime2",
+        "class": "RUNTIME",
+        "registry": "$registry",
+        "actorstore": "$actorstore"
+    },
+    {
+        "name": "runtime3",
+        "class": "RUNTIME",
+        "registry": "$runtime1",
+        "actorstore": "$actorstore"
+    }
+]

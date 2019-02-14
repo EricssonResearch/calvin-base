@@ -1,0 +1,23 @@
+- class: REGISTRY
+  name: registry
+  port: 4998
+  type: REST
+- class: ACTORSTORE
+  name: actorstore
+  port: 4999
+  type: REST
+- actorstore: $actorstore
+  class: RUNTIME
+  name: runtime1
+  port: 5001
+  registry: $registry
+  rt2rt_port: 5000
+- actorstore: $actorstore
+  class: RUNTIME
+  name: runtime2
+  registry: $registry
+- actorstore: $actorstore
+  class: RUNTIME
+  name: runtime3
+  registry: $runtime1
+
