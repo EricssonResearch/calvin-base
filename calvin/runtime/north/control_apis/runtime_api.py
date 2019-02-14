@@ -108,7 +108,7 @@ def handle_quit(self, handle, connection, match, data, hdr):
     self.send_response(handle, connection, None, status=calvinresponse.ACCEPTED)
 
 
-@handler(method="OPTIONS", path=r"/{path}")
+@handler(method="OPTIONS", path=r"/{path}{any_params}")
 @authentication_decorator
 def handle_options(self, handle, connection, match, data, hdr):
     """

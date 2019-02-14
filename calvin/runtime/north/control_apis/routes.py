@@ -36,6 +36,7 @@ trace_uuid_re = "(TRACE_" + uuid_re + "|" + uuid_re + ")"
 node_uuid_re = "(NODE_" + uuid_re + "|" + uuid_re + ")"
 policy_uuid_re = "(POLICY_" + uuid_re + "|" + uuid_re + ")"
 path_re = r"(/?[0-9a-zA-Z\.\-/_]*)"
+any_params_re = r"(\?.*)?"
 
 path_regex = {
     "uuid": uuid_re,
@@ -47,6 +48,7 @@ path_regex = {
     "node_id": node_uuid_re,
     "policy_id": policy_uuid_re,
     "path": path_re,
+    "any_params": any_params_re,
     # "ident": ident_re
 }
 
