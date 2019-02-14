@@ -130,11 +130,7 @@ class Node(object):
         # storage.Storage(node, storage_type, server=None, security_conf=None, override_storage=None)
         
         storage_type = _conf.get('global', 'storage_type')
-        storage_host = None
-        if storage_type == 'proxy':
-            storage_host = _conf.get('global', 'storage_proxy')
-        elif storage_type == 'remote':
-            storage_host = _conf.get('global', 'storage_host')
+        storage_host = _conf.get('global', 'storage_host')
         security_conf = _conf.get('security', 'security_conf')
         self.storage = storage.Storage(self, storage_type, server=storage_host, security_conf=security_conf)
 

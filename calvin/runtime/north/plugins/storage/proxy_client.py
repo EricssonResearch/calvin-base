@@ -33,7 +33,7 @@ class ProxyRegistryClient(StorageBase):
     """
     def __init__(self, node, host):
         super(ProxyRegistryClient, self).__init__()
-        self.master_uri = _conf.get('global', 'storage_proxy')
+        self.master_uri = host
         self.max_retries = _conf.get('global', 'storage_retries') or -1
         self.retries = 0
         self.node = node

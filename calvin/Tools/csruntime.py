@@ -23,6 +23,8 @@ import logging
 import os
 import socket
 
+import yaml
+
 # Calvin related imports must be in functions, to be able to set logfile before imports
 _conf = None
 _log = None
@@ -44,7 +46,11 @@ Start runtime, compile calvinscript and deploy application.
                            default=8000, help="use port <gui port> for gui server")
     argparser.add_argument('--gui-if', metavar='<gui interface>', type=str, dest="guiif",
                            default="localhost", help="use ipv4 interface <gui interface> for gui server")
-
+                           
+    argparser.add_argument('--registry', metavar='<config>', type=yaml.load, default={},
+                            help="configuration dict for registry with keys: type, uri",
+                            dest='config_registry')
+                           
     argparser.add_argument('--name', metavar='<name>', type=str,
                             help="shortcut for attribute indexed_public/node_name/name",
                             dest='name')
@@ -167,6 +173,11 @@ def set_config_from_args(args):
     from calvin.utilities import calvinconfig
     global _conf
     _conf = calvinconfig.get()
+    print args.config_registry
+    if 'type' in args.config_registry:
+        _conf.set('global', 'storage_type', args.config_registry['type'])
+    if 'uri' in args.config_registry:
+        _conf.set('global', 'storage_host', args.config_registry['uri'])
     _conf.add_section("ARGUMENTS")
     for arg in vars(args):
         if getattr(args, arg) is not None:
