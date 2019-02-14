@@ -12,116 +12,116 @@ def _start_process(cmd):
         cmd = shlex.split(cmd)
     process = subprocess.Popen(cmd)
     return process
-        
+
 
 class Process(object):
     """docstring for Process"""
-    
+
     # Define the (immutable) properties exposed by the process
     info_exports = []
-        
-    def __init__(self, config):
+
+    def __init__(self, config, port_numbers):
         super(Process, self).__init__()
         self.config = config
-        self.config["uri"] = "http://{host}:{port}".format(**config)
-        self.proc_handle = self.start_process()
-        self.wait_for_ack()
-            
+        self.config.setdefault('host', 'localhost')
+        self.config.setdefault('port', port_numbers.pop(0))
+        self.config["uri"] = "http://{host}:{port}".format(**self.config)
+        self.proc_handle = None
+        self.ack_status = False
+
     def info(self):
-        return {k:self.config[k] for k in self.info_exports}
-    
+        return {k: self.config[k] for k in self.info_exports}
+
     def cmd(self):
         raise NotImplementedError("Subclass must override.")
-        
+
     def start_process(self):
-        return _start_process(self.cmd())
-    
+        self.proc_handle = _start_process(self.cmd())
+
     def stop_process(self):
         if not self.proc_handle: return
         self.proc_handle.kill()
         self.proc_handle.communicate()
-        self.proc_handle.wait()  
-        
+        self.proc_handle.wait()
+
     def wait_for_ack(self):
-        return True      
-            
-            
+        self.ack_status = True
+
 
 class ActorstoreProcess(Process):
     """docstring for ActorstorProcess"""
-    
+
     info_exports = ["name", "uri", "type"]
-            
+
     def cmd(self):
-        return "csactorstore --host {host} --port {port}".format(**self.config)   
-        
-        
+        return "csactorstore --host {host} --port {port}".format(**self.config)
+
+
 class RegistryProcess(Process):
     """docstring for RegistryProcess"""
-    
+
     info_exports = ["name", "uri", "type"]
-    
+
     def cmd(self):
-        return "csregistry --host {host} --port {port}".format(**self.config)    
-        
-        
+        return "csregistry --host {host} --port {port}".format(**self.config)
+
+
 class RuntimeProcess(Process):
     """docstring for RuntimeProcess"""
-    
+
     # FIXME: Pass service config as arguments, not env vars
-    # FIXME: Wait for runtime to report node_id
-    
+
     info_exports = ["name", "uri", "rt2rt", "registry", "actorstore", "node_id"]
-    
-    def __init__(self, config):
-        super(RuntimeProcess, self).__init__(config)
-        self.config["rt2rt"] = "calvinip://{host}:{rt2rt_port}".format(**config)
+
+    def __init__(self, config, port_numbers):
+        super(RuntimeProcess, self).__init__(config, port_numbers)
+        self.config.setdefault('rt2rt_port', port_numbers.pop(0))
+        self.config["rt2rt"] = "calvinip://{host}:{rt2rt_port}".format(**self.config)
         self.config["node_id"] = ""
-        
+
     def cmd(self):
         return "csruntime --host {host} -p {rt2rt_port} -c {port}".format(**self.config)
-        
+
     def wait_for_ack(self):
-        req = self.config["uri"]+"/id"
+        req = self.config["uri"] + "/id"
         for i in range(10):
             try:
                 r = requests.get(req)
             except requests.exceptions.ConnectionError:
-                time.sleep(0.5)    
+                time.sleep(0.5)
                 continue
             if r.status_code == 200:
                 data = r.json()
                 self.config["node_id"] = data['id']
-                return True
-        else:
-            return False
-              
-        
-        
-        
+                self.ack_status = True
+        self.ack_status = False
+
+
 factories = {
     'REGISTRY': RegistryProcess,
     'ACTORSTORE': ActorstoreProcess,
     'RUNTIME': RuntimeProcess
 }
 
-def factory(entity):
-    class_ = factories[entity['class']]
-    return class_(entity) 
 
-    
+def factory(entity, port_numbers):
+    class_ = factories[entity['class']]
+    return class_(entity, port_numbers)
+
+
 def _random_ports(n):
     """
-    Return free port number.
+    Return free port numbers.
     """
+
     def _free_socket():
-        free_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        free_socket = socket.socket()
         free_socket.bind(('localhost', 0))
         free_socket.listen(5)
         return free_socket
-    
+
     sockets = [_free_socket() for i in range(n)]
-      
+
     ports = [s.getsockname()[1] for s in sockets]
     for s in sockets:
         s.close()
@@ -129,84 +129,63 @@ def _random_ports(n):
 
 
 class SystemManager(object):
-    """Read a system config file (JSON, YAML) and set up a system accordingly."""
+    """Read a system config file (JSON, YAML), set up a system accordingly."""
+
     def __init__(self, system_config):
         super(SystemManager, self).__init__()
-        self._system = [] #[factory(entity) for entity in system_config]
-        self.prepare_port_numbers(system_config)
-        self.process_config(system_config)
-        self.wait_for_system()
-        
+        # Prepare a range of port numbers, use maximum number
+        # of potentially undefined ports:
+        self.port_numbers = _random_ports(2 * len(system_config))
+        self._system = []
+        try:
+            self.process_config(system_config)
+            self.start_system()
+            self.wait_for_system()
+        except Exception as err:
+            self.teardown()
+            self._system = []
+            raise err
+
+    def start_system(self):
+        for s in self._system:
+            s.start_process()
+
     def wait_for_system(self):
         for s in self._system:
-            if not s.wait_for_ack():
+            s.wait_for_ack()
+            if not s.ack_status:
                 print "TIMEOUT for ", s.info()
-        
-    def prepare_port_numbers(self, system_config):
-        # Prepare range of port numbers
-        port_count = 0
-        for entity in system_config:
-            if not 'port' in entity: 
-                port_count += 1
-            if entity['class'] == 'RUNTIME' and not 'rt2rt_port' in entity:
-                port_count += 1
-        self.port_numbers = _random_ports(port_count) 
 
     def process_config(self, system_config):
         for entity in system_config:
             self._system.append(self.process_entity(entity))
-    
+
     def process_entity(self, entity):
-        entity.setdefault('host', 'localhost')
-        if not 'port' in entity:
-            entity['port'] = self.port_numbers.pop(0)
-        if entity['class'] == 'RUNTIME':
-            if not 'rt2rt_port' in entity:
-                entity['rt2rt_port'] = self.port_numbers.pop(0)
-            # RUNTIME => expand actorstore and registry
-            # Must be previously started => in _system
-            self.expand_registry(entity)
-            self.expand_actorstore(entity)
-        return factory(entity)
+        self.expand(entity, 'registry')
+        self.expand(entity, 'actorstore')
+        return factory(entity, self.port_numbers)
 
-    def expand_registry(self, entity):
-        reg = entity['registry']
-        if not reg.startswith('$'):
+    def expand(self, entity, entry):
+        value = entity.get(entry, "")
+        if not isinstance(value, basestring) or not value.startswith('$'):
             return
-        reg_name = reg[1:]
-        info = self.info[reg_name]
+        info = self.info[value[1:]]
         if 'rt2rt' in info:
-            # Runtime acting as proxy for registry
-            entity['registry'] = {'uri': info['rt2rt'], 'type': 'PROXY'}                
+            # Runtime acting as proxy for registry/actorstore
+            entity['entry'] = {'uri': info['rt2rt'], 'type': 'PROXY'}
         else:
-            entity['registry'] = { 'uri': info['uri'], 'type': info['type']}
+            entity['entry'] = {'uri': info['uri'], 'type': info['type']}
 
-    def expand_actorstore(self, entity):
-        reg = entity['actorstore']
-        if not reg.startswith('$'):
-            return            
-        reg_name = reg[1:]
-        info = self.info[reg_name]
-        entity['actorstore'] = { 'uri': info['uri'], 'type': info['type']}
-        
     @property
     def info(self):
         """Return a dict with immutable properties from each process wrapper"""
-        return {item.pop('name'):item for item in (s.info() for s in self._system)}
-    
+        return {
+            item.pop('name'): item
+            for item in (s.info() for s in self._system)
+        }
+
     def teardown(self):
         """Tear down the system."""
         for item in reversed(self._system):
             item.stop_process()
-            
-        
-if __name__ == '__main__':
-    from pprint import pprint
-    with open('/Users/eperspe/Source/calvin-base/tests/SystemYAML.yaml') as fp:
-        system_config = yaml.load(fp)
-        
-    s = SystemManager(system_config)
-    print "STARTED"
-    pprint(s.info)
-    
-    s.teardown()       
+
