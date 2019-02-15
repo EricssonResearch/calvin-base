@@ -31,7 +31,7 @@ class Process(object):
         self.ack_status = False
 
     def info(self):
-        return {k: self.config[k] for k in self.info_exports}
+        return {k: self.config[k] for k in self.info_exports if k in self.config}
 
     def cmd(self):
         raise NotImplementedError("Subclass must override.")
@@ -87,10 +87,9 @@ class RegistryProcess(Process):
 class RuntimeProcess(Process):
     """docstring for RuntimeProcess"""
 
-    # FIXME: Pass service config as arguments, not env vars
-    # FIXME: Set --name parameter
+    # FIXME: Pass actor store config as arguments
 
-    info_exports = ["name", "uri", "rt2rt", "registry", "actorstore", "node_id"]
+    info_exports = ["name", "uri", "rt2rt", "node_id", "actorstore", "registry"]
     ack_path = "/id"
     
     def __init__(self, config, port_numbers):
@@ -102,7 +101,8 @@ class RuntimeProcess(Process):
     def cmd(self):
         cmd = "csruntime --host {host} -p {rt2rt_port} -c {port}".format(**self.config)
         opt1 = ' --registry "{registry}"'.format(**self.config) if 'registry' in self.config else ""
-        return cmd + opt1
+        opt2 = ' --name "{name}"'.format(**self.config)
+        return cmd + opt1 + opt2
 
     def ack_ok_action(self, response):
         data = response.json()
