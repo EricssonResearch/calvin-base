@@ -22,10 +22,13 @@ import json
 import time
 
 import pytest
+import yaml
+
 from mock import Mock
 import requests
 
 from calvin.utilities import calvinuuid
+import tests.orchestration as orchestration
 
 
 ##################################
@@ -180,37 +183,7 @@ def free_ports():
     s1.close(), s2.close()
     return (p1, p2)
     
-# FIXTURE: single_runtime_system
-@pytest.yield_fixture(scope="module")
-def single_runtime_system(file_dir, working_dir, patch_config, start_actorstore, start_runtime, stop_process):
-    """
-    Setup actorstore and runtime for the duration of the test module and
-    guarantee teardown afterwards (yield fixture).
-    Runtime defaults to local (internal) registry.
-    FIXME: actorstore uri is hardcoded to "http://localhost:4999"
-    FIXME: runtime uri is hardcoded to "http://localhost:5001"
-    """
-    # Setup
-    p, c = free_ports()
-    rt_proc = start_runtime(p, c)
-    as_proc = start_actorstore()
-    # FIXME: Wait for RT to be in listening mode
-    time.sleep(2)
-        
-    # Run tests
-    yield "http://localhost:{}".format(c)
-    
-    # Teardown
-    # rt_proc.terminate()
-    stop_process(rt_proc)
-    
-    # as_proc.terminate()
-    stop_process(as_proc)
-        
-    
-    
-    
-    
+
     
 # FIXTURE: patch_config
 @pytest.fixture(scope='module')
@@ -248,6 +221,46 @@ def dummy_peer_node():
     Another dummy node to pass in when unittesting classes that needs a runtime node.
     """
     return _DummyNode()         
+
+
+
+
+
+
+@pytest.fixture(scope='module')
+def system_setup(request, file_dir, working_dir, patch_config):
+    """
+    Setup a test system according to a system config in YAML or JSON and pass 
+    the system info to the tests.
+    
+    The test module must define either 
+    - 'system_config_file' to name a config file in 'tests/systems/', or
+    - 'system_config' to be a string with the system config
+    where the latter is suitable for very simple setups only.
+    
+    This fixture relies on the tool-suite (csruntime et al.) so it is probably 
+    a good idea to make sure that they are tested first.
+
+    This fixture pretty much replaces all previous fixtures and avoids 
+    monkeypatching environment etc.    
+    """
+    system_config_file = getattr(request.module, "system_config_file", None)
+    if system_config_file:
+        config_file = os.path.join(file_dir, 'tests/systems', system_config_file)
+        with open(config_file, 'r') as fp:
+            config = yaml.load(fp)
+    else:
+        system_config = getattr(request.module, "system_config", None)
+        if not system_config: 
+            pytest.fail("Need system config!")
+        config = yaml.load(system_config)    
+        
+    sysmgr = orchestration.SystemManager(config)
+
+    yield sysmgr.info
+    
+    sysmgr.teardown()
+
             
 @pytest.fixture(scope='module')
 def control_api():

@@ -3,7 +3,6 @@ import shlex
 import socket
 import time
 
-import yaml
 import requests
 
 
@@ -23,7 +22,7 @@ class Process(object):
     def __init__(self, config, port_numbers):
         super(Process, self).__init__()
         self.config = config
-        self.config.setdefault('host', 'localhost')
+        self.config.setdefault('host', '127.0.0.1')
         self.config.setdefault('port', port_numbers.pop(0))
         self.config["uri"] = "http://{host}:{port}".format(**self.config)
         self.proc_handle = None
@@ -70,6 +69,7 @@ class RuntimeProcess(Process):
     """docstring for RuntimeProcess"""
 
     # FIXME: Pass service config as arguments, not env vars
+    # FIXME: Set --name parameter
 
     info_exports = ["name", "uri", "rt2rt", "registry", "actorstore", "node_id"]
 
@@ -80,7 +80,9 @@ class RuntimeProcess(Process):
         self.config["node_id"] = ""
 
     def cmd(self):
-        return "csruntime --host {host} -p {rt2rt_port} -c {port}".format(**self.config)
+        cmd = "csruntime --host {host} -p {rt2rt_port} -c {port}".format(**self.config)
+        opt1 = ' --registry "{registry}"'.format(**self.config) if 'registry' in self.config else ""
+        return cmd + opt1
 
     def wait_for_ack(self):
         req = self.config["uri"] + "/id"
@@ -94,6 +96,7 @@ class RuntimeProcess(Process):
                 data = r.json()
                 self.config["node_id"] = data['id']
                 self.ack_status = True
+                return
         self.ack_status = False
 
 
@@ -172,9 +175,9 @@ class SystemManager(object):
         info = self.info[value[1:]]
         if 'rt2rt' in info:
             # Runtime acting as proxy for registry/actorstore
-            entity['entry'] = {'uri': info['rt2rt'], 'type': 'PROXY'}
+            entity[entry] = {'uri': '{}'.format(info['rt2rt']), 'type': 'PROXY'}
         else:
-            entity['entry'] = {'uri': info['uri'], 'type': info['type']}
+            entity[entry] = {'uri': '{}'.format(info['uri']), 'type': info['type']}
 
     @property
     def info(self):

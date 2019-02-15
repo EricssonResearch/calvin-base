@@ -224,9 +224,20 @@ testlist = [
     )
 ]
 
+system_config = r"""
+- class: ACTORSTORE
+  name: actorstore
+  port: 4999
+  type: REST
+- class: RUNTIME
+  name: runtime
+  actorstore: $actorstore
+  registry: '{type: local, uri: null}'
+"""
+
 @pytest.fixture(scope='module', params=testlist)
-def deploy_application(request, single_runtime_system, control_api):
-    rt_uri = single_runtime_system
+def deploy_application(request, system_setup, control_api):
+    rt_uri = system_setup['runtime']['uri']
     # expects can be a function
     name, script, sinks, expects = request.param
     if type(expects) in (list, tuple):
