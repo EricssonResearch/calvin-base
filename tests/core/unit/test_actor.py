@@ -51,9 +51,15 @@ def create_actor(node):
     actor.outports['token'].set_queue(queue.fanout_fifo.FanoutFIFO({'queue_length': 4, 'direction': "out"}, {}))
     return actor
 
+system_config = r"""
+- class: ACTORSTORE
+  name: actorstore
+  port: 4999
+  type: REST
+"""
 
 @pytest.fixture
-def actor(actorstore, dummy_node):
+def actor(system_setup, dummy_node):
     """FIXME: Generalize test file and merge with services/actorstore tests"""
     get_calvinsys()._node = Mock()
     return create_actor(dummy_node)

@@ -55,6 +55,18 @@ class ActorstoreProcess(Process):
     def cmd(self):
         return "csactorstore --host {host} --port {port}".format(**self.config)
 
+    def wait_for_ack(self):
+        req = self.config["uri"] + "/actors/"
+        for i in range(10):
+            try:
+                r = requests.get(req)
+            except requests.exceptions.ConnectionError:
+                time.sleep(0.5)
+                continue
+            if r.status_code == 200:
+                self.ack_status = True
+                return
+        self.ack_status = False
 
 class RegistryProcess(Process):
     """docstring for RegistryProcess"""
