@@ -175,7 +175,7 @@ class SystemManager(object):
         info = self.info[value[1:]]
         if 'rt2rt' in info:
             # Runtime acting as proxy for registry/actorstore
-            entity[entry] = {'uri': '{}'.format(info['rt2rt']), 'type': 'PROXY'}
+            entity[entry] = {'uri': '{}'.format(info['rt2rt']), 'type': 'proxy'}
         else:
             entity[entry] = {'uri': '{}'.format(info['uri']), 'type': info['type']}
 

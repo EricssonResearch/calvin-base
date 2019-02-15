@@ -1,52 +1,49 @@
-import os
 import json
-import time
 
 import pytest
 import requests
 
-@pytest.fixture(scope="function")
-def _proxy_storage_system(start_registry, start_runtime, stop_process):
-    """
-    Setup actorstore and runtimes for the duration of the test module and
-    guarantee teardown afterwards (yield fixture).
-    Runtime defaults to local (internal) registry.
-    """
-    # Setup
-    # REST registry on http://localhost:4998
-    registry_proc = start_registry()
-    # This is the proxy server on port 5000/5001
-    server_rt_proc = start_runtime(5000, 5001, {'type': 'rest', 'uri': 'http://localhost:4998'})
-    # This is the proxy client on port 5002/5003
-    client_rt_proc = start_runtime(5002, 5003, {'type': 'proxy', 'uri': 'calvinip://localhost:5000'})
-    time.sleep(4)
-        
-    # Run tests
-    yield
-    
-    # Teardown
-    # control_api.quit("http://localhost:{}".format(5003), method="now")
-    # control_api.quit("http://localhost:{}".format(5001), method="now")
-    stop_process(client_rt_proc)
-    stop_process(server_rt_proc)
-    stop_process(registry_proc)
+
+system_config = r"""
+- class: REGISTRY
+  name: registry
+  port: 4998
+  type: REST
+- class: ACTORSTORE
+  name: actorstore
+  port: 4999
+  type: REST
+- class: RUNTIME
+  actorstore: $actorstore
+  name: server
+  registry: $registry
+- class: RUNTIME
+  actorstore: $actorstore
+  name: client
+  registry: $server
+"""
     
     
-def test_simple(_proxy_storage_system, control_api):
+def test_simple(system_setup, control_api):
     # We have two runtimes with identical capabilities, 
     # but one is proxy server and one is proxy client.
     # Thus, the 'supernode' information in the registry will reflact that.
     # Use the above facts for a simple sanity test of proxy storage 
-    status, response = control_api.get_node_id("http://localhost:5001")
+    server_uri = system_setup['server']['uri']
+    client_uri = system_setup['client']['uri']
+    reg_uri = system_setup['registry']['uri']
+    status, response = control_api.get_node_id(server_uri)
     assert status == 200
     server_id = response['id']
-    status, response = control_api.get_node_id("http://localhost:5003")
+    assert server_id == system_setup['server']['node_id']
+    status, response = control_api.get_node_id(client_uri)
     assert status == 200
     client_id = response['id']
-    res = requests.get("http://localhost:4998/dumpstorage")
+    assert client_id == system_setup['client']['node_id']
+    res = requests.get(reg_uri + "/dumpstorage")
     db = res.json()
     key_value_db, indexed_db = db
-    # print json.dumps(key_value_db, indent=4)
+    # print json.dumps(indexed_db, indent=4)
     
     assert 'node-{}'.format(server_id) in key_value_db
     assert 'node-{}'.format(client_id) in key_value_db
