@@ -18,6 +18,8 @@ class Process(object):
 
     # Define the (immutable) properties exposed by the process
     info_exports = []
+    # Define the path to use in wait_for_ack
+    ack_path = ""
 
     def __init__(self, config, port_numbers):
         super(Process, self).__init__()
@@ -43,51 +45,44 @@ class Process(object):
         self.proc_handle.communicate()
         self.proc_handle.wait()
 
+    def ack_ok_action(self, response):
+        pass
+        
     def wait_for_ack(self):
-        self.ack_status = True
+        req = self.config["uri"] + self.ack_path
+        for i in range(20):
+            try:
+                r = requests.get(req)
+            except requests.exceptions.ConnectionError:
+                time.sleep(0.25)
+                continue
+            if r.status_code == 200:
+                self.ack_ok_action(r)
+                self.ack_status = True
+                return
+        self.ack_status = False
+
 
 
 class ActorstoreProcess(Process):
     """docstring for ActorstorProcess"""
 
     info_exports = ["name", "uri", "type"]
+    ack_path = "/actors/"
 
     def cmd(self):
         return "csactorstore --host {host} --port {port}".format(**self.config)
 
-    def wait_for_ack(self):
-        req = self.config["uri"] + "/actors/"
-        for i in range(10):
-            try:
-                r = requests.get(req)
-            except requests.exceptions.ConnectionError:
-                time.sleep(0.5)
-                continue
-            if r.status_code == 200:
-                self.ack_status = True
-                return
-        self.ack_status = False
 
 class RegistryProcess(Process):
     """docstring for RegistryProcess"""
 
     info_exports = ["name", "uri", "type"]
-
+    ack_path = "/dumpstorage"
+    
     def cmd(self):
         return "csregistry --host {host} --port {port}".format(**self.config)
 
-    def wait_for_ack(self):
-        req = self.config["uri"] + "/dumpstorage"
-        for i in range(10):
-            try:
-                r = requests.get(req)
-            except requests.exceptions.ConnectionError:
-                time.sleep(0.5)
-                continue
-            if r.status_code == 200:
-                self.ack_status = True
-                return
-        self.ack_status = False
 
 class RuntimeProcess(Process):
     """docstring for RuntimeProcess"""
@@ -96,7 +91,8 @@ class RuntimeProcess(Process):
     # FIXME: Set --name parameter
 
     info_exports = ["name", "uri", "rt2rt", "registry", "actorstore", "node_id"]
-
+    ack_path = "/id"
+    
     def __init__(self, config, port_numbers):
         super(RuntimeProcess, self).__init__(config, port_numbers)
         self.config.setdefault('rt2rt_port', port_numbers.pop(0))
@@ -108,21 +104,10 @@ class RuntimeProcess(Process):
         opt1 = ' --registry "{registry}"'.format(**self.config) if 'registry' in self.config else ""
         return cmd + opt1
 
-    def wait_for_ack(self):
-        req = self.config["uri"] + "/id"
-        for i in range(10):
-            try:
-                r = requests.get(req)
-            except requests.exceptions.ConnectionError:
-                time.sleep(0.5)
-                continue
-            if r.status_code == 200:
-                data = r.json()
-                self.config["node_id"] = data['id']
-                self.ack_status = True
-                return
-        self.ack_status = False
-
+    def ack_ok_action(self, response):
+        data = response.json()
+        self.config["node_id"] = data['id']
+        
 
 factories = {
     'REGISTRY': RegistryProcess,
