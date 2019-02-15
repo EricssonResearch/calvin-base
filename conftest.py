@@ -52,6 +52,7 @@ def execute_cmd_check_output():
         return res.strip()
     return _execute_cmd
 
+
 # FIXTURE: file_dir
 # Provide the path to the directory where this file resides
 # FIXME: Is this too fragile?
@@ -63,6 +64,7 @@ def file_dir():
     """
     return _file_dir()
 
+
 # FIXTURE: working_dir
 @pytest.fixture(scope='module')
 def working_dir(tmpdir_factory):
@@ -72,25 +74,6 @@ def working_dir(tmpdir_factory):
     return wdir   
     
 
-def free_ports():
-    import socket
-    """
-    Determines a free port using sockets.
-    """
-    def _free_socket():
-        free_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        free_socket.bind(('localhost', 0))
-        free_socket.listen(5)
-        return free_socket
-    
-    s1, s2 = _free_socket(), _free_socket()    
-    p1, p2 = s1.getsockname()[1], s2.getsockname()[1]    
-    # port = free_socket.getsockname()[1]
-    s1.close(), s2.close()
-    return (p1, p2)
-    
-
-    
 # FIXTURE: patch_config
 @pytest.fixture(scope='module')
 def patch_config(file_dir, working_dir):
@@ -121,16 +104,13 @@ def dummy_node():
     """
     return _DummyNode()
 
+
 @pytest.fixture(scope='module')
 def dummy_peer_node():
     """
     Another dummy node to pass in when unittesting classes that needs a runtime node.
     """
     return _DummyNode()         
-
-
-
-
 
 
 @pytest.fixture(scope='module')
