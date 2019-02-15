@@ -17,3 +17,4 @@ pystache==0.5.4
 jsonschema==2.6.0
 u-msgpack-python==2.4.1
 cbor==1.0.0
+PyYAML==3.13
