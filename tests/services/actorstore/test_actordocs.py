@@ -4,9 +4,10 @@ import pytest
 
 from calvin.utilities.docgen import DocumentationStore
 
+system_config_file = "actorstore.yaml"
 
 @pytest.fixture(scope='module')
-def docstore(actorstore):
+def docstore(system_setup):
     ds = DocumentationStore()
     return ds
 

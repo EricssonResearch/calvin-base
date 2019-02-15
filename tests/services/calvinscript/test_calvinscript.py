@@ -25,7 +25,9 @@ def parse(test, source_text=None, verify=True):
 
     return deployable, errors, warnings
 
-def testCheckSimpleScript(actorstore):
+system_config_file = "actorstore.yaml"
+
+def testCheckSimpleScript(system_setup):
     script = """
     a:std.CountTimer(sleep=0.1, start=1, steps=100)
     b:io.Print()
@@ -35,7 +37,7 @@ def testCheckSimpleScript(actorstore):
     result, errors, warnings = parse('inline', script)
     assert not errors
 
-def testCheckSimpleScript2(actorstore):
+def testCheckSimpleScript2(system_setup):
     script = """
     a:Foo()
     b:Bar()
@@ -43,7 +45,7 @@ def testCheckSimpleScript2(actorstore):
     result, errors, warnings = parse('inline', script)
     assert errors
 
-def testCheckLocalComponent(actorstore):
+def testCheckLocalComponent(system_setup):
     script = """
     component Foo() -> out {
         f:std.CountTimer(sleep=0.1, start=1, steps=100)
@@ -58,7 +60,7 @@ def testCheckLocalComponent(actorstore):
 
 
 
-def testCheckOutportConnections(actorstore):
+def testCheckOutportConnections(system_setup):
     script = """
     a:std.CountTimer(sleep=0.1, start=1, steps=100)
     b:std.CountTimer(sleep=0.1, start=1, steps=100)
@@ -68,7 +70,7 @@ def testCheckOutportConnections(actorstore):
     result, errors, warnings = parse('inline', script)
     assert errors[0]['reason'] == "Actor b (std.CountTimer) is missing connection to outport 'integer'" 
 
-def testCheckInportConnections1(actorstore):
+def testCheckInportConnections1(system_setup):
     script = """
     c:test.Sink(store_tokens=false, quiet=false, active=true)
     """
@@ -76,7 +78,7 @@ def testCheckInportConnections1(actorstore):
     assert len(errors) == 1 
     assert errors[0]['reason'] == "Actor c (test.Sink) is missing connection to inport 'token'" 
 
-def testCheckInportConnections2(actorstore):
+def testCheckInportConnections2(system_setup):
     script = """
     a:std.CountTimer(sleep=0.1, start=1, steps=100)
     b:std.CountTimer(sleep=0.1, start=1, steps=100)
@@ -90,7 +92,7 @@ def testCheckInportConnections2(actorstore):
     # assert errors[1]['reason'] == "Input port 'c.token' with multiple connections ('b.integer') must have a routing port property." 
 
 
-def testBadComponent1(actorstore):
+def testBadComponent1(system_setup):
     script = """
     component Foo() -> out {
         a:std.CountTimer(sleep=0.1, start=1, steps=100)
@@ -105,7 +107,7 @@ def testBadComponent1(actorstore):
     assert len(errors) == 1 
     assert errors[0]['reason'] == "Actor b (std.CountTimer) is missing connection to outport 'integer'" 
 
-def testBadComponent2(actorstore):
+def testBadComponent2(system_setup):
     script = """
     component Foo() -> out {
         a:std.CountTimer(sleep=0.1, start=1, steps=100)
@@ -120,7 +122,7 @@ def testBadComponent2(actorstore):
     assert len(errors) == 1 
     assert errors[0]['reason'] == "Component Foo is missing connection to outport 'out'" 
 
-def testBadComponent3(actorstore):
+def testBadComponent3(system_setup):
     script = """
     component Foo() -> out {
         a:std.CountTimer(sleep=0.1, start=1, steps=100)
@@ -135,7 +137,7 @@ def testBadComponent3(actorstore):
     assert len(errors) == 1 
     # assert errors[0]['reason'] == "Input port 'b.token' with multiple connections ('a:a.integer') must have a routing port property." 
 
-def testBadComponent4(actorstore):
+def testBadComponent4(system_setup):
     script = """
     component Foo() in -> {
         a:test.Sink(store_tokens=false, quiet=false, active=true)
@@ -149,7 +151,7 @@ def testBadComponent4(actorstore):
     assert errors[0]['reason'] == "Actor a (test.Sink) is missing connection to inport 'token'" 
     assert errors[1]['reason'] == "Component Foo is missing connection to inport 'in'" 
 
-def testBadComponent5(actorstore):
+def testBadComponent5(system_setup):
     script = """
     component Foo() in -> {
         a:test.Sink(store_tokens=false, quiet=false, active=true)
@@ -164,7 +166,7 @@ def testBadComponent5(actorstore):
     assert errors[0]['reason'] == "Component Foo has no inport 'foo'" 
     assert errors[1]['reason'] == "Component Foo is missing connection to inport 'in'" 
 
-def testBadComponent6(actorstore):
+def testBadComponent6(system_setup):
     script = """
     component Foo() -> out {
         a:std.CountTimer(sleep=0.1, start=1, steps=100)
@@ -179,7 +181,7 @@ def testBadComponent6(actorstore):
     assert errors[0]['reason'] == "Component Foo has no outport 'foo'" 
     assert errors[1]['reason'] == "Component Foo is missing connection to outport 'out'" 
 
-def testBadComponent7(actorstore):
+def testBadComponent7(system_setup):
     script = """
     component Foo() in -> out {
         .in > .out
@@ -192,7 +194,7 @@ def testBadComponent7(actorstore):
 
 
 
-def testUndefinedActors(actorstore):
+def testUndefinedActors(system_setup):
     script = """
     a.token > b.token
     """
@@ -202,7 +204,7 @@ def testUndefinedActors(actorstore):
     assert errors[1]['reason'] == "Undefined actor: 'b'" 
 
 
-def testUndefinedArguments(actorstore):
+def testUndefinedArguments(system_setup):
     script = """
     a:std.Constant()
     b:test.Sink(store_tokens=false, quiet=false, active=true)
@@ -212,7 +214,7 @@ def testUndefinedArguments(actorstore):
     assert len(errors) == 1 
     assert errors[0]['reason'] == "Missing argument: 'data'" 
 
-def testExcessArguments(actorstore):
+def testExcessArguments(system_setup):
     script = """
     a:std.Constant(data=1, bar=2)
     b:test.Sink(store_tokens=false, quiet=false, active=true)
@@ -223,7 +225,7 @@ def testExcessArguments(actorstore):
     assert errors[0]['reason'] == "Excess argument: 'bar'" 
 
 
-def testComponentUndefinedArgument(actorstore):
+def testComponentUndefinedArgument(system_setup):
     script = """
     component Foo(file) in -> {
         a:test.Sink(store_tokens=false, quiet=false, active=true)
@@ -238,7 +240,7 @@ def testComponentUndefinedArgument(actorstore):
     assert errors[0]['reason'] == "Missing argument: 'file'" 
     assert errors[1]['reason'] == "Unused argument: 'file'" 
 
-def testComponentUnusedArgument(actorstore):
+def testComponentUnusedArgument(system_setup):
     script = """
     component Foo(file) in -> {
         a:test.Sink(store_tokens=false, quiet=false, active=true)
@@ -252,7 +254,7 @@ def testComponentUnusedArgument(actorstore):
     assert len(errors) == 1 
     assert errors[0]['reason'] == "Unused argument: 'file'" 
 
-def testComponentExcessArgument(actorstore):
+def testComponentExcessArgument(system_setup):
     script = """
     component Foo(file) -> out {
         file > .out
@@ -266,7 +268,7 @@ def testComponentExcessArgument(actorstore):
     assert errors[0]['reason'] == "Excess argument: 'bar'" 
 
 
-def testLocalComponentRecurse(actorstore):
+def testLocalComponentRecurse(system_setup):
     script = """
       component E() in -> out {
       f:std.Identity(dump=false)
@@ -291,7 +293,7 @@ def testLocalComponentRecurse(actorstore):
     result, errors, warnings = parse('inline', script)
     assert len(errors) == 0 
 
-def testLocalComponentBad(actorstore):
+def testLocalComponentBad(system_setup):
     script = """
     component B() in -> out {
       e:E()
@@ -316,7 +318,7 @@ def testLocalComponentBad(actorstore):
     result, errors, warnings = parse('inline', script)
     assert len(errors) == 0 
 
-def testLocalBadComponentCauseCrash1(actorstore):
+def testLocalBadComponentCauseCrash1(system_setup):
     script = """
     component Foo() in -> out {
       snk1 : io.Print()
@@ -326,7 +328,7 @@ def testLocalBadComponentCauseCrash1(actorstore):
     result, errors, warnings = parse('inline', script)
     assert len(errors) == 1 
 
-def testLocalBadComponentCauseCrash2(actorstore):
+def testLocalBadComponentCauseCrash2(system_setup):
     script = """
     component Foo() in -> out {
       snk1 : io.Print()
@@ -340,7 +342,7 @@ def testLocalBadComponentCauseCrash2(actorstore):
     assert errors[1]['reason'] == "Component foo (local.Foo) is missing connection to inport 'in'" 
     assert errors[2]['reason'] == "Component foo (local.Foo) is missing connection to outport 'out'" 
 
-def testLocalBadComponentCauseCrash3(actorstore):
+def testLocalBadComponentCauseCrash3(system_setup):
     script = """
     component Foo() in -> out {
       snk1 : io.Print()
@@ -356,7 +358,7 @@ def testLocalBadComponentCauseCrash3(actorstore):
     assert errors[1]['reason'] == "Component foo (local.Foo) is missing connection to outport 'out'" 
 
 
-def testNoSuchPort(actorstore):
+def testNoSuchPort(system_setup):
     script = """
     i:std.Identity(dump=false)
     src:std.CountTimer(sleep=0.1, start=1, steps=100)
@@ -371,7 +373,7 @@ def testNoSuchPort(actorstore):
     assert errors[2]['reason'] == "Actor i (std.Identity) is missing connection to inport 'token'" 
     assert errors[3]['reason'] == "Actor i (std.Identity) is missing connection to outport 'token'" 
 
-def testRedefineInstance(actorstore):
+def testRedefineInstance(system_setup):
     script = """
     i:std.Identity(dump=false)
     src:std.CountTimer(sleep=0.1, start=1, steps=100)
@@ -384,7 +386,7 @@ def testRedefineInstance(actorstore):
     assert len(errors) == 1 
     assert errors[0]['reason'] == "Instance identifier 'i' redeclared" 
 
-def testUndefinedActorInComponent(actorstore):
+def testUndefinedActorInComponent(system_setup):
     script = """
     component Bug() -> out {
       b.out > .out
@@ -394,7 +396,7 @@ def testUndefinedActorInComponent(actorstore):
     assert len(errors) == 1 
 
 
-def testUndefinedConstant(actorstore):
+def testUndefinedConstant(system_setup):
     script = """
     src : std.Constant(data=FOO)
     snk : test.Sink(store_tokens=false, quiet=false, active=true)
@@ -405,7 +407,7 @@ def testUndefinedConstant(actorstore):
     assert errors[0]['reason'] == "Undefined identifier: 'FOO'" 
 
 @pytest.mark.xfail()
-def testUnusedConstant(actorstore):
+def testUnusedConstant(system_setup):
     script = """
     define FOO=2
     sink : flow.Terminator()
@@ -416,7 +418,7 @@ def testUnusedConstant(actorstore):
     assert errors[0]['reason'] == "Unused constant: 'FOO'" 
 
 
-def testDefinedConstant(actorstore):
+def testDefinedConstant(system_setup):
     script = """
     define FOO = 42
     src : std.Constant(data=FOO)
@@ -426,7 +428,7 @@ def testDefinedConstant(actorstore):
     result, errors, warnings = parse('inline', script)
     assert len(errors) == 0 
 
-def testUndefinedRecursiveConstant(actorstore):
+def testUndefinedRecursiveConstant(system_setup):
     script = """
     define FOO = BAR
     src : std.Constant(data=FOO)
@@ -439,7 +441,7 @@ def testUndefinedRecursiveConstant(actorstore):
     assert errors[1]['reason'] == "Undefined identifier: 'FOO'" 
 
 
-def testDefinedRecursiveConstant(actorstore):
+def testDefinedRecursiveConstant(system_setup):
     script = """
     define FOO = BAR
     define BAR = 42
@@ -451,7 +453,7 @@ def testDefinedRecursiveConstant(actorstore):
     assert len(errors) == 0 
 
 
-def testLiteralOnPort(actorstore):
+def testLiteralOnPort(system_setup):
     script = """
     snk : test.Sink(store_tokens=false, quiet=false, active=true)
     42 > snk.token
@@ -459,7 +461,7 @@ def testLiteralOnPort(actorstore):
     result, errors, warnings = parse('inline', script)
     assert len(errors) == 0 
 
-def testComponentArgumentOnInternalPort(actorstore):
+def testComponentArgumentOnInternalPort(system_setup):
     script = """
     component Foo(foo) -> out {
         foo > .out
@@ -468,7 +470,7 @@ def testComponentArgumentOnInternalPort(actorstore):
     result, errors, warnings = parse('inline', script)
     assert len(errors) == 0 
 
-def testLiteralOnInternalPort(actorstore):
+def testLiteralOnInternalPort(system_setup):
     script = """
     component Foo() -> out {
         1 > .out
@@ -478,7 +480,7 @@ def testLiteralOnInternalPort(actorstore):
     assert len(errors) == 0 
 
 
-def testBadLocalPort(actorstore):
+def testBadLocalPort(system_setup):
     script = """
     component Foo() in -> {
         snk : test.Sink(store_tokens=false, quiet=false, active=true)
@@ -492,7 +494,7 @@ def testBadLocalPort(actorstore):
     assert errors[0]['reason'] == "Internal port '.in' outside component definition" 
 
 
-def testVoidOnInPort(actorstore):
+def testVoidOnInPort(system_setup):
     script = """
     iip : flow.Init(data="ping")
     print : io.Print()
@@ -505,7 +507,7 @@ def testVoidOnInPort(actorstore):
     assert warnings[0]['reason'] == "Using 'void' as input to 'iip.in'" 
 
 
-def testVoidOnOutPort(actorstore):
+def testVoidOnOutPort(system_setup):
     script = """
     src : std.Counter()
     src.integer > voidport
@@ -513,7 +515,7 @@ def testVoidOnOutPort(actorstore):
     result, errors, warnings = parse('inline', script)
     assert len(errors) == 0 
 
-def testVoidInvalidUse1(actorstore):
+def testVoidInvalidUse1(system_setup):
     script = """
     component Foo() in -> {
         .in > voidport
@@ -523,7 +525,7 @@ def testVoidInvalidUse1(actorstore):
     assert len(errors) == 1 
     assert errors[0]['reason'] == "Syntax error." 
 
-def testVoidInvalidUse2(actorstore):
+def testVoidInvalidUse2(system_setup):
     script = """
     component Bar() -> out {
         voidport > .out
@@ -533,7 +535,7 @@ def testVoidInvalidUse2(actorstore):
     assert len(errors) == 1 
     assert errors[0]['reason'] == "Syntax error." 
 
-def testVoidInvalidUse3(actorstore):
+def testVoidInvalidUse3(system_setup):
     script = """
     1 > voidport
     """
@@ -541,7 +543,7 @@ def testVoidInvalidUse3(actorstore):
     assert len(errors) == 1 
     assert errors[0]['reason'] == "Syntax error." 
 
-def testVoidInvalidUse4(actorstore):
+def testVoidInvalidUse4(system_setup):
     script = """
     define BAR=1
     BAR > voidport
@@ -550,7 +552,7 @@ def testVoidInvalidUse4(actorstore):
     assert len(errors) == 1 
     assert errors[0]['reason'] == "Syntax error." 
 
-def testPortlist2(actorstore):
+def testPortlist2(system_setup):
     script = """
     src : std.Counter()
     snk1 : io.Print()
@@ -560,7 +562,7 @@ def testPortlist2(actorstore):
     result, errors, warnings = parse('inline', script)
     assert len(errors) == 0 
 
-def testPortlist3(actorstore):
+def testPortlist3(system_setup):
     script = """
     src : std.Counter()
     snk1 : io.Print()
@@ -571,7 +573,7 @@ def testPortlist3(actorstore):
     result, errors, warnings = parse('inline', script)
     assert len(errors) == 0 
 
-def testPortlistLiteral(actorstore):
+def testPortlistLiteral(system_setup):
     script = """
     snk1 : io.Print()
     snk2 : io.Print()
@@ -581,7 +583,7 @@ def testPortlistLiteral(actorstore):
     assert len(errors) == 0 
 
 
-def testPortlistInternalOutPort(actorstore):
+def testPortlistInternalOutPort(system_setup):
     script = """
     component Foo() in ->  {
         snk1 : io.Print()
@@ -594,7 +596,7 @@ def testPortlistInternalOutPort(actorstore):
     result, errors, warnings = parse('inline', script)
     assert len(errors) == 0 
 
-def testPortlistInternalInPort(actorstore):
+def testPortlistInternalInPort(system_setup):
     script = """
     component Foo() -> out {
         snk1 : io.Print()
@@ -605,7 +607,7 @@ def testPortlistInternalInPort(actorstore):
     result, errors, warnings = parse('inline', script)
     assert len(errors) == 0 
 
-def testPortlistInternalInPort2(actorstore):
+def testPortlistInternalInPort2(system_setup):
     script = """
     component Foo() -> out {
         snk1 : io.Print()
@@ -618,7 +620,7 @@ def testPortlistInternalInPort2(actorstore):
     assert len(errors) == 0 
 
 
-def testPortlistInternalOutPortPassthrough(actorstore):
+def testPortlistInternalOutPortPassthrough(system_setup):
     script = """
     component Foo() in -> out {
         snk1 : io.Print()
@@ -629,7 +631,7 @@ def testPortlistInternalOutPortPassthrough(actorstore):
     assert len(errors) == 1 
     assert errors[0]['reason'] == "Component inport connected directly to outport." 
 
-def testTokenTransform(actorstore):
+def testTokenTransform(system_setup):
     script = """
     snk1 : io.Print()
     1 > /2/ snk1.token
@@ -637,7 +639,7 @@ def testTokenTransform(actorstore):
     result, errors, warnings = parse('inline', script)
     assert len(errors) == 0 
 
-def testTokenTransformBad(actorstore):
+def testTokenTransformBad(system_setup):
     script = """
     snk1 : io.Print()
     1 /2/ > snk1.token
@@ -645,7 +647,7 @@ def testTokenTransformBad(actorstore):
     result, errors, warnings = parse('inline', script)
     assert len(errors) == 2 
 
-def testTokenTransformInternalInport(actorstore):
+def testTokenTransformInternalInport(system_setup):
     script = """
     component Foo() in ->  {
         snk1 : io.Print()
@@ -657,7 +659,7 @@ def testTokenTransformInternalInport(actorstore):
     result, errors, warnings = parse('inline', script)
     assert len(errors) == 0 
 
-def testTokenTransformInternalInportBad(actorstore):
+def testTokenTransformInternalInportBad(system_setup):
     script = """
     component Foo() in ->  {
         snk1 : io.Print()
@@ -669,7 +671,7 @@ def testTokenTransformInternalInportBad(actorstore):
     result, errors, warnings = parse('inline', script)
     assert len(errors) == 4 
 
-def testTokenTransformInternalOutport(actorstore):
+def testTokenTransformInternalOutport(system_setup):
     script = """
     component Foo()  -> out {
 
@@ -681,7 +683,7 @@ def testTokenTransformInternalOutport(actorstore):
     result, errors, warnings = parse('inline', script)
     assert len(errors) == 0 
 
-def testTokenTransformInternalOutportBad(actorstore):
+def testTokenTransformInternalOutportBad(system_setup):
     script = """
     component Foo()  -> out {
 
@@ -693,7 +695,7 @@ def testTokenTransformInternalOutportBad(actorstore):
     result, errors, warnings = parse('inline', script)
     assert len(errors) == 3 
 
-def testStringLiteral(actorstore):
+def testStringLiteral(system_setup):
     # N.B raw string (r"") required to have same behaviour as script file
     script = r"""
     out: io.Print()
@@ -702,7 +704,7 @@ def testStringLiteral(actorstore):
     result, errors, warnings = parse('inline', script)
     assert len(errors) == 0 
 
-def testStringLiteralNoLinebreaks(actorstore):
+def testStringLiteralNoLinebreaks(system_setup):
     # N.B raw string (r"") required to have same behaviour as script file
     script = r"""
     define FOO = "abc
@@ -711,7 +713,7 @@ def testStringLiteralNoLinebreaks(actorstore):
     result, errors, warnings = parse('inline', script)
     assert len(errors) == 1 
 
-def testStringLiteralConcatenation(actorstore):
+def testStringLiteralConcatenation(system_setup):
     # N.B raw string (r"") required to have same behaviour as script file
     script = r"""
     define FOO = "abc\n"
@@ -720,7 +722,7 @@ def testStringLiteralConcatenation(actorstore):
     result, errors, warnings = parse('inline', script)
     assert len(errors) == 0 
 
-def testLabelConstant(actorstore):
+def testLabelConstant(system_setup):
     script = r"""
     print1 : io.Print()
     print2 : io.Print()
@@ -730,7 +732,7 @@ def testLabelConstant(actorstore):
     result, errors, warnings = parse('inline', script)
     assert len(errors) == 0 
 
-def testLabelConstantify(actorstore):
+def testLabelConstantify(system_setup):
     script = r"""
     print1 : io.Print()
     print2 : io.Print()
@@ -740,7 +742,7 @@ def testLabelConstantify(actorstore):
     result, errors, warnings = parse('inline', script)
     assert len(errors) == 0 
 
-def testPortRef(actorstore):
+def testPortRef(system_setup):
     script = r"""
     print1 : io.Print()
     &print1.token >  print1.token
@@ -749,7 +751,7 @@ def testPortRef(actorstore):
     assert len(errors) == 0 
 
 @pytest.mark.xfail()
-def testPortRefMissingSyntaxCheck(actorstore):
+def testPortRefMissingSyntaxCheck(system_setup):
     # FIXME: io.Print has no outport
     script = r"""
     print1 : io.Print()
@@ -759,7 +761,7 @@ def testPortRefMissingSyntaxCheck(actorstore):
     assert len(errors) == 1 
 
 @pytest.mark.xfail()
-def testPortRefAsKey(actorstore):
+def testPortRefAsKey(system_setup):
     script = r"""
     print1 : io.Print()
     {&print1.token:"Comment"} >  print1.token
@@ -767,7 +769,7 @@ def testPortRefAsKey(actorstore):
     result, errors, warnings = parse('inline', script)
     self.assertTrue(len(errors) > 0)
 
-# def testAmbigousPortProperty1(actorstore):
+# def testAmbigousPortProperty1(system_setup):
 #     script = r"""
 #     i : std.Identity(dump=false)
 #     src : std.CountTimer(sleep=0.1, start=1, steps=100)
@@ -779,7 +781,7 @@ def testPortRefAsKey(actorstore):
 #     result, errors, warnings = parse('inline', script)
 #     assert len(errors) == 2 
 
-# def testAmbigousPortProperty2(actorstore):
+# def testAmbigousPortProperty2(system_setup):
 #     script = r"""
 #     i : std.Identity(dump=false)
 #     src : std.CountTimer(sleep=0.1, start=1, steps=100)
@@ -791,7 +793,7 @@ def testPortRefAsKey(actorstore):
 #     result, errors, warnings = parse('inline', script)
 #     assert len(errors) == 1 
 
-# def testAmbigousPortProperty3(actorstore):
+# def testAmbigousPortProperty3(system_setup):
 #     script = r"""
 #     i : std.Identity(dump=false)
 #     src : std.CountTimer(sleep=0.1, start=1, steps=100)
@@ -803,7 +805,7 @@ def testPortRefAsKey(actorstore):
 #     result, errors, warnings = parse('inline', script)
 #     assert len(errors) == 0 
 
-def testComponentToComponent1(actorstore):
+def testComponentToComponent1(system_setup):
     script = r"""
     component InComp() in -> {
         out : io.Print()
@@ -825,7 +827,7 @@ def testComponentToComponent1(actorstore):
         print e['reason']
     assert len(errors) == 0 
 
-def testCompToCompWithFanoutFromInternalInport(actorstore):
+def testCompToCompWithFanoutFromInternalInport(system_setup):
     script = r"""
     component Left() -> out {
         src : std.Trigger(tick=1, data=true)

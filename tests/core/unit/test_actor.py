@@ -51,12 +51,7 @@ def create_actor(node):
     actor.outports['token'].set_queue(queue.fanout_fifo.FanoutFIFO({'queue_length': 4, 'direction': "out"}, {}))
     return actor
 
-system_config = r"""
-- class: ACTORSTORE
-  name: actorstore
-  port: 4999
-  type: REST
-"""
+system_config_file = "actorstore.yaml"
 
 @pytest.fixture
 def actor(system_setup, dummy_node):

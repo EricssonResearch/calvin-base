@@ -101,8 +101,10 @@ def ordered(obj):
 
 test_list = [os.path.basename(x)[:-7] for x in glob.glob("{}/*.calvin".format(absolute_filename('codegen')))]
 
+system_config_file = "actorstore.yaml"
+
 @pytest.mark.parametrize("test", test_list)
-def testCalvinScriptCodegen(actorstore, test):
+def testCalvinScriptCodegen(system_setup, test):
     code, it, ref = codegen(test)
     assert it.error_count == 0
     compare(ordered(code), ordered(ref))

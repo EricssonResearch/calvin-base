@@ -22,27 +22,36 @@ from requests_futures.sessions import FuturesSession
 # Setup actorstore for the duration of the test module
     
 
-@pytest.fixture()
-def _host():
-    return "http://localhost:4998"    
+# @pytest.fixture()
+# def _host():
+#     return "http://localhost:4998"
+
+system_config = r"""
+- class: REGISTRY
+  name: registry
+  port: 4998
+  type: REST
+"""
 
 @pytest.fixture()
-def _registry(_host):
-    r = RESTRegistryClient(None, _host)
-    return r
-    
+def _registry():
+    r = RESTRegistryClient(None, "http://127.0.0.1:4998")
+    return r    
     
 @pytest.fixture(scope='module')
 def _session():  
     session = FuturesSession()
     return session
 
-def test_service_sanity(remote_registry, _host):
+def test_service_sanity(system_setup):
+    _host = system_setup['registry']['uri']
+    print _host
     response = requests.get(_host+"/dumpstorage")
     assert response.status_code == 200
     # assert response.json() == [{},{}]
     
-def test_service_storage(remote_registry, _session, _host):
+def test_service_storage(system_setup, _session):
+    _host = system_setup['registry']['uri']
     response = requests.get(_host+"/storage/foo")
     assert response.status_code == 404
     
@@ -60,8 +69,8 @@ def test_service_storage(remote_registry, _session, _host):
     assert response.status_code == 404
     
     
-
-def test_set(remote_registry, _registry, _host, org_cb):
+def test_set(system_setup, _registry, org_cb):
+    _host = system_setup['registry']['uri']
     _registry.set('key', 'value', cb=CalvinCB(func=org_cb, org_key='key', org_value='value', org_cb=None))
     _registry.barrier()
     org_cb.assert_once()
@@ -71,7 +80,8 @@ def test_set(remote_registry, _registry, _host, org_cb):
     assert response.json() == 'value'
 
 
-def test_get(remote_registry, _registry, _host, org_cb):
+def test_get(system_setup, _registry, org_cb):
+    _host = system_setup['registry']['uri']
     _registry.set('key', 'value', cb=CalvinCB(func=Mock(), org_key='key', org_value='value', org_cb=None))
     _registry.get('key', cb=CalvinCB(func=org_cb, org_key='key', org_cb=None))
     _registry.barrier()
@@ -81,7 +91,8 @@ def test_get(remote_registry, _registry, _host, org_cb):
     assert response.status_code == 200
     assert response.json() == 'value'
     
-def test_delete(remote_registry, _registry, _host, org_cb):
+def test_delete(system_setup, _registry, org_cb):
+    _host = system_setup['registry']['uri']
     _registry.set('key', 'value', cb=CalvinCB(func=Mock(), org_key='key', org_value='value', org_cb=None))
     _registry.barrier()
     _registry.delete('key', cb=CalvinCB(func=org_cb, org_key='key', org_cb=None))
@@ -91,7 +102,7 @@ def test_delete(remote_registry, _registry, _host, org_cb):
     response = requests.get(_host+"/storage/key")
     assert response.status_code == 404
 
-def test_bad_index(remote_registry, _registry, _host, org_cb):
+def test_bad_index(system_setup, _registry, org_cb):
     with pytest.raises(TypeError):    
         _registry.add_index('indexes', 'value')
     with pytest.raises(TypeError):    
@@ -100,7 +111,7 @@ def test_bad_index(remote_registry, _registry, _host, org_cb):
         _registry.remove_index('indexes', 'value')
         
 # Since the _registry is the same for the whole module, get and set must be tested in the same function below
-# def test_add_index(remote_registry, _registry, _host, org_cb):
+# def test_add_index(system_setup, _registry, org_cb):
 #     _registry.add_index(('index1', 'index2'), 'value', cb=CalvinCB(func=Mock(), org_key='key', org_value='value', org_cb=None))
 #     _registry.add_index(('index1', 'index2'), ('value1', 'value2'), cb=CalvinCB(func=org_cb, org_key='key', org_value='value', org_cb=None))
 #     _registry.barrier()
@@ -108,7 +119,8 @@ def test_bad_index(remote_registry, _registry, _host, org_cb):
 #     org_cb.assert_once()
 #     args, kwargs = org_cb.get_args()
 
-def test_get_index(remote_registry, _registry, _host, org_cb):
+def test_get_index(system_setup, _registry, org_cb):
+    _host = system_setup['registry']['uri']
     _registry.add_index(('index1', 'index2'), ('value1', 'value2'), cb=CalvinCB(func=Mock(), org_key='key', org_value='value', org_cb=None))
     _registry.barrier()
     _registry.get_index(('index1', 'index2'), cb=CalvinCB(func=org_cb, org_key='key', org_value='value', org_cb=None))
@@ -125,7 +137,8 @@ def test_get_index(remote_registry, _registry, _host, org_cb):
     assert len(result) == 2
     assert set(('value1', 'value2')) == set(result)
     
-def test_remove_index(remote_registry, _registry, _host, org_cb):
+def test_remove_index(system_setup, _registry, org_cb):
+    _host = system_setup['registry']['uri']
     _registry.add_index(('index1', 'index2'), ('value1', 'value2'), cb=CalvinCB(func=Mock(), org_key='key', org_value='value', org_cb=None))
     _registry.barrier()
     _registry.remove_index(('index1', 'index2'), ('value1',), cb=CalvinCB(func=Mock(), org_key='key', org_value='value', org_cb=None))
@@ -157,16 +170,16 @@ def test_remove_index(remote_registry, _registry, _host, org_cb):
     # assert _registry.localstore_sets[('prefix2', 'index1', 'index2')]['+'] == set(['value1', 'value2'])
     # assert _registry.localstore_sets[('prefix2', 'index1', 'index2')]['-'] == set()
 #
-# def test_get_index_fail(remote_registry, _registry, _host, org_cb):
+# def test_get_index_fail(remote_registry, _registry, org_cb):
 #     assert _registry.get_index('prefix1', ('index1', 'index2')) == set()
 #
-# def test_get_index(remote_registry, _registry, _host, org_cb):
+# def test_get_index(remote_registry, _registry, org_cb):
 #     _registry.localstore_sets[('prefix1', 'index1', 'index2')] = {'+': set(['value']), '-': set()}
 #     _registry.localstore_sets[('prefix2', 'index1', 'index2')] = {'+': set(['value1', 'value2']), '-': set()}
 #     assert _registry.get_index('prefix1', ('index1', 'index2')) == set(['value'])
 #     assert _registry.get_index('prefix2', ('index1', 'index2')) == set(('value1', 'value2'))
 #
-# def test_remove_index(remote_registry, _registry, _host, org_cb):
+# def test_remove_index(remote_registry, _registry, org_cb):
 #     _registry.localstore_sets[('prefix1', 'index1', 'index2')] = {'+': set(['value']), '-': set()}
 #     _registry.localstore_sets[('prefix2', 'index1', 'index2')] = {'+': set(['value1', 'value2']), '-': set()}
 #     _registry.remove_index('prefix1', ('index1', 'index2'), 'value')
@@ -174,12 +187,12 @@ def test_remove_index(remote_registry, _registry, _host, org_cb):
 #     assert _registry.localstore_sets[('prefix1', 'index1', 'index2')] == {'+': set(), '-': set(['value'])}
 #     assert _registry.localstore_sets[('prefix2', 'index1', 'index2')] == {'+': set(['value2']), '-': set(['value1'])}
 #
-# def test_remove_index_nonexisting_value(remote_registry, _registry, _host, org_cb):
+# def test_remove_index_nonexisting_value(remote_registry, _registry, org_cb):
 #     _registry.localstore_sets[('prefix1', 'index1', 'index2')] = {'+': set(['value']), '-': set()}
 #     _registry.remove_index('prefix1', ('index1', 'index2'), 'value1')
 #     assert _registry.localstore_sets[('prefix1', 'index1', 'index2')] == {'+': set(['value']), '-': set(['value1'])}
 #
-# def test_remove_index_nonexisting_key(remote_registry, _registry, _host, org_cb):
+# def test_remove_index_nonexisting_key(remote_registry, _registry, org_cb):
 #     _registry.localstore_sets[('prefix1', 'index1', 'index2')] = {'+': set(['value']), '-': set()}
 #     _registry.remove_index('prefix2', ('index1', 'index2'), 'value')
 #     assert _registry.localstore_sets[('prefix1', 'index1', 'index2')] == {'+': set(['value']), '-': set()}

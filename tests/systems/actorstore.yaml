@@ -1,0 +1,4 @@
+- class: ACTORSTORE
+  name: actorstore
+  port: 4999
+  type: REST

@@ -37,70 +37,7 @@ import tests.orchestration as orchestration
 
 def _file_dir():
     return os.path.dirname(os.path.realpath(__file__))
-
-@pytest.fixture(scope='module')
-def start_process():
-    """
-    Provides function returning process handle to new process given by cmd (string or list).
-    Usage: e.g. start_process("csruntime -n localhost")
-    """
-    def _start_process(cmd):
-        if isinstance(cmd, basestring):
-            cmd = shlex.split(cmd)
-        process = subprocess.Popen(cmd)
-        return process
-    return _start_process
     
-@pytest.fixture(scope='module')
-def stop_process():
-    """
-    Utility function to cleanly terminate a process given its process handle
-    Usage: stop_process(proc_handle)
-    """
-    def _stop_process(proc):
-        proc.kill()
-        proc.communicate()
-        proc.wait()        
-        
-    return _stop_process    
-            
-
-@pytest.fixture(scope='module')
-def start_actorstore(start_process):
-    """
-    Provides convenience function returning process handle to new actorstore process.
-    Usage: start_actorstore()
-    """    
-    def _start_actorstore():
-        app_path = os.path.abspath(_file_dir() + "/calvinservices/actorstore/store_app.py")
-        os.putenv("FLASK_APP", app_path)
-        return start_process("flask run --port 4999")
-    return _start_actorstore
-
-@pytest.fixture(scope='module')
-def start_runtime(start_process):
-    """
-    Provides convenience function returning process handle to new runtime process.
-    Usage: start_runtime(calvin_port, control_port)
-    """
-    def _start_runtime(tunnel_port, control_port, registry=None):
-        # return _start_process("csruntime -n localhost -l calvinconfig:DEBUG")
-        cmd = "csruntime -n localhost -p {} -c {}".format(tunnel_port, control_port)
-        if registry:
-            cmd = cmd + " " + "--registry='{}'".format(json.dumps(registry))
-        return start_process(cmd)
-    return _start_runtime
-    
-@pytest.fixture(scope='module')
-def start_registry(start_process):
-    """
-    Provides convenience function returning process handle to new registry process.
-    Usage: start_registry()
-    """
-    def _start_registry():
-        os.putenv("FLASK_APP", "calvinservices/registry/registry_app.py")
-        return start_process("flask run --port 4998")
-    return _start_registry
 
 @pytest.fixture
 def execute_cmd_check_output():
@@ -132,38 +69,7 @@ def working_dir(tmpdir_factory):
     """Return string with POSIX path to temp dir (module scope)"""
     wdir = tmpdir_factory.mktemp('work')
     wdir = str(wdir)
-    return wdir    
-
-@pytest.yield_fixture(scope="module")
-def remote_registry(start_registry):
-    """
-    Setup registry service for the duration of the test module and 
-    guarantee teardown afterwards (yield fixture). 
-    FIXME: registry uri is hardcoded to "http://localhost:4998"
-    """
-    # Setup
-    reg_proc = start_registry()
-    time.sleep(1)
-    # Run tests
-    yield
-    # Teardown
-    reg_proc.terminate()
-
-# FIXTURE: actorstore
-@pytest.yield_fixture(scope="module")
-def actorstore(start_actorstore):
-    """
-    Setup actorstore for the duration of the test module and 
-    guarantee teardown afterwards (yield fixture). 
-    FIXME: actorstore uri is hardcoded to "http://localhost:4999"
-    """
-    # Setup
-    as_proc = start_actorstore()
-    time.sleep(1)
-    # Run tests
-    yield
-    # Teardown
-    as_proc.terminate()
+    return wdir   
     
 
 def free_ports():
