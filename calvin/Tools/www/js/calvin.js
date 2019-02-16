@@ -493,7 +493,7 @@ function make_base_auth(user, password)
   return "Basic " + btoa(username + ':' + password);
 }
 
-function send_request(type, url, data, successhandler, errorhandler, kwargs)
+function send_request(type, url, data, successhandler, errorhandler, kwargs, asyncop = true)
 {
   $.ajax({
     timeout: 10000,
@@ -509,6 +509,7 @@ function send_request(type, url, data, successhandler, errorhandler, kwargs)
     url: url,
     type: type,
     data: data,
+    async: asyncop,
     success: function(data) {
       if (data)
         console.log("Success: " + type + " " + url + " response: " + JSON.stringify(data));
@@ -828,6 +829,9 @@ function getActor(id, show, replicas)
           getReplicas(data.replication_id)
         } else {
           actor.master = false
+          if ("replication_id" in data) {
+            actor.replication_id = data.replication_id
+          }
         }
       }
     },
@@ -853,6 +857,32 @@ function getReplicas(id)
     },
     null,
     null
+  );
+}
+
+// Get replication information about replication id
+function getReplicationData(id, actor_id)
+{
+  // This one is blocking
+  send_request("GET",
+    connect_uri + '/storage/replicationdata-' + id,
+    null,
+    function(data, kwargs) {
+      if (data && "result" in data) {
+        actor = findActor(kwargs.actor_id)
+        if (actor) {
+          actor.replication_data = data.result
+          console.log("Actor updated with replication_data" + JSON.stringify(actor))
+        } else {
+          console.log("Failed adding replication data to actor " + kwargs.actor_id + ", could not find actor");
+        }
+      } else {
+        console.log("Failed finding replication data for " + id);
+      }
+    },
+    null,
+    {"actor_id": actor_id},
+    false,
   );
 }
 
@@ -1409,7 +1439,6 @@ function migrate(actor_id)
 }
 
 // Replicate actor with "actor_id" to selected (or unselected) runtime in combobox in actorsTable
-// FIXME now during testing we have manual control over replication, this will be removed later
 function replicate(actor_id)
 {
   var combo = document.getElementById('selectRuntime');
@@ -1419,65 +1448,83 @@ function replicate(actor_id)
     var peer_id = "same";
   }
   var actor = findActor(actor_id);
-  if (actor) {
-    var node = findRuntime(actor.peer_id);
-    if (node) {
-      if (node.control_uris) {
-        var url = node.control_uris[0] + '/actor/' + actor.id + '/replicate';
-        if (peer_id == "same") {
-          var data = JSON.stringify({});
+  if (actor && "replication_id" in actor) {
+    // Fill in latest replication data in actor object
+    getReplicationData(actor.replication_id, actor.id)
+    if ("replication_data" in actor && "leader_node_id" in actor.replication_data) {
+      var node = findRuntime(actor.replication_data.leader_node_id);
+      if (node) {
+        if (node.control_uris) {
+          var url = node.control_uris[0] + '/actor/' + actor.replication_id + '/replicate';
+          if (peer_id == "same") {
+            var data = JSON.stringify({});
+          } else {
+            var data = JSON.stringify({'peer_node_id': peer_id});
+          }
+          send_request("POST",
+            url,
+            data,
+            function(data, kwargs) {
+              showSuccess("Actor " + kwargs.actor.name +"("+ kwargs.actor.id +")" + " replicated");
+            },
+            function(request, status, error, kwargs) {
+              showError("Failed to replicate " + kwargs.actor.name);
+            },
+            {"actor": actor}
+          );
         } else {
-          var data = JSON.stringify({'peer_node_id': peer_id});
+          console.log("Failed to replicate, replication mgmt node " + actor.replication_data.leader_node_id + " has no control API");
+          showError("Failed to replicate, replication mgmt node " + actor.replication_data.leader_node_id + " has no control API");
         }
-        send_request("POST",
-          url,
-          data,
-          function(data, kwargs) {
-            showSuccess("Actor " + kwargs.actor.name +"("+ kwargs.actor.id +")" + " replicated as " + data['actor_id']);
-          },
-          function(request, status, error, kwargs) {
-            showError("Failed to replicate " + kwargs.actor.name);
-          },
-          {"actor": actor}
-        );
       } else {
-        showError("Node " + actor.peer_id + " has no control API");
+        console.log("Failed to replicate, no replication mgmt node with id: " + actor.replication_data.leader_node_id);
+        showError("Failed to replicate, no replication mgmt node with id: " + actor.replication_data.leader_node_id);
       }
     } else {
-      showError("Failed to replicate, no node with id: " + actor.peer_id);
+      console.log("Failed to replicate, could not find any replication data, is it marked as manual scaling?" + JSON.stringify(actor));
+      showError("Failed to replicate, could not find any replication data, is it marked as manual scaling?")
     }
+  } else {
+    console.log("Failed to replicate, no manual scaling rule applied on actor");
+    showError("Failed to replicate, no manual scaling rule applied on actor")
   }
 }
 
 // Dereplicate actor with "actor_id"
-// FIXME now during testing we have manual control over replication, this will be removed later
 function dereplicate(actor_id)
 {
   var actor = findActor(actor_id);
-  if (actor) {
-    var node = findRuntime(actor.peer_id);
-    if (node) {
-      if (node.control_uris) {
-        var url = node.control_uris[0] + '/actor/' + actor.id + '/replicate';
-        var data = JSON.stringify({'dereplicate': true, 'exhaust': true});
-
-        send_request("POST",
-          url,
-          data,
-          function(data, kwargs) {
-            showSuccess("Actor " + actor.name +"("+ actor_id +")" + " dereplicated");
-          },
-          function(request, status, error, kwargs) {
-            showError("Failed to dereplicate " + actor.name + "("+ actor_id +")")
-          },
-          null
-        );
+  if (actor  && "replication_id" in actor) {
+    // Fill in latest replication data in actor object
+    getReplicationData(actor.replication_id, actor.id)
+    if ("replication_data" in actor && "leader_node_id" in actor.replication_data) {
+      var node = findRuntime(actor.replication_data.leader_node_id);
+      if (node) {
+        if (node.control_uris) {
+          var url = node.control_uris[0] + '/actor/' + actor.replication_id + '/replicate';
+          var data = JSON.stringify({'dereplicate': true, 'exhaust': true});
+          send_request("POST",
+            url,
+            data,
+            function(data, kwargs) {
+              showSuccess("Actor " + actor.name +"("+ actor_id +")" + " dereplicated");
+            },
+            function(request, status, error, kwargs) {
+              showError("Failed to dereplicate " + actor.name + "("+ actor_id +")")
+            },
+            null
+          );
+        } else {
+          showError("Node " + actor.replication_data.leader_node_id + " has no control API");
+        }
       } else {
-        showError("Node " + actor.peer_id + " has no control API");
+        showError("Failed to dereplicate, no node with id: " + actor.replication_data.leader_node_id);
       }
     } else {
-      showError("Failed to dereplicate, no node with id: " + actor.peer_id);
+      showError("Failed to replicate, could not find any replication data, is it marked as manual scaling?")
     }
+  } else {
+    showError("Failed to dereplicate, no manual scaling rule applied on actor")
   }
 }
 
