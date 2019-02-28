@@ -93,7 +93,7 @@ def _actor_report(self, handle, connection, match, data, hdr):
         _log.exception("Actor report failed")
         report = None
         status = calvinresponse.NOT_FOUND
-    self.send_response(handle, connection, None if report is None else json.dumps(report, default=repr), status=status)
+    self.send_response(handle, connection, json.dumps([]) if report is None else json.dumps(report, default=repr), status=status)
 
 # DEPRECATED: Perhaps used in Kappa?
 @handler(method="GET", path="/actor/{actor_id}/report")

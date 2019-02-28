@@ -210,6 +210,8 @@ class NullRegistryClient(StorageBase):
     #         # async.DelayedCall(0, callback, True)
     
     def _response(self, cb, value):
+        if not cb:
+            return
         callback = cb.kwargs.get('org_cb')
         if callback:
             org_key = cb.kwargs.get('org_key', 'NO-SUCH-KEY')

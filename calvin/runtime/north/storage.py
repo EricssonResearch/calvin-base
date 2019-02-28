@@ -331,6 +331,13 @@ class PrivateStorage(object):
         self.storage.get(key=prefix + key,
                          cb=CalvinCB(func=self.get_iter_cb, it=it, org_key=key, include_key=include_key))
 
+    def delete_cb(self, key, value, org_cb, org_key):
+        # FIXME: To work properly we need an extra callback layer...
+        """ delete callback
+        """
+        if org_cb:
+            org_cb(org_key, value)
+
     def delete(self, prefix, key, cb):
         """ Delete registry key: prefix+key
             It is assumed that the prefix and key are strings,
@@ -342,7 +349,7 @@ class PrivateStorage(object):
         """
         _log.debug("Deleting key %s" % prefix + key)
         self.localstorage.delete(prefix + key)
-        self.storage.delete(prefix + key, cb=CalvinCB(func=None, org_key=key, org_cb=cb))
+        self.storage.delete(prefix + key, cb=CalvinCB(func=self.delete_cb, org_cb=cb, org_key=key))
 
 
     def add_index_cb(self, value, org_value, org_cb, index_items, silent=False):
