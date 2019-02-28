@@ -102,9 +102,6 @@ Start runtime, compile calvinscript and deploy application.
                            help='Any string for filtering your dht clients, use same for all nodes in the network.',
                            default=None)
 
-    argparser.add_argument('-s', '--storage-only', dest='storage', action='store_true', default=False,
-                           help='Start storage only runtime')
-
     argparser.add_argument('--credentials', metavar='<credentials>', type=str,
                            help='Supply credentials to run program under '
                                 'e.g. \'{"user":"ex_user", "password":"passwd"}\'',
@@ -128,16 +125,6 @@ def runtime(uris, control_uri, attributes=None, dispatch=False):
     except Exception as e:
         print "Starting runtime failed:", e
         raise
-
-# DEPRECATED
-def storage_runtime(uri, control_uri, attributes=None, dispatch=False):
-    from nodecontrol import dispatch_storage_node, start_storage_node
-    kwargs = {}
-    if dispatch:
-        return dispatch_storage_node(uri=uri, control_uri=control_uri, **kwargs)
-    else:
-        start_storage_node(uri, control_uri, **kwargs)
-
 
 def set_loglevel(levels, filename):
     from calvin.utilities.calvinlogger import get_logger, set_file
@@ -425,14 +412,11 @@ def main():
         runtime_attr["indexed_public"]["node_name"]['name'] = "no_name"
 
     runtime_certificate(runtime_attr)
-    if args.storage:
-        storage_runtime(uris, control_uri, runtime_attr, dispatch=False)
-    else:
-        runtime(uris, control_uri, runtime_attr, dispatch=False)
+    runtime(uris, control_uri, runtime_attr, dispatch=False)
     return 0
 
 
-def csruntime(host, port=5000, controlport=5001, loglevel=None, logfile=None, attr=None, storage=False,
+def csruntime(host, port=5000, controlport=5001, loglevel=None, logfile=None, attr=None,
               credentials=None, outfile=None, configfile=None, dht_network_filter=None):
     """ Create a completely seperate process for the runtime. Useful when doing tests that start multiple
         runtimes from the same python script, since some objects otherwise gets unexceptedly shared.
@@ -442,7 +426,6 @@ def csruntime(host, port=5000, controlport=5001, loglevel=None, logfile=None, at
         call += (" --attr \"%s\"" % (json.dumps(attr).replace('"',"\\\""), )) if attr else ""
     except:
         pass
-    call += " -s" if storage else ""
     call += (" --logfile %s" % (logfile, )) if logfile else ""
     if loglevel:
         for l in loglevel:

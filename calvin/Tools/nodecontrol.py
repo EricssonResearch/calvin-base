@@ -78,15 +78,3 @@ def start_node(uri, control_uri, trace=False, attributes=None):
         calvin_node.create_tracing_node(uri, control_uri, trace, attributes)
     else:
         calvin_node.create_node(uri, control_uri, attributes)
-
-
-def dispatch_storage_node(uri, control_uri, trace=False, attributes=None):
-    p = storage_node.start_node(uri, control_uri, trace, attributes)
-    return node_control(control_uri), p
-
-
-def start_storage_node(uri, control_uri, trace=False, attributes=None):
-    if trace:
-        storage_node.create_tracing_node(uri, control_uri, trace, attributes)
-    else:
-        storage_node.create_node(uri, control_uri, attributes)
