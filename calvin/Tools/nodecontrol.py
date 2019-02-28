@@ -18,7 +18,6 @@
 
 import time
 from calvin.runtime.north import calvin_node
-from calvin.utilities import storage_node
 from calvin.requests.request_handler import RequestHandler
 
 
