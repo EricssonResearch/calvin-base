@@ -14,6 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# DEPRECATED
+
 import json
 import requests
 import inspect
