@@ -86,7 +86,7 @@ Start runtime, compile calvinscript and deploy application.
                            help="exposed external control url (e.g. outside of container)",
                            dest='control_ext')
 
-    argparser.add_argument('--attr', metavar='<attr>', type=str,
+    argparser.add_argument('--attr', metavar='<attr>', type=yaml.load,
                            help='JSON coded attributes for started node '
                                 'e.g. \'{"indexed_public": {"owner": {"personOrGroup": "Me"}}}\''
                                 ', see documentation',
@@ -391,11 +391,7 @@ def main():
             return -1
 
     if args.attr:
-        try:
-            runtime_attr = json.loads(args.attr)
-        except Exception as e:
-            print "Attributes not JSON:\n", e
-            return -1
+        runtime_attr = args.attr
 
     if args.ext:
         runtime_attr['external_uri'] = args.ext
@@ -405,6 +401,12 @@ def main():
 
     # We let --name override node_name:name (if present)
     if args.name:
+        # Issue a warning if name in attributes is overridden by --name option 
+        attr_name = runtime_attr.get('indexed_public', {}).get('node_name', {}).get('name')
+        if attr_name:
+            import warnings
+            msg = 'Name "{}" in attributes is overridden by --name "{}" option'.format(attr_name, args.name)
+            warnings.warn(msg)
         runtime_attr.setdefault("indexed_public",{}).setdefault("node_name",{})['name'] = args.name
 
     # If still no name give it "no_name" name

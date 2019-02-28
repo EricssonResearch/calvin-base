@@ -1,6 +1,7 @@
 import subprocess
 import shlex
 import socket
+import json
 import time
 
 import requests
@@ -101,12 +102,23 @@ class RuntimeProcess(Process):
         self.config["rt2rt"] = "calvinip://{host}:{rt2rt_port}".format(**self.config)
         self.config["node_id"] = ""
 
+    def _attributes_option(self):
+        attrs = self.config.get("attributes")   
+        if not attrs:
+            return ""
+        if isinstance(attrs, basestring):
+            # Assume file reference
+            return ' --attr-file {}'.format(attrs)
+        # Convert attrs to JSON
+        return ' --attr "{}"'.format(attrs)
+
     def cmd(self):
         cmd = "csruntime --host {host} -p {rt2rt_port} -c {port}".format(**self.config)
         opt1 = ' --registry "{registry}"'.format(**self.config) if 'registry' in self.config else ""
         opt2 = ' --name "{name}"'.format(**self.config)
+        attrs = self._attributes_option()
         debug = ' -l DEBUG'
-        return cmd + opt1 + opt2 # + debug
+        return cmd + opt1 + opt2 + attrs # + debug
 
     def ack_ok_action(self, response):
         data = response.json()
@@ -155,6 +167,11 @@ class SystemManager(object):
         self._system = []
         try:
             self.process_config(system_config)
+            # print "System startup sequence:"
+            # print "------------------------"
+            # for s in self._system:
+            #     print s
+            # print "------------------------"
             self.start_system()
             self.wait_for_system()
         except Exception as err:
