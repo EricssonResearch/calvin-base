@@ -118,7 +118,7 @@ Start runtime, compile calvinscript and deploy application.
 
 
 def runtime(uris, control_uri, attributes=None, dispatch=False):
-    from calvin.utilities.nodecontrol import dispatch_node, start_node
+    from nodecontrol import dispatch_node, start_node
     kwargs = {'attributes': attributes} if attributes else {}
     try:
         if dispatch:
@@ -129,8 +129,9 @@ def runtime(uris, control_uri, attributes=None, dispatch=False):
         print "Starting runtime failed:", e
         raise
 
+# DEPRECATED
 def storage_runtime(uri, control_uri, attributes=None, dispatch=False):
-    from calvin.utilities.nodecontrol import dispatch_storage_node, start_storage_node
+    from nodecontrol import dispatch_storage_node, start_storage_node
     kwargs = {}
     if dispatch:
         return dispatch_storage_node(uri=uri, control_uri=control_uri, **kwargs)
@@ -223,7 +224,7 @@ def runtime_certificate(rt_attributes):
     import copy
     import requests
     import sys
-    from calvin.requests.request_handler import RequestHandler
+    from request_handler import RequestHandler
     from calvin.utilities.attribute_resolver import AttributeResolver
     from calvin.utilities import calvinconfig
     from calvin.utilities import calvinuuid

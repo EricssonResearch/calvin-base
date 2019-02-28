@@ -27,7 +27,7 @@ _request_handler = None
 
 
 def get_request_handler(verify=None):
-    from calvin.requests.request_handler import RequestHandler
+    from request_handler import RequestHandler
     return _request_handler if _request_handler else RequestHandler(verify=verify)
 
 
