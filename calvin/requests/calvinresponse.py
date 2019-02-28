@@ -192,6 +192,9 @@ class CalvinResponse(object):
 
     def __str__(self):
         return str(self.status) + ", " + RESPONSE_CODES[self.status] + ((", " + str(self.data)) if self.data else "")
+    
+    def __repr__(self):
+        return "CalvinResponse(status={})".format(self.status)    
 
 
 def isfailresponse(obj):

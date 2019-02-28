@@ -183,6 +183,7 @@ def control_api():
             super(ControlAPI, self).__init__()
         
         # cscontrol, nodecontrol
+        # N.B. This queries the RUNTIME at host_uri
         def get_node_id(self, host_uri):
             response = requests.get(host_uri + NODE_ID)
             return response.status_code, response.json()
@@ -192,11 +193,17 @@ def control_api():
             response = requests.post(host_uri + DEPLOY, json=deployable)
             return response.status_code, response.json()
 
-        # # cscontrol, nodecontrol
-        # def get_node(self, rt, node_id):
-        #     response = requests.get(host_uri + NODE_PATH.format(node_id))
-        #     return response.status_code, response.json()
-        #
+        # cscontrol
+        # N.B. This queries the RUNTIME at host_uri, and may thus fail
+        def migrate_actor(self, host_uri, actor_id, reqs):
+            response = requests.post(host_uri + ACTOR_MIGRATE.format(actor_id), json=reqs)
+            return response.status_code, None
+
+        # cscontrol, nodecontrol
+        def get_node(self, host_uri, node_id):
+            response = requests.get(host_uri + NODE_PATH.format(node_id))
+            return response.status_code, response.json()
+
         # # cscontrol
         def quit(self, host_uri, method=None):
             if method is None:
@@ -209,15 +216,18 @@ def control_api():
             response = requests.get(host_uri + ACTOR_PATH.format(actor_id))
             return response.status_code, response.json()
 
+        # N.B. This queries the RUNTIME at host_uri, and may thus fail, use get_actor to find out where the actor resides
         def get_actor_report(self, host_uri, actor_id):
             response = requests.get(host_uri + ACTOR_REPORT.format(actor_id))
             return response.status_code, response.json()
 
+        # N.B. This queries the RUNTIME at host_uri, and may thus fail, use get_actor to find out where the actor resides
         def get_actors(self, host_uri):
             response = requests.get(host_uri + ACTORS)
             return response.status_code, response.json()
 
         # cscontrol
+        # N.B. This queries the RUNTIME at host_uri
         def get_applications(self, host_uri):
             response = requests.get(host_uri + APPLICATIONS)
             return response.status_code, response.json()
@@ -231,6 +241,10 @@ def control_api():
         def delete_application(self, host_uri, application_id):
             response = requests.delete(host_uri + APPLICATION_PATH.format(application_id))
             # FIXME: Make control api at least return consistent type, if not value
+            return response.status_code, None
+
+        def migrate_application(self, host_uri, app_id, reqs):
+            response = requests.post(host_uri + APPLICATION_MIGRATE.format(app_id), json=reqs)
             return response.status_code, None
         
             

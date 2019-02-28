@@ -70,6 +70,8 @@ class CalvinCB(object):
         """
         try:
             return self.func(*(self.args + list(args)), **dict(self.kwargs, **kwargs))
+        except AssertionError as error:
+            raise error
         except (TypeError, Exception):
             name = "unknown"
             if hasattr(self.func, 'name'):

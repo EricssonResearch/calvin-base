@@ -35,6 +35,9 @@ class Process(object):
 
     def cmd(self):
         raise NotImplementedError("Subclass must override.")
+    
+    def __repr__(self):
+        return self.cmd()
 
     def start_process(self):
         self.proc_handle = _start_process(self.cmd())
@@ -102,7 +105,8 @@ class RuntimeProcess(Process):
         cmd = "csruntime --host {host} -p {rt2rt_port} -c {port}".format(**self.config)
         opt1 = ' --registry "{registry}"'.format(**self.config) if 'registry' in self.config else ""
         opt2 = ' --name "{name}"'.format(**self.config)
-        return cmd + opt1 + opt2
+        debug = ' -l DEBUG'
+        return cmd + opt1 + opt2 # + debug
 
     def ack_ok_action(self, response):
         data = response.json()
