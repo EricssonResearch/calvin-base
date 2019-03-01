@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import absolute_import
 import re
 
 # from calvin.runtime.north.plugins.storage import storage_factory
@@ -30,7 +31,7 @@ from calvin.utilities import calvinresponse
 from calvin.runtime.north.calvinsys import get_calvinsys
 from calvin.runtime.north.calvinlib import get_calvinlib
 from calvin.runtime.north.plugins.storage.storage_clients import LocalRegistry, NullRegistryClient, registry
-from storage_proxyserver import StorageProxyServer
+from .storage_proxyserver import StorageProxyServer
 
 _log = calvinlogger.get_logger(__name__)
 

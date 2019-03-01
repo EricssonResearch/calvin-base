@@ -203,7 +203,7 @@ class CA():
         self.enrollment_challenge_db = {}
         self.allowed_authentication_servers = None
         self.allowed_authorization_servers = None
-        os.umask(0077)
+        os.umask(0o077)
         self.domain = domain
         _log.debug("CA init")
         self.security_dir = _conf.get("security", "security_dir")
@@ -256,19 +256,19 @@ class CA():
         password_file = os.path.join(private, "ca_password")
         self.enrollment_challenge_db_path = os.path.join(private, "enrollment_challenge_db.json")
 
-        os.umask(0077)
+        os.umask(0o077)
         try:
-            os.mkdir(crlpath, 0700)
+            os.mkdir(crlpath, 0o700)
         except OSError:
             pass
 
         try:
-            os.mkdir(outpath, 0700)
+            os.mkdir(outpath, 0o700)
         except OSError:
             pass
 
         try:
-            os.mkdir(private, 0700)
+            os.mkdir(private, 0o700)
         except OSError:
             pass
 
@@ -336,8 +336,8 @@ class CA():
                 self.config.set(section, option, value)
 
         try:
-            os.makedirs(directory, 0700)
-        except OSError, e:
+            os.makedirs(directory, 0o700)
+        except OSError as e:
             _log.error("Failed to create directory, err={}".format(e))
         with open(self.configfile, 'wb') as configfd:
             self.config.write(configfd)
@@ -388,7 +388,7 @@ class CA():
                 raise ConfigurationMalformed("Missing `CA_default`."
                                              "`private_key` variable"
                                              " in {}".format(cert_conf_file))
-        except (Exception), err:
+        except (Exception) as err:
             raise ConfigurationMalformed(err)
 
 
@@ -476,7 +476,7 @@ class CA():
             filepath = os.path.join(new_cert, filename)
             with open(filepath, 'w') as csr_fd:
                 csr_fd.write(csr)
-        except (Exception), err:
+        except (Exception) as err:
             raise StoreFailed(err)
         return filepath
 
@@ -538,7 +538,7 @@ class CA():
             raise
         try:
             csrx509 = certificate.verify_certstr_with_policy(csr)
-        except (OpenSSL.crypto.Error, IOError), err:
+        except (OpenSSL.crypto.Error, IOError) as err:
             raise CsrDeniedMalformed(err)
         except:
             raise
@@ -593,7 +593,7 @@ class CA():
             # TODO: Make sure there is a configuration entry for CA services
             # to filter accepted nodes, e.g. implement node name whitelist.
             # The openssl policy can also do this ...
-        except (OpenSSL.crypto.Error), err:
+        except (OpenSSL.crypto.Error) as err:
             raise CsrDeniedConfiguration(err)
         return csrx509
 
@@ -621,14 +621,14 @@ class CA():
 
         password_file = os.path.join(private, "ca_password")
         signed = os.path.join(certspath, "signed.pem")
-        os.umask(0077)
+        os.umask(0o077)
         try:
-            os.mkdir(private, 0700)
+            os.mkdir(private, 0o700)
         except OSError:
             pass
 
         try:
-            os.mkdir(certspath, 0700)
+            os.mkdir(certspath, 0o700)
         except OSError:
             pass
 

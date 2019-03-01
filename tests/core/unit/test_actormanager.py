@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import print_function
 import pytest
 from mock import Mock, patch
 
@@ -177,7 +178,7 @@ def test_missing_actor(actor_manager):
                       ("get_port_state", (None, ))]
     for func, args in test_functions:
         with pytest.raises(Exception) as excinfo:
-            print func
+            print(func)
             getattr(actor_manager, func)('123', *args)
         assert "Actor '123' not found" in str(excinfo.value)
 

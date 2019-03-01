@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import print_function
 from calvin.runtime.north.plugins.port.queue.common import QueueFull
 from calvin.runtime.north.plugins.port.queue.fanout_base import FanoutBase
 from calvin.utilities import calvinlogger
@@ -42,7 +43,7 @@ class FanoutMappedFIFO(FanoutBase):
 
     def _set_port_mapping(self, mapping):
         if not set(mapping.values()) == set(self.readers):
-            print mapping, self.readers
+            print(mapping, self.readers)
             raise Exception("Illegal port mapping dictionary")
         self.mapping = mapping
 

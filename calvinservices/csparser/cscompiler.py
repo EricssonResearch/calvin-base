@@ -15,11 +15,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import absolute_import
 import os
 import sys
 import json
 import argparse
-from cspreprocess import Preprocessor
+from .cspreprocess import Preprocessor
 from calvinservices.csparser.dscodegen import calvin_dscodegen
 from calvinservices.csparser.codegen import calvin_codegen
 from calvinservices.csparser.parser import printable_ir

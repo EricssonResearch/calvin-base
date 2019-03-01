@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import print_function
 import pytest
 
 from calvinservices.csparser.codegen import calvin_codegen
@@ -188,7 +189,7 @@ def testBadComponent7(system_setup):
     }
     """
     result, errors, warnings = parse('inline', script)
-    print errors
+    print(errors)
     assert len(errors) == 1 
     assert errors[0]['reason'] == "Component inport connected directly to outport." 
 
@@ -352,7 +353,7 @@ def testLocalBadComponentCauseCrash3(system_setup):
     1 > foo.in
     """
     result, errors, warnings = parse('inline', script)
-    print errors
+    print(errors)
     assert len(errors) == 2 
     assert errors[0]['reason'] == "Component Foo is missing connection to outport 'out'" 
     assert errors[1]['reason'] == "Component foo (local.Foo) is missing connection to outport 'out'" 
@@ -824,7 +825,7 @@ def testComponentToComponent1(system_setup):
     """
     result, errors, warnings = parse('inline', script)
     for e in errors:
-        print e['reason']
+        print(e['reason'])
     assert len(errors) == 0 
 
 def testCompToCompWithFanoutFromInternalInport(system_setup):
@@ -844,7 +845,7 @@ def testCompToCompWithFanoutFromInternalInport(system_setup):
     """
     result, errors, warnings = parse('inline', script)
     for e in errors:
-        print e['reason']
+        print(e['reason'])
     assert len(errors) == 0 
 
 

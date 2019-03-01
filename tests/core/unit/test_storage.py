@@ -1,3 +1,4 @@
+from __future__ import print_function
 import pytest
 import yaml
 
@@ -141,7 +142,7 @@ def _storage(request, dummy_node):
 def test_set_get_delete(_storage):
     def cb(expected, *args, **kwargs):
         # print
-        print expected, args, kwargs
+        print(expected, args, kwargs)
         assert not args
         assert len(kwargs) == 2
         assert 'key' in kwargs 

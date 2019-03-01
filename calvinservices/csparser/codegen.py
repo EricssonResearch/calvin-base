@@ -15,12 +15,14 @@
 # limitations under the License.
 
 
+from __future__ import print_function
+from __future__ import absolute_import
 import numbers
 
-import astnode as ast
-import astprint
-from parser import calvin_parse
-from visitor import Visitor, search_tree
+from . import astnode as ast
+from . import astprint
+from .parser import calvin_parse
+from .visitor import Visitor, search_tree
 from calvin.actor.port_property_syntax import port_property_data
 
 # FIXME: External dependency to be removed
@@ -873,7 +875,7 @@ class CodeGen(object):
             return
         ast.Node._verbose_desc = self.verbose_nodes
         printer = astprint.BracePrinter()
-        print "========\n{}\n========".format(heading)
+        print("========\n{}\n========".format(heading))
         printer.process(self.root)
 
 
@@ -1068,17 +1070,17 @@ if __name__ == '__main__':
     """
 
     source_text = cleandoc(source_text)
-    print source_text
-    print
+    print(source_text)
+    print()
     ai, it = calvin_codegen(source_text, script)
-    print
-    print json.dumps(ai, indent = 4)
-    print
+    print()
+    print(json.dumps(ai, indent = 4))
+    print()
     if it.issue_count == 0:
-        print "No issues"
-        print ai
+        print("No issues")
+        print(ai)
     for i in it.formatted_issues(custom_format="{type!c}: {reason} {filename}:{line}:{col}", filename=script):
-        print i
+        print(i)
 
 
 

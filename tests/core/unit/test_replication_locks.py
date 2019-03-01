@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import print_function
 import pytest
 
 from calvin.runtime.north.replicationmanager import ReplicationData, ReplicationManager
@@ -34,52 +35,52 @@ def replication_manager(dummy_node):
 def test_lock1(replication_manager):
     
     def _print_lock_lists():
-        print "RM1 given  ", replication_manager.managed_replications["RM1"].given_lock_replication_ids
-        print "RM1 aquired", replication_manager.managed_replications["RM1"].aquired_lock_replication_ids
-        print "RM1 queued ", replication_manager.managed_replications["RM1"].queued_lock_replication_ids
-        print "RM2 given  ", replication_manager.managed_replications["RM2"].given_lock_replication_ids
-        print "RM2 aquired", replication_manager.managed_replications["RM2"].aquired_lock_replication_ids
-        print "RM2 queued ", replication_manager.managed_replications["RM2"].queued_lock_replication_ids
+        print("RM1 given  ", replication_manager.managed_replications["RM1"].given_lock_replication_ids)
+        print("RM1 aquired", replication_manager.managed_replications["RM1"].aquired_lock_replication_ids)
+        print("RM1 queued ", replication_manager.managed_replications["RM1"].queued_lock_replication_ids)
+        print("RM2 given  ", replication_manager.managed_replications["RM2"].given_lock_replication_ids)
+        print("RM2 aquired", replication_manager.managed_replications["RM2"].aquired_lock_replication_ids)
+        print("RM2 queued ", replication_manager.managed_replications["RM2"].queued_lock_replication_ids)
     
     def _response1(status):
-        print "response1", status
+        print("response1", status)
         _print_lock_lists()
         assert "RM1" in replication_manager.managed_replications["RM2"].given_lock_replication_ids
         assert "RM2" in replication_manager.managed_replications["RM1"].aquired_lock_replication_ids
 
     def _response2(status):
-        print "response2", status
+        print("response2", status)
         _print_lock_lists()
         assert "RM1" in replication_manager.managed_replications["RM2"].given_lock_replication_ids
         assert "RM2" in replication_manager.managed_replications["RM1"].aquired_lock_replication_ids
 
     def _response3(status):
-        print "response3", status
+        print("response3", status)
         _print_lock_lists()
         assert "RM2" in replication_manager.managed_replications["RM1"].given_lock_replication_ids
         assert "RM1" in replication_manager.managed_replications["RM2"].aquired_lock_replication_ids
     
-    print "Test: local"
+    print("Test: local")
     replication_manager.lock_peer_replication("RM1", _response1)
-    print "lock"
+    print("lock")
     _print_lock_lists()
     replication_manager.release_peer_replication("RM1")
-    print "released 1"
+    print("released 1")
     _print_lock_lists()
     assert "RM1" not in replication_manager.managed_replications["RM2"].given_lock_replication_ids
     assert "RM2" not in replication_manager.managed_replications["RM1"].aquired_lock_replication_ids
     replication_manager.lock_peer_replication("RM1", _response2)
     replication_manager.lock_peer_replication("RM2", _response3)
-    print "queued"
+    print("queued")
     _print_lock_lists()
     assert "RM1" in replication_manager.managed_replications["RM2"].queued_lock_replication_ids
     replication_manager.release_peer_replication("RM1")
-    print "release 1 -> lock"
+    print("release 1 -> lock")
     _print_lock_lists()
     assert "RM2" in replication_manager.managed_replications["RM1"].given_lock_replication_ids
     assert "RM1" in replication_manager.managed_replications["RM2"].aquired_lock_replication_ids
     replication_manager.release_peer_replication("RM2")
-    print "released 2"
+    print("released 2")
     _print_lock_lists()
     assert "RM2" not in replication_manager.managed_replications["RM1"].given_lock_replication_ids
     assert "RM1" not in replication_manager.managed_replications["RM2"].aquired_lock_replication_ids

@@ -15,6 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import print_function
 import argparse
 import json
 import pprint
@@ -69,7 +70,7 @@ def main():
     args = parse_arguments()
     WIDTH = args.width or WIDTH
     text_width = args.text_width or WIDTH + 20
-    print "Analyze", args.files
+    print("Analyze", args.files)
     files = []
     for name in set(args.files):
         files.append(open(name, 'r'))
@@ -127,7 +128,7 @@ def main():
     pprint.pprint(pid_to_node_id)
     int_pid_to_node_id = {int(k): v for k,v in pid_to_node_id.iteritems()}
     pids = list(pids)
-    print "PIDS", pids
+    print("PIDS", pids)
 
     for l in log:
         if l['node_id'] in int_pid_to_node_id:
@@ -147,7 +148,7 @@ def main():
     line = ""
     for n in nodes:
         line += str(n) + " "*(WIDTH-len(n))
-    print line
+    print(line)
     for l in log:
         if 'match_exclude' in l:
             exclude_line = l['match_exclude']
@@ -156,7 +157,7 @@ def main():
         if any([exclude_line.find(excl) > -1 for excl in args.excludes]):
             continue
         if l['node_id'] == "TESTRUN":
-            print l['func'] + "%"*(len(nodes)*WIDTH-len(l['func']))
+            print(l['func'] + "%"*(len(nodes)*WIDTH-len(l['func'])))
             if 'param' in l and l['param']:
                 pprint.pprint(l['param'])
             continue
@@ -175,7 +176,7 @@ def main():
                 wrapped_lines = textwrap.wrap(line, width=text_width,
                                               replace_whitespace=False, drop_whitespace=False)
                 for wl in wrapped_lines:
-                    print " "*ind + pre + wl
+                    print(" "*ind + pre + wl)
                     pre = ""
             continue
 
@@ -183,9 +184,9 @@ def main():
         if l['func']=="SEND":
             ends = nodes.index(l['param']['to_rt_uuid'])*WIDTH
             if ind < ends:
-                print " "*ind + "-"*(ends-1-ind) + ">"
+                print(" "*ind + "-"*(ends-1-ind) + ">")
             else:
-                print " "*ends + "<" + "-"*(ind - ends-1)
+                print(" "*ends + "<" + "-"*(ind - ends-1))
             if l['param']['cmd'] == "REPLY":
                 id_ = l['param']['msg_uuid']
                 print (" "*ind + [c['param']['cmd'] for c in log 
@@ -193,25 +194,25 @@ def main():
                                  " reply")
             pp = pprint.pformat(l['param'], indent=1, width=text_width)
             for p in pp.split("\n"):
-                print " "*ind + p
+                print(" "*ind + p)
         elif l['func']!="RECV":
             if l['peer_node_id']:
                 ends = nodes.index(l['peer_node_id'])*WIDTH
                 if ind < ends:
-                    print " "*ind + "# " + l['func'] + " #" + "="*(ends-4-ind-len(l['func'])) + "*"
+                    print(" "*ind + "# " + l['func'] + " #" + "="*(ends-4-ind-len(l['func'])) + "*")
                 else:
-                    print " "*ends + "*" + "="*(ind - ends-1) + "# " + l['func'] + " #"
+                    print(" "*ends + "*" + "="*(ind - ends-1) + "# " + l['func'] + " #")
             else:
-                print " "*ind + "# " + l['func'] + " #"
+                print(" "*ind + "# " + l['func'] + " #")
             pp = MyPrettyPrinter(indent=1, width=WIDTH).pformat(l['param'])
             for p in pp.split("\n"):
-                print " "*ind + p
+                print(" "*ind + p)
             if l['stack'] and args.limit >= 0:
                 tb = traceback.format_list(l['stack'][-(args.limit+2):-1])
                 for s in tb:
                     for sl in s.split("\n"):
                         if sl:
-                            print " "*ind + ">" + sl.rstrip()
+                            print(" "*ind + ">" + sl.rstrip())
 
 if __name__ == '__main__':
     main()

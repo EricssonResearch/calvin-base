@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import print_function
 import os
 
 import pytest
@@ -522,4 +523,4 @@ def test_actors(mock_calvinsys, mock_calvinlib, monkeypatch, store, actor_type):
     
     
 if __name__ == '__main__':
-    print actor_list()    
+    print(actor_list())    

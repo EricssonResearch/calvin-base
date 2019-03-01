@@ -14,8 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.runtime.south.calvinlib import base_calvinlib_object
+from __future__ import absolute_import
 import base64
+
+from calvin.runtime.south.calvinlib import base_calvinlib_object
 
 class Base64(base_calvinlib_object.BaseCalvinlibObject):
     """

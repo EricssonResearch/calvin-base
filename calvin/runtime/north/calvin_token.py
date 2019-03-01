@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import print_function
 class Token(object):
 
     """ Token class """
@@ -86,39 +87,39 @@ if __name__ == '__main__':
 
 
     t = Token()
-    print t
+    print(t)
 
     t = ExceptionToken()
-    print t
+    print(t)
 
     t = EOSToken()
-    print t
+    print(t)
 
     t = ExceptionToken("Hello")
-    print t
+    print(t)
 
     t = Token(41)
-    print t
+    print(t)
     data = t.encode()
-    print data
+    print(data)
     t = Token.decode(data)
-    print t
+    print(t)
 
 
     t = Token(42)
-    print t
+    print(t)
     data = t.encode(coder=FooCoder())
-    print data
+    print(data)
     t = Token.decode(data, coder=FooCoder())
-    print t
+    print(t)
 
     t = EOSToken()
-    print t
+    print(t)
     data = t.encode(coder=FooCoder())
-    print data
+    print(data)
     t = Token.decode(data, coder=FooCoder())
-    print t
+    print(t)
 
     t = Token.decode("<{}>", coder=FooCoder())
-    print t
+    print(t)
 

@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import print_function
 import os
 import json
 from calvin.utilities.calvinlogger import get_logger
@@ -469,12 +470,12 @@ if __name__ == "__main__":
 
     print(a)
     p = a.get('global', 'actor_paths')
-    print(p, type(p))
+    print((p, type(p)))
 
     p = a.get(None, 'framework')
-    print(p, type(p))
+    print((p, type(p)))
     p = a.get(None, 'unittest_loops')
-    print(p, type(p))
+    print((p, type(p)))
 
     p = a.get('Testing', 'unittest_loops')
-    print(p, type(p))
+    print((p, type(p)))

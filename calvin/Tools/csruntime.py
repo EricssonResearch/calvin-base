@@ -15,6 +15,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import print_function
+from __future__ import absolute_import
 import argparse
 import time
 import json
@@ -115,7 +117,7 @@ Start runtime, compile calvinscript and deploy application.
 
 
 def runtime(uris, control_uri, attributes=None, dispatch=False):
-    from nodecontrol import dispatch_node, start_node
+    from .nodecontrol import dispatch_node, start_node
     kwargs = {'attributes': attributes} if attributes else {}
     try:
         if dispatch:
@@ -123,7 +125,7 @@ def runtime(uris, control_uri, attributes=None, dispatch=False):
         else:
             start_node(uris, control_uri, **kwargs)
     except Exception as e:
-        print "Starting runtime failed:", e
+        print("Starting runtime failed:", e)
         raise
 
 def set_loglevel(levels, filename):
@@ -161,7 +163,7 @@ def set_config_from_args(args):
     from calvin.utilities import calvinconfig
     global _conf
     _conf = calvinconfig.get()
-    print args.config_registry
+    print(args.config_registry)
     if 'type' in args.config_registry:
         _conf.set('global', 'storage_type', args.config_registry['type'])
     if 'uri' in args.config_registry:
@@ -211,7 +213,7 @@ def runtime_certificate(rt_attributes):
     import copy
     import requests
     import sys
-    from request_handler import RequestHandler
+    from .request_handler import RequestHandler
     from calvin.utilities.attribute_resolver import AttributeResolver
     from calvin.utilities import calvinconfig
     from calvin.utilities import calvinuuid
@@ -362,7 +364,7 @@ def main():
         try:
             credentials_ = json.loads(args.credentials)
         except Exception as e:
-            print "Credentials not JSON:\n", e
+            print("Credentials not JSON:\n", e)
             return 1
 
     uris = args.uris
@@ -377,7 +379,7 @@ def main():
         uris.append("calvinip://%s:%d" % (args.host, args.port))
 
     if not uris:
-        print "At least one listening interface is needed"
+        print("At least one listening interface is needed")
         return -1
 
     # Attributes
@@ -387,7 +389,7 @@ def main():
         try:
             runtime_attr = json.load(open(args.attr_file))
         except Exception as e:
-            print "Attribute file not JSON:\n", e
+            print("Attribute file not JSON:\n", e)
             return -1
 
     if args.attr:

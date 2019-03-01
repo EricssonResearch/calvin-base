@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import print_function
 from calvin.runtime.north.plugins.storage.storage_base import StorageBase
 from calvin.runtime.south.async import async
 from calvin.utilities import calvinlogger
@@ -51,8 +52,8 @@ class ProxyRegistryClient(StorageBase):
         """
         from urlparse import urlparse
         import socket
-        print "PROXY start"
-        print "master_uri:", self.master_uri
+        print("PROXY start")
+        print("master_uri:", self.master_uri)
         o=urlparse(self.master_uri)
         fqdn = socket.getfqdn(o.hostname)
         self._server_node_name = fqdn.decode('unicode-escape')

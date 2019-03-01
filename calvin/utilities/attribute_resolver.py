@@ -15,6 +15,7 @@
 # limitations under the License.
 
 # import copy
+from __future__ import print_function
 import re
 
 from calvin.utilities.calvinlogger import get_logger
@@ -319,7 +320,7 @@ def format_index_string(attr, trim=True):
     attr_type = None
     attribute = None
     if isinstance(attr, dict):
-        attr_type, attribute = attr.iteritems().next()
+        attr_type, attribute = next(attr.iteritems())
     elif isinstance(attr, (list, tuple)):
         attr_type, attribute = attr[0], attr[1]
     _attr = attr_resolver[attr_type](attribute)
@@ -442,30 +443,30 @@ if __name__ == "__main__":
                             "node_name": {"organization": "ericsson.com", "purpose": "Test", "name": "alpha1"},
                             "cpuAvail": 50}})
 
-    print attribute_docs
+    print(attribute_docs)
 
     s = AttributeResolverHelper.encode_index(['a1', 'a2', 'a3'])
-    print s
-    print AttributeResolverHelper.decode_index(s)
+    print(s)
+    print(AttributeResolverHelper.decode_index(s))
     s = AttributeResolverHelper.encode_index(['a/1', 'a\\2', 'ö3'])
-    print s
+    print(s)
     aa = AttributeResolverHelper.decode_index(s)
-    print aa, 'correct?', aa[2]
+    print(aa, 'correct?', aa[2])
     s = AttributeResolverHelper.encode_index(['a1/', '', 'a2\\', u'a3'])
-    print s
-    print AttributeResolverHelper.decode_index(s)
+    print(s)
+    print(AttributeResolverHelper.decode_index(s))
     aa = ar.get_indexed_public(as_list=True)
-    print aa
-    print aa[2][6]
+    print(aa)
+    print(aa[2][6])
     ar = AttributeResolver(None)
     aa = ar.get_indexed_public(as_list=True)
-    print aa
-    print ar.resolve_indexed_public({"owner": {"organization": "org.testexample", "personOrGroup": "testOwner1"}})
-    print format_index_string({"owner": {"organization": "org.testexample", "personOrGroup": "testOwner1"}})
-    print ar.resolve_indexed_public({"owner": {"organization": "org.testexample"}})
-    print format_index_string({"owner": {"organization": "org.testexample"}})
-    print format_index_string({"owner": {}})
+    print(aa)
+    print(ar.resolve_indexed_public({"owner": {"organization": "org.testexample", "personOrGroup": "testOwner1"}}))
+    print(format_index_string({"owner": {"organization": "org.testexample", "personOrGroup": "testOwner1"}}))
+    print(ar.resolve_indexed_public({"owner": {"organization": "org.testexample"}}))
+    print(format_index_string({"owner": {"organization": "org.testexample"}}))
+    print(format_index_string({"owner": {}}))
     s = AttributeResolverHelper.encode_index(['cpuAvail', '0', '25', '50'])
-    print s
-    print AttributeResolverHelper.decode_index(s)
+    print(s)
+    print(AttributeResolverHelper.decode_index(s))
     

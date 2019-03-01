@@ -1,3 +1,4 @@
+from __future__ import print_function
 port_property_data = {
     'name': {
         'doc': """Calvin-base supported port properties""",
@@ -315,4 +316,4 @@ def generate_doc():
     return p + "\n" + s
 
 if __name__ == '__main__':
-    print generate_doc()
+    print(generate_doc())

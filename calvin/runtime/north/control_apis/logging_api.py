@@ -14,12 +14,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import absolute_import
 import json
 import time
 from calvin.utilities import calvinresponse
 from calvin.utilities import calvinuuid
-from routes import register, handler
-from authentication import authentication_decorator
+from .routes import register, handler
+from .authentication import authentication_decorator
 
 LOG_ACTOR_FIRING = 0
 LOG_ACTION_RESULT = 1

@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import print_function
 import pytest
 
 from calvin.runtime.north.plugins.port import queue
@@ -21,7 +22,7 @@ from calvin.runtime.north.calvin_token import Token
 
 
 def verify_data(write_data, fifo_data):
-    print write_data, fifo_data
+    print(write_data, fifo_data)
     for a, b in zip(write_data, fifo_data):
         d = b.value
         assert a == d
@@ -421,7 +422,7 @@ def test_collect_unordered1():
             f.commit(None)
     except:
         pass
-    print [t.value for t in tokens]
+    print([t.value for t in tokens])
     assert [t.value for t in tokens] == range(0,10) * 4
 
 def test_collect_unordered2():
@@ -446,7 +447,7 @@ def test_collect_unordered2():
                 f.cancel(None)
     except:
         pass
-    print [t.value for t in tokens]
+    print([t.value for t in tokens])
     assert [t.value for t in tokens] == [0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9] * 4
 
 def test_collect_unordered3():
@@ -475,6 +476,6 @@ def test_collect_unordered3():
                 pass
     except:
         pass
-    print [t.value for t in tokens]
+    print([t.value for t in tokens])
     s = [0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5] * 4 + [0] * 12
     assert [t.value for t in tokens][:len(s)] == s

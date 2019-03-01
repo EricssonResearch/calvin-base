@@ -81,4 +81,4 @@ def select(node, replication_data, possible_placements, **kwargs):
     return [selected]
 
 def direct_replication(node, replication_data, **kwargs):
-    return bool(replication_data.known_runtimes) and len(replication_data.instances) < kwargs.get('max', sys.maxint)
+    return bool(replication_data.known_runtimes) and len(replication_data.instances) < kwargs.get('max', sys.maxsize)

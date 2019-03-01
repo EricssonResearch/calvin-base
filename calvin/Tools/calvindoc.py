@@ -15,6 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import print_function
 import json
 import sys
 import argparse
@@ -45,13 +46,13 @@ def main():
     store = DocumentationStore()
 
     if args.all:
-        print store.documentation()
+        print(store.documentation())
     else:
         if args.format == 'raw':
-            print store.help_raw(args.what)
+            print(store.help_raw(args.what))
         else:
             compact = bool(args.format == 'compact')
-            print store.help(args.what, compact=compact, formatting=args.prettyprinter)
+            print(store.help(args.what, compact=compact, formatting=args.prettyprinter))
 
 if __name__ == '__main__':
     main()

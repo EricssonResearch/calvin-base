@@ -15,6 +15,7 @@
 # limitations under the License.
 
 
+from __future__ import print_function
 import os
 import sys
 import json
@@ -355,9 +356,9 @@ class Store(object):
          
 if __name__ == '__main__':
     s = Store()    
-    print json.dumps((s.get_metadata('std.CountTimer')), indent=4)
-    print json.dumps((s.get_metadata('std')), indent=4)
-    print json.dumps((s.get_metadata('')), indent=4)
+    print(json.dumps((s.get_metadata('std.CountTimer')), indent=4))
+    print(json.dumps((s.get_metadata('std')), indent=4))
+    print(json.dumps((s.get_metadata('')), indent=4))
     
     
     

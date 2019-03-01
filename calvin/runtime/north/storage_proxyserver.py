@@ -1,3 +1,4 @@
+from __future__ import print_function
 from calvin.utilities import calvinresponse
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.utilities import calvinlogger
@@ -26,7 +27,7 @@ class StorageProxyServer(object):
             # print "TRY: register_tunnel_handler"
             self.node.proto.register_tunnel_handler('storage', CalvinCB(self.tunnel_request_handles))
         except:
-            print "FAILED: register_tunnel_handler"
+            print("FAILED: register_tunnel_handler")
             
             # OK, then skip being a proxy server
             # FIXME: Set to None?

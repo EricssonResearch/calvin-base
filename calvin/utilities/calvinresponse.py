@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import print_function
 import numbers
 from calvin.utilities import calvinlogger
 
@@ -217,43 +218,43 @@ if __name__ == '__main__':
     r3 = CalvinResponse(BAD_REQUEST)
     r.data = {'foo': 42}
     if r:
-        print "CORRECT", r
+        print("CORRECT", r)
     else:
-        print "INCORRECT", r
+        print("INCORRECT", r)
 
     if r3:
-        print "INCORRECT", r3
+        print("INCORRECT", r3)
     else:
-        print "CORRECT", r3
+        print("CORRECT", r3)
 
     if r == OK:
-        print "EQ CORRECT1"
+        print("EQ CORRECT1")
     else:
-        print "EQ INCORRECT1"
+        print("EQ INCORRECT1")
 
     if r in [OK, BAD_REQUEST]:
-        print "EQ CORRECT2"
+        print("EQ CORRECT2")
     else:
-        print "EQ INCORRECT2"
+        print("EQ INCORRECT2")
 
     if r == r2:
-        print "EQ CORRECT3"
+        print("EQ CORRECT3")
     else:
-        print "EQ INCORRECT3"
+        print("EQ INCORRECT3")
 
     if r == r3:
-        print "EQ INCORRECT4"
+        print("EQ INCORRECT4")
     else:
-        print "EQ CORRECT4"
+        print("EQ CORRECT4")
 
     if min([r, r2, r3]):
-        print "EQ CORRECT5"
+        print("EQ CORRECT5")
     else:
-        print "EQ INCORRECT5"
+        print("EQ INCORRECT5")
 
     if max([r, r2, r3]):
-        print "EQ INCORRECT6"
+        print("EQ INCORRECT6")
     else:
-        print "EQ CORRECT6"
+        print("EQ CORRECT6")
 
-    print max([r, r2, r3])
+    print(max([r, r2, r3]))

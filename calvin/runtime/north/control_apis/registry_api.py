@@ -14,14 +14,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import absolute_import
 import json
 import re
 
 from calvin.utilities import calvinresponse
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.utilities.calvinlogger import get_logger
-from routes import register, handler
-from authentication import authentication_decorator
+from .routes import register, handler
+from .authentication import authentication_decorator
 from calvin.utilities.attribute_resolver import format_index_string
 
 _log = get_logger(__name__)

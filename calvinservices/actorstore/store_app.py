@@ -15,11 +15,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import print_function
+from __future__ import absolute_import
 import argparse
 
 from flask import Flask, jsonify, abort
 
-import store
+from . import store
 
 app = Flask(__name__)
 
@@ -30,8 +32,8 @@ actorstore = store.Store()
 def get_tasks(actor_type=''):
     parts = [p for p in actor_type.split('/') if p.strip()]
     actor_type = ".".join(parts)
-    print "parts", parts
-    print "actor_type", actor_type
+    print("parts", parts)
+    print("actor_type", actor_type)
     res, src, properties = actorstore.get_info(actor_type)
     if res is store.Pathinfo.invalid:
         abort(404)

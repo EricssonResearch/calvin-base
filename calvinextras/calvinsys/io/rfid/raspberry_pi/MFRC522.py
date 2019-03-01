@@ -3,6 +3,7 @@
 
 # [1]: https://www.nxp.com/docs/en/data-sheet/MFRC522.pdf 
 
+from __future__ import print_function
 import pigpio
 
 class IR:
@@ -208,9 +209,9 @@ class MFRC522:
       irq_status = self.reg_read(self.CommIrqReg)
       div_status = self.reg_read(self.DivIrqReg)
       flags = [irqmap[key] for key in [0x40, 0x20, 0x10, 0x08, 0x04, 0x02, 0x01] if key & irq_enabled]
-      print "ComIEnReg : " + "|".join(flags)       
+      print("ComIEnReg : " + "|".join(flags))       
       flags = [irqmap[key] for key in [0x40, 0x20, 0x10, 0x08, 0x04, 0x02, 0x01] if key & irq_status]
-      print "CommIrqReg : " + "|".join(flags) 
+      print("CommIrqReg : " + "|".join(flags)) 
       # print "DivIrqReg : 0x%02x" %  (div_status & 0x14)  
       # print "irq_status : 0x%02x, div_status : 0x%02x" % (irq_status, div_status)
   
@@ -467,7 +468,7 @@ class MFRC522:
     if status != self.MI_OK or backLen != 4 or (backData[0] & 0x0F) != 0x0A:
         return (self.MI_ERR, backData)
     
-    print str(backLen)+" backdata &0x0F == 0x0A "+str(backData[0]&0x0F)
+    print(str(backLen)+" backdata &0x0F == 0x0A "+str(backData[0]&0x0F))
 
     buf = writeData[0:16]
     status, backData, backLen = self.authenticated(buf, crc=True)
@@ -489,7 +490,7 @@ class MFRC522:
     timer_hi = ticks>>8 & 0xFF
     timer_lo = ticks & 0xFF
     
-    print f_timer, tick_s, tick_s * ticks
+    print(f_timer, tick_s, tick_s * ticks)
     
     self.reg_write(self.TModeReg, mode<<4 | prescale_hi)
     self.reg_write(self.TPrescalerReg, prescale_lo)

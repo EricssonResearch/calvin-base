@@ -260,7 +260,8 @@ class TaggedSource(base_calvinsys_object.BaseCalvinsysObject):
                 if error and client:
                     client.disconnect()
 
-        def setup_done((client, parameter, subscription)):
+        def setup_done(client_param_subscr_tuple):
+            (client, parameter, subscription) = client_param_subscr_tuple
             self.client = client
             self.subscription = subscription
             self.running = True

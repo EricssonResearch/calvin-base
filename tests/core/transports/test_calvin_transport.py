@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import print_function
 import pytest
 import sys
 import os
@@ -51,11 +52,11 @@ def slay(plist):
             p.terminate()
             p.join(timeout=.2)
             if p.is_alive():
-                print "Warning: process %s still alive slay!!" % p._name
+                print("Warning: process %s still alive slay!!" % p._name)
                 os.kill(p.pid, signal.SIGKILL)
     time.sleep(.1)
     if len(multiprocessing.active_children()) > 1:
-        print "Error: children is still alive", multiprocessing.active_children()
+        print("Error: children is still alive", multiprocessing.active_children())
         for a in multiprocessing.active_children():
             a.terminate()
 
@@ -87,7 +88,7 @@ class BaseTHandler(multiprocessing.Process):
             self._return(False, {'self._item': repr(self._item)})
 
         self._running = False
-        print(reactor, reactor.running)
+        print((reactor, reactor.running))
         if reactor.running:
             reactor.callLater(.1, reactor.stop)
 
@@ -109,13 +110,13 @@ class BaseTHandler(multiprocessing.Process):
         multiprocessing.Process.start(self)
 
     def __timeout(self, command=None, *args):
-        print("Timeout in", self)
+        print(("Timeout in", self))
         self._return("timeout", {command: args})
 
     def _base_run(self):
         # make it work with twisted py.test plugin also
         reactor._started = False
-        print "timeout %s", self._timeout
+        print("timeout %s", self._timeout)
         reactor.callLater(self._timeout, self._stop_reactor, timeout=True)
         reactor.callInThread(self._read_thread)
         reactor.run()
@@ -137,10 +138,10 @@ class TransportTestServerHandler(BaseTHandler):
                 'peer_connected': [CalvinCB(self._peer_connected)]}
 
     def _data_received(self, *args):
-        print("server_data_received", args)
+        print(("server_data_received", args))
 
     def _peer_connected(self, transport, uri):
-        print("server_peer_connected", transport)
+        print(("server_peer_connected", transport))
         transport.callback_register('join_finished', CalvinCB(self._join_finished))
         transport.callback_register('data_received', CalvinCB(self._data_received))
 
@@ -149,16 +150,16 @@ class TransportTestServerHandler(BaseTHandler):
         self._return('server_join_failed', {'transport': repr(transport), 'uri': uri, 'reason': reason})
 
     def _join_finished(self, transport, _id, uri, is_orginator):
-        print("server_join_finished", transport, _id, uri)
+        print(("server_join_finished", transport, _id, uri))
         self._return(transport._coder is not None and _id and uri, {'transport._coder': transport._coder , 'id': _id, 'uri': uri})
         self._return('server_join_finished', {'transport': repr(transport), '_id': _id, 'uri': uri})
         pass
 
     def _peer_disconnected(self, *args):
-        print("server peer disconnected", args)
+        print(("server peer disconnected", args))
 
     def _server_stopped(self, *args):
-        print("Server stopped", args)
+        print(("Server stopped", args))
         self._item = None
         self._outqueue.put(["server_stopped", repr(args)])
 
@@ -171,7 +172,7 @@ class TransportTestServerHandler(BaseTHandler):
         self._return(not self._item.is_listening())
 
     def stop(self):
-        print("server_stop", self._item)
+        print(("server_stop", self._item))
         if self._item:
             self._stop_server()
 
@@ -179,7 +180,7 @@ class TransportTestServerHandler(BaseTHandler):
         reactor.callLater(1, self._stop_reactor)
 
     def _server_started(self, server, port):
-        print("Server started", server, port)
+        print(("Server started", server, port))
         self._item = server
 
         # put in queue
@@ -211,7 +212,7 @@ class TransportTestClientHandler(BaseTHandler):
         self._ttf = ttf
 
     def set_port(self, port):
-        print("set_port", port)
+        print(("set_port", port))
         self._port = port
 
     def get_callbacks(self):
@@ -221,11 +222,11 @@ class TransportTestClientHandler(BaseTHandler):
                 'peer_connected': [CalvinCB(self._peer_connected)]}
 
     def _data_received(self, data):
-        print("client_data_received", data)
+        print(("client_data_received", data))
         self._return('client_data_received', {'data': data})
 
     def _peer_connected(self, transport, uri):
-        print("client_peer_connected", transport)
+        print(("client_peer_connected", transport))
         transport.callback_register('join_finished', CalvinCB(self._join_finished))
         transport.callback_register('data_received', CalvinCB(self._data_received))
         self._return('client_connected', {'transport': repr(transport), 'uri': uri})
@@ -240,12 +241,12 @@ class TransportTestClientHandler(BaseTHandler):
         self._return('client_join_failed', {'transport': repr(transport), 'uri': uri, 'reason': reason})
 
     def _join_finished(self, transport, _id, uri, is_orginator):
-        print("client_join_finished", transport, _id, uri)
+        print(("client_join_finished", transport, _id, uri))
         self._return(transport._coder is not None and _id and uri, {'transport._coder': transport._coder , 'id': _id, 'uri': uri})
         self._return('client_join_finished', {'transport': repr(transport), '_id': _id, 'uri': uri})
 
     def _peer_disconnected(self, transport, uri, reason):
-        print("client_peer_disconnected", transport, uri, reason)
+        print(("client_peer_disconnected", transport, uri, reason))
         #self._return(not self._item.is_connected(), variables={'is_connected': self._item.is_connected()})
         self._return('client_disconnected', {'transport': repr(transport), 'reason': reason, 'uri': uri})
         # If we have stop stop everything
@@ -259,7 +260,7 @@ class TransportTestClientHandler(BaseTHandler):
         self._item.disconnect()
 
     def stop(self):
-        print("client_stop", self._item)
+        print(("client_stop", self._item))
         if self._item:
             self._stop_client()
 
@@ -322,9 +323,9 @@ class TestTransportServer(object):
                     # print mess
                     if not mess[0]:
                         for a in mess[1]:
-                            print a,
+                            print(a, end=' ')
                         for k,v in mess[2].items():
-                            print "%s = %s" % (k, repr(v))
+                            print("%s = %s" % (k, repr(v)))
                         raise Exception("\n".join(mess[1][11:]))
         except Exception as e:
             import traceback
@@ -389,7 +390,7 @@ class TestTransportClient(object):
                         # TODO: terminate
                         raise Exception("Timeout: %s" % "\n".join(mess[1][11:]))
                     elif mess[0] == 'server_stopped':
-                        print "Hej hej"
+                        print("Hej hej")
                         sstop = True
                         stop = (sstop and cstop)
                     elif mess[0] == 'server_started':
@@ -412,9 +413,9 @@ class TestTransportClient(object):
                         # print mess
                         if not mess[0]:
                             for a in mess[1][11:-1]:
-                                print a,
+                                print(a, end=' ')
                             for k,v in mess[2].items():
-                                print "%s = %s" % (k, repr(v))
+                                print("%s = %s" % (k, repr(v)))
                             raise Exception("\n".join(mess[1][11:]))
         except Exception as e:
             error = e
@@ -469,7 +470,7 @@ class TestTransportClient(object):
                         # TODO: terminate
                         raise Exception("Timeout: %s" % "\n".join(mess[1][11:]))
                     elif mess[0] == 'server_stopped':
-                        print "Hej hej"
+                        print("Hej hej")
                         sstop = True
                         stop = (sstop and cstop)
                     elif mess[0] == 'server_started':
@@ -490,9 +491,9 @@ class TestTransportClient(object):
                         # print mess
                         if not mess[0]:
                             for a in mess[1][11:-1]:
-                                print a,
+                                print(a, end=' ')
                             for k,v in mess[2].items():
-                                print "%s = %s" % (k, repr(v))
+                                print("%s = %s" % (k, repr(v)))
                             raise Exception("\n".join(mess[1][11:]))
         except Exception as e:
             error = e
@@ -552,7 +553,7 @@ class TestTransportClient(object):
                         # TODO: terminate
                         raise Exception("Timeout: %s" % "\n".join(mess[1][11:]))
                     elif mess[0] == 'server_stopped':
-                        print "Hej hej"
+                        print("Hej hej")
                         sstop = True
                         stop = (sstop and cstop)
                     elif mess[0] == 'server_started':
@@ -573,9 +574,9 @@ class TestTransportClient(object):
                         # print mess
                         if not mess[0]:
                             for a in mess[1][11:-1]:
-                                print a,
+                                print(a, end=' ')
                             for k,v in mess[2].items():
-                                print "%s = %s" % (k, repr(v))
+                                print("%s = %s" % (k, repr(v)))
                             raise Exception("\n".join(mess[1][11:]))
         except Exception as e:
             error = e
@@ -634,7 +635,7 @@ class TestTransportClient(object):
                         # TODO: terminate
                         raise Exception("Timeout: %s" % "\n".join(mess[1][11:]))
                     elif mess[0] == 'server_stopped':
-                        print "Hej hej"
+                        print("Hej hej")
                         sstop = True
                         stop = (sstop and cstop)
                     elif mess[0] == 'server_started':
@@ -655,18 +656,18 @@ class TestTransportClient(object):
                         # print mess
                         if not mess[0]:
                             for a in mess[1][11:-1]:
-                                print a,
+                                print(a, end=' ')
                             for k,v in mess[2].items():
-                                print "%s = %s" % (k, repr(v))
+                                print("%s = %s" % (k, repr(v)))
                             raise Exception("\n".join(mess[1][11:]))
         except Exception as e:
             error = e
 
         for tq in queues:
-            print "hej", repr(tq)
+            print("hej", repr(tq))
             tq[1].put(['stop', [], {}])
 
-        print sh, ch
+        print(sh, ch)
         slay([sh, ch])
 
         if error:

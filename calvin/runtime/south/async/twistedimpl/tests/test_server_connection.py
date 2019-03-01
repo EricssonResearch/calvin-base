@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import print_function
 from calvin.runtime.south.async import async
 from calvin.runtime.south.async import server_connection
 from calvin.runtime.south.async import threads
@@ -30,9 +31,9 @@ def data_available(conn):
     first_print = True
     while conn.data_available is False:
         if first_print:
-            print "waiting for conn.data_available ... ",
+            print("waiting for conn.data_available ... ", end=' ')
             first_print = False
-    print ""
+    print("")
     return True
 
 
@@ -40,9 +41,9 @@ def connection_made(factory):
     first_print = True
     while not factory.connections:
         if first_print:
-            print "waiting for connection ... ",
+            print("waiting for connection ... ", end=' ')
             first_print = False
-    print ""
+    print("")
     return True
 
 
@@ -50,9 +51,9 @@ def hundred_connection_made(factory):
     first_print = True
     while not len(factory.connections) == 100:
         if first_print:
-            print "waiting for 100 connection ... ",
+            print("waiting for 100 connection ... ", end=' ')
             first_print = False
-    print ""
+    print("")
     return True
 
 
@@ -60,9 +61,9 @@ def no_more_connections(factory):
     first_print = True
     while factory.connections:
         if first_print:
-            print "waiting for connections to close ... ",
+            print("waiting for connections to close ... ", end=' ')
             first_print = False
-    print ""
+    print("")
     return True
 
 

@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import print_function
 from calvin.actor.actor import Actor, manage, condition
 
 class Burn(Actor):
@@ -44,7 +45,7 @@ class Burn(Actor):
         self.time = calvinlib.use('time')
         
     def log(self, data):
-        print "%s<%s,%s>: %s" % (self.__class__.__name__, self.name, self.id, data)
+        print("%s<%s,%s>: %s" % (self.__class__.__name__, self.name, self.id, data))
 
     @condition(['token'], ['token'])
     def donothing(self, input):

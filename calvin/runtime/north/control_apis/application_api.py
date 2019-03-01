@@ -14,6 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import print_function
+from __future__ import absolute_import
 import json
 
 from calvin.utilities import calvinresponse
@@ -25,8 +27,8 @@ from calvin.utilities.issuetracker import IssueTracker
 from calvin.runtime.north.appmanager import Deployer
 from calvin.runtime.north.plugins.port import DISCONNECT
 from calvin.utilities.security import security_enabled
-from routes import register, handler
-from authentication import authentication_decorator
+from .routes import register, handler
+from .authentication import authentication_decorator
 from calvin.utilities.replication_defs import PRE_CHECK, REPLICATION_STATUS
 
 _log = get_logger(__name__)
@@ -284,10 +286,10 @@ def handle_deploy(self, handle, connection, match, data, hdr):
                 verify=True,
                 cb=CalvinCB(self.handle_deploy_cb, handle, connection)
             )
-        print self.node.id, "Deployer instantiated"
+        print(self.node.id, "Deployer instantiated")
         d.deploy()
     except Exception as e:
-        print "Deployer failed"
+        print("Deployer failed")
         self.send_response(
             handle,
             connection,
@@ -299,7 +301,7 @@ def handle_deploy(self, handle, connection, match, data, hdr):
 def handle_deploy_cb(self, handle, connection, status, deployer, **kwargs):
     _log.analyze(self.node.id, "+ DEPLOYED", {'status': status.status})
     if status:
-        print "DEPLOY STATUS", str(status)
+        print("DEPLOY STATUS", str(status))
         self.send_response(handle, connection,
                            json.dumps({'application_id': deployer.app_id,
                                        'actor_map': deployer.actor_map,

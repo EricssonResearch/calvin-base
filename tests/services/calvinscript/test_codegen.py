@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import print_function
 import os
 import json
 import glob
@@ -34,7 +35,7 @@ def _read_file(file):
             text = str(source.read())
             # print type(text), type(unicode(text))
     except Exception as e:
-        print "Error: Could not read file: '%s'" % file
+        print("Error: Could not read file: '%s'" % file)
         raise e
     return text
 

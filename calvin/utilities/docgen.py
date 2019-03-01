@@ -15,6 +15,7 @@
 # limitations under the License.
 
 
+from __future__ import print_function
 import inspect
 import json
 from collections import namedtuple
@@ -389,15 +390,15 @@ class DocumentationStore(object):
 if __name__ == '__main__':
 
     def test_all_formatters(d):
-        print "\n%s\n=======================" % (d.__class__.__name__,)
+        print("\n%s\n=======================" % (d.__class__.__name__,))
         for formatter in [d.compact, d.detailed, d.markdown, d.markdown_links]:
-            print "%s:\n-----------------------" % (formatter.__name__,)
-            print formatter()
+            print("%s:\n-----------------------" % (formatter.__name__,))
+            print(formatter())
 
     s = DocumentationStore()
     
     metadata = s._retrieve_metadata('io.Print')
-    print metadata
+    print(metadata)
     df = DocFormatter(compact=False, outputformat='md', links=True)
-    print df.format(metadata)
+    print(df.format(metadata))
         

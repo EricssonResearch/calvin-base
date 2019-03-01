@@ -1,3 +1,4 @@
+from __future__ import print_function
 import subprocess
 import shlex
 import socket
@@ -187,7 +188,7 @@ class SystemManager(object):
         for s in self._system:
             s.wait_for_ack()
             if not s.ack_status:
-                print "TIMEOUT for ", s.info()
+                print("TIMEOUT for ", s.info())
 
     def process_config(self, system_config):
         for entity in system_config:

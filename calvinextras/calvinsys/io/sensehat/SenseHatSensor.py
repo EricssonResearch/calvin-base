@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 
 # -*- coding: utf-8 -*-
 
@@ -16,7 +17,7 @@
 # limitations under the License.
 
 from calvin.runtime.south.calvinsys import base_calvinsys_object
-import sensehat
+from . import sensehat
 from calvin.utilities.calvinlogger import get_logger
 
 _log = get_logger(__name__)

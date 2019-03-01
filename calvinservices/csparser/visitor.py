@@ -16,7 +16,9 @@
 
 
 # FIXME: For debugging NoneType object in tree, remove when fixed
-from astnode import BaseNode
+from __future__ import print_function
+from __future__ import absolute_import
+from .astnode import BaseNode
 
 class Visitor(object):
 
@@ -28,7 +30,7 @@ class Visitor(object):
         """
         # FIXME: For debugging NoneType object in tree, remove when fixed
         if not issubclass(type(node), BaseNode):
-            print "Skipping {}, {}".format(type(node), node)
+            print("Skipping {}, {}".format(type(node), node))
             return  
         methname = 'visit_' + type(node).__name__ 
         meth = getattr(self, methname, self.generic_visit)
@@ -98,27 +100,27 @@ if __name__ == '__main__':
     a.add_child(b)
     b.add_child(c)
     
-    print len(search_tree(a, lambda node: node.foo == "c", 2))
-    print len(search_tree(a, lambda node: node.foo == "c", 1))
-    print len(search_tree(a, lambda node: node.foo == "c", 0))
-    print
-    print len(search_tree(a, lambda node: node.foo == "b", 2))
-    print len(search_tree(a, lambda node: node.foo == "b", 1))
-    print len(search_tree(a, lambda node: node.foo == "b", 0))
-    print 
-    print len(search_tree(a, lambda node: node.foo == "a", 2))
-    print len(search_tree(a, lambda node: node.foo == "a", 1))
-    print len(search_tree(a, lambda node: node.foo == "a", 0))
-    print 
-    print len(search_tree(a, lambda node: True, 2))
-    print len(search_tree(a, lambda node: True, 1))
-    print len(search_tree(a, lambda node: True, 0))
-    print 
-    print len(search_tree(a, lambda node: node.foo == "b" or node.foo == "c", 2))
-    print len(search_tree(a, lambda node: node.foo == "b" or node.foo == "c", 1))
-    print len(search_tree(a, lambda node: node.foo == "b" or node.foo == "c", 0))
-    print
-    print len(search_tree(a, lambda node: node.foo == "b" or node.foo == "c", -1))
+    print(len(search_tree(a, lambda node: node.foo == "c", 2)))
+    print(len(search_tree(a, lambda node: node.foo == "c", 1)))
+    print(len(search_tree(a, lambda node: node.foo == "c", 0)))
+    print()
+    print(len(search_tree(a, lambda node: node.foo == "b", 2)))
+    print(len(search_tree(a, lambda node: node.foo == "b", 1)))
+    print(len(search_tree(a, lambda node: node.foo == "b", 0)))
+    print() 
+    print(len(search_tree(a, lambda node: node.foo == "a", 2)))
+    print(len(search_tree(a, lambda node: node.foo == "a", 1)))
+    print(len(search_tree(a, lambda node: node.foo == "a", 0)))
+    print() 
+    print(len(search_tree(a, lambda node: True, 2)))
+    print(len(search_tree(a, lambda node: True, 1)))
+    print(len(search_tree(a, lambda node: True, 0)))
+    print() 
+    print(len(search_tree(a, lambda node: node.foo == "b" or node.foo == "c", 2)))
+    print(len(search_tree(a, lambda node: node.foo == "b" or node.foo == "c", 1)))
+    print(len(search_tree(a, lambda node: node.foo == "b" or node.foo == "c", 0)))
+    print()
+    print(len(search_tree(a, lambda node: node.foo == "b" or node.foo == "c", -1)))
     
     
     

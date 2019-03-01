@@ -15,6 +15,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import print_function
+from __future__ import absolute_import
 import os
 import argparse
 import json
@@ -27,7 +29,7 @@ _request_handler = None
 
 
 def get_request_handler(verify=None):
-    from request_handler import RequestHandler
+    from .request_handler import RequestHandler
     return _request_handler if _request_handler else RequestHandler(verify=verify)
 
 
@@ -83,7 +85,7 @@ def handle_security_arguments(args):
             credentials_ = json.loads(args.credentials)
             req_handler.set_credentials(credentials_)
         except Exception as e:
-            print "Credentials not JSON:\n", e
+            print("Credentials not JSON:\n", e)
     return req_handler
 
 
@@ -240,8 +242,8 @@ def main():
     args = parse_args()
     try:
         r =  args.func(args)
-        print "OK" if r is None else json.dumps(r, indent=2)
+        print("OK" if r is None else json.dumps(r, indent=2))
     except Exception as e:
-        print "Error {}".format(e)
+        print("Error {}".format(e))
 if __name__ == '__main__':
     main()

@@ -16,9 +16,10 @@
 
 # DEPRECATED
 
+from __future__ import absolute_import
 import time
 from calvin.runtime.north import calvin_node
-from request_handler import RequestHandler
+from .request_handler import RequestHandler
 
 
 def node_control(control_uri, barrier=True, request_handler=None):

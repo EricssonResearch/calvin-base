@@ -15,14 +15,16 @@
 # limitations under the License.
 
 
+from __future__ import print_function
+from __future__ import absolute_import
 import string
 import random
 import inspect
 
-import astnode as ast
-from visitor import Visitor
-from codegen import calvin_astgen, calvin_components, query, PortlistRewrite #, ResolvePortRefs
-from parser import calvin_parse
+from . import astnode as ast
+from .visitor import Visitor
+from .codegen import calvin_astgen, calvin_components, query, PortlistRewrite #, ResolvePortRefs
+from .parser import calvin_parse
 from calvin.actorstore.store import DocumentationStore
 
 _docstore = DocumentationStore()
@@ -50,7 +52,7 @@ class BaseRenderer(object):
 
     def _default(self, node, order):
         if self.debug:
-            print "Not handling: {} ({})".format(node.__class__.__name__, order)
+            print("Not handling: {} ({})".format(node.__class__.__name__, order))
         return ''
 
     def _add(self, stmt):
@@ -341,12 +343,12 @@ if __name__ == '__main__':
     """
 
     dot_src, it =  visualize_script(source_text)
-    print dot_src
+    print(dot_src)
 
 
     dot_src, it =  visualize_deployment(source_text)
-    print dot_src
+    print(dot_src)
 
     dot_src, it =  visualize_component(source_text, "FilterUnchanged")
-    print dot_src
+    print(dot_src)
 

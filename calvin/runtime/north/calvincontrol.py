@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import absolute_import
 import json
 from random import randint
 from urlparse import urlparse
@@ -27,15 +28,15 @@ from calvin.utilities.issuetracker import IssueTracker
 #
 # Dynamically build selected set of APIs
 #
-from control_apis import routes
-from control_apis import security_api
-from control_apis import runtime_api
-from control_apis import application_api
-from control_apis import documentation_api
-from control_apis import logging_api
-from control_apis import registry_api
-from control_apis import uicalvinsys_api
-from control_apis import proxyhandler_api
+from .control_apis import routes
+from .control_apis import security_api
+from .control_apis import runtime_api
+from .control_apis import application_api
+from .control_apis import documentation_api
+from .control_apis import logging_api
+from .control_apis import registry_api
+from .control_apis import uicalvinsys_api
+from .control_apis import proxyhandler_api
 
 _log = get_logger(__name__)
 

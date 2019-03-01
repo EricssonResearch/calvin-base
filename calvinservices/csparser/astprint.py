@@ -15,8 +15,10 @@
 # limitations under the License.
 
 
-import astnode as ast
-from visitor import Visitor
+from __future__ import print_function
+from __future__ import absolute_import
+from . import astnode as ast
+from .visitor import Visitor
 
 class DotPrinter(Visitor):
     """docstring for DotPrinter"""
@@ -54,7 +56,7 @@ class DotPrinter(Visitor):
         self.add('digraph TMP {')
         self.visit(node)
         self.add('}')
-        print "\n".join(self.statements)
+        print("\n".join(self.statements))
 
 
 class DotDebugPrinter(DotPrinter):
@@ -252,7 +254,7 @@ class BracePrinter(BraceFormatter):
 
     def process(self, node):
         text = super(BracePrinter, self).process(node)
-        print text
+        print(text)
 
 if __name__ == '__main__':
     ast.Node._verbose_desc = True

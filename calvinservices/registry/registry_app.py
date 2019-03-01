@@ -15,6 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import print_function
 import argparse
 
 from flask import Flask, jsonify, request, abort
@@ -102,7 +103,7 @@ def add_index():
     try:
         reg.add_index(data['indexes'], data['value'])
     except Exception as e:
-        print "Exception", e
+        print("Exception", e)
         abort(400)
     return ''
 
@@ -115,7 +116,7 @@ def remove_index():
     try:
         reg.remove_index(data['indexes'], data['value'])
     except Exception as e:
-        print "Exception", e
+        print("Exception", e)
         abort(400)
     return ''
 
@@ -128,7 +129,7 @@ def get_index():
     try:
         reg.get_index(data['indexes'])
     except Exception as e:
-        print "Exception", e
+        print("Exception", e)
         abort(400)
     value = list(reg.get_index(data['indexes']))
     return jsonify(value)

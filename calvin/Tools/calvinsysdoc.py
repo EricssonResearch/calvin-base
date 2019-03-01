@@ -15,6 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import print_function
 import json
 import sys
 import argparse
@@ -44,9 +45,9 @@ def main():
     store = CalvinSysDoc()
 
     if args.format == 'raw':
-        print store.help_raw(args.what)
+        print(store.help_raw(args.what))
     else:
-        print store.help(what=args.what, formatting=args.prettyprinter)
+        print(store.help(what=args.what, formatting=args.prettyprinter))
 
 if __name__ == '__main__':
     main()

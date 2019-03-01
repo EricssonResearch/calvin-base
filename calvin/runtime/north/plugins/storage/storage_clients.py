@@ -14,13 +14,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import print_function
+from __future__ import absolute_import
 import itertools
 import re
 
-from storage_base import StorageBase
+from .storage_base import StorageBase
 from calvin.utilities import calvinresponse
 from calvin.runtime.south.async import async
-from proxy_client import ProxyRegistryClient
+from .proxy_client import ProxyRegistryClient
 
 # _log = calvinlogger.get_logger(__name__)
 # _conf = calvinconfig.get()
@@ -64,7 +66,7 @@ def registry(kind, node, host):
     class_ = all_kinds.get(kind.lower())
     if not class_:
         raise ValueError("Unknown registry type '{}', must be one of: {}".format(kind, ",".join(all_kinds.keys())))
-    print "Instantiating {}({}, {})".format(class_.__name__, node, host)   
+    print("Instantiating {}({}, {})".format(class_.__name__, node, host))   
     return class_(node, host)        
                 
 

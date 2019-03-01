@@ -1,3 +1,4 @@
+from __future__ import print_function
 import os
 
 import pytest
@@ -12,9 +13,9 @@ system_config_file = "SystemYAML.yaml"
 # """
 
 def test_it(system_setup):
-    print system_setup
+    print(system_setup)
         
 def test_another(system_setup):
-    print len(system_setup)
+    print(len(system_setup))
     
     

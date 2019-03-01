@@ -150,7 +150,7 @@ class ReqMatch(object):
         try:
             while True:
                 _log.analyze(self.node.id, "+ ITER", {})
-                node_id = self.node_iter.next()
+                node_id = next(self.node_iter)
                 self.possible_placements.add(node_id)
         except dynops.PauseIteration:
             _log.analyze(self.node.id, "+ PAUSED",

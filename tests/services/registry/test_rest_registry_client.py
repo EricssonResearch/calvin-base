@@ -1,3 +1,4 @@
+from __future__ import print_function
 import os
 import shlex
 import subprocess
@@ -45,7 +46,7 @@ def _session():
 
 def test_service_sanity(system_setup):
     _host = system_setup['registry']['uri']
-    print _host
+    print(_host)
     response = requests.get(_host+"/dumpstorage")
     assert response.status_code == 200
     # assert response.json() == [{},{}]
@@ -128,7 +129,7 @@ def test_get_index(system_setup, _registry, org_cb):
     response = requests.get(_host+"/dumpstorage")
     org_cb.assert_once()
     args, kwargs = org_cb.get_args()
-    print args, kwargs
+    print(args, kwargs)
     assert 'value' in kwargs
     # assert 'result' in kwargs['value']
     # assert kwargs['value']['result'] == ['value1', 'value2']

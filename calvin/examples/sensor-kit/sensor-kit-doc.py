@@ -1,3 +1,4 @@
+from __future__ import print_function
 import pystache
 import json
 import sys
@@ -185,7 +186,7 @@ with open("calvin.conf") as f:
     d = json.load(f)
     caps = d['calvinsys']['capabilities']
 
-print preamble
+print(preamble)
 
 for k, device, title, conflicts, comment in meta:
     if k.startswith('sys.timer'):
@@ -214,7 +215,7 @@ for k, device, title, conflicts, comment in meta:
     entry['conflicts'] = ', '.join(conflicts)
     if os.path.exists('images/' + device + '.png'):
         entry['has_image'] = True
-    print pystache.render(templ, entry)
+    print(pystache.render(templ, entry))
 
-print postamble
+print(postamble)
 

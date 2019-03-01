@@ -15,6 +15,8 @@
 # limitations under the License.
 
 
+from __future__ import print_function
+from __future__ import absolute_import
 from copy import copy, deepcopy
 
 class BaseNode(object):
@@ -455,8 +457,8 @@ def node_decoder(o):
 
 if __name__ == '__main__':
     import json
-    import astprint
-    import astnode as ast
+    from . import astprint
+    from . import astnode as ast
 
     Node._verbose_desc = True
 
@@ -468,9 +470,9 @@ if __name__ == '__main__':
 
     s = json.dumps(root, default=ast.node_encoder, indent=2)
 
-    print
-    print s
-    print
+    print()
+    print(s)
+    print()
 
     tree = json.loads(s, object_hook=ast.node_decoder)
     bp.visit(tree)

@@ -13,6 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import print_function
 import os
 import os.path
 import importlib
@@ -44,7 +45,7 @@ class CalvinLibDoc(object):
                     except Exception as e:
                         _log.info("Error: {}".format(e))
                         pass
-        print data
+        print(data)
 
     def rel_path_to_namespace(self, rel_path):
         return '.'.join([x for x in rel_path.split('/')]).strip('.')

@@ -14,8 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import absolute_import
 import cbor
-from message_coder import MessageCoderBase
+from .message_coder import MessageCoderBase
 
 from calvin.utilities.calvinlogger import get_logger
 
