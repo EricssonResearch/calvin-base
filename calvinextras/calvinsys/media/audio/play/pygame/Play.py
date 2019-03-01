@@ -16,7 +16,7 @@
 
 import pygame
 
-from calvin.runtime.south.async import threads
+from calvin.runtime.south.asynchronous import threads
 from calvin.utilities.calvinlogger import get_logger
 from calvinextras.calvinsys.media.audio.play import BasePlay
 

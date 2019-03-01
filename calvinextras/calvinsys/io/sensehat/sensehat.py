@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.runtime.south.async import threads
+from calvin.runtime.south.asynchronous import threads
 from calvin.utilities.calvinlogger import get_logger
 import sense_hat
 

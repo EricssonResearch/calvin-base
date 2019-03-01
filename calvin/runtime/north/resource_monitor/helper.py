@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from calvin.runtime.south.async import async_impl
+from calvin.runtime.south.asynchronous import asynchronous
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.utilities.attribute_resolver import AttributeResolver
 from calvin.utilities.calvinlogger import get_logger
@@ -53,5 +53,5 @@ class ResourceMonitorHelper(object):
 
         self.storage.set(prefix=prefix, key=self.node_id, value=value, cb=None)
         if cb:
-            async_impl.DelayedCall(0, cb, value, True)
+            asynchronous.DelayedCall(0, cb, value, True)
 

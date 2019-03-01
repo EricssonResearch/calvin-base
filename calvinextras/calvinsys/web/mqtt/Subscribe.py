@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.runtime.south.async import threads
+from calvin.runtime.south.asynchronous import threads
 from calvin.runtime.south.calvinsys import base_calvinsys_object
 from calvin.utilities.calvinlogger import get_logger
 import paho.mqtt.subscribe

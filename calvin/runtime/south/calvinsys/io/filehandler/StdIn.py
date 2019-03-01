@@ -15,7 +15,7 @@
 # limitations under the License.
 
 from calvin.runtime.south.calvinsys import base_calvinsys_object
-from calvin.runtime.south.async import filedescriptor
+from calvin.runtime.south.asynchronous import filedescriptor
 
 class StdIn(base_calvinsys_object.BaseCalvinsysObject):
     """

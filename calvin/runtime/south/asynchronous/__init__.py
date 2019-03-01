@@ -25,7 +25,7 @@ from calvin.utilities import calvinconfig
 
 
 # Spec
-_MODULES = {'async_impl': ['DelayedCall', 'run_ioloop', 'stop_ioloop'],
+_MODULES = {'asynchronous': ['DelayedCall', 'run_ioloop', 'stop_ioloop'],
             'filedescriptor': ['FD'],
             'pipe': ['Pipe'],
             'defer': [],

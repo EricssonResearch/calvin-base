@@ -18,7 +18,7 @@ from calvin.utilities import dynops
 from calvin.utilities import calvinlogger
 from calvin.runtime.north.plugins.requirements import req_operations
 import calvin.utilities.calvinresponse as response
-from calvin.runtime.south.async import async_impl
+from calvin.runtime.south.asynchronous import asynchronous
 
 _log = calvinlogger.get_logger(__name__)
 
@@ -161,7 +161,7 @@ class ReqMatch(object):
             # This is a temporary fix by keep trying
             delay = 0.0 if self._collect_placement_counter > self._collect_placement_last_value + 100 else 0.2
             self._collect_placement_counter += 1
-            self._collect_placement_cb = async_impl.DelayedCall(delay, self._collect_placements)
+            self._collect_placement_cb = asynchronous.DelayedCall(delay, self._collect_placements)
             return
         except StopIteration:
             # All possible actor placements derived

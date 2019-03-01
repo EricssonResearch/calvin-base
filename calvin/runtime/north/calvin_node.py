@@ -36,7 +36,7 @@ from calvin.runtime.north.authorization import authorization
 from calvin.runtime.north.calvin_network import CalvinNetwork
 from calvin.runtime.north.calvin_proto import CalvinProto
 from calvin.runtime.north.portmanager import PortManager
-from calvin.runtime.south.async import async_impl
+from calvin.runtime.south.asynchronous import asynchronous
 from calvin.utilities.attribute_resolver import AttributeResolver
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.utilities.security import security_modules_check
@@ -145,7 +145,7 @@ class Node(object):
         self.proxy_handler = ProxyHandler(self)
 
         # The initialization that requires the main loop operating is deferred to start function
-        async_impl.DelayedCall(0, self.start)
+        asynchronous.DelayedCall(0, self.start)
 
     def insert_local_reply(self):
         msg_id = calvinuuid.uuid("LMSG")
@@ -270,7 +270,7 @@ class Node(object):
 
     def stop_with_cleanup(self):
         # Set timeout in case some actor is refusing to stop (or leave if already migrating)
-        timeout = async_impl.DelayedCall(50, self.stop)
+        timeout = asynchronous.DelayedCall(50, self.stop)
         self.quitting = True
         # get all actors
         if not self.am.actors:
@@ -289,16 +289,16 @@ class Node(object):
         def poll_deleted(retry):
             if self.am.actors:
                 _log.info("{} actors remaining, rechecking in {} secs".format(len(self.am.actors)))
-                async_impl.DelayedCall(1*retry, poll_deleted)
+                asynchronous.DelayedCall(1*retry, poll_deleted)
             else :
                 _log.info("All done, exiting")
                 timeout.cancel()
                 self.stop()
-        async_impl.DelayedCall(0.5, poll_deleted, retry=1)
+        asynchronous.DelayedCall(0.5, poll_deleted, retry=1)
 
     def stop_with_migration(self, callback=None):
         # Set timeout if we are still failing after 50 seconds
-        timeout_stop = async_impl.DelayedCall(50, self.stop)
+        timeout_stop = asynchronous.DelayedCall(50, self.stop)
         self.quitting = True
         actors = []
         already_migrating = []
@@ -314,7 +314,7 @@ class Node(object):
             # When already migrating, we can only poll, since we don't get the callback
             if self.am.actors:
                 # Check again in a sec
-                async_impl.DelayedCall(1, poll_migrated)
+                asynchronous.DelayedCall(1, poll_migrated)
                 return
             timeout_stop.cancel()
             self.stop(callback)
@@ -340,7 +340,7 @@ class Node(object):
             self.stop(callback)
 
         if already_migrating:
-            async_impl.DelayedCall(1, poll_migrated)
+            asynchronous.DelayedCall(1, poll_migrated)
             if not actors:
                 return
         elif not actors:

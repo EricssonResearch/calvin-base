@@ -17,7 +17,7 @@
 import cv2
 
 from calvinextras.calvinsys.media.webcam import BaseWebcam
-from calvin.runtime.south.async import threads
+from calvin.runtime.south.asynchronous import threads
 from calvin.utilities.calvinlogger import get_logger
 
 _log = get_logger(__name__)

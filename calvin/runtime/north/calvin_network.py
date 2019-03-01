@@ -22,7 +22,7 @@ import importlib
 from calvin.utilities import calvinuuid
 from calvin.utilities.calvin_callback import CalvinCB
 import calvin.utilities.calvinresponse as response
-from calvin.runtime.south.async import async_impl
+from calvin.runtime.south.asynchronous import asynchronous
 from calvin.utilities import calvinlogger
 from calvin.utilities import calvinconfig
 _log = calvinlogger.get_logger(__name__)
@@ -82,7 +82,7 @@ class CalvinLink(CalvinBaseLink):
             # close old link after a period, since might still receive messages on the transport layer
             # TODO chose the delay based on RTT instead of arbitrary 3 seconds
             _log.analyze(self.rt_id, "+ DELAYED LINK CLOSE", {})
-            async_impl.DelayedCall(3.0, old_link.close)
+            asynchronous.DelayedCall(3.0, old_link.close)
 
     def reply_handler(self, payload):
         """ Gets called when a REPLY messages arrives on this link """
@@ -133,7 +133,7 @@ class CalvinLink(CalvinBaseLink):
         """
         msg_id = calvinuuid.uuid("MSGID")
         self.replies[msg_id] = {'callback': callback, 'send_time': time.time()}
-        self.replies_timeout[msg_id] = async_impl.DelayedCall(10.0, CalvinCB(self.reply_timeout, msg_id))
+        self.replies_timeout[msg_id] = asynchronous.DelayedCall(10.0, CalvinCB(self.reply_timeout, msg_id))
         msg['msg_uuid'] = msg_id
         self.send(msg, dest_peer_id)
 

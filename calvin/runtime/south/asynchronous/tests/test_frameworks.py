@@ -21,8 +21,8 @@
 import inspect
 
 from calvin.utilities import calvinlogger
-from calvin.runtime.south.async import get_frameworks
-from calvin.runtime.south.async import twistedimpl
+from calvin.runtime.south.asynchronous import get_frameworks
+from calvin.runtime.south.asynchronous import twistedimpl
 from twisted.internet import defer, threads
 import pytest
 
@@ -39,7 +39,7 @@ MODULES = {'defer': {'Deferred':         {'type': 'class', 'comp': defer.Deferre
                      'DeferredList':     {'type': 'class', 'comp': defer.DeferredList},
                      'inline_callbacks': {'type': 'function', 'comp': defer.inlineCallbacks},
                      'maybe_deferred':   {'type': 'function', 'comp': defer.maybeDeferred}},
-           'async_impl': {'DelayedCall': {'type': 'class', 'comp': twistedimpl.async_impl.DelayedCall},
+           'asynchronous': {'DelayedCall': {'type': 'class', 'comp': twistedimpl.asynchronous.DelayedCall},
                      'run_ioloop':  {'type': 'class', 'comp': twistedimpl.async.run_ioloop},
                      'stop_ioloop': {'type': 'class', 'comp': twistedimpl.async.stop_ioloop}},
            'server_connection': {'ServerProtocolFactory': {'type': 'class', 'comp': twistedimpl.server_connection.ServerProtocolFactory},
@@ -69,7 +69,7 @@ class TestFrameworks(object):
         """
         for framework in FRAMEWORKS:
             for module, items in MODULES.iteritems():
-                module_obj = __import__("calvin.runtime.south.async.%s.%s" % (framework, module),
+                module_obj = __import__("calvin.runtime.south.asynchronous.%s.%s" % (framework, module),
                                         globals=globals(), fromlist=[''])
                 for item, info in items.iteritems():
                     # Check for existans

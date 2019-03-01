@@ -19,7 +19,7 @@ import re
 
 # from calvin.runtime.north.plugins.storage import storage_factory
 from calvin.actor.port_property_syntax import list_port_property_capabilities
-from calvin.runtime.south.async import async_impl
+from calvin.runtime.south.asynchronous import asynchronous
 from calvin.utilities import calvinlogger
 from calvin.utilities.calvin_callback import CalvinCB
 # from calvin.actor import actorport
@@ -89,7 +89,7 @@ class PrivateStorage(object):
         if delay is None:
             delay = self.flush_timeout
         if self.flush_delayedcall is None:
-            self.flush_delayedcall = async_impl.DelayedCall(delay, self.flush_localdata)
+            self.flush_delayedcall = asynchronous.DelayedCall(delay, self.flush_localdata)
 
     def flush_localdata(self):
         """ Write data in localstore to storage
@@ -214,7 +214,7 @@ class PrivateStorage(object):
         # self.storage = registry(self.node, self.storage_type)
         self.trigger_flush(0)
         if kwargs["org_cb"]:
-            async_impl.DelayedCall(0, kwargs["org_cb"], args[0])
+            asynchronous.DelayedCall(0, kwargs["org_cb"], args[0])
 
     def start(self, cb=None):
         """ Start storage
@@ -696,7 +696,7 @@ class Storage(PrivateStorage):
             for index in indexes:
                 self.remove_index(index, node.id, cb=CalvinCB(self._delete_node_cb, counter=counter, org_cb=cb))
             # The remove index gets 1 second otherwise we call the callback anyway, i.e. stop the node
-            async_impl.DelayedCall(1.0, self._delete_node_timeout_cb, counter=counter, org_cb=cb)
+            asynchronous.DelayedCall(1.0, self._delete_node_timeout_cb, counter=counter, org_cb=cb)
         except:
             _log.debug("Remove node index failed", exc_info=True)
             if cb:

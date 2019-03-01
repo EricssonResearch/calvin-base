@@ -16,7 +16,7 @@
 
 from calvinextras.calvinsys.io.dht11temphumidity.BaseDHT11 import BaseDHT11
 from calvin.utilities.calvinlogger import get_logger
-from calvin.runtime.south.async import async_impl as async_impl  # noqa: W606
+from calvin.runtime.south.asynchronous import asynchronous as asynchronous  # noqa: W606
 import pigpio
 
 _log = get_logger(__name__)
@@ -62,7 +62,7 @@ class SensorReader(object):
         self._running = False
 
     def _measure(self):
-        # self._in_progress = async_impl.DelayedCall(0.0, self._read_temp)
+        # self._in_progress = asynchronous.DelayedCall(0.0, self._read_temp)
         # 0 Switch to OUT               ___   18000   ___
         # 1. Pull down for 20ms trigger    \___ //___/
         # 2. Switch to IN               ___  80  ____
@@ -78,8 +78,8 @@ class SensorReader(object):
             return
         self._gpio.set_mode(self._pin, pigpio.OUTPUT)
         self._gpio.write(self._pin, 0)
-        self._listen_in_progress = async_impl.DelayedCall(self._listen_timeout, self._listen_failed)
-        async_impl.DelayedCall(0.025, self._switch_to_listen_cb)
+        self._listen_in_progress = asynchronous.DelayedCall(self._listen_timeout, self._listen_failed)
+        asynchronous.DelayedCall(0.025, self._switch_to_listen_cb)
 
     def _switch_to_listen_cb(self):
         self._gpio.write(self._pin, 1)
@@ -93,13 +93,13 @@ class SensorReader(object):
         self._read_data_handle = None
         self._listen_in_progress = None
         self._callback()
-        async_impl.DelayedCall(self._update_interval, self._measure)
+        asynchronous.DelayedCall(self._update_interval, self._measure)
 
     def _read_data_cb(self, pin, edge, tick):
         self._edge_ticks.append(tick)
         if len(self._edge_ticks) < 41:
             return
-        async_impl.call_from_thread(self._listen_in_progress.cancel)
+        asynchronous.call_from_thread(self._listen_in_progress.cancel)
         self._read_data_handle.cancel()
         self._read_data_handle = None
         self._parse_ticks()
@@ -128,8 +128,8 @@ class SensorReader(object):
             self._value = {"temperature": tint, "humidity": rhint}
 
         self._listen_in_progress = None
-        async_impl.call_from_thread(self._callback)
-        async_impl.call_from_thread(async_impl.DelayedCall, self._update_interval, self._measure)
+        asynchronous.call_from_thread(self._callback)
+        asynchronous.call_from_thread(asynchronous.DelayedCall, self._update_interval, self._measure)
 
     def ref(self, mode):
         self._references[mode] += 1

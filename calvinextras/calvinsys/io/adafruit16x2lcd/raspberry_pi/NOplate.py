@@ -15,7 +15,7 @@
 # limitations under the License.
 
 from calvinextras.calvinsys.io.adafruit16x2lcd.BaseDisplay import BaseDisplay
-from calvin.runtime.south.async import async_impl
+from calvin.runtime.south.asynchronous import asynchronous
 from Adafruit_CharLCD import Adafruit_CharLCD as LCD
 import Adafruit_GPIO as aGPIO
 
@@ -46,7 +46,7 @@ class TwoLineLCD(object):
             line_1 += " "  # Padding when scrolling
         if len(line_2) > self._columns:
             line_2 += " "  # Padding when scrolling
-        self._in_progress = async_impl.DelayedCall(0, self._message, line_1, line_2)
+        self._in_progress = asynchronous.DelayedCall(0, self._message, line_1, line_2)
 
     def _message(self, line_1, line_2):
         self.lcd.home()
@@ -56,7 +56,7 @@ class TwoLineLCD(object):
         if len(line_2) > self._columns-1:
             line_2 = rotate(line_2)
 
-        self._in_progress = async_impl.DelayedCall(0.5, self._message, line_1, line_2)
+        self._in_progress = asynchronous.DelayedCall(0.5, self._message, line_1, line_2)
 
 
 class NOplate(BaseDisplay):

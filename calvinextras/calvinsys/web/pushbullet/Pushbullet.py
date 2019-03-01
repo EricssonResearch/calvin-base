@@ -32,7 +32,7 @@ from __future__ import absolute_import
 # limitations under the License.
 
 from . import pushbullet
-from calvin.runtime.south.async import threads, async_impl
+from calvin.runtime.south.asynchronous import threads, asynchronous
 from calvin.utilities.calvinlogger import get_logger
 from calvin.runtime.south.calvinsys import base_calvinsys_object
 

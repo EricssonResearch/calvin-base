@@ -16,7 +16,7 @@
 
 import requests
 
-from calvin.runtime.south.async import threads
+from calvin.runtime.south.asynchronous import threads
 from calvin.utilities.calvinlogger import get_logger
 from calvin.runtime.south.calvinsys import base_calvinsys_object
 

@@ -22,7 +22,7 @@ from calvin.utilities import calvinlogger
 from calvin.runtime.north.plugins.requirements import req_operations
 import calvin.utilities.calvinresponse as response
 from calvin.utilities import calvinuuid
-from calvin.runtime.south.async import async_impl
+from calvin.runtime.south.asynchronous import asynchronous
 from calvin.utilities.security import Security
 from calvin.utilities.requirement_matching import ReqMatch
 

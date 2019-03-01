@@ -16,7 +16,7 @@
 
 from __future__ import print_function
 from calvin.runtime.north.plugins.storage.storage_base import StorageBase
-from calvin.runtime.south.async import async_impl
+from calvin.runtime.south.asynchronous import asynchronous
 from calvin.utilities import calvinlogger
 from calvin.utilities import calvinconfig
 from calvin.utilities.calvin_callback import CalvinCB
@@ -80,7 +80,7 @@ class ProxyRegistryClient(StorageBase):
             if self.max_retries - self.retries != 0:
                 delay = 0.5 * self.retries if self.retries < 20 else 10
                 _log.info("Link to proxy failed, retrying in {}".format(delay))
-                async_impl.DelayedCall(delay, self.node.network.join,
+                asynchronous.DelayedCall(delay, self.node.network.join,
                     [self.master_uri], callback=CalvinCB(self._start_link_cb, org_cb=org_cb),
                     corresponding_server_node_names=[self._server_node_name])
                 return

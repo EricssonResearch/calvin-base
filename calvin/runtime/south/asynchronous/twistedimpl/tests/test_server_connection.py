@@ -15,9 +15,9 @@
 # limitations under the License.
 
 from __future__ import print_function
-from calvin.runtime.south.async import async_impl
-from calvin.runtime.south.async import server_connection
-from calvin.runtime.south.async import threads
+from calvin.runtime.south.asynchronous import asynchronous
+from calvin.runtime.south.asynchronous import server_connection
+from calvin.runtime.south.asynchronous import threads
 from calvin.utilities.calvinlogger import get_logger
 
 import pytest
@@ -75,7 +75,7 @@ def print_header(string):
 class Scheduler_stub(object):
     def trigger_loop(self, actor_ids=None):
         """ Trigger the loop_once """
-        async_impl.DelayedCall(0, self.trigger_loop)
+        asynchronous.DelayedCall(0, self.trigger_loop)
         return
 
 class TestServer(object):

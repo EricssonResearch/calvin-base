@@ -19,7 +19,7 @@ from PIL import ImageTk, Image
 import Tkinter as tkinter
 import StringIO
 import base64
-from calvin.runtime.south.async import async_impl
+from calvin.runtime.south.asynchronous import asynchronous
 from calvin.utilities.calvinlogger import get_logger
 from calvinextras.calvinsys.media.image.render import BaseRenderer
 
@@ -34,7 +34,7 @@ class Renderer(BaseRenderer.BaseRenderer):
     def init(self):
         self._render_in_progress = False
         self._running = False
-        async_impl.call_in_thread(self._local_mainloop)
+        asynchronous.call_in_thread(self._local_mainloop)
 
 
     def can_write(self):
@@ -58,7 +58,7 @@ class Renderer(BaseRenderer.BaseRenderer):
                 panel.update()
                 self._render_in_progress = False
                 # Done -> awaken scheduler
-                async_impl.call_from_thread(self.scheduler_wakeup)
+                asynchronous.call_from_thread(self.scheduler_wakeup)
 
             else :
                 import time

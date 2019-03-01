@@ -21,7 +21,7 @@ import random
 import logging
 
 from .monitor import Event_Monitor, VisualizingMonitor
-from calvin.runtime.south.async import async_impl
+from calvin.runtime.south.asynchronous import asynchronous
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities import calvinconfig
@@ -56,12 +56,12 @@ class BaseScheduler(object):
         self.insert_task(self._maintenance_loop, self._maintenance_delay)
         self.insert_task(self._check_replication, self._replication_interval)
         self.insert_task(self.strategy, 0)
-        async_impl.run_ioloop()
+        asynchronous.run_ioloop()
 
     # System exit point
     def stop(self):
         if not self.done:
-            async_impl.DelayedCall(0,async_impl.stop_ioloop)
+            asynchronous.DelayedCall(0,asynchronous.stop_ioloop)
         self.done = True
 
     ######################################################################
@@ -210,7 +210,7 @@ class BaseScheduler(object):
     def _schedule_next(self, delay, what):
         if self._scheduled:
             self._scheduled.cancel()
-        self._scheduled = async_impl.DelayedCall(delay, what)
+        self._scheduled = asynchronous.DelayedCall(delay, what)
 
     # Don't call directly
     def _process_next(self):
