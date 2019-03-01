@@ -749,13 +749,13 @@ class Storage(PrivateStorage):
         _log.debug("Add actor %s id %s" % (actor, node_id))
         data = {"name": actor.name, "type": actor._type, "node_id": node_id}
         inports = []
-        for p in actor.inports.values():
+        for p in actor.inports.itervalues():
             port = {"id": p.id, "name": p.name}
             inports.append(port)
             self.add_port(p, node_id, actor.id)
         data["inports"] = inports
         outports = []
-        for p in actor.outports.values():
+        for p in actor.outports.itervalues():
             port = {"id": p.id, "name": p.name}
             outports.append(port)
             self.add_port(p, node_id, actor.id)

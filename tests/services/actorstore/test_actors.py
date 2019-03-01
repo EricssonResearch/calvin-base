@@ -509,11 +509,11 @@ def test_actors(mock_calvinsys, mock_calvinlib, monkeypatch, store, actor_type):
     actor.setup_complete()
     
     # 4. Attach ports
-    for inport in actor.inports.values():
+    for inport in actor.inports.itervalues():
         inport.set_queue(queue.fanout_fifo.FanoutFIFO({'queue_length': 100, 'direction': "in"}, {}))
         inport.endpoint = DummyInEndpoint(inport)
         inport.queue.add_reader(inport.id, {})
-    for outport in actor.outports.values():
+    for outport in actor.outports.itervalues():
         outport.set_queue(queue.fanout_fifo.FanoutFIFO({'queue_length': 100, 'direction': "out"}, {}))
         outport.queue.add_reader(actor.id, {})
         outport.endpoints.append(DummyOutEndpoint(outport))

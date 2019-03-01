@@ -561,10 +561,10 @@ class ActorManager(object):
             self._actor_not_found(actor_id)
 
         actor = self.actors[actor_id]
-        for port in actor.inports.values():
+        for port in actor.inports.itervalues():
             if port.id == port_id:
                 return port.queue._state()
-        for port in actor.outports.values():
+        for port in actor.outports.itervalues():
             if port.id == port_id:
                 return port.queue._state()
         raise Exception("No port with id: %s" % port_id)
@@ -580,13 +580,13 @@ class ActorManager(object):
         return self.actors[actor_id].report(**(kwargs if kwargs and isinstance(kwargs, dict) else {}))
 
     def enabled_actors(self):
-        return [actor for actor in self.actors.values() if actor.enabled()]
+        return [actor for actor in self.actors.itervalues() if actor.enabled()]
 
     def denied_actors(self):
-        return [actor for actor in self.actors.values() if actor.denied()]
+        return [actor for actor in self.actors.itervalues() if actor.denied()]
 
     def migratable_actors(self):
-        return [actor for actor in self.actors.values() if actor.migratable()]
+        return [actor for actor in self.actors.itervalues() if actor.migratable()]
 
     def list_actors(self):
         return self.actors.keys()

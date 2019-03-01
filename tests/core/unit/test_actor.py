@@ -67,9 +67,9 @@ def actor(system_setup, dummy_node):
     (True, True, True),
 ])
 def test_did_connect(actor, inport_ret_val, outport_ret_val, expected):
-    for port in actor.inports.values():
+    for port in actor.inports.itervalues():
         port.is_connected = Mock(return_value=inport_ret_val)
-    for port in actor.outports.values():
+    for port in actor.outports.itervalues():
         port.is_connected = Mock(return_value=outport_ret_val)
 
     actor.fsm = Mock()
@@ -87,9 +87,9 @@ def test_did_connect(actor, inport_ret_val, outport_ret_val, expected):
     (False, False, True),
 ])
 def test_did_disconnect(actor, inport_ret_val, outport_ret_val, expected):
-    for port in actor.inports.values():
+    for port in actor.inports.itervalues():
         port.is_connected = Mock(return_value=inport_ret_val)
-    for port in actor.outports.values():
+    for port in actor.outports.itervalues():
         port.is_connected = Mock(return_value=outport_ret_val)
 
     actor.fsm = Mock()

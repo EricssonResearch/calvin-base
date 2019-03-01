@@ -153,7 +153,7 @@ class CollectBase(object):
     def any_outstanding_exhaustion_tokens(self):
         # Between having asked actor to exhaust and receiving exhaustion tokens we don't want to assume that
         # the exhaustion is done.
-        return any([not t[1] for t in self.termination.values()])
+        return any([not t[1] for t in self.termination.itervalues()])
 
     def set_exhausted_tokens(self, tokens):
         _log.debug("set_exhausted_tokens %s %s new:%s existing:%s writers:%s" % (

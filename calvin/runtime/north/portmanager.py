@@ -318,15 +318,15 @@ class PortManager(object):
 
     def add_ports_of_actor(self, actor):
         """ Add an actor's ports to the dictionary, used by actor manager """
-        for port in actor.inports.values():
+        for port in actor.inports.itervalues():
             self.ports[port.id] = port
-        for port in actor.outports.values():
+        for port in actor.outports.itervalues():
             self.ports[port.id] = port
 
     def remove_ports_of_actor(self, actor):
         """ Remove an actor's ports in the dictionary, used by actor manager """
         port_ids = []
-        for port in actor.inports.values():
+        for port in actor.inports.itervalues():
             port_ids.append(port.id)
             self.ports.pop(port.id)
             # Also unregister any left over endpoints (during app destroy we don't disconnect)
@@ -335,7 +335,7 @@ class PortManager(object):
                     self.node.sched.unregister_endpoint(e)
                 except:
                     pass
-        for port in actor.outports.values():
+        for port in actor.outports.itervalues():
             port_ids.append(port.id)
             self.ports.pop(port.id)
             # Also unregister any left over endpoints (during app destroy we don't disconnect)

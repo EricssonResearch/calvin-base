@@ -109,7 +109,7 @@ class Application(object):
     def group_components(self):
         self.components = {}
         l = (len(self.ns)+1) if self.ns else 0
-        for name in self.actors.values():
+        for name in self.actors.itervalues():
              if name.find(':',l)> -1:
                 # This is part of a component
                 # component name including optional namespace
@@ -331,7 +331,7 @@ class AppManager(object):
     def _destroy_final_cb(self, application, node_id, status):
         _log.analyze(self._node.id, "+", {'node_id': node_id, 'status': status})
         application._destroy_node_ids[node_id] = status
-        if any([s is None for s in application._destroy_node_ids.values()]):
+        if any([s is None for s in application._destroy_node_ids.itervalues()]):
             return
         # Done
         for replication_id, replica_ids in application._replicas_actor_final.items():
@@ -346,7 +346,7 @@ class AppManager(object):
             # Missing is the actors that could not be found.
             # FIXME retry? They could have moved
             missing = []
-            for status in application._destroy_node_ids.values():
+            for status in application._destroy_node_ids.itervalues():
                 missing += [] if status.data is None else status.data
             application.destroy_cb(status=response.CalvinResponse(False, data=missing))
         self._node.control.log_application_destroy(application.id)
@@ -449,7 +449,7 @@ class AppManager(object):
         # all possible actor placements derived
         _log.analyze(self._node.id, "+ ACTOR PLACEMENT", {'placement': app.actor_placement}, tb=True)
         status = response.CalvinResponse(True)
-        if any([not n for n in app.actor_placement.values()]):
+        if any([not n for n in app.actor_placement.itervalues()]):
             # At least one actor have no required placement
             # Let them stay on this node
             app.actor_placement = {actor_id: set([self._node.id]) if placement is None else placement
@@ -463,7 +463,7 @@ class AppManager(object):
 
         # Get list of all possible nodes
         node_ids = set([])
-        for possible_nodes in app.actor_placement.values():
+        for possible_nodes in app.actor_placement.itervalues():
             node_ids |= possible_nodes
         node_ids = list(node_ids)
         node_ids = [n for n in node_ids if not isinstance(n, dynops.InfiniteElement)]
@@ -513,7 +513,7 @@ class AppManager(object):
         actor_matrix = [[0 for x in range(l)] for x in range(l)]
         for actor_id in list_actors:
             connections = self._node.am.connections(actor_id)
-            for p in connections['inports'].values():
+            for p in connections['inports'].itervalues():
                 try:
                     peer_actor_id = self._node.pm._get_local_port(port_id=p[1]).owner.id
                 except:
@@ -575,11 +575,11 @@ class AppManager(object):
     def _migrated_cb(self, status, app, actor_id, cb, **kwargs):
         app._migrated_actors[actor_id] = status
         _log.analyze(self._node.id, "+", {'actor_id': actor_id, 'status': status, 'statuses': app._migrated_actors})
-        if any([s is None for s in app._migrated_actors.values()]):
+        if any([s is None for s in app._migrated_actors.itervalues()]):
             return
         # Done
         if cb:
-            cb(status=response.CalvinResponse(all([s for s in app._migrated_actors.values()])))
+            cb(status=response.CalvinResponse(all([s for s in app._migrated_actors.itervalues()])))
 
 class Deployer(object):
 

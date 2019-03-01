@@ -91,7 +91,7 @@ class ConnectionFactory(object):
 
     def init(self):
         data = {}
-        for class_name in _MODULES.values():
+        for class_name in _MODULES.itervalues():
             _log.debug("Init connection method %s" % class_name)
             C = globals()[class_name]
             data[C.__name__] = C(self.node, PURPOSE.INIT, None, None, None, self, **self.kwargs).init()

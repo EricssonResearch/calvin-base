@@ -409,10 +409,10 @@ class Actor(object):
 
     def __str__(self):
         ip = ""
-        for p in self.inports.values():
+        for p in self.inports.itervalues():
             ip = ip + str(p)
         op = ""
-        for p in self.outports.values():
+        for p in self.outports.itervalues():
             op = op + str(p)
         s = "Actor: '%s' class '%s'\nstatus: %s\ninports: %s\noutports:%s" % (
             self._name, self._type, self.fsm, ip, op)
@@ -432,12 +432,12 @@ class Actor(object):
         # have inports, have outports, or have in- and outports
 
         if self.inports:
-            for p in self.inports.values():
+            for p in self.inports.itervalues():
                 if not p.is_connected():
                     return
 
         if self.outports:
-            for p in self.outports.values():
+            for p in self.outports.itervalues():
                 if not p.is_connected():
                     return
 
@@ -460,12 +460,12 @@ class Actor(object):
         # Three non-patological options:
         # have inports, have outports, or have in- and outports
         if self.inports:
-            for p in self.inports.values():
+            for p in self.inports.itervalues():
                 if p.is_connected():
                     return
 
         if self.outports:
-            for p in self.outports.values():
+            for p in self.outports.itervalues():
                 if p.is_connected():
                     return
 
@@ -481,14 +481,14 @@ class Actor(object):
             return None
         t = time.time()
         pressure = {}
-        for port in self.inports.values():
+        for port in self.inports.itervalues():
             for e in port.endpoints:
                 PRESSURE_LENGTH = len(e.pressure)
                 pressure[port.id + "," + e.peer_id] = {'last': e.pressure_last, 'count': e.pressure_count,
                     'pressure': [e.pressure[i % PRESSURE_LENGTH] for i in range(
                                         max(0, e.pressure_count - PRESSURE_LENGTH), e.pressure_count)]}
         pressure_event = False
-        for p in pressure.values():
+        for p in pressure.itervalues():
             if len(p['pressure']) < 2:
                 continue
             if ((p['pressure'][-1][1] - p['pressure'][-2][1]) < 10 and
@@ -540,7 +540,7 @@ class Actor(object):
             except:
                 _log.exception("FINSIHED EXHAUSTION FAILED")
         if (output_ok and self._exhaust_cb is not None and
-            not any([p.any_outstanding_exhaustion_tokens() for p in self.inports.values()])):
+            not any([p.any_outstanding_exhaustion_tokens() for p in self.inports.itervalues()])):
             _log.debug("actor %s exhausted" % self._id)
             # We are in exhaustion, got all exhaustion tokens from peer ports
             # but stopped firing while outport token slots available, i.e. exhausted inports or deadlock
@@ -602,13 +602,13 @@ class Actor(object):
     def connections(self, node_id):
         c = {'actor_id': self._id, 'actor_name': self._name}
         inports = {}
-        for port in self.inports.values():
+        for port in self.inports.itervalues():
             peers = [
                 (node_id, p[1]) if p[0] == 'local' else p for p in port.get_peers()]
             inports[port.id] = peers
         c['inports'] = inports
         outports = {}
-        for port in self.outports.values():
+        for port in self.outports.itervalues():
             peers = [
                 (node_id, p[1]) if p[0] == 'local' else p for p in port.get_peers()]
             outports[port.id] = peers
@@ -782,9 +782,9 @@ class Actor(object):
 
     def _derive_port_property_capabilities(self):
         port_property_capabilities = set([])
-        for port in self.inports.values():
+        for port in self.inports.itervalues():
             port_property_capabilities.update(get_port_property_capabilities(port.properties))
-        for port in self.outports.values():
+        for port in self.outports.itervalues():
             port_property_capabilities.update(get_port_property_capabilities(port.properties))
         _log.debug("derive_port_property_capabilities:" + str(port_property_capabilities))
         return get_port_property_runtime(port_property_capabilities)

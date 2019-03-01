@@ -69,7 +69,7 @@ def pre_check(node, **kwargs):
     replicate = False
     dereplicate = False
     t = time.time() + replication_data.pressure_event_diff
-    for p in replication_data.pressure.values():
+    for p in replication_data.pressure.itervalues():
         if len(p['pressure']) < 2:
             continue
         if ((p['pressure'][-1][1] - p['pressure'][-2][1]) < 10 and

@@ -67,7 +67,7 @@ class SimpleSSE(resource.Resource, object):
             self._send(self.connections[client_id], data)
 
     def broadcast(self, data):
-        for connection in self.connections.values():
+        for connection in self.connections.itervalues():
             self._send(connection, data)
 
 class EventSource(object):

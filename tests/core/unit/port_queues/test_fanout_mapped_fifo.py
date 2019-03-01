@@ -28,7 +28,7 @@ class TestFanoutMappedFIFO(unittest.TestCase):
             
     def setup_readers(self, n):
         reader_map = {"%d" % i:"reader-%d" % i for i in range(1, n+1)}
-        for reader in reader_map.values():
+        for reader in reader_map.itervalues():
             self.outport.add_reader(reader, {})
         self.outport.set_config({"port-mapping": reader_map})
     
@@ -194,7 +194,7 @@ class TestFanoutMappedFIFO(unittest.TestCase):
             
     def testSetConfig_Normal(self):
         reader_map = {"%d" % i:"reader-%d" % i for i in range(1, 4)}
-        for reader in reader_map.values():
+        for reader in reader_map.itervalues():
             self.outport.add_reader(reader, {})
         self.outport.set_config({"port-mapping": reader_map})
         

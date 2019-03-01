@@ -292,7 +292,7 @@ class ReplicationManager(object):
         return calvinresponse.CalvinResponse(True, {'replication_id': replication_data.id})
 
     def deployed_actors_connected(self, actor_ids):
-        for replication_data in self.managed_replications.values():
+        for replication_data in self.managed_replications.itervalues():
             if replication_data.original_actor_id not in actor_ids:
                 continue
             # supervised actor now fully connected
@@ -678,9 +678,9 @@ class ReplicationManager(object):
                 # Got all responses
                 self._replicate_cont(replication_data, state, connection_list, dst_node_id, callback=callback)
 
-        for port in rep_state['inports'].values():
+        for port in rep_state['inports'].itervalues():
             self.node.storage.get_port(port['id'], cb=CalvinCB(_got_port, port=port, dir="in"))
-        for port in rep_state['outports'].values():
+        for port in rep_state['outports'].itervalues():
             self.node.storage.get_port(port['id'], cb=CalvinCB(_got_port, port=port, dir="out"))
 
     def _replicate_cont(self, replication_data, state, connection_list, dst_node_id, callback):
@@ -815,7 +815,7 @@ class ReplicationManager(object):
         _log.debug("REPLICATION LOOP")
         if self.node.quitting:
             return
-        for replication_data in self.managed_replications.values():
+        for replication_data in self.managed_replications.itervalues():
             _log.debug("REPLICATION LOOP %s %s" % (replication_data.id, REPLICATION_STATUS.reverse_mapping[replication_data.status]))
             if replication_data.status != REPLICATION_STATUS.READY:
                 continue
