@@ -18,7 +18,7 @@ def _registry(dummy_node):
     return r
 
 @pytest.fixture()
-def _testdata():
+def _testdata(file_dir):
 
     def _to_set(o):
         """Convert JSON testdata special dicts to sets"""
@@ -34,7 +34,7 @@ def _testdata():
         return tuple(items)
 
     # Read testdata from file
-    with open('calvin/runtime/north/tests/registry_startup.txt', 'r') as fp:
+    with open(file_dir+'/tests/services/registry/registry_startup.txt', 'r') as fp:
         _store, _sets = json.load(fp, object_hook=_to_set)
     # Massage keys that are in fact tuples
     _sets = {_expand(k):v for k, v in _sets.items()}

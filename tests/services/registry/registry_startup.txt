@@ -1,0 +1,220 @@
+[
+    {
+        "node-fec7e688-411f-4087-b8c8-80c150031fd9": {
+            "attributes": {
+                "indexed_public": [
+                    "/node/attribute/node_name/////no_name"
+                ], 
+                "public": {}
+            }, 
+            "control_uris": [
+                "http://localhost:5001"
+            ], 
+            "uris": [
+                "calvinip://localhost:5000"
+            ]
+        }
+    }, 
+    {
+        "#node/attribute,node_name,,,,,no_name": {
+            "+": {"__SET__": ["fec7e688-411f-4087-b8c8-80c150031fd9"]}, 
+            "-": {"__SET__": []}
+        }, 
+        "#node/capabilities/base64": {
+            "+": {"__SET__": ["fec7e688-411f-4087-b8c8-80c150031fd9"]}, 
+            "-": {"__SET__": []}
+        }, 
+        "#node/capabilities/copy": {
+            "+": {"__SET__": ["fec7e688-411f-4087-b8c8-80c150031fd9"]}, 
+            "-": {"__SET__": []}
+        }, 
+        "#node/capabilities/http.delete": {
+            "+": {"__SET__": ["fec7e688-411f-4087-b8c8-80c150031fd9"]}, 
+            "-": {"__SET__": []}
+        }, 
+        "#node/capabilities/http.get": {
+            "+": {"__SET__": ["fec7e688-411f-4087-b8c8-80c150031fd9"]}, 
+            "-": {"__SET__": []}
+        }, 
+        "#node/capabilities/http.post": {
+            "+": {"__SET__": ["fec7e688-411f-4087-b8c8-80c150031fd9"]}, 
+            "-": {"__SET__": []}
+        }, 
+        "#node/capabilities/http.put": {
+            "+": {"__SET__": ["fec7e688-411f-4087-b8c8-80c150031fd9"]}, 
+            "-": {"__SET__": []}
+        }, 
+        "#node/capabilities/io.filereader": {
+            "+": {"__SET__": ["fec7e688-411f-4087-b8c8-80c150031fd9"]}, 
+            "-": {"__SET__": []}
+        }, 
+        "#node/capabilities/io.filesize": {
+            "+": {"__SET__": ["fec7e688-411f-4087-b8c8-80c150031fd9"]}, 
+            "-": {"__SET__": []}
+        }, 
+        "#node/capabilities/io.filewriter": {
+            "+": {"__SET__": ["fec7e688-411f-4087-b8c8-80c150031fd9"]}, 
+            "-": {"__SET__": []}
+        }, 
+        "#node/capabilities/io.stdin": {
+            "+": {"__SET__": ["fec7e688-411f-4087-b8c8-80c150031fd9"]}, 
+            "-": {"__SET__": []}
+        }, 
+        "#node/capabilities/io.stdout": {
+            "+": {"__SET__": ["fec7e688-411f-4087-b8c8-80c150031fd9"]}, 
+            "-": {"__SET__": []}
+        }, 
+        "#node/capabilities/json": {
+            "+": {"__SET__": ["fec7e688-411f-4087-b8c8-80c150031fd9"]}, 
+            "-": {"__SET__": []}
+        }, 
+        "#node/capabilities/log.error": {
+            "+": {"__SET__": ["fec7e688-411f-4087-b8c8-80c150031fd9"]}, 
+            "-": {"__SET__": []}
+        }, 
+        "#node/capabilities/log.info": {
+            "+": {"__SET__": ["fec7e688-411f-4087-b8c8-80c150031fd9"]}, 
+            "-": {"__SET__": []}
+        }, 
+        "#node/capabilities/log.warning": {
+            "+": {"__SET__": ["fec7e688-411f-4087-b8c8-80c150031fd9"]}, 
+            "-": {"__SET__": []}
+        }, 
+        "#node/capabilities/math.arithmetic.compare": {
+            "+": {"__SET__": ["fec7e688-411f-4087-b8c8-80c150031fd9"]}, 
+            "-": {"__SET__": []}
+        }, 
+        "#node/capabilities/math.arithmetic.eval": {
+            "+": {"__SET__": ["fec7e688-411f-4087-b8c8-80c150031fd9"]}, 
+            "-": {"__SET__": []}
+        }, 
+        "#node/capabilities/math.arithmetic.operator": {
+            "+": {"__SET__": ["fec7e688-411f-4087-b8c8-80c150031fd9"]}, 
+            "-": {"__SET__": []}
+        }, 
+        "#node/capabilities/math.hash": {
+            "+": {"__SET__": ["fec7e688-411f-4087-b8c8-80c150031fd9"]}, 
+            "-": {"__SET__": []}
+        }, 
+        "#node/capabilities/math.random": {
+            "+": {"__SET__": ["fec7e688-411f-4087-b8c8-80c150031fd9"]}, 
+            "-": {"__SET__": []}
+        }, 
+        "#node/capabilities/mqtt.publish": {
+            "+": {"__SET__": ["fec7e688-411f-4087-b8c8-80c150031fd9"]}, 
+            "-": {"__SET__": []}
+        }, 
+        "#node/capabilities/mqtt.subscribe": {
+            "+": {"__SET__": ["fec7e688-411f-4087-b8c8-80c150031fd9"]}, 
+            "-": {"__SET__": []}
+        }, 
+        "#node/capabilities/mustache": {
+            "+": {"__SET__": ["fec7e688-411f-4087-b8c8-80c150031fd9"]}, 
+            "-": {"__SET__": []}
+        }, 
+        "#node/capabilities/network.socketclient": {
+            "+": {"__SET__": ["fec7e688-411f-4087-b8c8-80c150031fd9"]}, 
+            "-": {"__SET__": []}
+        }, 
+        "#node/capabilities/network.tcpserver": {
+            "+": {"__SET__": ["fec7e688-411f-4087-b8c8-80c150031fd9"]}, 
+            "-": {"__SET__": []}
+        }, 
+        "#node/capabilities/network.udplistener": {
+            "+": {"__SET__": ["fec7e688-411f-4087-b8c8-80c150031fd9"]}, 
+            "-": {"__SET__": []}
+        }, 
+        "#node/capabilities/portproperty.nbr_peers.many": {
+            "+": {"__SET__": ["fec7e688-411f-4087-b8c8-80c150031fd9"]}, 
+            "-": {"__SET__": []}
+        }, 
+        "#node/capabilities/portproperty.nbr_peers.one": {
+            "+": {"__SET__": ["fec7e688-411f-4087-b8c8-80c150031fd9"]}, 
+            "-": {"__SET__": []}
+        }, 
+        "#node/capabilities/portproperty.routing.balanced": {
+            "+": {"__SET__": ["fec7e688-411f-4087-b8c8-80c150031fd9"]}, 
+            "-": {"__SET__": []}
+        }, 
+        "#node/capabilities/portproperty.routing.collect-all-tagged": {
+            "+": {"__SET__": ["fec7e688-411f-4087-b8c8-80c150031fd9"]}, 
+            "-": {"__SET__": []}
+        }, 
+        "#node/capabilities/portproperty.routing.collect-any-tagged": {
+            "+": {"__SET__": ["fec7e688-411f-4087-b8c8-80c150031fd9"]}, 
+            "-": {"__SET__": []}
+        }, 
+        "#node/capabilities/portproperty.routing.collect-tagged": {
+            "+": {"__SET__": ["fec7e688-411f-4087-b8c8-80c150031fd9"]}, 
+            "-": {"__SET__": []}
+        }, 
+        "#node/capabilities/portproperty.routing.collect-unordered": {
+            "+": {"__SET__": ["fec7e688-411f-4087-b8c8-80c150031fd9"]}, 
+            "-": {"__SET__": []}
+        }, 
+        "#node/capabilities/portproperty.routing.default": {
+            "+": {"__SET__": ["fec7e688-411f-4087-b8c8-80c150031fd9"]}, 
+            "-": {"__SET__": []}
+        }, 
+        "#node/capabilities/portproperty.routing.dispatch-mapped": {
+            "+": {"__SET__": ["fec7e688-411f-4087-b8c8-80c150031fd9"]}, 
+            "-": {"__SET__": []}
+        }, 
+        "#node/capabilities/portproperty.routing.dispatch-ordered": {
+            "+": {"__SET__": ["fec7e688-411f-4087-b8c8-80c150031fd9"]}, 
+            "-": {"__SET__": []}
+        }, 
+        "#node/capabilities/portproperty.routing.fanout": {
+            "+": {"__SET__": ["fec7e688-411f-4087-b8c8-80c150031fd9"]}, 
+            "-": {"__SET__": []}
+        }, 
+        "#node/capabilities/portproperty.routing.random": {
+            "+": {"__SET__": ["fec7e688-411f-4087-b8c8-80c150031fd9"]}, 
+            "-": {"__SET__": []}
+        }, 
+        "#node/capabilities/portproperty.routing.round-robin": {
+            "+": {"__SET__": ["fec7e688-411f-4087-b8c8-80c150031fd9"]}, 
+            "-": {"__SET__": []}
+        }, 
+        "#node/capabilities/portproperty.runtime.base.1": {
+            "+": {"__SET__": ["fec7e688-411f-4087-b8c8-80c150031fd9"]}, 
+            "-": {"__SET__": []}
+        }, 
+        "#node/capabilities/portproperty.tag": {
+            "+": {"__SET__": ["fec7e688-411f-4087-b8c8-80c150031fd9"]}, 
+            "-": {"__SET__": []}
+        }, 
+        "#node/capabilities/regexp": {
+            "+": {"__SET__": ["fec7e688-411f-4087-b8c8-80c150031fd9"]}, 
+            "-": {"__SET__": []}
+        }, 
+        "#node/capabilities/sys.attribute.indexed": {
+            "+": {"__SET__": ["fec7e688-411f-4087-b8c8-80c150031fd9"]}, 
+            "-": {"__SET__": []}
+        }, 
+        "#node/capabilities/sys.attribute.public": {
+            "+": {"__SET__": ["fec7e688-411f-4087-b8c8-80c150031fd9"]}, 
+            "-": {"__SET__": []}
+        }, 
+        "#node/capabilities/sys.schedule": {
+            "+": {"__SET__": ["fec7e688-411f-4087-b8c8-80c150031fd9"]}, 
+            "-": {"__SET__": []}
+        }, 
+        "#node/capabilities/sys.timer.once": {
+            "+": {"__SET__": ["fec7e688-411f-4087-b8c8-80c150031fd9"]}, 
+            "-": {"__SET__": []}
+        }, 
+        "#node/capabilities/sys.timer.repeating": {
+            "+": {"__SET__": ["fec7e688-411f-4087-b8c8-80c150031fd9"]}, 
+            "-": {"__SET__": []}
+        }, 
+        "#node/capabilities/time": {
+            "+": {"__SET__": ["fec7e688-411f-4087-b8c8-80c150031fd9"]}, 
+            "-": {"__SET__": []}
+        }, 
+        "#supernode,0": {
+            "+": {"__SET__": ["fec7e688-411f-4087-b8c8-80c150031fd9"]}, 
+            "-": {"__SET__": []}
+        }
+    }
+]
