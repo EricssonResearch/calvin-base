@@ -17,7 +17,7 @@
 import json
 import os.path
 from twisted.enterprise import adbapi
-from calvin.runtime.south.async import async
+from calvin.runtime.south.async import async_impl
 from calvin.utilities.calvinlogger import get_logger
 from calvin.runtime.south.calvinsys import base_calvinsys_object
 
@@ -98,7 +98,7 @@ class PersistentBuffer(base_calvinsys_object.BaseCalvinsysObject):
             self._changed = True # Something has changed, need to check if readable
             # install timer to report on pushing/popping
             if reporting:
-                self._statlogging= async.DelayedCall(reporting, log_stats)
+                self._statlogging= async_impl.DelayedCall(reporting, log_stats)
             self.scheduler_wakeup()
 
         def create(db):

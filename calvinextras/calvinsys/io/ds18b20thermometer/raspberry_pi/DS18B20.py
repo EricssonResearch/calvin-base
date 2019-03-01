@@ -16,7 +16,7 @@
 
 from calvinextras.calvinsys.io.ds18b20thermometer.BaseDS18B20 import BaseDS18B20
 from calvin.utilities.calvinlogger import get_logger
-from calvin.runtime.south.async import async
+from calvin.runtime.south.async import async_impl
 import glob
 
 _log = get_logger(__name__)
@@ -52,7 +52,7 @@ class DS18B20(BaseDS18B20):
         lines = self._read_temp_raw()
         if not lines or lines[0].strip()[-3:] != 'YES':
             # Nothing to read, try again in a second
-            self._in_progress = async.DelayedCall(1.0, self._read_temp)
+            self._in_progress = async_impl.DelayedCall(1.0, self._read_temp)
             return
 
         equals_pos = lines[1].find('t=')
@@ -62,20 +62,20 @@ class DS18B20(BaseDS18B20):
             self._temperature = float(temp_string)/1000.0
             self._temperature = self._temperature
         else :
-            self._in_progress = async.DelayedCall(1.0, self._read_temp)
+            self._in_progress = async_impl.DelayedCall(1.0, self._read_temp)
 
         # clear in_progress
         self._in_progress = None
 
 
     def _start_read(self):
-        async.call_from_thread(self._read_temp)
+       async_impl.call_from_thread(self._read_temp)
 
     def can_write(self):
         return self._in_progress is None
 
     def write(self, measure):
-        self._in_progress = async.DelayedCall(0.0, self._read_temp)
+        self._in_progress = async_impl.DelayedCall(0.0, self._read_temp)
 
     def can_read(self):
         return self._temperature is not None

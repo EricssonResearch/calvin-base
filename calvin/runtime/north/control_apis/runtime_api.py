@@ -19,7 +19,7 @@ import json
 from calvin.utilities import calvinresponse
 from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities.calvin_callback import CalvinCB
-from calvin.runtime.south.async import async
+from calvin.runtime.south.async import async_impl
 from .routes import handler, register
 from .authentication import authentication_decorator
 from calvin.runtime.north.calvinsys import get_calvinsys
@@ -89,7 +89,7 @@ def handle_quit(self, handle, connection, match, data, hdr):
     else: # Clean up
         stop_method = self.node.stop_with_cleanup
 
-    async.DelayedCall(.2, stop_method)
+    async_impl.DelayedCall(.2, stop_method)
     self.send_response(handle, connection, None, status=calvinresponse.ACCEPTED)
 
 

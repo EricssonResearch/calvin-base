@@ -21,7 +21,7 @@ import re
 
 from .storage_base import StorageBase
 from calvin.utilities import calvinresponse
-from calvin.runtime.south.async import async
+from calvin.runtime.south.async import async_impl
 from .proxy_client import ProxyRegistryClient
 
 # _log = calvinlogger.get_logger(__name__)
@@ -42,7 +42,7 @@ from .proxy_client import ProxyRegistryClient
   # if self.started:
   #     self.storage.set(key=prefix + key, value=value, cb=CalvinCB(func=self.set_cb, org_key=key, org_value=value, org_cb=cb))
   # elif cb:
-  #     async.DelayedCall(0, cb, key=key, value=calvinresponse.CalvinResponse(True))
+  #     async_impl.DelayedCall(0, cb, key=key, value=calvinresponse.CalvinResponse(True))
 
 ## Proposed pattern
   # drop self.started
@@ -208,7 +208,7 @@ class NullRegistryClient(StorageBase):
     #         callback = cb
     #     if callback:
     #         callback(True)
-    #         # async.DelayedCall(0, callback, True)
+    #         # async_impl.DelayedCall(0, callback, True)
     
     def _response(self, cb, value):
         if not cb:
@@ -218,7 +218,7 @@ class NullRegistryClient(StorageBase):
             org_key = cb.kwargs.get('org_key', 'NO-SUCH-KEY')
             callback(key=org_key, value=calvinresponse.CalvinResponse(value))
             # FIXME: Should this be used instead?         
-            # async.DelayedCall(0, callback, key=org_key, value=calvinresponse.CalvinResponse(value))        
+            # async_impl.DelayedCall(0, callback, key=org_key, value=calvinresponse.CalvinResponse(value))        
     
     #
     # Remaining methods will only pass on the callback on behalf of the preceeding LocalStorage operation
@@ -368,7 +368,7 @@ class DebugRegistryClient(LocalRegistry):
     def _response(self, cb, value):
         cb(value=calvinresponse.CalvinResponse(value))
         # FIXME: Should this be used instead?
-        # async.DelayedCall(0, callback, key=org_key, value=calvinresponse.CalvinResponse(value))
+        # async_impl.DelayedCall(0, callback, key=org_key, value=calvinresponse.CalvinResponse(value))
 
     def start(self, cb):
         self._response(cb, True)

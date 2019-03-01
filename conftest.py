@@ -246,15 +246,7 @@ def control_api():
         def migrate_application(self, host_uri, app_id, reqs):
             response = requests.post(host_uri + APPLICATION_MIGRATE.format(app_id), json=reqs)
             return response.status_code, None
-        
-            
-        # # cscontrol, utilities.security, utilities.runtime_credentials
-        # def get_index(self, rt, index, root_prefix_level=None):
-        #     if root_prefix_level is None:
-        #         r = self._get(rt, timeout, async, INDEX_PATH.format(index))
-        #     else:
-        #         r = self._get(rt, timeout, async, INDEX_PATH_RPL.format(index, root_prefix_level))
-        #     return self.check_response(r)
+                    
     return ControlAPI()
         
 

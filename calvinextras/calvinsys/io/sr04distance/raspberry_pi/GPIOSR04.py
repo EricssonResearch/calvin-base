@@ -16,7 +16,7 @@
 
 from calvinextras.calvinsys.io.sr04distance import BaseSR04
 from calvin.utilities.calvinlogger import get_logger
-from calvin.runtime.south.async import async
+from calvin.runtime.south.async import async_impl
 
 import time
 import RPi.GPIO as gpio
@@ -55,7 +55,7 @@ class GPIOSR04(BaseSR04.BaseSR04):
                 _log.debug("echo timeout exceeded") #
 
             self._detection = None
-            async.call_from_thread(self.scheduler_wakeup)
+           async_impl.call_from_thread(self.scheduler_wakeup)
 
 
         except Exception as e:
@@ -63,7 +63,7 @@ class GPIOSR04(BaseSR04.BaseSR04):
 
     def write(self, _):
         # trigger measurement
-        async.call_from_thread(self._trigger)
+       async_impl.call_from_thread(self._trigger)
 
     def can_read(self):
         # measurement done

@@ -17,7 +17,7 @@
 from __future__ import absolute_import
 from calvinextras.calvinsys.io.rfid.BaseRFID import BaseRFID
 from calvin.utilities.calvinlogger import get_logger
-from calvin.runtime.south.async import async
+from calvin.runtime.south.async import async_impl
 
 from . import MFRC522
 

@@ -16,7 +16,7 @@
 
 from calvinextras.calvinsys.io.dht11temphumidity.BaseDHT11 import BaseDHT11
 from calvin.utilities.calvinlogger import get_logger
-from calvin.runtime.south.async import async as async_impl  # noqa: W606
+from calvin.runtime.south.async import async_impl as async_impl  # noqa: W606
 import pigpio
 
 _log = get_logger(__name__)

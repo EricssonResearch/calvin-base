@@ -16,7 +16,7 @@ from __future__ import print_function
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.runtime.south.async import threads, async
+from calvin.runtime.south.async import threads, async_impl
 from calvin.utilities.calvinlogger import get_logger
 from calvin.runtime.south.calvinsys import base_calvinsys_object
 import pymongo
@@ -86,7 +86,7 @@ class MongoDB(base_calvinsys_object.BaseCalvinsysObject):
                 self.stats.reset()
 
         if self.logging_interval:
-            self.stats = async.DelayedCall(self.logging_interval, report)
+            self.stats = async_impl.DelayedCall(self.logging_interval, report)
         else:
             self.stats = None
 

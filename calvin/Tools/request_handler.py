@@ -103,7 +103,7 @@ class RequestBase(object):
             raise Exception("%d%s" % (response.status_code, ("\n" + repr(response.text)) if response.text else ""))
         else:
             # FIXME: Don't just assume it's a future
-            # We have a async Future just return it
+            # We have a use_async Future just return it
             response._calvin_key = key
             response._calvin_success = success
             self.future_responses.append(response)
@@ -116,20 +116,20 @@ class RequestBase(object):
             # FIXME: Don't do data=json.dumps(data) since that is done implicitly by requests
         return send_func(host + path, timeout=timeout, data=json.dumps(data), auth=self.credentials, verify=self.verify)
 
-    def _get(self, host, timeout, async, path, headers="", data=None):
-        req = session if async else requests
+    def _get(self, host, timeout, use_async, path, headers="", data=None):
+        req = session if use_async else requests
         return self._send(host, timeout, req.get, path, data)
 
-    def _post(self, host, timeout, async, path, data=None):
-        req = session if async else requests
+    def _post(self, host, timeout, use_async, path, data=None):
+        req = session if use_async else requests
         return self._send(host, timeout, req.post, path, data)
 
-    def _put(self, host, timeout, async, path, data=None):
-        req = session if async else requests
+    def _put(self, host, timeout, use_async, path, data=None):
+        req = session if use_async else requests
         return self._send(host, timeout, req.put, path, data)
 
-    def _delete(self, host, timeout, async, path, data=None):
-        req = session if async else requests
+    def _delete(self, host, timeout, use_async, path, data=None):
+        req = session if use_async else requests
         return self._send(host, timeout, req.delete, path, data)
 
     def async_response(self, response):
@@ -177,7 +177,7 @@ class RequestHandler(RequestBase):
     def __getattr__(self, name):
         if name.startswith("async_"):
             func = name[6:]
-            return partial(getattr(self, func), async=True)
+            return partial(getattr(self, func), use_async=True)
         else:
             raise AttributeError("Unknown request handler attribute %s" % name)
             
@@ -186,57 +186,57 @@ class RequestHandler(RequestBase):
         return RequestBase._send(self, rt.control_uri, timeout, send_func, path, data)    
 
     # cscontrol, nodecontrol
-    def get_node_id(self, rt, timeout=DEFAULT_TIMEOUT, async=False):
-        r = self._get(rt, timeout, async, NODE_ID)
+    def get_node_id(self, rt, timeout=DEFAULT_TIMEOUT, use_async=False):
+        r = self._get(rt, timeout, use_async, NODE_ID)
         return self.check_response(r, key="id")
 
     # cscontrol, nodecontrol
-    def get_node(self, rt, node_id, timeout=DEFAULT_TIMEOUT, async=False):
-        r = self._get(rt, timeout, async, NODE_PATH.format(node_id))
+    def get_node(self, rt, node_id, timeout=DEFAULT_TIMEOUT, use_async=False):
+        r = self._get(rt, timeout, use_async, NODE_PATH.format(node_id))
         return self.check_response(r)
 
     # cscontrol
-    def quit(self, rt, method=None, timeout=DEFAULT_TIMEOUT, async=False):
+    def quit(self, rt, method=None, timeout=DEFAULT_TIMEOUT, use_async=False):
         if method is None:
-            r = self._delete(rt, timeout, async, NODE)
+            r = self._delete(rt, timeout, use_async, NODE)
         else:
-            r = self._delete(rt, timeout, async, NODE_PATH.format(method))
+            r = self._delete(rt, timeout, use_async, NODE_PATH.format(method))
         return self.check_response(r)
 
     # cscontrol
-    def get_nodes(self, rt, timeout=DEFAULT_TIMEOUT, async=False):
-        r = self._get(rt, timeout, async, NODES)
+    def get_nodes(self, rt, timeout=DEFAULT_TIMEOUT, use_async=False):
+        r = self._get(rt, timeout, use_async, NODES)
         return self.check_response(r)
 
     # cscontrol
     def peer_setup(self, rt, *peers, **kwargs):
         timeout = kwargs.get('timeout', DEFAULT_TIMEOUT)
-        async = kwargs.get('async', False)
+        use_async = kwargs.get('use_async', False)
 
         if not isinstance(peers[0], type("")):
             peers = peers[0]
         data = {'peers': peers}
 
-        r = self._post(rt, timeout, async, PEER_SETUP, data)
+        r = self._post(rt, timeout, use_async, PEER_SETUP, data)
         return self.check_response(r)
 
-    def get_actor(self, rt, actor_id, timeout=DEFAULT_TIMEOUT, async=False):
-        r = self._get(rt, timeout, async, ACTOR_PATH.format(actor_id))
+    def get_actor(self, rt, actor_id, timeout=DEFAULT_TIMEOUT, use_async=False):
+        r = self._get(rt, timeout, use_async, ACTOR_PATH.format(actor_id))
         return self.check_response(r)
 
-    def get_actors(self, rt, timeout=DEFAULT_TIMEOUT, async=False):
-        r = self._get(rt, timeout, async, ACTORS)
+    def get_actors(self, rt, timeout=DEFAULT_TIMEOUT, use_async=False):
+        r = self._get(rt, timeout, use_async, ACTORS)
         return self.check_response(r)
 
     # cscontrol
-    def migrate(self, rt, actor_id, dst_id, timeout=DEFAULT_TIMEOUT, async=False):
+    def migrate(self, rt, actor_id, dst_id, timeout=DEFAULT_TIMEOUT, use_async=False):
         data = {'peer_node_id': dst_id}
         path = ACTOR_MIGRATE.format(actor_id)
-        r = self._post(rt, timeout, async, path, data)
+        r = self._post(rt, timeout, use_async, path, data)
         return self.check_response(r)
 
     # cscontrol
-    def replicate(self, rt, replication_id=None, dst_id=None, dereplicate=False, exhaust=False, requirements=None, timeout=DEFAULT_TIMEOUT, async=False):
+    def replicate(self, rt, replication_id=None, dst_id=None, dereplicate=False, exhaust=False, requirements=None, timeout=DEFAULT_TIMEOUT, use_async=False):
         data = {}
         if dst_id:
             data['peer_node_id'] = dst_id
@@ -249,71 +249,71 @@ class RequestHandler(RequestBase):
         if not data:
             data = None
         path = ACTOR_REPLICATE.format(replication_id)
-        r = self._post(rt, timeout, async, path, data)
+        r = self._post(rt, timeout, use_async, path, data)
         return self.check_response(r)
 
     # cscontrol
     def migrate_use_req(self, rt, actor_id, requirements, extend=False, move=False, timeout=DEFAULT_TIMEOUT,
-                        async=False):
+                        use_async=False):
         data = {'requirements': requirements, 'extend': extend, 'move': move}
         path = ACTOR_MIGRATE.format(actor_id)
-        r = self._post(rt, timeout, async, path, data)
+        r = self._post(rt, timeout, use_async, path, data)
         return self.check_response(r)
 
     # cscontrol
     def migrate_app_use_req(self, rt, application_id, deploy_info=None, move=False, timeout=DEFAULT_TIMEOUT,
-                            async=False):
+                            use_async=False):
         data = {'deploy_info': deploy_info, "move": move}
         path = APPLICATION_MIGRATE.format(application_id)
-        r = self._post(rt, timeout, async, path, data)
+        r = self._post(rt, timeout, use_async, path, data)
         return self.check_response(r)
 
     # kappa
-    def report(self, rt, actor_id, kwargs=None, timeout=DEFAULT_TIMEOUT, async=False):
+    def report(self, rt, actor_id, kwargs=None, timeout=DEFAULT_TIMEOUT, use_async=False):
         path = ACTOR_REPORT.format(actor_id)
         if kwargs:
-            r = self._post(rt, timeout, async, path, kwargs)
+            r = self._post(rt, timeout, use_async, path, kwargs)
         else:
-            r = self._get(rt, timeout, async, path)
+            r = self._get(rt, timeout, use_async, path)
         return self.check_response(r)
 
     # cscontrol
-    def get_applications(self, rt, timeout=DEFAULT_TIMEOUT, async=False):
-        r = self._get(rt, timeout, async, APPLICATIONS)
+    def get_applications(self, rt, timeout=DEFAULT_TIMEOUT, use_async=False):
+        r = self._get(rt, timeout, use_async, APPLICATIONS)
         return self.check_response(r)
 
     # cscontrol
-    def get_application(self, rt, application_id, timeout=DEFAULT_TIMEOUT, async=False):
-        r = self._get(rt, timeout, async, APPLICATION_PATH.format(application_id))
+    def get_application(self, rt, application_id, timeout=DEFAULT_TIMEOUT, use_async=False):
+        r = self._get(rt, timeout, use_async, APPLICATION_PATH.format(application_id))
         return self.check_response(r)
 
     # cscontrol
-    def delete_application(self, rt, application_id, timeout=DEFAULT_TIMEOUT, async=False):
-        r = self._delete(rt, timeout, async, APPLICATION_PATH.format(application_id))
+    def delete_application(self, rt, application_id, timeout=DEFAULT_TIMEOUT, use_async=False):
+        r = self._delete(rt, timeout, use_async, APPLICATION_PATH.format(application_id))
         return self.check_response(r)
 
     # cscontrol
-    def deploy(self, rt, deployable, timeout=DEFAULT_TIMEOUT, async=False):
+    def deploy(self, rt, deployable, timeout=DEFAULT_TIMEOUT, use_async=False):
         r = self._post(rt, timeout, False, DEPLOY, data=deployable)
         return self.check_response(r)
 
     # cscontrol, utilities.security, utilities.runtime_credentials
-    def get_index(self, rt, index, root_prefix_level=None, timeout=DEFAULT_TIMEOUT, async=False):
+    def get_index(self, rt, index, root_prefix_level=None, timeout=DEFAULT_TIMEOUT, use_async=False):
         if root_prefix_level is None:
-            r = self._get(rt, timeout, async, INDEX_PATH.format(index))
+            r = self._get(rt, timeout, use_async, INDEX_PATH.format(index))
         else:
-            r = self._get(rt, timeout, async, INDEX_PATH_RPL.format(index, root_prefix_level))
+            r = self._get(rt, timeout, use_async, INDEX_PATH_RPL.format(index, root_prefix_level))
         return self.check_response(r)
 
     # csruntime
-    def sign_csr_request(self, rt, csr, timeout=DEFAULT_TIMEOUT, async=False):
+    def sign_csr_request(self, rt, csr, timeout=DEFAULT_TIMEOUT, use_async=False):
         data = {'csr': csr}
-        r = self._post(rt, timeout, async, CSR_REQUEST, data=data['csr'])
+        r = self._post(rt, timeout, use_async, CSR_REQUEST, data=data['csr'])
         return self.check_response(r)
 
     # csmanage
-    def get_enrollment_password(self, rt, node_name, timeout=DEFAULT_TIMEOUT, async=False):
-        r = self._get(rt, timeout, async, ENROLLMENT_PASSWORD.format(node_name))
+    def get_enrollment_password(self, rt, node_name, timeout=DEFAULT_TIMEOUT, use_async=False):
+        r = self._get(rt, timeout, use_async, ENROLLMENT_PASSWORD.format(node_name))
         result = self.check_response(r)
         if 'enrollment_password' in result:
             return result['enrollment_password']
@@ -322,6 +322,6 @@ class RequestHandler(RequestBase):
             return None
 
     # DEPRECATED: In tests only
-    def abolish_proxy_peer(self, rt, peer_id, timeout=DEFAULT_TIMEOUT, async=False):
-        r = self._delete(rt, timeout, async, PROXY_PEER_ABOLISH.format(peer_id))
+    def abolish_proxy_peer(self, rt, peer_id, timeout=DEFAULT_TIMEOUT, use_async=False):
+        r = self._delete(rt, timeout, use_async, PROXY_PEER_ABOLISH.format(peer_id))
         return self.check_response(r)

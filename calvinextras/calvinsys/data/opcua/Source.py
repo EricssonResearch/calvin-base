@@ -18,7 +18,7 @@ import time
 from collections import deque
 from socket import error as socket_error
 import opcua
-from calvin.runtime.south.async import async, threads
+from calvin.runtime.south.async import async_impl, threads
 from calvin.runtime.south.calvinsys import base_calvinsys_object
 from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities.calvinlogger import add_logging_handler
@@ -73,7 +73,7 @@ class ChangeHandler(object):
 
         value = data_value_to_struct(data.monitored_item.Value)
         value['tag'] = self.node_to_tag[node]
-        async.call_from_thread(self.notify, value)
+       async_impl.call_from_thread(self.notify, value)
 
     def event_notification(self, event):
         _log.info("Received event: {}".format(event))
@@ -166,7 +166,7 @@ class Source(base_calvinsys_object.BaseCalvinsysObject):
                     self.stat_logger.reset()
 
             self.stats = {"incoming": 0, "outgoing": 0, "current_in": 0, "current_out": 0}
-            self.stat_logger = async.DelayedCall(logging_interval, show_stats)
+            self.stat_logger = async_impl.DelayedCall(logging_interval, show_stats)
 
         def notify_change(value):
             if not self.running:
@@ -196,7 +196,7 @@ class Source(base_calvinsys_object.BaseCalvinsysObject):
                 if not failure:
                     _log.info("Connection OK, resetting watchdog")
                     # We have contact with opcua server, reset watchdog, continue as before
-                    self.watchdog = async.DelayedCall(timeout, watchdog, parameter)
+                    self.watchdog = async_impl.DelayedCall(timeout, watchdog, parameter)
                     # Alert the scheduler
                     self.scheduler_wakeup()
                 else:
@@ -215,7 +215,7 @@ class Source(base_calvinsys_object.BaseCalvinsysObject):
                 check_connection.addBoth(result)
             else :
                 self.data_changed = False
-                self.watchdog = async.DelayedCall(timeout, watchdog, parameter)
+                self.watchdog = async_impl.DelayedCall(timeout, watchdog, parameter)
 
         def _connect_and_subscribe(client):
 
@@ -282,7 +282,7 @@ class Source(base_calvinsys_object.BaseCalvinsysObject):
                 error = True
                 _log.warning("Nonfatal error during connection to %s: %s" % (endpoint, e))
                 _log.info("Connection retry in {} seconds".format(reconnect_interval))
-                async.DelayedCall(reconnect_interval, setup)
+                async_impl.DelayedCall(reconnect_interval, setup)
             except Exception as e:
                 # For unhandled exceptions, we assume them to be fatal
                 error = True
@@ -297,14 +297,14 @@ class Source(base_calvinsys_object.BaseCalvinsysObject):
             self.client = client
             self.subscription = subscription
             self.running = True
-            self.watchdog = async.DelayedCall(timeout, watchdog, parameter)
+            self.watchdog = async_impl.DelayedCall(timeout, watchdog, parameter)
             # All set - alert the scheduler
             _log.info("Setup complete")
             self.scheduler_wakeup()
 
         def setup_failed(failure):
             _log.info("Setup of connection to {} failed - retrying in {}".format(endpoint, reconnect_interval))
-            async.DelayedCall(reconnect_interval, setup)
+            async_impl.DelayedCall(reconnect_interval, setup)
             self.scheduler_wakeup()
 
         def setup():

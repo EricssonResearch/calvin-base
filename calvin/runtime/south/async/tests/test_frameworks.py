@@ -39,7 +39,7 @@ MODULES = {'defer': {'Deferred':         {'type': 'class', 'comp': defer.Deferre
                      'DeferredList':     {'type': 'class', 'comp': defer.DeferredList},
                      'inline_callbacks': {'type': 'function', 'comp': defer.inlineCallbacks},
                      'maybe_deferred':   {'type': 'function', 'comp': defer.maybeDeferred}},
-           'async': {'DelayedCall': {'type': 'class', 'comp': twistedimpl.async.DelayedCall},
+           'async_impl': {'DelayedCall': {'type': 'class', 'comp': twistedimpl.async_impl.DelayedCall},
                      'run_ioloop':  {'type': 'class', 'comp': twistedimpl.async.run_ioloop},
                      'stop_ioloop': {'type': 'class', 'comp': twistedimpl.async.stop_ioloop}},
            'server_connection': {'ServerProtocolFactory': {'type': 'class', 'comp': twistedimpl.server_connection.ServerProtocolFactory},

@@ -17,7 +17,7 @@
 import random
 from calvin.utilities import dynops
 from calvin.utilities.requirement_matching import ReqMatch
-from calvin.runtime.south.async import async
+from calvin.runtime.south.async import async_impl
 from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities.calvin_callback import CalvinCB
 import calvin.utilities.calvinresponse as response
