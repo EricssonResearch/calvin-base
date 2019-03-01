@@ -20,6 +20,7 @@ from calvin.runtime.south.async import threads
 from calvin.utilities.calvinlogger import get_logger
 
 import pytest
+import pytest_twisted
 import socket
 
 _log = get_logger(__name__)
@@ -79,7 +80,7 @@ class Scheduler_stub(object):
 class TestServer(object):
 
     @pytest.mark.essential
-    @pytest.inlineCallbacks
+    @pytest_twisted.inlineCallbacks
     def test_default_line_mode(self):
         print_header("TEST_DEFAULT_LINE_MODE")
         print_header("Setup")
@@ -116,7 +117,7 @@ class TestServer(object):
         yield threads.defer_to_thread(no_more_connections, self.factory)
 
     @pytest.mark.essential
-    @pytest.inlineCallbacks
+    @pytest_twisted.inlineCallbacks
     def test_args_in_line_mode(self):
         print_header("TEST_ARGS_IN_LINE_MODE")
         print_header("Setup")
@@ -151,7 +152,7 @@ class TestServer(object):
         yield threads.defer_to_thread(no_more_connections, self.factory)
 
     @pytest.mark.essential
-    @pytest.inlineCallbacks
+    @pytest_twisted.inlineCallbacks
     def test_raw_mode(self):
         print_header("TEST_RAW_MODE")
         print_header("Setup")
@@ -187,7 +188,7 @@ class TestServer(object):
         yield threads.defer_to_thread(no_more_connections, self.factory)
 
     @pytest.mark.slow
-    @pytest.inlineCallbacks
+    @pytest_twisted.inlineCallbacks
     def test_many_clients(self):
         print_header("TEST_MANY_CLIENTS")
         print_header("Setup")
