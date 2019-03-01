@@ -26,7 +26,7 @@ from calvin.actor.actor import ShadowActor
 from calvin.utilities import calvinconfig
 # from calvin.utilities.security import Security, security_enabled
 from calvin.utilities import dynops
-from calvin.requests import calvinresponse
+from calvin.utilities import calvinresponse
 from calvin.runtime.north.calvinsys import get_calvinsys
 from calvin.runtime.north.calvinlib import get_calvinlib
 from calvin.runtime.north.plugins.storage.storage_clients import LocalRegistry, NullRegistryClient, registry

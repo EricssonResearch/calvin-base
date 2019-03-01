@@ -16,7 +16,7 @@
 
 import json
 
-from calvin.requests import calvinresponse
+from calvin.utilities import calvinresponse
 from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.utilities.issuetracker import IssueTracker

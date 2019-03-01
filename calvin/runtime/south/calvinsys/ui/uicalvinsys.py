@@ -1,5 +1,5 @@
 from calvin.runtime.south.async import sse_event_source as sse
-from calvin.requests import calvinresponse
+from calvin.utilities import calvinresponse
 
 try:
     _eventsource = sse.EventSource(port=7777)

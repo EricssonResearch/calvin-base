@@ -16,7 +16,7 @@
 
 import functools
 from base64 import b64decode
-from calvin.requests import calvinresponse
+from calvin.utilities import calvinresponse
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.utilities.issuetracker import IssueTracker
 from calvin.utilities.calvinlogger import get_logger

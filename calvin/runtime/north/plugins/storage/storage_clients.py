@@ -18,7 +18,7 @@ import itertools
 import re
 
 from storage_base import StorageBase
-from calvin.requests import calvinresponse
+from calvin.utilities import calvinresponse
 from calvin.runtime.south.async import async
 from proxy_client import ProxyRegistryClient
 

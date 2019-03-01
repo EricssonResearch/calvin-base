@@ -15,7 +15,7 @@
 # limitations under the License.
 
 from calvin.actor.actorport import PortMeta
-import calvin.requests.calvinresponse as response
+import calvin.utilities.calvinresponse as response
 from calvin.utilities import calvinlogger
 from calvin.runtime.north.plugins.port.connection.common import BaseConnection, PURPOSE
 from calvin.runtime.north.plugins.port import DISCONNECT

@@ -15,7 +15,7 @@
 # limitations under the License.
 
 import json
-from calvin.requests import calvinresponse
+from calvin.utilities import calvinresponse
 import calvin.runtime.south.calvinsys.ui.uicalvinsys as ui
 from routes import handler
 

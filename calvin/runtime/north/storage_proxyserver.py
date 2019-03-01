@@ -1,4 +1,4 @@
-from calvin.requests import calvinresponse
+from calvin.utilities import calvinresponse
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.utilities import calvinlogger
 

@@ -17,7 +17,7 @@
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.runtime.north.plugins.port.connection import ConnectionFactory, PURPOSE
 from calvin.actor.actorport import PortMeta
-import calvin.requests.calvinresponse as response
+import calvin.utilities.calvinresponse as response
 from calvin.utilities import calvinlogger
 from calvin.actor.actor import ShadowActor
 from calvin.utilities.utils import enum

@@ -20,7 +20,7 @@ from calvin.utilities import calvinlogger
 from calvin.utilities import calvinconfig
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.utilities import calvinuuid
-from calvin.requests import calvinresponse
+from calvin.utilities import calvinresponse
 
 _conf = calvinconfig.get()
 _log = calvinlogger.get_logger(__name__)

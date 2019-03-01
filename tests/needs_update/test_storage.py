@@ -16,7 +16,7 @@
 
 # FIXME: Rewrite
 
-from calvin.requests import calvinresponse
+from calvin.utilities import calvinresponse
 from calvin.utilities import calvinuuid
 from calvin.runtime.north import storage
 from calvin.runtime.north import appmanager

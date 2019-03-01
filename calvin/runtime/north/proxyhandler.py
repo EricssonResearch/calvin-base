@@ -18,7 +18,7 @@ import time
 import json
 from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities.calvin_callback import CalvinCB
-import calvin.requests.calvinresponse as response
+import calvin.utilities.calvinresponse as response
 from calvin.utilities.attribute_resolver import AttributeResolver
 from calvin.actor.port_property_syntax import list_port_property_capabilities
 from calvin.utilities.requirement_matching import ReqMatch

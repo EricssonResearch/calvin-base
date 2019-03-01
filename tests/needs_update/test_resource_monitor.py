@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from calvin.runtime.north import storage
-from calvin.requests import calvinresponse
+from calvin.utilities import calvinresponse
 import calvin.utilities.calvinconfig
 from calvin.runtime.north.resource_monitor.cpu import CpuMonitor
 from calvin.runtime.north.resource_monitor.memory import MemMonitor

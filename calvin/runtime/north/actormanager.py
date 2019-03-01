@@ -20,7 +20,7 @@ from calvin.utilities.requirement_matching import ReqMatch
 from calvin.runtime.south.async import async
 from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities.calvin_callback import CalvinCB
-import calvin.requests.calvinresponse as response
+import calvin.utilities.calvinresponse as response
 from calvin.utilities.security import Security, security_enabled
 from calvin.actor.actor import ShadowActor
 from calvin.runtime.north.plugins.port import DISCONNECT

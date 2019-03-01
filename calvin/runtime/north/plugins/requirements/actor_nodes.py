@@ -15,7 +15,7 @@
 # limitations under the License.
 
 from calvin.utilities import dynops
-import calvin.requests.calvinresponse as response
+import calvin.utilities.calvinresponse as response
 
 req_type = "placement"
 

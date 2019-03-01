@@ -7,7 +7,7 @@ import pytest
 from mock import MagicMock, Mock
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.runtime.north.plugins.storage.storage_clients import RESTRegistryClient
-import calvin.requests.calvinresponse as calvinresponse
+import calvin.utilities.calvinresponse as calvinresponse
 import requests
 from requests_futures.sessions import FuturesSession
 # from requests_futures.sessions import FuturesSession

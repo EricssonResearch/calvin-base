@@ -16,7 +16,7 @@
 
 import json
 import time
-from calvin.requests import calvinresponse
+from calvin.utilities import calvinresponse
 from calvin.utilities import calvinuuid
 from routes import register, handler
 from authentication import authentication_decorator

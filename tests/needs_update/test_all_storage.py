@@ -32,7 +32,7 @@ from calvin.utilities.utils import get_home
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.runtime.south.async import threads, async
 from calvin.runtime.north import storage, calvin_proto
-from calvin.requests import calvinresponse
+from calvin.utilities import calvinresponse
 from calvin.tests.helpers_twisted import create_callback, wait_for
 import calvin.tests
 from calvin.tests import helpers

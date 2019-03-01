@@ -20,7 +20,7 @@ from urlparse import urlparse
 from calvin.utilities.calvinlogger import get_logger
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.runtime.south.async import server_connection
-from calvin.requests import calvinresponse
+from calvin.utilities import calvinresponse
 from calvin.utilities.security import Security
 from calvin.utilities import calvinuuid
 from calvin.utilities.issuetracker import IssueTracker

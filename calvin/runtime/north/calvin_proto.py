@@ -20,7 +20,7 @@ from calvin.utilities.utils import enum
 from calvin.utilities.calvin_callback import CalvinCB, CalvinCBClass
 from calvin.utilities import calvinlogger
 from calvin.utilities import calvinconfig
-import calvin.requests.calvinresponse as response
+import calvin.utilities.calvinresponse as response
 
 _log = calvinlogger.get_logger(__name__)
 _conf = calvinconfig.get()

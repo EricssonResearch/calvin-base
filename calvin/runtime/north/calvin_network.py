@@ -21,7 +21,7 @@ import importlib
 
 from calvin.utilities import calvinuuid
 from calvin.utilities.calvin_callback import CalvinCB
-import calvin.requests.calvinresponse as response
+import calvin.utilities.calvinresponse as response
 from calvin.runtime.south.async import async
 from calvin.utilities import calvinlogger
 from calvin.utilities import calvinconfig
