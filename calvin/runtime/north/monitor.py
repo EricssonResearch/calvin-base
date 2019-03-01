@@ -47,7 +47,7 @@ class Event_Monitor(object):
 
     def _check_backoff(self):
         current = time.time()
-        for ep in self._backoff.keys():
+        for ep in self._backoff:
             tc = self._backoff[ep][0]
             if tc < current:
                 self.clear_backoff(ep)

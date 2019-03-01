@@ -54,7 +54,7 @@ class CollectBase(object):
 
 
     def __str__(self):
-        fifo = "\n".join([str(k) + ": " + ", ".join(map(lambda x: str(x), self.fifo[k])) for k in self.fifo.keys()])
+        fifo = "\n".join([str(k) + ": " + ", ".join(map(lambda x: str(x), self.fifo[k])) for k in self.fifo])
         return "Tokens: %s\nw:%s, r:%s, tr:%s" % (fifo, self.write_pos, self.read_pos, self.tentative_read_pos)
 
     def _state(self):
@@ -162,7 +162,7 @@ class CollectBase(object):
         # Extend lists of current exhaust tokens, not replace (with likely empty list).
         # This is useful when a disconnect happens from both directions or other reasons
         self.exhausted_tokens.update({k: self.exhausted_tokens.get(k, []) + v   for k, v in tokens.items()})
-        for peer_id in tokens.keys():
+        for peer_id in tokens:
             self.termination[peer_id] = (self.termination[peer_id][0], True)
         remove = []
         for peer_id, exhausted_tokens in self.exhausted_tokens.items():
@@ -176,7 +176,7 @@ class CollectBase(object):
             _log.debug("set_exhausted_tokens remove %s %s" % (peer_id, self.exhausted_tokens[peer_id]))
             del self.exhausted_tokens[peer_id]
         # Remove any terminated queues if empty
-        for peer_id in tokens.keys():
+        for peer_id in tokens:
             if peer_id not in self.writers:
                 continue
             if (self.write_pos[peer_id] == self.read_pos[peer_id] and

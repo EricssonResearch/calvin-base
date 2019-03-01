@@ -144,7 +144,7 @@ class FanoutFIFO(object):
     def set_exhausted_tokens(self, tokens):
         _log.debug("set_exhausted_tokens %s %s %s" % (self._type, tokens, {k:DISCONNECT.reverse_mapping[v[0]] for k, v in self.termination.items()}))
         self.exhausted_tokens.update(tokens)
-        for peer_id in tokens.keys():
+        for peer_id in tokens:
             try:
                 # We can get set_exhaust_token even after done with the termination, since it is a confirmation
                 # from peer port it has handled the exhaustion also
@@ -158,7 +158,7 @@ class FanoutFIFO(object):
         for peer_id in remove:
             del self.exhausted_tokens[peer_id]
         # If fully consumed remove peer_ids in tokens
-        for peer_id in tokens.keys():
+        for peer_id in tokens:
             if (self.termination.get(peer_id, (-1,))[0] in [DISCONNECT.EXHAUST_PEER_RECV, DISCONNECT.EXHAUST_INPORT] and
                 min(self.read_pos.values() or [0]) == self.write_pos):
                 del self.termination[peer_id]

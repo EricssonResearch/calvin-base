@@ -31,7 +31,7 @@ from calvin.utilities.calvinlogger import get_logger
 _log = get_logger(__name__)
 
 
-for module in _MODULES.keys():
+for module in _MODULES:
     module_obj = __import__(module, globals=globals())
     globals()[module] = module_obj
 

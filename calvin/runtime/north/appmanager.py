@@ -75,7 +75,7 @@ class Application(object):
                 # This is a component
                 # component name including optional namespace
                 component = ':'.join(name.split(':')[0:(2 if ns else 1)])
-                if component in components.keys():
+                if component in components:
                     components[component] += _id
                 else:
                     components[component] = _id
@@ -209,7 +209,7 @@ class AppManager(object):
         application.replication_ids = []
         application._replicas_actor_final = {}
         application._replicas_node_final = {}
-        for actor_id in application.actors.keys():
+        for actor_id in application.actors:
             if actor_id in self._node.am.list_actors():
                 application.update_node_info(self._node.id, actor_id)
                 replication_id = self._node.am.actors[actor_id]._replication_id.id
@@ -297,7 +297,7 @@ class AppManager(object):
             # Already called
             return
         _log.analyze(self._node.id, "+ BEGIN 2", {'node_info': application.node_info, 'origin_node_id': application.origin_node_id})
-        application._destroy_node_ids = {n: None for n in application.node_info.keys()}
+        application._destroy_node_ids = {n: None for n in application.node_info}
         for node_id, actor_ids in application.node_info.iteritems():
             if not node_id:
                 _log.analyze(self._node.id, "+ UNKNOWN NODE", {})
@@ -429,7 +429,7 @@ class AppManager(object):
         actor_ids = app.get_actors()
         app.actor_placement_nbr = len(actor_ids)
         for actor_id in actor_ids:
-            if actor_id not in self._node.am.actors.keys():
+            if actor_id not in self._node.am.actors:
                 _log.debug("Only apply requirements to local actors")
                 app.actor_placement[actor_id] = None
                 continue

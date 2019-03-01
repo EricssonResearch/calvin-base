@@ -182,14 +182,14 @@ class AttributeResolverHelper(object):
     def owner_resolver(cls, attr):
         if not isinstance(attr, dict):
             raise Exception('Owner attribute must be a dictionary with %s keys.' % owner_keys)
-        resolved = [cls._to_unicode(attr[k]) if k in attr.keys() else None for k in owner_keys]
+        resolved = [cls._to_unicode(attr[k]) if k in attr else None for k in owner_keys]
         return resolved
 
     @classmethod
     def node_name_resolver(cls, attr):
         if not isinstance(attr, dict):
             raise Exception('Node name attribute must be a dictionary with %s keys.' % node_name_keys)
-        resolved = [cls._to_unicode(attr[k]) if k in attr.keys() else None for k in node_name_keys]
+        resolved = [cls._to_unicode(attr[k]) if k in attr else None for k in node_name_keys]
         return resolved
 
     @classmethod
@@ -202,7 +202,7 @@ class AttributeResolverHelper(object):
                 raise Exception("country must be ISO 3166-1 alpha2")
         if "stateOrProvince" in attr and "country" not in attr:
             raise Exception("country required for stateOrProvince, see ISO 3166-2 for proper code")
-        resolved = [cls._to_unicode(attr[k]) if k in attr.keys() else None for k in address_keys]
+        resolved = [cls._to_unicode(attr[k]) if k in attr else None for k in address_keys]
         return resolved
 
     @classmethod

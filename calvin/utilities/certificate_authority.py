@@ -322,7 +322,7 @@ class CA():
         """
         directory = os.path.dirname(self.configfile)
 
-        for section in self.__class__.DEFAULT.keys():
+        for section in self.__class__.DEFAULT:
             self.config.add_section(section)
             for option in self.__class__.DEFAULT[section]:
                 if option == "0.organizationName":
@@ -352,8 +352,8 @@ class CA():
             # Empty openssl.conf file or could not successfully parse the file.
             self.new_opensslconf()
         configuration = {}
-        for section in self.__class__.DEFAULT.keys():
-            for option in self.__class__.DEFAULT[section].keys():
+        for section in self.__class__.DEFAULT:
+            for option in self.__class__.DEFAULT[section]:
                 raw = self.config.get(section, option)
                 value = raw.split("#")[0].strip()  # Remove comments
 

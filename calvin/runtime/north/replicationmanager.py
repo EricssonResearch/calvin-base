@@ -390,7 +390,7 @@ class ReplicationManager(object):
             if cb:
                 cb(status=calvinresponse.CalvinResponse(calvinresponse.OK))
             return calvinresponse.CalvinResponse(calvinresponse.OK)
-        if replication_id in self.managed_replications.keys():
+        if replication_id in self.managed_replications:
             self.remove_replication_leader(replication_id)
             if cb:
                 cb(status=calvinresponse.CalvinResponse(calvinresponse.OK))

@@ -286,7 +286,7 @@ class CalvinNetwork(object):
                   use a default configuration, e.g. choose port number.
         """
         if not uris:
-            uris = [schema + "://default" for schema in self.transports.keys()]
+            uris = [schema + "://default" for schema in self.transports]
 
         for uri in uris:
             schema, addr = uri.split(':', 1)
@@ -299,7 +299,7 @@ class CalvinNetwork(object):
                   use a default configuration, e.g. choose port number.
         """
         if not uris:
-            uris = [schema + "://default" for schema in self.transports.keys()]
+            uris = [schema + "://default" for schema in self.transports]
 
         for uri in uris:
             schema, addr = uri.split(':', 1)
@@ -336,7 +336,7 @@ class CalvinNetwork(object):
                 # No simultaneous join detected
                 schema = uri.split(":", 1)[0]
                 _log.analyze(self.node.id, "+", {'uri': uri, 'peer_id': peer_id, 'schema': schema, 'transports': self.transports.keys()}, peer_node_id=peer_id)
-                if schema in self.transports.keys():
+                if schema in self.transports:
                     # store we have a pending join and its callback
                     if peer_id:
                         self.pending_joins_by_id[peer_id] = uri

@@ -256,7 +256,7 @@ def get_port_property_capabilities(properties):
             value = values[0]
         else:
             value = values
-        if key not in port_property_data.keys():
+        if key not in port_property_data:
             # This should not happen so just ignore it
             continue
         ppdata = port_property_sets['all'][key]

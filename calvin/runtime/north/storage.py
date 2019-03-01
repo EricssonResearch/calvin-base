@@ -100,6 +100,7 @@ class PrivateStorage(object):
         self.flush_delayedcall = None
 
         # FIXME: localstorage iterable as a stop-gap measure?
+        # N.B. Must use copy of keys here since content may change
         for key in self.localstorage.localstore.keys():
             _log.debug("Flush key %s: " % (key,))
             self.storage.set(key=key, value=self.localstorage.get(key), cb=CalvinCB(func=self.set_cb, key=key, org_key=None, org_value=None, org_cb=None, silent=True))

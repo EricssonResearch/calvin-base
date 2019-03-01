@@ -242,7 +242,7 @@ class RuntimeCredentials():
         """
 #            print "new_opensslconf"
         _log.debug("__init__::new_opensslconf")
-        for section in self.__class__.DEFAULT.keys():
+        for section in self.__class__.DEFAULT:
             self.config.add_section(section)
 #            print "[{}]".format(section)
             hostname = socket.gethostname()
@@ -292,8 +292,8 @@ class RuntimeCredentials():
             # Empty openssl.conf file or could not successfully parse the file.
             self.new_opensslconf()
         configuration = {}
-        for section in self.__class__.DEFAULT.keys():
-            for option in self.__class__.DEFAULT[section].keys():
+        for section in self.__class__.DEFAULT:
+            for option in self.__class__.DEFAULT[section]:
                 raw = self.config.get(section, option)
                 value = raw.split("#")[0].strip()  # Remove comments
 
