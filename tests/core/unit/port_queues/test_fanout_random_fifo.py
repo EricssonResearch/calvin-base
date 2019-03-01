@@ -5,7 +5,8 @@ pytest_unittest = pytest.mark.unittest
 from calvin.runtime.north.calvin_token import Token
 from calvin.runtime.north.plugins.port.queue.common import QueueEmpty
 
-from calvin.runtime.north.plugins.port.queue.test.test_fanout_round_robin_fifo import TestFanoutRoundRobinFIFO
+from tests.core.unit.port_queues.test_fanout_round_robin_fifo import TestFanoutRoundRobinFIFO
+
 class DummyPort(object):
     pass
 

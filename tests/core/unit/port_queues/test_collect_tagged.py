@@ -3,7 +3,7 @@ import pytest
 from calvin.runtime.north.plugins.port import queue
 from calvin.runtime.north.calvin_token import Token
 from calvin.runtime.north.plugins.port.queue.common import QueueEmpty
-from calvin.runtime.north.plugins.port.queue.test.test_collect_unordered import TestCollectUnorderedFIFO
+from tests.core.unit.port_queues.test_collect_unordered import TestCollectUnorderedFIFO
 pytest_unittest = pytest.mark.unittest
 
 class DummyPort(object):
