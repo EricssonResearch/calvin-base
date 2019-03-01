@@ -18,7 +18,7 @@
 
 import time
 from calvin.runtime.north import calvin_node
-from calvin.requests.request_handler import RequestHandler
+from request_handler import RequestHandler
 
 
 def node_control(control_uri, barrier=True, request_handler=None):
