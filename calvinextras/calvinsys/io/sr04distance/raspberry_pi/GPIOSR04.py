@@ -55,7 +55,7 @@ class GPIOSR04(BaseSR04.BaseSR04):
                 _log.debug("echo timeout exceeded") #
 
             self._detection = None
-           async_impl.call_from_thread(self.scheduler_wakeup)
+            async_impl.call_from_thread(self.scheduler_wakeup)
 
 
         except Exception as e:

@@ -71,7 +71,7 @@ class ChangeHandler(object):
 
         value = data_value_to_struct(data.monitored_item.Value)
         value['tag'] = self.node_to_tag[node]
-       async_impl.call_from_thread(self.notify, value)
+        async_impl.call_from_thread(self.notify, value)
 
     def event_notification(self, event):
         _log.info("Received event: {}".format(event))
@@ -281,7 +281,7 @@ class TaggedSource(base_calvinsys_object.BaseCalvinsysObject):
                     _log.error("Disconnect from %s failed: %s" % (endpoint, e))
 
             if self.client:
-               async_impl.call_in_thread(disconnect, self.client)
+                async_impl.call_in_thread(disconnect, self.client)
                 self.client = None
 
             _log.info("Resetting connection")

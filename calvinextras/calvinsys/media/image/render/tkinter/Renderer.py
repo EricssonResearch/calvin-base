@@ -34,7 +34,7 @@ class Renderer(BaseRenderer.BaseRenderer):
     def init(self):
         self._render_in_progress = False
         self._running = False
-       async_impl.call_in_thread(self._local_mainloop)
+        async_impl.call_in_thread(self._local_mainloop)
 
 
     def can_write(self):
@@ -58,7 +58,7 @@ class Renderer(BaseRenderer.BaseRenderer):
                 panel.update()
                 self._render_in_progress = False
                 # Done -> awaken scheduler
-               async_impl.call_from_thread(self.scheduler_wakeup)
+                async_impl.call_from_thread(self.scheduler_wakeup)
 
             else :
                 import time

@@ -73,7 +73,7 @@ class ChangeHandler(object):
 
         value = data_value_to_struct(data.monitored_item.Value)
         value['tag'] = self.node_to_tag[node]
-       async_impl.call_from_thread(self.notify, value)
+        async_impl.call_from_thread(self.notify, value)
 
     def event_notification(self, event):
         _log.info("Received event: {}".format(event))

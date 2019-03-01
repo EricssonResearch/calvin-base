@@ -44,7 +44,7 @@ class PIGPIOSR04(BaseSR04.BaseSR04):
             _log.debug("echo timeout exceded")
         self._elapsed = pigpio.tickDiff(self._t0, tick)
         self._detection.cancel()
-       async_impl.call_from_thread(self.scheduler_wakeup)
+        async_impl.call_from_thread(self.scheduler_wakeup)
 
 
     def can_write(self):
