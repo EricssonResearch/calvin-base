@@ -26,7 +26,6 @@ import tempfile
 import time
 import random
 import shutil
-from calvin.utilities import confsort
 import OpenSSL
 from cryptography.x509 import load_pem_x509_certificate
 from cryptography.hazmat.backends import default_backend
