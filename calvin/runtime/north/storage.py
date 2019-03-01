@@ -106,6 +106,7 @@ class PrivateStorage(object):
             self.storage.set(key=key, value=self.localstorage.get(key), cb=CalvinCB(func=self.set_cb, key=key, org_key=None, org_value=None, org_cb=None, silent=True))
 
         # FIXME: localstorage_sets iterable as a stop-gap measure?
+        # N.B. Must use copy of items here since content may change
         for key, value in self.localstorage.localstore_sets.items():
             if isinstance(key, tuple):
                 self._flush_add_index(key, value['+'])
@@ -193,9 +194,9 @@ class PrivateStorage(object):
         import json
         with tempfile.NamedTemporaryFile(mode='w', prefix="storage", delete=False) as fp:
             fp.write("[")
-            json.dump({str(k): str(v) for k, v in self.localstorage.localstore.items()}, fp)
+            json.dump({str(k): str(v) for k, v in self.localstorage.localstore.iteritems()}, fp)
             fp.write(", ")
-            json.dump({str(k): list(v['+']) for k, v in self.localstorage.localstore_sets.items()}, fp)
+            json.dump({str(k): list(v['+']) for k, v in self.localstorage.localstore_sets.iteritems()}, fp)
             fp.write("]")
             name = fp.name
         return name

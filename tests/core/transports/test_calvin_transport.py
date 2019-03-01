@@ -324,7 +324,7 @@ class TestTransportServer(object):
                     if not mess[0]:
                         for a in mess[1]:
                             print(a, end=' ')
-                        for k,v in mess[2].items():
+                        for k,v in mess[2].iteritems():
                             print("%s = %s" % (k, repr(v)))
                         raise Exception("\n".join(mess[1][11:]))
         except Exception as e:
@@ -414,7 +414,7 @@ class TestTransportClient(object):
                         if not mess[0]:
                             for a in mess[1][11:-1]:
                                 print(a, end=' ')
-                            for k,v in mess[2].items():
+                            for k,v in mess[2].iteritems():
                                 print("%s = %s" % (k, repr(v)))
                             raise Exception("\n".join(mess[1][11:]))
         except Exception as e:
@@ -492,7 +492,7 @@ class TestTransportClient(object):
                         if not mess[0]:
                             for a in mess[1][11:-1]:
                                 print(a, end=' ')
-                            for k,v in mess[2].items():
+                            for k,v in mess[2].iteritems():
                                 print("%s = %s" % (k, repr(v)))
                             raise Exception("\n".join(mess[1][11:]))
         except Exception as e:
@@ -575,7 +575,7 @@ class TestTransportClient(object):
                         if not mess[0]:
                             for a in mess[1][11:-1]:
                                 print(a, end=' ')
-                            for k,v in mess[2].items():
+                            for k,v in mess[2].iteritems():
                                 print("%s = %s" % (k, repr(v)))
                             raise Exception("\n".join(mess[1][11:]))
         except Exception as e:
@@ -657,7 +657,7 @@ class TestTransportClient(object):
                         if not mess[0]:
                             for a in mess[1][11:-1]:
                                 print(a, end=' ')
-                            for k,v in mess[2].items():
+                            for k,v in mess[2].iteritems():
                                 print("%s = %s" % (k, repr(v)))
                             raise Exception("\n".join(mess[1][11:]))
         except Exception as e:

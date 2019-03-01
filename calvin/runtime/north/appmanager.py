@@ -66,7 +66,7 @@ class Application(object):
         return self.actors.keys()
 
     def get_actor_name_map(self, ns):
-        actors = {v: [k] for k, v in self.actors.items() if v is not None}
+        actors = {v: [k] for k, v in self.actors.iteritems() if v is not None}
         # Collect all actors under top component name
         components = {}
         l = (len(ns)+1) if ns else 0
@@ -334,10 +334,10 @@ class AppManager(object):
         if any([s is None for s in application._destroy_node_ids.itervalues()]):
             return
         # Done
-        for replication_id, replica_ids in application._replicas_actor_final.items():
+        for replication_id, replica_ids in application._replicas_actor_final.iteritems():
             for replica_id in replica_ids:
                 self._node.storage.remove_replica(replication_id, replica_id)
-        for replication_id, replica_node_ids in application._replicas_node_final.items():
+        for replication_id, replica_node_ids in application._replicas_node_final.iteritems():
             for replica_node_id in replica_node_ids:
                 self._node.storage.remove_replica_node_force(replication_id, replica_node_id)
         if all(application._destroy_node_ids.values()):
@@ -453,7 +453,7 @@ class AppManager(object):
             # At least one actor have no required placement
             # Let them stay on this node
             app.actor_placement = {actor_id: set([self._node.id]) if placement is None else placement
-                                     for actor_id, placement in app.actor_placement.items()}
+                                     for actor_id, placement in app.actor_placement.iteritems()}
             # Status will indicate success, but be different than the normal OK code
             status = response.CalvinResponse(response.CREATED)
             _log.analyze(self._node.id, "+ MISS PLACEMENT", {'app_id': app.id, 'placement': app.actor_placement}, tb=True)

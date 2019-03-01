@@ -65,7 +65,7 @@ def get_frameworks():
 if _FW_PATH not in _FW_MODULES:
     raise Exception("No framework '%s' with that name, avalible ones are '%s'" % (_FW_PATH, _FW_MODULES))
 
-for module, _classes in _MODULES.items():
+for module, _classes in _MODULES.iteritems():
     module_obj = __import__("%s.%s" % (_FW_PATH, module), globals=globals(), fromlist=[''])
     globals()[module] = module_obj
     __all__.append(module_obj)

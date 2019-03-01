@@ -266,8 +266,8 @@ class LocalRegistry(StorageBase):
     
     def dump(self):
         data = [ 
-            {str(k): v for k, v in self.localstore.items()},
-            {str(k): list(v['+']) for k, v in self.localstore_sets.items()}
+            {str(k): v for k, v in self.localstore.iteritems()},
+            {str(k): list(v['+']) for k, v in self.localstore_sets.iteritems()}
         ]
         return data   
             
@@ -306,7 +306,7 @@ class LocalRegistry(StorageBase):
         key = tuple(indexes)    
         # Collect a value set from all key-indexes that include the indexes, always compairing full index levels
         local_values = set(itertools.chain(
-            *(v['+'] for k, v in self.localstore_sets.items()
+            *(v['+'] for k, v in self.localstore_sets.iteritems()
                 if all(map(lambda x, y: False if x is None else True if y is None else x==y, k, key)))))
         return local_values       
             

@@ -48,7 +48,7 @@ class FanoutBase(object):
     def _state(self):
         state = {
             'queuetype': self._type,
-            'fifo': {p: [t.encode() for t in tokens] for p, tokens in self.fifo.items()},
+            'fifo': {p: [t.encode() for t in tokens] for p, tokens in self.fifo.iteritems()},
             'N': self.N,
             'readers': self.readers,
             'write_pos': self.write_pos,
@@ -59,7 +59,7 @@ class FanoutBase(object):
 
     def _set_state(self, state):
         self._type = state.get('queuetype')
-        self.fifo = {p: [Token.decode(t) for t in tokens] for p, tokens in state['fifo'].items()}
+        self.fifo = {p: [Token.decode(t) for t in tokens] for p, tokens in state['fifo'].iteritems()}
         self.N = state['N']
         self.readers = state['readers']
         self.write_pos = state['write_pos']

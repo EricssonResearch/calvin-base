@@ -669,4 +669,4 @@ class CalvinNetwork(object):
         return list(self._links.keys())
 
     def list_direct_links(self):
-        return [peer_id for peer_id, l in self._links.items() if isinstance(l, CalvinLink)]
+        return [peer_id for peer_id, l in self._links.iteritems() if isinstance(l, CalvinLink)]

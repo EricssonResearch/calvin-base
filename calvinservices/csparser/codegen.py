@@ -313,7 +313,7 @@ class CollectPortProperties(Visitor):
         # FIXME: Actor argument shouldn't matter, since it will be taken from the port after flattening the tree,
         #        but it setting it a generic string causes errors. Need to find out why.
         port_property = ast.PortProperty(actor=actor, port=port, direction=direction, debug_info=node.debug_info)
-        for ident, value in properties.items():
+        for ident, value in properties.iteritems():
             prop = ast.NamedArg(ident=ast.Id(ident=ident), arg=ast.Value(value=value))
             port_property.add_child(prop)
         destination_port.add_child(port_property)

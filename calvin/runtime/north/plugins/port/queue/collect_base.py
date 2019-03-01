@@ -60,7 +60,7 @@ class CollectBase(object):
     def _state(self):
         state = {
             'queuetype': self._type,
-            'fifo': {p: [t.encode() for t in tokens] for p, tokens in self.fifo.items()},
+            'fifo': {p: [t.encode() for t in tokens] for p, tokens in self.fifo.iteritems()},
             'N': self.N,
             'writers': self.writers,
             'write_pos': self.write_pos,
@@ -73,7 +73,7 @@ class CollectBase(object):
 
     def _set_state(self, state):
         self._type = state.get('queuetype')
-        self.fifo = {p: [Token.decode(t) for t in tokens] for p, tokens in state['fifo'].items()}
+        self.fifo = {p: [Token.decode(t) for t in tokens] for p, tokens in state['fifo'].iteritems()}
         self.N = state['N']
         self.writers = state['writers']
         self.write_pos = state['write_pos']
@@ -161,7 +161,7 @@ class CollectBase(object):
             self.exhausted_tokens, self.writers))
         # Extend lists of current exhaust tokens, not replace (with likely empty list).
         # This is useful when a disconnect happens from both directions or other reasons
-        self.exhausted_tokens.update({k: self.exhausted_tokens.get(k, []) + v   for k, v in tokens.items()})
+        self.exhausted_tokens.update({k: self.exhausted_tokens.get(k, []) + v   for k, v in tokens.iteritems()})
         for peer_id in tokens:
             self.termination[peer_id] = (self.termination[peer_id][0], True)
         remove = []

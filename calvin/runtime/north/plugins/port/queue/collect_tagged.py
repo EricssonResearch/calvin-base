@@ -58,4 +58,4 @@ class CollectTagged(CollectUnordered):
         if not set(mapping.values()) == set(self.writers):
             print(mapping, self.writers)
             raise Exception("Illegal port mapping dictionary")
-        self.tags = { v: k for k,v in mapping.items() }
+        self.tags = { v: k for k,v in mapping.iteritems() }

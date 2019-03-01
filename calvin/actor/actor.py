@@ -354,8 +354,8 @@ class Actor(object):
         self._exhaust_cb = None
         self._pressure_event = 0  # Time of last pressure event time (not in state only local)
 
-        self.inports = {p: actorport.InPort(p, self, pp) for p, pp in self.inport_properties.items()}
-        self.outports = {p: actorport.OutPort(p, self, pp) for p, pp in self.outport_properties.items()}
+        self.inports = {p: actorport.InPort(p, self, pp) for p, pp in self.inport_properties.iteritems()}
+        self.outports = {p: actorport.OutPort(p, self, pp) for p, pp in self.outport_properties.iteritems()}
 
         hooks = {
             (Actor.STATUS.PENDING, Actor.STATUS.ENABLED): self._will_start,

@@ -354,7 +354,7 @@ class AttributeResolver(object):
 
     def set_indexed_public(self, attributes):
         attr = {}
-        for attr_type, attribute in attributes.items():
+        for attr_type, attribute in attributes.iteritems():
             attr[attr_type] = attr_resolver[attr_type](attribute)
         self.attr["indexed_public"] = attr
 
@@ -412,7 +412,7 @@ class AttributeResolver(object):
 
     def get_indexed_public(self, as_list=False):
         # Return all indexes encoded for storage as a list of lists
-        return [AttributeResolverHelper.encode_index([AttributeResolverHelper._to_unicode(k)] + v, as_list=as_list) for k, v in self.attr["indexed_public"].items()]
+        return [AttributeResolverHelper.encode_index([AttributeResolverHelper._to_unicode(k)] + v, as_list=as_list) for k, v in self.attr["indexed_public"].iteritems()]
 
     def get_node_name_as_str(self):
         """

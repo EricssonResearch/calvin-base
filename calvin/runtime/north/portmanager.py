@@ -60,7 +60,7 @@ class PortManager(object):
             try:
                 port = self._get_local_port(actor_id=actor_id, port_name=p['port'], port_dir=p['direction'],
                                             port_id=None)
-                for port_property, value in p['properties'].items():
+                for port_property, value in p['properties'].iteritems():
                     success.append(self._set_port_property(port, port_property, value))
             except:
                 success.append(False)
@@ -72,7 +72,7 @@ class PortManager(object):
         _log.analyze(self.node.id, "+", port_properties)
         port = self._get_local_port(actor_id=actor_id, port_name=port_name, port_dir=port_dir, port_id=port_id)
         success = []
-        for port_property, value in port_properties.items():
+        for port_property, value in port_properties.iteritems():
             success.append(self._set_port_property(port, port_property, value))
         ok = all(success)
         return response.CalvinResponse(True) if ok else response.CalvinResponse(response.BAD_REQUEST)

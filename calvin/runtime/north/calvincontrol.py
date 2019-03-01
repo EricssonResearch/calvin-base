@@ -117,6 +117,7 @@ class CalvinControl(object):
             addr, conn = self.server.accept()
             self.connections[addr] = conn
 
+        # N.B. Must use copy of connections.items here
         for handle, connection in self.connections.items():
             if connection.data_available:
                 command, headers, data = connection.data_get()
@@ -243,7 +244,7 @@ class CalvinControlTunnelServer(object):
         self.node.proto.register_tunnel_handler("control", CalvinCB(self.tunnel_request_handles))
 
     def stop(self):
-        for _, control in self.controltunnels.items():
+        for _, control in self.controltunnels.iteritems():
             control.close()
 
     def tunnel_request_handles(self, tunnel):
@@ -317,7 +318,7 @@ class CalvinControlTunnel(object):
             self.connections[msg_id] = conn
             _log.debug("New connection msg_id: %s" % msg_id)
 
-        for msg_id, connection in self.connections.items():
+        for msg_id, connection in self.connections.iteritems():
             if connection.data_available:
                 command, headers, data = connection.data_get()
                 _log.debug("CalvinControlTunnel handle_request msg_id: %s command: %s" % (msg_id, command))

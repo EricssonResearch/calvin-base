@@ -52,6 +52,6 @@ def test_simple(system_setup, control_api):
     assert indexed_db["(u'supernode', u'0', u'1')"] == [server_id]
 
     assert all([set(value) == set([server_id, client_id]) 
-        for key, value in indexed_db.items() 
+        for key, value in indexed_db.iteritems() 
             if not key.startswith("(u'supernode',") 
                 and not key.startswith("(u'node/attribute', u'node_name'")])
