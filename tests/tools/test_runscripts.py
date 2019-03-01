@@ -49,7 +49,7 @@ def test_store(system_setup, execute_cmd_check_output):
 @pytest.mark.parametrize('script', ['capture_output'])
 def test_cscontrol_compile_deploy_delete_cycle(system_setup, execute_cmd_check_output, file_dir, working_dir, script):
     uri = system_setup['runtime']['uri']
-    src_path = os.path.join(file_dir, "tests/needs_update/scripts", script) + ".calvin"
+    src_path = os.path.join(file_dir, "tests/scripts", script) + ".calvin"
     deployable_path = os.path.join(working_dir, script) + ".json"
     assert '' == execute_cmd_check_output(("cscompile", "--output", deployable_path, src_path))
     out = execute_cmd_check_output("cscontrol {} deploy {}".format(uri, deployable_path))

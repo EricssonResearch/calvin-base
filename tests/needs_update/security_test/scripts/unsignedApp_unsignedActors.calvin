@@ -1,6 +1,0 @@
-src : std.CountTimerUnsigned()
-sum : std.SumUnsigned()
-snk : test.Sink(store_tokens=true, quiet=1, active=true)
-
-src.integer > sum.integer
-sum.integer > snk.token
