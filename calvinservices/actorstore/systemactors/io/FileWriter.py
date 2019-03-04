@@ -92,12 +92,12 @@ class FileWriter(Actor):
     action_priority = (writef,)
     
 
-    test_kwargs = {'basename': 'test', 'suffix':''}
-    test_calvinsys = {
-        'io.filewriter': {'write': ['the quick brown fox jumped over the lazy dog']},
-    }
-    test_set = [
-        {
-            'inports': {'data': ['the quick brown fox jumped over the lazy dog']}
-        }
-    ]
+    # test_kwargs = {'basename': 'test', 'suffix':''}
+    # test_calvinsys = {
+    #     'io.filewriter': {'write': ['the quick brown fox jumped over the lazy dog']},
+    # }
+    # test_set = [
+    #     {
+    #         'inports': {'data': ['the quick brown fox jumped over the lazy dog']}
+    #     }
+    # ]
