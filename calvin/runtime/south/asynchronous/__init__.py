@@ -19,10 +19,33 @@
 
 """
 
+# FIXME: Here we actually need to be able to switch between twisted and asyncio,
+#        at least while testing until the asyncio version is feature complete. 
+
 import os
 
 from calvin.utilities import calvinconfig
 
+from .twistedimpl import asynchronous
+from .twistedimpl.asynchronous import DelayedCall
+from .twistedimpl.asynchronous import run_ioloop
+from .twistedimpl.asynchronous import stop_ioloop
+
+from .twistedimpl import server_connection
+from .twistedimpl.server_connection import ServerProtocolFactory
+from .twistedimpl.server_connection import LineProtocol
+from .twistedimpl.server_connection import RawDataProtocol
+
+from .twistedimpl.pipe import Pipe
+
+from .twistedimpl import client_connection
+from .twistedimpl.client_connection import TCPClientProtocolFactory
+from .twistedimpl.client_connection import UDPClientProtocolFactory
+
+from .twistedimpl.http_client import HTTPClient
+
+from .twistedimpl import sse_event_source 
+from .twistedimpl.sse_event_source import EventSource
 
 # Spec
 _MODULES = {'asynchronous': ['DelayedCall', 'run_ioloop', 'stop_ioloop'],
@@ -32,7 +55,7 @@ _MODULES = {'asynchronous': ['DelayedCall', 'run_ioloop', 'stop_ioloop'],
             'threads': [],
             'server_connection': ['ServerProtocolFactory', 'LineProtocol', 'RawDataProtocol'],
             'sse_event_source': ['EventSource'],
-            'client_connection': ['ClientProtocolFactory'],
+            'client_connection': ['TCPClientProtocolFactory', 'UDPClientProtocolFactory'],
             'http_client': ['HTTPClient']}
 
 _FW_MODULES = []
@@ -49,23 +72,16 @@ _CONF = calvinconfig.get()
 _FW_PATH = _CONF.get(None, 'framework')
 
 
+# Unused
 def get_framework():
     """
         Get the framework used on the runtime
     """
     return _FW_PATH
 
-
+# Used by test_frameworks
 def get_frameworks():
     """
         Get all frameworks in the system
     """
     return _FW_MODULES
-
-if _FW_PATH not in _FW_MODULES:
-    raise Exception("No framework '%s' with that name, avalible ones are '%s'" % (_FW_PATH, _FW_MODULES))
-
-for module, _classes in _MODULES.items():
-    module_obj = __import__("%s.%s" % (_FW_PATH, module), globals=globals(), fromlist=[''])
-    globals()[module] = module_obj
-    __all__.append(module_obj)

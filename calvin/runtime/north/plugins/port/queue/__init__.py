@@ -14,26 +14,36 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Queues
-_MODULES = {'fanout_fifo': 'FanoutFIFO',
-            'collect_unordered': 'CollectUnordered',
-            'collect_tagged': "CollectTagged",
-            'collect_synced': 'CollectSynced',
-            'collect_any': 'CollectAny',
-            'fanout_ordered_fifo': 'FanoutOrderedFIFO',
-            'fanout_round_robin_fifo': "FanoutRoundRobinFIFO",
-            'fanout_random_fifo': "FanoutRandomFIFO",
-            'fanout_balanced_fifo': "FanoutBalancedFIFO",
-            'fanout_mapped_fifo': 'FanoutMappedFIFO'}
-
 from calvin.utilities.calvinlogger import get_logger
 
 _log = get_logger(__name__)
 
+from .fanout_fifo import FanoutFIFO
+from .collect_unordered import CollectUnordered
+from .collect_tagged import CollectTagged
+from .collect_synced import CollectSynced
+from .collect_any import CollectAny
+from .fanout_ordered_fifo import FanoutOrderedFIFO
+from .fanout_round_robin_fifo import FanoutRoundRobinFIFO
+from .fanout_random_fifo import FanoutRandomFIFO
+from .fanout_balanced_fifo import FanoutBalancedFIFO
+from .fanout_mapped_fifo import FanoutMappedFIFO
 
-for module in _MODULES:
-    module_obj = __import__(module, globals=globals())
-    globals()[module] = module_obj
+
+# FIXME: Move the below code out of the __init__ module
+
+# Queues
+_MODULES = {'fanout_fifo': FanoutFIFO,
+            'collect_unordered': CollectUnordered,
+            'collect_tagged': CollectTagged,
+            'collect_synced': CollectSynced,
+            'collect_any': CollectAny,
+            'fanout_ordered_fifo': FanoutOrderedFIFO,
+            'fanout_round_robin_fifo': FanoutRoundRobinFIFO,
+            'fanout_random_fifo': FanoutRandomFIFO,
+            'fanout_balanced_fifo': FanoutBalancedFIFO,
+            'fanout_mapped_fifo': FanoutMappedFIFO}
+
 
 def get(port, peer_port=None, peer_port_meta=None):
     #TODO implement more logic based on port and peer port properties
@@ -64,7 +74,7 @@ def get(port, peer_port=None, peer_port_meta=None):
         else:
             selected_queue = "fanout_fifo"
     try:
-        class_ = getattr(globals()[selected_queue], _MODULES[selected_queue])
+        class_ = _MODULES[selected_queue]
         peer_port_properties = {}
         if peer_port is not None:
             peer_port_properties = peer_port.properties

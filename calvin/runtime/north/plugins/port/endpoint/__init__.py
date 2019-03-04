@@ -14,16 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.runtime.north.plugins.port.endpoint.common import Endpoint
 
-# Endpoint methods
-_MODULES = {'local': ['LocalInEndpoint', 'LocalOutEndpoint'],
-            'tunnel':  ['TunnelInEndpoint', 'TunnelOutEndpoint']}
-from calvin.utilities.calvinlogger import get_logger
-_log = get_logger(__name__)
-
-
-for module, classes in _MODULES.items():
-    module_obj = __import__(module, globals=globals())
-    for class_ in classes:
-        globals()[class_] = getattr(module_obj, class_)
+from .common import Endpoint
+from .local import LocalInEndpoint, LocalOutEndpoint
+from .tunnel import TunnelInEndpoint, TunnelOutEndpoint
