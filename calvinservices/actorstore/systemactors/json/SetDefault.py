@@ -55,24 +55,27 @@ class SetDefault(Actor):
         pass
 
     def _check_type_mismatch(self, container, key):
-        t_cont = type(container)
-        t_key = type(key)
-        mismatch = (t_cont is list and t_key is not int) or (t_cont is dict and not isinstance(key, str))
-        if mismatch:
+        list_mismatch = isinstance(container, list) and not isinstance(key, int)
+        dict_mismatch = isinstance(container, dict) and not isinstance(key, str)
+        if list_mismatch or dict_mismatch:
             raise Exception()
 
     def _set_default(self, container, key, value):
-        keylist = key if type(key) is list else [key]
+        keylist = key if isinstance(key, list) else [key]
         try:
             res = container
             for key in keylist[:-1]:
                 self._check_type_mismatch(res, key)
                 res = res[key]
             self._check_type_mismatch(res, keylist[-1])
-            if keylist[-1] not in res:
-                res[keylist[-1]] = value
         except:
             container = ExceptionToken()
+        else:
+            if isinstance(res, dict):
+                if keylist[-1] not in res:
+                    res[keylist[-1]] = value
+            else:
+                container = ExceptionToken()
         return container
 
     @condition(['container', 'key', 'value'], ['container'])
