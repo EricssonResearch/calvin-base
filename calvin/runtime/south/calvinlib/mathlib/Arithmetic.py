@@ -80,7 +80,7 @@ class Arithmetic(base_calvinlib_object.BaseCalvinlibObject):
                 '+': operator.add,
                 '-': operator.sub,
                 '*': operator.mul,
-                '/': operator.div,
+                '/': operator.truediv,
                 'div': operator.floordiv,
                 'mod': operator.mod,
             }[op]
