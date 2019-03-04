@@ -44,7 +44,7 @@ def test1():
     verify_data(['3', '4'], [f.peek('p1.id') for _ in range(2)])
 
     with pytest.raises(queue.common.QueueEmpty):
-		f.peek('p1.id')
+        f.peek('p1.id')
 
     f.commit('p1.id')
 
@@ -67,7 +67,7 @@ def test2():
 
     # Ensure fifo is empty
     with pytest.raises(queue.common.QueueEmpty):
-		f.peek("r1")
+        f.peek("r1")
     assert f.tokens_available(0, "r1")
     assert f.tokens_available(0, "r2")
 
@@ -82,7 +82,7 @@ def test2():
 
     assert [True] * 3 == [f.write(Token(t), None) for t in ['2', '3', '4']]
     with pytest.raises(queue.common.QueueFull):
-		f.write(Token('5'), None)
+        f.write(Token('5'), None)
     verify_data(['2', '3', '4'], [f.peek('r1') for _ in range(3)])
     f.commit("r1")
 
@@ -101,7 +101,7 @@ def test2():
 
     assert not f.tokens_available(1, "r2")
     with pytest.raises(queue.common.QueueEmpty):
-		f.peek("r2")
+        f.peek("r2")
     assert f.tokens_available(1, "r1")
     verify_data(['5'], [f.peek("r1")])
 
@@ -115,9 +115,9 @@ def test2():
     assert [f.peek("r1") for _ in range(3)] 
     assert [f.peek("r2") for _ in range(3)]
     with pytest.raises(queue.common.QueueEmpty):
-		f.peek("r1")
+        f.peek("r1")
     with pytest.raises(queue.common.QueueEmpty):
-		f.peek("r2")
+        f.peek("r2")
 
 def test3():
     """Testing commit reads"""
@@ -131,13 +131,13 @@ def test3():
     # Fails, fifo full
     assert not f.slots_available(1, None)
     with pytest.raises(queue.common.QueueFull):
-		f.write(Token('5'), None)
+        f.write(Token('5'), None)
 
     # Tentative, fifo still full
     verify_data(['1'], [f.peek("r1")])
     assert not f.slots_available(1, None)
     with pytest.raises(queue.common.QueueFull):
-		f.write(Token('5'), None)
+        f.write(Token('5'), None)
 
     # commit previous reads, fifo 1 pos free
     f.commit('r1')
@@ -146,7 +146,7 @@ def test3():
     # fifo full again
     assert not f.slots_available(1, None)
     with pytest.raises(queue.common.QueueFull):
-		f.write(Token('5'), None)
+        f.write(Token('5'), None)
 
 def test4():
     """Testing rollback reads"""
@@ -160,7 +160,7 @@ def test4():
     # fifo full
     assert not f.slots_available(1, None)
     with pytest.raises(queue.common.QueueFull):
-		f.write(Token('5'), None)
+        f.write(Token('5'), None)
 
     # tentative reads
     verify_data(['1', '2', '3', '4'], [f.peek("r1")
@@ -172,7 +172,7 @@ def test4():
     f.cancel("r1")
     assert not f.slots_available(1, None)
     with pytest.raises(queue.common.QueueFull):
-		f.write(Token('5'), None)
+        f.write(Token('5'), None)
     assert f.tokens_available(4, "r1")
 
     # re-read
@@ -185,7 +185,7 @@ def test4():
     assert f.write(Token('a'), None)
     assert not f.slots_available(1, None)
     with pytest.raises(queue.common.QueueFull):
-		f.write(Token('b'), None)
+        f.write(Token('b'), None)
 
 def test_round_robin_queue_1():
     """Round-Robin scheduled queue test"""
@@ -196,9 +196,9 @@ def test_round_robin_queue_1():
 
     # Ensure fifo is empty
     with pytest.raises(queue.common.QueueEmpty):
-		f.peek("r1")
+        f.peek("r1")
     with pytest.raises(queue.common.QueueEmpty):
-		f.peek("r2")
+        f.peek("r2")
     assert not f.tokens_available(1, "r1")
     assert not f.tokens_available(1, "r2")
 
@@ -242,7 +242,7 @@ def test_round_robin_queue_1():
     assert f.write(Token('6'), None)
     assert not f.tokens_available(1, "r1")
     with pytest.raises(queue.common.QueueEmpty):
-		f.peek("r1")
+        f.peek("r1")
     assert f.tokens_available(1, "r2")
     verify_data(['6'], [f.peek("r2")])
 
@@ -257,9 +257,9 @@ def test_round_robin_queue_1():
     verify_data(['7', '9'], [f.peek("r1") for _ in range(2)])
     verify_data(['8', '10'], [f.peek("r2") for _ in range(2)])
     with pytest.raises(queue.common.QueueEmpty):
-		f.peek("r1")
+        f.peek("r1")
     with pytest.raises(queue.common.QueueEmpty):
-		f.peek("r2")
+        f.peek("r2")
 
 def test_round_robin_queue_2():
     """Round-Robin scheduled queue test"""
@@ -270,9 +270,9 @@ def test_round_robin_queue_2():
 
     # Ensure fifo is empty
     with pytest.raises(queue.common.QueueEmpty):
-		f.peek("r1")
+        f.peek("r1")
     with pytest.raises(queue.common.QueueEmpty):
-		f.peek("r2")
+        f.peek("r2")
     assert not f.tokens_available(1, "r1")
     assert not f.tokens_available(1, "r2")
 
@@ -329,9 +329,9 @@ def test_scheduled_queue_3():
 
     # Ensure fifo is empty
     with pytest.raises(queue.common.QueueEmpty):
-		f.peek("r1")
+        f.peek("r1")
     with pytest.raises(queue.common.QueueEmpty):
-		f.peek("r2")
+        f.peek("r2")
     assert not f.tokens_available(1, "r1")
     assert not f.tokens_available(1, "r2")
 
@@ -370,9 +370,9 @@ def test_random_queue_4():
 
     # Ensure fifo is empty
     with pytest.raises(queue.common.QueueEmpty):
-		f.peek("r1")
+        f.peek("r1")
     with pytest.raises(queue.common.QueueEmpty):
-		f.peek("r2")
+        f.peek("r2")
     assert not f.tokens_available(1, "r1")
     assert not f.tokens_available(1, "r2")
 
