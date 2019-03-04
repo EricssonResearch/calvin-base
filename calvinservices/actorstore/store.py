@@ -139,7 +139,7 @@ class Store(object):
         return None
     
     def get_docs(self, codeobject):
-        return codeobject.co_consts[0]
+        return codeobject.co_consts[1]
     
     def get_startofcode(self, codeobject):
         return codeobject.co_firstlineno - 1        
