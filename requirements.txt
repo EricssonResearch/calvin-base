@@ -1,6 +1,6 @@
 colorlog==2.6.1
 ply==3.8
-Twisted==15.5.0
+Twisted>=18.9.0
 requests>=2.9.1
 infi.traceback==0.3.12
 wrapt==1.10.2
@@ -14,7 +14,7 @@ service-identity==17.0.0
 ndg-httpsclient==0.4.2
 pyasn1>=0.4.2
 pystache==0.5.4
-jsonschema==2.6.0
+jsonschema>=3.0.1
 u-msgpack-python==2.4.1
 cbor==1.0.0
 PyYAML==3.13
