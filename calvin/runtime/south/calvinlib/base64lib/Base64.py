@@ -29,21 +29,19 @@ class Base64(base_calvinlib_object.BaseCalvinlibObject):
     }
     
     encode_schema = {
-        "description": "base64 encode binary string",
-        "type": "string"
-        
+        "description": "return string with base64 encoded bytes-like object",
     }
     
     decode_schema = {
-        "description": "decode base64 encoded string",
-        "type": "string"
+        "description": "return bytes-like object from base64 encoded string",
+        "type": "string",
     }
 
     def init(self):
         pass
         
-    def encode(self, string):
-        return base64.b64encode(string)
+    def encode(self, bytes_like_object):
+        return str(base64.b64encode(bytes_like_object), 'ascii')
 
     def decode(self, b64string):
         return base64.b64decode(b64string)

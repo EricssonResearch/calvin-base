@@ -56,7 +56,7 @@ class ProxyRegistryClient(StorageBase):
         print("master_uri:", self.master_uri)
         o=urlparse(self.master_uri)
         fqdn = socket.getfqdn(o.hostname)
-        self._server_node_name = fqdn.decode('unicode-escape')
+        self._server_node_name = fqdn
         self.node.network.join([self.master_uri],
                                callback=CalvinCB(self._start_link_cb, org_cb=tunnel_up_callback),
                                corresponding_server_node_names=[self._server_node_name])

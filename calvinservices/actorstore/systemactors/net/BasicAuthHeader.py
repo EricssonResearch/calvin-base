@@ -46,7 +46,9 @@ class BasicAuthHeader(Actor):
 
     @condition(['credential'], ['header'])
     def authorization_header(self, credential):
-        auth = "Basic " + self.base64.encode("%s:%s" % (credential['username'], credential['password']))
+        auth_str = "{username}:{password}".format(**credential)
+        b64_auth_str = self.base64.encode(auth_str.encode('utf-8'))
+        auth = "Basic " + b64_auth_str
         header = {'Authorization': auth}
         return (header,)
 

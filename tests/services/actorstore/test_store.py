@@ -67,7 +67,8 @@ def signature_old(desc):
             signature = {'actor_type': str(desc['actor_type']),
                          'inports': sorted([str(i) for i in desc['component'].inports]),
                          'outports': sorted([str(i) for i in desc['component'].outports])}
-    return hashlib.sha256(json.dumps(signature, separators=(',', ':'), sort_keys=True)).hexdigest()
+    data = json.dumps(signature, separators=(',', ':'), sort_keys=True)                     
+    return hashlib.sha256(data.encode('utf-8')).hexdigest()
 
 
 @pytest.mark.parametrize('actor_file', actor_files())

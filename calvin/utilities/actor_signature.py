@@ -25,4 +25,4 @@ def signature(metadata):
         'outports': sorted([str(port['name']) for port in metadata['ports'] if port['direction'] == 'out'])
     }
     data = json.dumps(signature, separators=(',', ':'), sort_keys=True)
-    return hashlib.sha256(data).hexdigest()
+    return hashlib.sha256(data.encode('utf-8')).hexdigest()

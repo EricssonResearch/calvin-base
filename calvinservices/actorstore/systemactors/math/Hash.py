@@ -53,7 +53,7 @@ class Hash(Actor):
     def compute(self, string):
         try:
             alg = self.hash.new(self.algorithm)
-            alg.update(string)
+            alg.update(string.encode('utf-8'))
             res = alg.hexdigest()
         except Exception as e:
             res = ExceptionToken(str(e))

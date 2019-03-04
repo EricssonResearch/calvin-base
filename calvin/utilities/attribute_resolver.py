@@ -170,26 +170,21 @@ class AttributeResolverHelper(object):
     '''Resolves attributes'''
 
     @staticmethod
-    def _to_unicode(value):
-        if isinstance(value, str):
-            return value.decode("UTF-8")
-        elif isinstance(value, str):
-            return value
-        else:
-            return str(value).decode("UTF-8")
+    def _stringify(value):
+        return str(value)
 
     @classmethod
     def owner_resolver(cls, attr):
         if not isinstance(attr, dict):
             raise Exception('Owner attribute must be a dictionary with %s keys.' % owner_keys)
-        resolved = [cls._to_unicode(attr[k]) if k in attr else None for k in owner_keys]
+        resolved = [cls._stringify(attr[k]) if k in attr else None for k in owner_keys]
         return resolved
 
     @classmethod
     def node_name_resolver(cls, attr):
         if not isinstance(attr, dict):
             raise Exception('Node name attribute must be a dictionary with %s keys.' % node_name_keys)
-        resolved = [cls._to_unicode(attr[k]) if k in attr else None for k in node_name_keys]
+        resolved = [cls._stringify(attr[k]) if k in attr else None for k in node_name_keys]
         return resolved
 
     @classmethod
@@ -202,42 +197,42 @@ class AttributeResolverHelper(object):
                 raise Exception("country must be ISO 3166-1 alpha2")
         if "stateOrProvince" in attr and "country" not in attr:
             raise Exception("country required for stateOrProvince, see ISO 3166-2 for proper code")
-        resolved = [cls._to_unicode(attr[k]) if k in attr else None for k in address_keys]
+        resolved = [cls._stringify(attr[k]) if k in attr else None for k in address_keys]
         return resolved
 
     @classmethod
     def cpu_avail_resolver(cls, attr):
         if attr not in cpuAvail_keys:
             raise Exception('CPU availability must be: %s' % cpuAvail_keys)
-        resolved = list(map(cls._to_unicode, cpuAvail_keys[:cpuAvail_keys.index(attr) + 1]))
+        resolved = list(map(cls._stringify, cpuAvail_keys[:cpuAvail_keys.index(attr) + 1]))
         return resolved
 
     @classmethod
     def cpu_total_resolver(cls, attr):
         if attr not in cpuTotal_keys:
             raise Exception('CPU power must be: %s' % cpuTotal_keys)
-        resolved = list(map(cls._to_unicode, cpuTotal_keys[:cpuTotal_keys.index(attr) + 1]))
+        resolved = list(map(cls._stringify, cpuTotal_keys[:cpuTotal_keys.index(attr) + 1]))
         return resolved
 
     @classmethod
     def cpu_affi_resolver(cls, attr):
         if attr not in cpuAffinity_keys:
             raise Exception('CPU affinity must be: %s' % cpuAffinity_keys)
-        resolved = [cls._to_unicode(attr)]
+        resolved = [cls._stringify(attr)]
         return resolved
 
     @classmethod
     def mem_avail_resolver(cls, attr):
         if attr not in memAvail_keys:
             raise Exception('RAM availability must be: %s' % memAvail_keys)
-        resolved = list(map(cls._to_unicode, memAvail_keys[:memAvail_keys.index(attr) + 1]))
+        resolved = list(map(cls._stringify, memAvail_keys[:memAvail_keys.index(attr) + 1]))
         return resolved
 
     @classmethod
     def mem_total_resolver(cls, attr):
         if attr not in memTotal_keys:
             raise Exception('RAM must be: %s' % memTotal_keys)
-        resolved = list(map(cls._to_unicode, memTotal_keys[:memTotal_keys.index(attr) + 1]))
+        resolved = list(map(cls._stringify, memTotal_keys[:memTotal_keys.index(attr) + 1]))
         return resolved
 
     @classmethod
@@ -412,7 +407,7 @@ class AttributeResolver(object):
 
     def get_indexed_public(self, as_list=False):
         # Return all indexes encoded for storage as a list of lists
-        return [AttributeResolverHelper.encode_index([AttributeResolverHelper._to_unicode(k)] + v, as_list=as_list) for k, v in self.attr["indexed_public"].items()]
+        return [AttributeResolverHelper.encode_index([AttributeResolverHelper._stringify(k)] + v, as_list=as_list) for k, v in self.attr["indexed_public"].items()]
 
     def get_node_name_as_str(self):
         """
