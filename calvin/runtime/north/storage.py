@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from __future__ import absolute_import
+
 import re
 
 # from calvin.runtime.north.plugins.storage import storage_factory
@@ -101,13 +101,13 @@ class PrivateStorage(object):
 
         # FIXME: localstorage iterable as a stop-gap measure?
         # N.B. Must use copy of keys here since content may change
-        for key in self.localstorage.localstore.keys():
+        for key in list(self.localstorage.localstore.keys()):
             _log.debug("Flush key %s: " % (key,))
             self.storage.set(key=key, value=self.localstorage.get(key), cb=CalvinCB(func=self.set_cb, key=key, org_key=None, org_value=None, org_cb=None, silent=True))
 
         # FIXME: localstorage_sets iterable as a stop-gap measure?
         # N.B. Must use copy of items here since content may change
-        for key, value in self.localstorage.localstore_sets.items():
+        for key, value in list(self.localstorage.localstore_sets.items()):
             if isinstance(key, tuple):
                 self._flush_add_index(key, value['+'])
                 self._flush_remove_index(key, value['-'])
@@ -194,9 +194,9 @@ class PrivateStorage(object):
         import json
         with tempfile.NamedTemporaryFile(mode='w', prefix="storage", delete=False) as fp:
             fp.write("[")
-            json.dump({str(k): str(v) for k, v in self.localstorage.localstore.iteritems()}, fp)
+            json.dump({str(k): str(v) for k, v in iter(self.localstorage.localstore.items())}, fp)
             fp.write(", ")
-            json.dump({str(k): list(v['+']) for k, v in self.localstorage.localstore_sets.iteritems()}, fp)
+            json.dump({str(k): list(v['+']) for k, v in iter(self.localstorage.localstore_sets.items())}, fp)
             fp.write("]")
             name = fp.name
         return name
@@ -617,14 +617,14 @@ class Storage(PrivateStorage):
             node.super_node_class = 1
         else:
             node.super_node_class = 0
-        self.add_index(['supernode'] + map(str, range(node.super_node_class + 1)), node.id, root_prefix_level=1)
+        self.add_index(['supernode'] + list(map(str, list(range(node.super_node_class + 1)))), node.id, root_prefix_level=1)
 
     def _remove_super_node(self, node):
         if node.super_node_class is not None:
-            self.remove_index(['supernode'] + map(str, range(node.super_node_class + 1)), node.id, root_prefix_level=1)
+            self.remove_index(['supernode'] + list(map(str, list(range(node.super_node_class + 1)))), node.id, root_prefix_level=1)
 
     def get_super_node(self, super_node_class, cb):
-        self.get_index(['supernode'] + map(str, range(super_node_class + 1)), root_prefix_level=1, cb=cb)
+        self.get_index(['supernode'] + list(map(str, list(range(super_node_class + 1)))), root_prefix_level=1, cb=cb)
 
     def _add_node_index(self, node, cb=None):
         indexes = node.attributes.get_indexed_public()
@@ -724,7 +724,7 @@ class Storage(PrivateStorage):
                  value={"name": application.name,
                         "ns": application.ns,
                         # FIXME when all users of the actors field is updated, save the full dict only
-                        "actors": application.actors.keys(),
+                        "actors": list(application.actors.keys()),
                         "actors_name_map": application.actors,
                         "origin_node_id": application.origin_node_id},
                  cb=cb)
@@ -750,13 +750,13 @@ class Storage(PrivateStorage):
         _log.debug("Add actor %s id %s" % (actor, node_id))
         data = {"name": actor.name, "type": actor._type, "node_id": node_id}
         inports = []
-        for p in actor.inports.itervalues():
+        for p in actor.inports.values():
             port = {"id": p.id, "name": p.name}
             inports.append(port)
             self.add_port(p, node_id, actor.id)
         data["inports"] = inports
         outports = []
-        for p in actor.outports.itervalues():
+        for p in actor.outports.values():
             port = {"id": p.id, "name": p.name}
             outports.append(port)
             self.add_port(p, node_id, actor.id)

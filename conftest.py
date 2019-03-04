@@ -46,7 +46,7 @@ def execute_cmd_check_output():
     Usage: e.g. start_process("csdocs io.Print")
     """
     def _execute_cmd(cmd):
-        if isinstance(cmd, basestring):
+        if isinstance(cmd, str):
             cmd = shlex.split(cmd)
         res = subprocess.check_output(cmd)
         return res.strip()

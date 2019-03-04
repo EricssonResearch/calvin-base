@@ -194,7 +194,7 @@ class Node(object):
             peer_node_ids[uri] = (peer_node_id, status)
         if not peers:
             # Get highest status, i.e. any error
-            comb_status = max([s for _, s in peer_node_ids.itervalues()])
+            comb_status = max([s for _, s in peer_node_ids.values()])
             org_cb(peer_node_ids=peer_node_ids, status=comb_status)
 
     def logging_callback(self, preamble=None, *args, **kwargs):
@@ -277,7 +277,7 @@ class Node(object):
             # No actors, we're basically done
             return self.stop()
         actors = []
-        for actor in self.am.actors.itervalues():
+        for actor in self.am.actors.values():
             # Do not delete migrating actors (for now)
             if actor._migrating_to is None:
                 actors.append(actor)
@@ -304,7 +304,7 @@ class Node(object):
         already_migrating = []
         if not self.am.actors:
             return self.stop(callback)
-        for actor in self.am.actors.itervalues():
+        for actor in self.am.actors.values():
             if actor._migrating_to is None:
                 actors.append(actor)
             else:

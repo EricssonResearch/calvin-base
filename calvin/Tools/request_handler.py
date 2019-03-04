@@ -84,7 +84,7 @@ class RequestBase(object):
             _log.error("Incorrectly formated credentials supplied, credentials={}".format(credentials))
             self.credentials=None
 
-    def check_response(self, response, success=range(200, 207), key=None):
+    def check_response(self, response, success=list(range(200, 207)), key=None):
         if isinstance(response, Response):
             if response.status_code in success:
                 if response.status_code == "204":
@@ -156,7 +156,7 @@ class RequestBase(object):
 
         
 def get_runtime(value):
-    if isinstance(value, basestring):
+    if isinstance(value, str):
         return RT(value)
     else:
         return value

@@ -43,9 +43,9 @@ class Stringify(Actor):
         try:
             # Always unicode
             if self.encoding:
-                new_token = unicode(input, self.encoding)
+                new_token = str(input, self.encoding)
             else:
-                new_token = unicode(input)
+                new_token = str(input)
 
             return (new_token, )
         except Exception as exc:

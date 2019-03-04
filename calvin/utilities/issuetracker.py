@@ -1,4 +1,4 @@
-from __future__ import print_function
+
 import sys
 import string
 
@@ -170,7 +170,7 @@ class IssueTracker(object):
                 # This should not fail
                 if not did_warn:
                     sys.stderr.write("Bad format string '{}', using default.\n".format(str(item_format)))
-                    sys.stderr.write("Available keys: {}\n".format(str(combined.keys())))
+                    sys.stderr.write("Available keys: {}\n".format(str(list(combined.keys()))))
                     did_warn = True
                 x = fmt.format(self._default_format, **combined)
 

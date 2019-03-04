@@ -23,7 +23,7 @@ from calvin.utilities.calvinlogger import get_logger
 _log = get_logger(__name__)
 
 
-for module, classes in _MODULES.iteritems():
+for module, classes in _MODULES.items():
     module_obj = __import__(module, globals=globals())
     for class_ in classes:
         globals()[class_] = getattr(module_obj, class_)

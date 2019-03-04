@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from __future__ import print_function
+
 import os
 import json
 from calvin.utilities.calvinlogger import get_logger
@@ -248,7 +248,7 @@ class CalvinConfig(object):
         return default
 
     def sections(self):
-        return self.config.keys()
+        return list(self.config.keys())
 
     def has_section(self, section):
         return section in self.config
@@ -324,7 +324,7 @@ class CalvinConfig(object):
         for section in config:
             _section = section.lower()
             self.add_section(_section)
-            for option, value in config[section].iteritems():
+            for option, value in config[section].items():
                 _option = option.lower()
                 self.set(_section, _option, value)
 
@@ -383,7 +383,7 @@ class CalvinConfig(object):
         if not delta_config:
             return
         for section in delta_config:
-            for option, value in delta_config[section].iteritems():
+            for option, value in delta_config[section].items():
                 if option.lower() == 'comment':
                     continue
                 operation = {
@@ -443,7 +443,7 @@ class CalvinConfig(object):
                 _log.warning("Value {} of environment variable {} is malformed, skipping.".format(repr(value), wildcard))
 
     def save(self, path, skip_arguments=True):
-        json.dump({k: v for k, v in self.config.iteritems() if k != "arguments" or not skip_arguments}, open(path, 'w'))
+        json.dump({k: v for k, v in iter(self.config.items()) if k != "arguments" or not skip_arguments}, open(path, 'w'))
 
     def __str__(self):
         d = {}

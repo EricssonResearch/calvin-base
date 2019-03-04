@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from __future__ import print_function
+
 import pytest
 
 from calvin.runtime.north.plugins.port import queue
@@ -277,7 +277,7 @@ def test_round_robin_queue_2():
     assert not f.tokens_available(1, "r2")
 
     # Fill up
-    assert [True] * 4 == [f.write(Token(t), None) for t in map(lambda x: str(x), range(1,5))]
+    assert [True] * 4 == [f.write(Token(t), None) for t in [str(x) for x in range(1,5)]]
     assert f.tokens_available(2, "r1")
     assert f.tokens_available(2, "r2")
 
@@ -340,7 +340,7 @@ def test_scheduled_queue_3():
 
     for k in range(10):
         # Fill up
-        assert [True] * 4 == [f.write(Token(t), None) for t in map(lambda x: str(x), range(k*4+1,k*4+5))]
+        assert [True] * 4 == [f.write(Token(t), None) for t in [str(x) for x in range(k*4+1,k*4+5)]]
 
         # Empty
         for r in ['r1', 'r2']:
@@ -381,7 +381,7 @@ def test_random_queue_4():
 
     for k in range(10):
         # Fill up
-        assert [True] * 4 == [f.write(Token(t), None) for t in map(lambda x: str(x), range(k*4+1,k*4+5))]
+        assert [True] * 4 == [f.write(Token(t), None) for t in [str(x) for x in range(k*4+1,k*4+5)]]
 
         # Empty
         for r in ['r1', 'r2']:
@@ -423,7 +423,7 @@ def test_collect_unordered1():
     except:
         pass
     print([t.value for t in tokens])
-    assert [t.value for t in tokens] == range(0,10) * 4
+    assert [t.value for t in tokens] == list(range(0,10)) * 4
 
 def test_collect_unordered2():
     f = queue.collect_unordered.CollectUnordered({'routing': 'collect-unordered', 'nbr_peers': 10}, {})

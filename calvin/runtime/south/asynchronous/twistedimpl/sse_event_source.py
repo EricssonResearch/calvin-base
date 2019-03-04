@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from __future__ import print_function
+
 from twisted.web import server, resource
 from twisted.internet import reactor
 import json
@@ -32,7 +32,7 @@ class SimpleSSE(resource.Resource, object):
 
     def responseCallback(self, err, connection):
         try:
-            keylist = [k for k,v in self.connections.iteritems() if v == connection]
+            keylist = [k for k,v in self.connections.items() if v == connection]
             for key in keylist:
                 self.connections.pop(key)
         except Exception as e:
@@ -67,7 +67,7 @@ class SimpleSSE(resource.Resource, object):
             self._send(self.connections[client_id], data)
 
     def broadcast(self, data):
-        for connection in self.connections.itervalues():
+        for connection in self.connections.values():
             self._send(connection, data)
 
 class EventSource(object):

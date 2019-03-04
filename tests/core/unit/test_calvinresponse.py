@@ -22,7 +22,7 @@ pytestmark = pytest.mark.unittest
 
 
 def test_boolean_value():
-    success_list = range(200, 207)
+    success_list = list(range(200, 207))
     for code in RESPONSE_CODES:
         response = CalvinResponse(code)
         if code in success_list:

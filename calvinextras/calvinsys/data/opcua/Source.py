@@ -241,7 +241,7 @@ class Source(base_calvinsys_object.BaseCalvinsysObject):
                 raise FatalException("Server has no namespace %s" % (namespace,))
 
             # Build node-ids for parameters
-            parameters = {"ns={};{}".format(namespace_idx, str(desc["address"])) : str(tag) for tag, desc in paramconfig.items()}
+            parameters = {"ns={};{}".format(namespace_idx, str(desc["address"])) : str(tag) for tag, desc in list(paramconfig.items())}
 
             # collect nodes for all parameters
             try:
@@ -253,14 +253,14 @@ class Source(base_calvinsys_object.BaseCalvinsysObject):
                 # create subscription
                 subscription = client.create_subscription(monitoring_interval, ChangeHandler(notify_change, node_to_tag))
                 # subscribe
-                subscription.subscribe_data_change(node_to_tag.keys())
+                subscription.subscribe_data_change(list(node_to_tag.keys()))
                 # Not all servers support this, will give "BadNodeIdUnknown" during setup
                 # TODO: When is this of interest?
                 # subscription.subscribe_events()
             except Exception as e:
                 raise FatalException("Failed to setup subscription %s" % (e,))
 
-            return client, parameters.keys()[0], subscription
+            return client, list(parameters.keys())[0], subscription
 
         def connect_and_subscribe():
             if self.client:

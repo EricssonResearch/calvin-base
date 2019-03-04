@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from __future__ import print_function
+
 import pytest
 
 from calvin.runtime.north.replicationmanager import ReplicationData, ReplicationManager
@@ -24,9 +24,9 @@ from calvin.runtime.north.replicationmanager import ReplicationData, Replication
 def replication_manager(dummy_node):
     rm = ReplicationManager(dummy_node)
     rm.managed_replications = {"RM1": ReplicationData(), "RM2":ReplicationData()}
-    for rid, r in rm.managed_replications.items():
+    for rid, r in list(rm.managed_replications.items()):
         r.id = rid
-        r.peer_replication_ids = rm.managed_replications.keys()
+        r.peer_replication_ids = list(rm.managed_replications.keys())
         r.peer_replication_ids.remove(rid)
     # Make both rm ids local
     rm.leaders_cache = {"RM1": rm.node.id, "RM2": rm.node.id}

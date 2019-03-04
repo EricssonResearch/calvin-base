@@ -55,18 +55,18 @@ def signature_old(desc):
         generates a signature string
     """
     if 'is_primitive' not in desc or desc['is_primitive']:
-        signature = {u'actor_type': unicode(desc['actor_type']),
-                     u'inports': sorted([unicode(i) for i in desc['inports']]),
-                     u'outports': sorted([unicode(i) for i in desc['outports']])}
+        signature = {'actor_type': str(desc['actor_type']),
+                     'inports': sorted([str(i) for i in desc['inports']]),
+                     'outports': sorted([str(i) for i in desc['outports']])}
     else:
         if type(desc['component']) is dict:
-            signature = {u'actor_type': unicode(desc['actor_type']),
-                         u'inports': sorted([unicode(i) for i in desc['component']['inports']]),
-                         u'outports': sorted([unicode(i) for i in desc['component']['outports']])}
+            signature = {'actor_type': str(desc['actor_type']),
+                         'inports': sorted([str(i) for i in desc['component']['inports']]),
+                         'outports': sorted([str(i) for i in desc['component']['outports']])}
         else:
-            signature = {u'actor_type': unicode(desc['actor_type']),
-                         u'inports': sorted([unicode(i) for i in desc['component'].inports]),
-                         u'outports': sorted([unicode(i) for i in desc['component'].outports])}
+            signature = {'actor_type': str(desc['actor_type']),
+                         'inports': sorted([str(i) for i in desc['component'].inports]),
+                         'outports': sorted([str(i) for i in desc['component'].outports])}
     return hashlib.sha256(json.dumps(signature, separators=(',', ':'), sort_keys=True)).hexdigest()
 
 

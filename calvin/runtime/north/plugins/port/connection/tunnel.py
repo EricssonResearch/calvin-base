@@ -51,7 +51,7 @@ class TunnelConnection(BaseConnection):
             return
         tunnel = None
         self.peer_port_meta.retries = 0
-        if self.peer_port_meta.node_id not in self.token_tunnel.tunnels.iterkeys():
+        if self.peer_port_meta.node_id not in iter(self.token_tunnel.tunnels.keys()):
             # No tunnel to peer, get one first
             _log.analyze(self.node.id, "+ GET TUNNEL", self.peer_port_meta, peer_node_id=self.peer_port_meta.node_id)
             tunnel = self.node.proto.tunnel_new(self.peer_port_meta.node_id, 'token', {})
@@ -242,19 +242,19 @@ class TunnelConnection(BaseConnection):
         self.port.exhausted_tokens(remaining_tokens)
         if terminate:
             self.node.storage.add_port(self.port, self.node.id, self.port.owner.id,
-                                        exhausting_peers=remaining_tokens.keys())
+                                        exhausting_peers=list(remaining_tokens.keys()))
         if not getattr(self, 'sent_callback', False) and not self._parallel_connections:
             # Last peer connection we should send OK
             if self.callback:
                 self.callback(status=response.CalvinResponse(True), port_id=self.port.id)
 
     def _serialize_remaining_tokens(self, remaining_tokens):
-        for peer_id, tokens in remaining_tokens.items():
+        for peer_id, tokens in list(remaining_tokens.items()):
             for token in tokens:
                 token[1] = token[1].encode()
 
     def _deserialize_remaining_tokens(self, remaining_tokens):
-        for peer_id, tokens in remaining_tokens.items():
+        for peer_id, tokens in list(remaining_tokens.items()):
             for token in tokens:
                 token[1] = Token.decode(token[1])
 
@@ -266,7 +266,7 @@ class TunnelConnection(BaseConnection):
         self.port.exhausted_tokens(peer_remaining_tokens)
         if terminate:
             self.node.storage.add_port(self.port, self.node.id, self.port.owner.id,
-                                        exhausting_peers=peer_remaining_tokens.keys())
+                                        exhausting_peers=list(peer_remaining_tokens.keys()))
         self._serialize_remaining_tokens(remaining_tokens)
         return response.CalvinResponse(True, {'remaining_tokens': remaining_tokens})
 

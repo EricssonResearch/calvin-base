@@ -426,7 +426,7 @@ class PolicyDecisionPoint(object):
 
         # Check each function argument
         for index, arg in enumerate(args):
-            if isinstance(arg, basestring):
+            if isinstance(arg, str):
                 if arg.startswith("attr"):
                     # Get value from request if the argument starts with "attr".
                     path = arg.split(":")
@@ -469,7 +469,7 @@ class PolicyDecisionPoint(object):
     def _to_string(self, value):
         if isinstance(value, str):
             return value.decode("UTF-8")
-        elif isinstance(value, unicode):
+        elif isinstance(value, str):
             return value
         else:
             return str(value).decode("UTF-8")

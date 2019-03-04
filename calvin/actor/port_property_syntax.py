@@ -1,4 +1,4 @@
-from __future__ import print_function
+
 port_property_data = {
     'name': {
         'doc': """Calvin-base supported port properties""",
@@ -234,7 +234,7 @@ def list_port_property_capabilities(which="runtime.base.1"):
     data = port_property_sets[which]
     property_capabilities = []
     # list all of the details as well as the collective name of the properties
-    for propertyname, value in data.iteritems():
+    for propertyname, value in data.items():
         if value['capability_type'] == "ignore":
             continue
         if value['capability_type'] == "category":
@@ -251,7 +251,7 @@ def list_port_property_capabilities(which="runtime.base.1"):
 
 def get_port_property_capabilities(properties):
     property_capabilities = set([])
-    for key, values in properties.iteritems():
+    for key, values in properties.items():
         if isinstance(values, (list, tuple)):
             value = values[0]
         else:
@@ -273,7 +273,7 @@ def get_port_property_capabilities(properties):
 
 def get_port_property_runtime(properties, prepend=True):
     runtimes = []
-    for rt, ppdata in port_property_sets.iteritems():
+    for rt, ppdata in port_property_sets.items():
         if rt == "all":
             continue
         available = set(list_port_property_capabilities(which=rt))
@@ -297,7 +297,7 @@ def generate_doc():
     p = "# Port Properties \n"
     p += """This page list the port properties that can be specified in a Calvinscript.\n"""
     s = ""
-    for pp, value in port_property_sets['all'].iteritems():
+    for pp, value in port_property_sets['all'].items():
         if not value["user-level"]:
             continue
         p += "* `" + pp + "`\n"
@@ -310,7 +310,7 @@ def generate_doc():
         s += "\n"
         if value.get("type", "unknown") != "category":
             continue
-        for name, data in value.get("values", {}).iteritems():
+        for name, data in value.get("values", {}).items():
             s += "* `\"" + name + "\"`: " + data.get("doc", "") + " "
             s += generate_port_dir_doc("argument", data.get("direction", "unknown")) + "\n"
     return p + "\n" + s

@@ -171,7 +171,7 @@ class ReqMatch(object):
                 # Replace Infinte Element with all known real ids
                 if any([isinstance(node_id, dynops.InfiniteElement) for node_id in self.possible_placements]):
                     try:
-                        replace_ids = self.node.network._links.keys() + [self.node.id]
+                        replace_ids = list(self.node.network._links.keys()) + [self.node.id]
                     except:
                         replace_ids = [self.node.id]
                     self.possible_placements = set(replace_ids)

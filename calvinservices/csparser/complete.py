@@ -173,7 +173,7 @@ class Completion(object):
 
     def _complete_module(self, matched):
         partial = matched.group(1) or ''
-        modules = self.metadata.keys()
+        modules = list(self.metadata.keys())
         s, c = self._filter_partial(modules, partial)
         return self.wrap_result(s, c, 'module', postamble='.')
 

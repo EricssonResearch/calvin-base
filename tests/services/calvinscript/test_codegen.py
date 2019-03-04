@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from __future__ import print_function
+
 import os
 import json
 import glob
@@ -51,23 +51,23 @@ def codegen(testname):
     ref_code = _read_file(ref_file)
     # print "ref_code", type(ref_code)
     ref_code = json.loads(ref_code)
-    ref_code.setdefault(u'valid', True)
+    ref_code.setdefault('valid', True)
     
     ref_file = _filepath(testname, "deployjson")
     ref_deploy = _read_file(ref_file)
     # print "ref_code", type(ref_code)
     ref_deploy = json.loads(ref_deploy)
-    ref_deploy.setdefault(u'valid', True)
+    ref_deploy.setdefault('valid', True)
     
-    ref_code = {u'app_info':ref_code, u'deploy_info':ref_deploy}
-    ref_code.setdefault(u'app_info_signature', None)
+    ref_code = {'app_info':ref_code, 'deploy_info':ref_deploy}
+    ref_code.setdefault('app_info_signature', None)
 
     return code, it, ref_code
 
 
 # Since the ds contains nested lists we cannot simply use == to check for equality
 def compare(dut, ref):
-    if isinstance(ref, basestring):
+    if isinstance(ref, str):
         # print "basestring"
         # print "Comparing {} and {}".format(dut, ref)
         assert dut == ref
@@ -82,7 +82,7 @@ def compare(dut, ref):
         # print "iterable"
         # print "Comparing {} and {}".format(dut, ref)
         assert len(dut) == len(ref)
-        pairs = zip(dut, ref)
+        pairs = list(zip(dut, ref))
         for pair in pairs:
             compare(*pair)
     else:
@@ -93,7 +93,7 @@ def compare(dut, ref):
 # See https://stackoverflow.com/a/25851972
 def ordered(obj):
     if isinstance(obj, dict):
-        return sorted((k, ordered(v)) for k, v in obj.items())
+        return sorted((k, ordered(v)) for k, v in list(obj.items()))
     if isinstance(obj, list):
         return sorted(ordered(x) for x in obj)
     else:

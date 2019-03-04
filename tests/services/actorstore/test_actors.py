@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from __future__ import print_function
+
 import os
 
 import pytest
@@ -36,7 +36,7 @@ _log = calvinlogger.get_logger(__name__)
 class MockCalvinSys(CalvinSys):
 
     def init(self, capabilities):
-        for key, value in capabilities.iteritems():
+        for key, value in capabilities.items():
             module = value['module']
             value['path'] = module
             value['module'] = None # Why?
@@ -117,7 +117,7 @@ class MockCalvinLib(CalvinLib):
         """
         setup capabilities from config
         """
-        for key, value in capabilities.iteritems():
+        for key, value in capabilities.items():
             module = value['module']
             value['path'] = module
             value['module'] = None
@@ -443,7 +443,7 @@ def run_actor_unittests(aut, actor_type, mock_sys):
                 __tracebackhide__ = True
                 pytest.fail("Actor {} failed during setup of test {}: {}".format(actor_type, test_index, e.message))
 
-        for port, values in inputs.iteritems():
+        for port, values in inputs.items():
             pwrite(aut, port, values)
 
         mock_sys.verify_read_write_during_init(aut, actor_type)
@@ -452,7 +452,7 @@ def run_actor_unittests(aut, actor_type, mock_sys):
         sched = scheduler.BaseScheduler(None, None)
         sched._fire_actor(aut)
 
-        for port, expected in outputs.iteritems():
+        for port, expected in outputs.items():
             actual = pread(aut, port, len(expected))
             if type(expected) is set:
                 actual = set(actual)
@@ -509,11 +509,11 @@ def test_actors(mock_calvinsys, mock_calvinlib, monkeypatch, store, actor_type):
     actor.setup_complete()
     
     # 4. Attach ports
-    for inport in actor.inports.itervalues():
+    for inport in actor.inports.values():
         inport.set_queue(queue.fanout_fifo.FanoutFIFO({'queue_length': 100, 'direction': "in"}, {}))
         inport.endpoint = DummyInEndpoint(inport)
         inport.queue.add_reader(inport.id, {})
-    for outport in actor.outports.itervalues():
+    for outport in actor.outports.values():
         outport.set_queue(queue.fanout_fifo.FanoutFIFO({'queue_length': 100, 'direction': "out"}, {}))
         outport.queue.add_reader(actor.id, {})
         outport.endpoints.append(DummyOutEndpoint(outport))

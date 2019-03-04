@@ -1,4 +1,4 @@
-from __future__ import print_function
+
 from calvin.utilities import calvinresponse
 from calvin.utilities.calvin_callback import CalvinCB
 from calvin.utilities import calvinlogger
@@ -65,7 +65,7 @@ class StorageProxyServer(object):
         if 'cmd' in payload and payload['cmd'] in self._proxy_cmds:
             # Call this node's storage methods, which could be local or DHT,
             # prefix is empty since that is already in the key (due to these calls come from the storage plugin level).
-            kwargs = {k: v for k, v in payload.iteritems() if k in ('key', 'value', 'index')}
+            kwargs = {k: v for k, v in iter(payload.items()) if k in ('key', 'value', 'index')}
             if payload['cmd'].endswith("_INDEX"):
                 kwargs['root_prefix_level'] = 0
                 dummykey = {'key': None}

@@ -107,7 +107,7 @@ class TCPServer(base_calvinsys_object.BaseCalvinsysObject):
         if self._server.pending_connections:
             addr, conn = self._server.accept()
             self._connections[str(addr)] = conn
-        for h, c in self._connections.items():
+        for h, c in list(self._connections.items()):
             if c.connection_lost:
                 del self._connections[h]
             if c.data_available:
@@ -115,7 +115,7 @@ class TCPServer(base_calvinsys_object.BaseCalvinsysObject):
         return False
 
     def read(self):
-        for h, c in self._connections.items():
+        for h, c in list(self._connections.items()):
             if c.data_available:
                 return {"handle": h, "data": c.data_get()}
 

@@ -56,7 +56,7 @@ def test_api_present(_registry, _mock_cb, call):
     # Check calling with required numbers of args
     method(*args, cb=_mock_cb)
     # Check calling with named arguments
-    kwargs = dict(zip([arg[0] if isinstance(arg, (tuple, list, set)) else arg for arg in args], args))
+    kwargs = dict(list(zip([arg[0] if isinstance(arg, (tuple, list, set)) else arg for arg in args], args)))
     method(cb=_mock_cb, **kwargs)
 
 # @pytest.mark.parametrize('call', prohibited)

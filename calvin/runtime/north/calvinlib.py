@@ -54,7 +54,7 @@ class CalvinLib(object):
         blacklist = _conf.get(None, 'capabilities_blacklist') or []
         for capability in blacklist:
             capabilities.pop(capability, None)
-        for key, value in capabilities.iteritems():
+        for key, value in capabilities.items():
             module = value['module']
             value['path'] = module
             value['module'] = None
@@ -101,7 +101,7 @@ class CalvinLib(object):
         """
         Returns list of requirements this system satisfies
         """
-        return self.capabilities.keys()
+        return list(self.capabilities.keys())
 
     def remove(self, obj):
         """

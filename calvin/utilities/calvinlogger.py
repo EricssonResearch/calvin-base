@@ -38,12 +38,12 @@ class JSONEncoderIters(json.JSONEncoder):
             pass
         else:
             return list(iterable)
-        if isinstance(o, (dict, list, basestring, int, long, float, bool, type(None))):
+        if isinstance(o, (dict, list, str, int, float, bool, type(None))):
             # Let the base class handle it
             return json.JSONEncoder.default(self, o)
         else:
             # Convert it to a string
-            return unicode(str(o))
+            return str(str(o))
 
 def analyze(self, node_id, func, param, peer_node_id=None, tb=False, mute=False, *args, **kws):
     if not mute and self.isEnabledFor(5):

@@ -1,4 +1,4 @@
-from __future__ import print_function
+
 import subprocess
 import shlex
 import socket
@@ -9,7 +9,7 @@ import requests
 
 
 def _start_process(cmd):
-    if isinstance(cmd, basestring):
+    if isinstance(cmd, str):
         cmd = shlex.split(cmd)
     process = subprocess.Popen(cmd)
     return process
@@ -107,7 +107,7 @@ class RuntimeProcess(Process):
         attrs = self.config.get("attributes")   
         if not attrs:
             return ""
-        if isinstance(attrs, basestring):
+        if isinstance(attrs, str):
             # Assume file reference
             return ' --attr-file {}'.format(attrs)
         # Convert attrs to JSON
@@ -201,7 +201,7 @@ class SystemManager(object):
 
     def expand(self, entity, entry):
         value = entity.get(entry, "")
-        if not isinstance(value, basestring) or not value.startswith('$'):
+        if not isinstance(value, str) or not value.startswith('$'):
             return
         info = self.info[value[1:]]
         if 'rt2rt' in info:

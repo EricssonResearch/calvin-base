@@ -24,9 +24,7 @@ from calvin.utilities.calvinlogger import get_logger
 _log = get_logger(__name__)
 
 # This is an abstract class for the PRP (Policy Retrieval Point)
-class PolicyRetrievalPoint(object):
-    __metaclass__ = ABCMeta  # Metaclass for defining Abstract Base Classes
-
+class PolicyRetrievalPoint(object, metaclass=ABCMeta):
     @abstractmethod
     def get_policy(self, id):
         """Return a JSON representation of the policy identified by id"""

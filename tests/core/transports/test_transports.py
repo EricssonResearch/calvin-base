@@ -21,7 +21,7 @@ import traceback
 import random
 import time
 import json
-import Queue
+import queue
 from mock import Mock
 
 from calvin.utilities import calvinlogger

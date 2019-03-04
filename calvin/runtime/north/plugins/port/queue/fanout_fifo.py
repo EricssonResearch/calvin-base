@@ -86,7 +86,7 @@ class FanoutFIFO(object):
         pass
 
     def add_reader(self, reader, properties):
-        if not isinstance(reader, basestring):
+        if not isinstance(reader, str):
             raise Exception('Not a string: %s' % reader)
         if reader in self.readers:
             return
@@ -139,10 +139,10 @@ class FanoutFIFO(object):
     def any_outstanding_exhaustion_tokens(self):
         # Between having asked actor to exhaust and receiving exhaustion tokens we don't want to assume that
         # the exhaustion is done.
-        return any([not t[1] for t in self.termination.itervalues()])
+        return any([not t[1] for t in self.termination.values()])
 
     def set_exhausted_tokens(self, tokens):
-        _log.debug("set_exhausted_tokens %s %s %s" % (self._type, tokens, {k:DISCONNECT.reverse_mapping[v[0]] for k, v in self.termination.items()}))
+        _log.debug("set_exhausted_tokens %s %s %s" % (self._type, tokens, {k:DISCONNECT.reverse_mapping[v[0]] for k, v in list(self.termination.items())}))
         self.exhausted_tokens.update(tokens)
         for peer_id in tokens:
             try:
@@ -152,7 +152,7 @@ class FanoutFIFO(object):
             except:
                 pass
         remove = []
-        for peer_id, exhausted_tokens in self.exhausted_tokens.items():
+        for peer_id, exhausted_tokens in list(self.exhausted_tokens.items()):
             if self._transfer_exhaust_tokens(peer_id, exhausted_tokens):
                 remove.append(peer_id)
         for peer_id in remove:
@@ -160,7 +160,7 @@ class FanoutFIFO(object):
         # If fully consumed remove peer_ids in tokens
         for peer_id in tokens:
             if (self.termination.get(peer_id, (-1,))[0] in [DISCONNECT.EXHAUST_PEER_RECV, DISCONNECT.EXHAUST_INPORT] and
-                min(self.read_pos.values() or [0]) == self.write_pos):
+                min(list(self.read_pos.values()) or [0]) == self.write_pos):
                 del self.termination[peer_id]
                 # Acting as inport then only one reader, remove it if still around
                 try:
@@ -199,7 +199,7 @@ class FanoutFIFO(object):
         return True
 
     def slots_available(self, length, metadata):
-        last_readpos = min(self.read_pos.values() or [0])
+        last_readpos = min(list(self.read_pos.values()) or [0])
         return (self.N - ((self.write_pos - last_readpos) % self.N) - 1) >= length
 
     def tokens_available(self, length, metadata):
@@ -226,7 +226,7 @@ class FanoutFIFO(object):
         _log.debug("COMMIT EXHAUSTING???")
         self.read_pos[metadata] = self.tentative_read_pos[metadata]
         remove = []
-        for peer_id, exhausted_tokens in self.exhausted_tokens.items():
+        for peer_id, exhausted_tokens in list(self.exhausted_tokens.items()):
             if self._transfer_exhaust_tokens(peer_id, self.exhausted_tokens[peer_id]):
                 # Emptied
                 remove.append(peer_id)
@@ -235,9 +235,9 @@ class FanoutFIFO(object):
         # If fully consumed remove queue
         terminated = False
         if self.termination:
-            _log.debug("COMMIT %s %s" % (metadata, {k:DISCONNECT.reverse_mapping[v[0]] for k, v in self.termination.items()}))
+            _log.debug("COMMIT %s %s" % (metadata, {k:DISCONNECT.reverse_mapping[v[0]] for k, v in list(self.termination.items())}))
         if (self.termination.get(metadata, (-1,))[0] in [DISCONNECT.EXHAUST_PEER_RECV, DISCONNECT.EXHAUST_INPORT] and
-            min(self.read_pos.values() or [0]) == self.write_pos and
+            min(list(self.read_pos.values()) or [0]) == self.write_pos and
             self.termination.get(metadata, (-1, False))[1]):
             del self.termination[metadata]
             terminated = True

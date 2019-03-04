@@ -335,7 +335,7 @@ class CalvinNetwork(object):
             if not (uri in self.pending_joins or peer_id in self.pending_joins_by_id or peer_id in self._links):
                 # No simultaneous join detected
                 schema = uri.split(":", 1)[0]
-                _log.analyze(self.node.id, "+", {'uri': uri, 'peer_id': peer_id, 'schema': schema, 'transports': self.transports.keys()}, peer_node_id=peer_id)
+                _log.analyze(self.node.id, "+", {'uri': uri, 'peer_id': peer_id, 'schema': schema, 'transports': list(self.transports.keys())}, peer_node_id=peer_id)
                 if schema in self.transports:
                     # store we have a pending join and its callback
                     if peer_id:
@@ -662,11 +662,11 @@ class CalvinNetwork(object):
 
     def link_check(self, rt_uuid):
         """ Check if we have the link otherwise raise exception """
-        if rt_uuid not in self._links.iterkeys():
+        if rt_uuid not in iter(self._links.keys()):
             raise KeyError("ERROR_LINK_NOT_ESTABLISHED")
 
     def list_links(self):
         return list(self._links.keys())
 
     def list_direct_links(self):
-        return [peer_id for peer_id, l in self._links.iteritems() if isinstance(l, CalvinLink)]
+        return [peer_id for peer_id, l in self._links.items() if isinstance(l, CalvinLink)]

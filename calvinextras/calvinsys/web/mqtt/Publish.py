@@ -184,10 +184,10 @@ class Publish(base_calvinsys_object.BaseCalvinsysObject):
 
         if will:
             payload = will.get("payload")
-            if isinstance(payload, basestring):
+            if isinstance(payload, str):
                 payload = payload.encode("ascii")
             topic = will.get("topic")
-            if isinstance(topic, basestring):
+            if isinstance(topic, str):
                 topic = topic.encode("ascii")
 
             self.client.will_set(topic=topic, payload=payload)

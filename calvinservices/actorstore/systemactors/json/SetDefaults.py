@@ -58,7 +58,7 @@ class SetDefaults(Actor):
     def _check_type_mismatch(self, container, key):
         t_cont = type(container)
         t_key = type(key)
-        mismatch = (t_cont is list and t_key is not int) or (t_cont is dict and not isinstance(key, basestring))
+        mismatch = (t_cont is list and t_key is not int) or (t_cont is dict and not isinstance(key, str))
         if mismatch:
             raise Exception()
 
@@ -70,7 +70,7 @@ class SetDefaults(Actor):
                 self._check_type_mismatch(res, key)
                 res = res[key]
             self._check_type_mismatch(res, keylist[-1])
-            if not res.has_key(keylist[-1]):
+            if keylist[-1] not in res:
                 res[keylist[-1]] = value
         except:
             container = ExceptionToken()

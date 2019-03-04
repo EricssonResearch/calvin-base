@@ -15,8 +15,8 @@
 # limitations under the License.
 
 
-from __future__ import print_function
-from __future__ import absolute_import
+
+
 import numbers
 
 from . import astnode as ast
@@ -100,7 +100,7 @@ def _check_arguments(assignment, issue_tracker):
 
     given_args = assignment.children
     given_idents = {a.ident.ident: a.ident for a in given_args}
-    given_keys = given_idents.keys()
+    given_keys = list(given_idents.keys())
     given = set(given_keys)
 
     # Case 0: Duplicated arguments
@@ -313,7 +313,7 @@ class CollectPortProperties(Visitor):
         # FIXME: Actor argument shouldn't matter, since it will be taken from the port after flattening the tree,
         #        but it setting it a generic string causes errors. Need to find out why.
         port_property = ast.PortProperty(actor=actor, port=port, direction=direction, debug_info=node.debug_info)
-        for ident, value in properties.iteritems():
+        for ident, value in properties.items():
             prop = ast.NamedArg(ident=ast.Id(ident=ident), arg=ast.Value(value=value))
             port_property.add_child(prop)
         destination_port.add_child(port_property)
@@ -532,7 +532,7 @@ class CoalesceProperties(Visitor):
         self.port_properties = {}
         self.visit(root)
         props = []
-        for key, pp in self.port_properties.iteritems():
+        for key, pp in self.port_properties.items():
             pp.add_child(ast.NamedArg(ident=ast.Id(ident="nbr_peers"), arg=ast.Value(value=self.counter[key])))
             props.append(pp)
         root.add_children(props)
@@ -597,7 +597,7 @@ class CheckPortProperties(Visitor):
         for value in p_value:
             if ppdata['type'] == "category":
                 if value not in ppdata['values']:
-                    reason = "Port property {} can only have values {}".format(p_name, ", ".join(ppdata['values'].keys()))
+                    reason = "Port property {} can only have values {}".format(p_name, ", ".join(list(ppdata['values'].keys())))
                     self.issue_tracker.add_error(reason, prop)
                     continue
                 if prop.parent.direction not in ppdata['values'][value]['direction']:
@@ -610,7 +610,7 @@ class CheckPortProperties(Visitor):
                     self.issue_tracker.add_error(reason, prop)
                     continue
             if ppdata['type'] == 'string':
-                if not isinstance(value, basestring):
+                if not isinstance(value, str):
                     reason = "Port property {} can only have string values".format(p_name)
                     self.issue_tracker.add_error(reason, prop)
                     continue
@@ -982,7 +982,7 @@ def match_query(kind=None, attributes=None):
         if not attributes:
             # No or empty attr dict matches.
             return True
-        for key, value in attributes.iteritems():
+        for key, value in attributes.items():
             attr_value = getattr(node, key, None)
             # Commenting out unused complication
             # if inspect.isclass(value):

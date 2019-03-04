@@ -28,9 +28,7 @@ _conf = calvinconfig.get()
 _sec_conf = _conf
 
 # This is an abstract class for the PRP (Policy Retrieval Point)
-class AuthenticationRetrievalPoint(object):
-    __metaclass__ = ABCMeta  # Metaclass for defining Abstract Base Classes
-
+class AuthenticationRetrievalPoint(object, metaclass=ABCMeta):
     @abstractmethod
     def get_users_db(self):
         """Return a JSON representation of the policy identified by id"""

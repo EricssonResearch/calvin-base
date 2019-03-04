@@ -354,8 +354,8 @@ class Actor(object):
         self._exhaust_cb = None
         self._pressure_event = 0  # Time of last pressure event time (not in state only local)
 
-        self.inports = {p: actorport.InPort(p, self, pp) for p, pp in self.inport_properties.iteritems()}
-        self.outports = {p: actorport.OutPort(p, self, pp) for p, pp in self.outport_properties.iteritems()}
+        self.inports = {p: actorport.InPort(p, self, pp) for p, pp in iter(self.inport_properties.items())}
+        self.outports = {p: actorport.OutPort(p, self, pp) for p, pp in iter(self.outport_properties.items())}
 
         hooks = {
             (Actor.STATUS.PENDING, Actor.STATUS.ENABLED): self._will_start,
@@ -409,10 +409,10 @@ class Actor(object):
 
     def __str__(self):
         ip = ""
-        for p in self.inports.itervalues():
+        for p in self.inports.values():
             ip = ip + str(p)
         op = ""
-        for p in self.outports.itervalues():
+        for p in self.outports.values():
             op = op + str(p)
         s = "Actor: '%s' class '%s'\nstatus: %s\ninports: %s\noutports:%s" % (
             self._name, self._type, self.fsm, ip, op)
@@ -432,12 +432,12 @@ class Actor(object):
         # have inports, have outports, or have in- and outports
 
         if self.inports:
-            for p in self.inports.itervalues():
+            for p in self.inports.values():
                 if not p.is_connected():
                     return
 
         if self.outports:
-            for p in self.outports.itervalues():
+            for p in self.outports.values():
                 if not p.is_connected():
                     return
 
@@ -460,12 +460,12 @@ class Actor(object):
         # Three non-patological options:
         # have inports, have outports, or have in- and outports
         if self.inports:
-            for p in self.inports.itervalues():
+            for p in self.inports.values():
                 if p.is_connected():
                     return
 
         if self.outports:
-            for p in self.outports.itervalues():
+            for p in self.outports.values():
                 if p.is_connected():
                     return
 
@@ -481,14 +481,14 @@ class Actor(object):
             return None
         t = time.time()
         pressure = {}
-        for port in self.inports.itervalues():
+        for port in self.inports.values():
             for e in port.endpoints:
                 PRESSURE_LENGTH = len(e.pressure)
                 pressure[port.id + "," + e.peer_id] = {'last': e.pressure_last, 'count': e.pressure_count,
                     'pressure': [e.pressure[i % PRESSURE_LENGTH] for i in range(
                                         max(0, e.pressure_count - PRESSURE_LENGTH), e.pressure_count)]}
         pressure_event = False
-        for p in pressure.itervalues():
+        for p in pressure.values():
             if len(p['pressure']) < 2:
                 continue
             if ((p['pressure'][-1][1] - p['pressure'][-2][1]) < 10 and
@@ -540,7 +540,7 @@ class Actor(object):
             except:
                 _log.exception("FINSIHED EXHAUSTION FAILED")
         if (output_ok and self._exhaust_cb is not None and
-            not any([p.any_outstanding_exhaustion_tokens() for p in self.inports.itervalues()])):
+            not any([p.any_outstanding_exhaustion_tokens() for p in self.inports.values()])):
             _log.debug("actor %s exhausted" % self._id)
             # We are in exhaustion, got all exhaustion tokens from peer ports
             # but stopped firing while outport token slots available, i.e. exhausted inports or deadlock
@@ -602,13 +602,13 @@ class Actor(object):
     def connections(self, node_id):
         c = {'actor_id': self._id, 'actor_name': self._name}
         inports = {}
-        for port in self.inports.itervalues():
+        for port in self.inports.values():
             peers = [
                 (node_id, p[1]) if p[0] == 'local' else p for p in port.get_peers()]
             inports[port.id] = peers
         c['inports'] = inports
         outports = {}
-        for port in self.outports.itervalues():
+        for port in self.outports.values():
             peers = [
                 (node_id, p[1]) if p[0] == 'local' else p for p in port.get_peers()]
             outports[port.id] = peers
@@ -706,7 +706,7 @@ class Actor(object):
         Managed state can only contain objects that can be JSON-serialized.
         """
         self._managed.update(set(state.keys()))
-        for key, val in state.iteritems():
+        for key, val in state.items():
             self.__dict__[key] = val
 
     def serialize(self):
@@ -782,9 +782,9 @@ class Actor(object):
 
     def _derive_port_property_capabilities(self):
         port_property_capabilities = set([])
-        for port in self.inports.itervalues():
+        for port in self.inports.values():
             port_property_capabilities.update(get_port_property_capabilities(port.properties))
-        for port in self.outports.itervalues():
+        for port in self.outports.values():
             port_property_capabilities.update(get_port_property_capabilities(port.properties))
         _log.debug("derive_port_property_capabilities:" + str(port_property_capabilities))
         return get_port_property_runtime(port_property_capabilities)
@@ -883,7 +883,7 @@ class ShadowActor(Actor):
             # Since actor requires is not known locally
             reqs += [{'op': 'shadow_actor_reqs_match',
                      'kwargs': {'signature': self._signature,
-                                'shadow_params': self._shadow_args.keys()},
+                                'shadow_params': list(self._shadow_args.keys())},
                      'type': '+'}]
         return reqs
 

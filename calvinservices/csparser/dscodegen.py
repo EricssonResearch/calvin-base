@@ -15,8 +15,8 @@
 # limitations under the License.
 
 
-from __future__ import print_function
-from __future__ import absolute_import
+
+
 from . import astprint
 from . import astnode as ast
 from .visitor import Visitor
@@ -125,7 +125,7 @@ class Backport(object):
         self.issuetracker = issuetracker
 
     def transform(self, requirements):
-        for actor, rule in requirements.iteritems():
+        for actor, rule in requirements.items():
             try:
                 new_rule = self.mangle(rule)
                 requirements[actor] = new_rule if type(new_rule) is list else [new_rule]

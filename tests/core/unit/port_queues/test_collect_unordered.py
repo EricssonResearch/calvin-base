@@ -17,7 +17,7 @@ def create_port(routing="collect-unordered"):
     return queue.get(port)
 
 def unwrap(data):
-    return data.value.items()[0]
+    return list(data.value.items())[0]
     
 @pytest_unittest
 class TestCollectUnorderedFIFO(unittest.TestCase):

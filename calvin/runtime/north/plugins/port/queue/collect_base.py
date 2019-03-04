@@ -54,13 +54,13 @@ class CollectBase(object):
 
 
     def __str__(self):
-        fifo = "\n".join([str(k) + ": " + ", ".join(map(lambda x: str(x), self.fifo[k])) for k in self.fifo])
+        fifo = "\n".join([str(k) + ": " + ", ".join([str(x) for x in self.fifo[k]]) for k in self.fifo])
         return "Tokens: %s\nw:%s, r:%s, tr:%s" % (fifo, self.write_pos, self.read_pos, self.tentative_read_pos)
 
     def _state(self):
         state = {
             'queuetype': self._type,
-            'fifo': {p: [t.encode() for t in tokens] for p, tokens in self.fifo.iteritems()},
+            'fifo': {p: [t.encode() for t in tokens] for p, tokens in iter(self.fifo.items())},
             'N': self.N,
             'writers': self.writers,
             'write_pos': self.write_pos,
@@ -73,7 +73,7 @@ class CollectBase(object):
 
     def _set_state(self, state):
         self._type = state.get('queuetype')
-        self.fifo = {p: [Token.decode(t) for t in tokens] for p, tokens in state['fifo'].iteritems()}
+        self.fifo = {p: [Token.decode(t) for t in tokens] for p, tokens in iter(state['fifo'].items())}
         self.N = state['N']
         self.writers = state['writers']
         self.write_pos = state['write_pos']
@@ -87,7 +87,7 @@ class CollectBase(object):
         return self._type
 
     def add_writer(self, writer, properties):
-        if not isinstance(writer, basestring):
+        if not isinstance(writer, str):
             raise Exception('Not a string: %s' % writer)
         if writer not in self.writers:
             self.read_pos[writer] = 0
@@ -104,7 +104,7 @@ class CollectBase(object):
             self.tags[writer] = properties.get("tag", writer)
 
     def remove_writer(self, writer):
-        if not isinstance(writer, basestring):
+        if not isinstance(writer, str):
             raise Exception('Not a string: %s' % writer)
         _log.debug("remove_writer %s %s" % (self.reader if hasattr(self, 'reader') else "--", writer))
         del self.read_pos[writer]
@@ -153,7 +153,7 @@ class CollectBase(object):
     def any_outstanding_exhaustion_tokens(self):
         # Between having asked actor to exhaust and receiving exhaustion tokens we don't want to assume that
         # the exhaustion is done.
-        return any([not t[1] for t in self.termination.itervalues()])
+        return any([not t[1] for t in self.termination.values()])
 
     def set_exhausted_tokens(self, tokens):
         _log.debug("set_exhausted_tokens %s %s new:%s existing:%s writers:%s" % (
@@ -161,11 +161,11 @@ class CollectBase(object):
             self.exhausted_tokens, self.writers))
         # Extend lists of current exhaust tokens, not replace (with likely empty list).
         # This is useful when a disconnect happens from both directions or other reasons
-        self.exhausted_tokens.update({k: self.exhausted_tokens.get(k, []) + v   for k, v in tokens.iteritems()})
+        self.exhausted_tokens.update({k: self.exhausted_tokens.get(k, []) + v   for k, v in iter(tokens.items())})
         for peer_id in tokens:
             self.termination[peer_id] = (self.termination[peer_id][0], True)
         remove = []
-        for peer_id, exhausted_tokens in self.exhausted_tokens.items():
+        for peer_id, exhausted_tokens in list(self.exhausted_tokens.items()):
             if peer_id not in self.writers:
                 # Make sure only writers in the exhausted_tokens
                 remove.append(peer_id)
@@ -235,14 +235,14 @@ class CollectBase(object):
         # Transfer in exhausted tokens when possible
         remove = []
         #_log.debug("commit collect exhausted_tokens %s" % self.exhausted_tokens)
-        for peer_id, exhausted_tokens in self.exhausted_tokens.items():
+        for peer_id, exhausted_tokens in list(self.exhausted_tokens.items()):
             if self._transfer_exhaust_tokens(peer_id, exhausted_tokens):
                 remove.append(peer_id)
         for peer_id in remove:
             del self.exhausted_tokens[peer_id]
         # When a terminated queue is fully consumed remove it
         remove = []
-        for peer_id, termination in self.termination.items():
+        for peer_id, termination in list(self.termination.items()):
             if (self.write_pos[peer_id] == self.read_pos[peer_id] and
                 termination[0] in [DISCONNECT.EXHAUST_PEER_RECV, DISCONNECT.EXHAUST_INPORT] and
                 termination[1]):

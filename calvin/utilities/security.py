@@ -534,7 +534,7 @@ class Security(object):
         file_content = ""
         # Filename is *.sign.<cert_hash>
         sign_files = {os.path.basename(f).split(".sign.")[1]: f for f in glob.glob(sign_filenames)}
-        for cert_hash, sign_filename in sign_files.iteritems():
+        for cert_hash, sign_filename in sign_files.items():
             try:
                 with open(sign_filename, 'rt') as f:
                     sign_content[cert_hash] = f.read()
@@ -592,7 +592,7 @@ class Security(object):
             return (False, None)
 
         # If any of the signatures is verified correctly, True is returned.
-        for cert_hash, signature in content['sign'].iteritems():
+        for cert_hash, signature in content['sign'].items():
             try:
                 # Check if the certificate is stored in the truststore (name is <cert_hash>.0)
                 #TODO: remove signature_trust_store dependency

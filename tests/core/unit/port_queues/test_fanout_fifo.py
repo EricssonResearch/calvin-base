@@ -190,8 +190,8 @@ class TestFanoutFIFO(unittest.TestCase):
         # tokens should still be available in original fifo(s)
         tokens_1 = [self.outport.peek("reader-1") for i in [1,2,3]]
         tokens_3 = [self.outport.peek("reader-3") for i in [1,2,3]]
-        self.assertEquals(tokens_1, ["data-%d" % i for i in [1,2,3]])
-        self.assertEquals(tokens_3, ["data-%d" % i for i in [1,2,3]])
+        self.assertEqual(tokens_1, ["data-%d" % i for i in [1,2,3]])
+        self.assertEqual(tokens_3, ["data-%d" % i for i in [1,2,3]])
         self.outport.cancel("reader-1")
         self.outport.cancel("reader-3")
         
@@ -200,13 +200,13 @@ class TestFanoutFIFO(unittest.TestCase):
         port.add_reader("new-reader", {} )
         tokens = [ port.peek("new-reader") for i in [1,2,3]]
         port.cancel("new-reader")
-        self.assertEquals(tokens, ["data-%d" % i for i in [1,2,3]])
+        self.assertEqual(tokens, ["data-%d" % i for i in [1,2,3]])
         
         # setting again changes nothing
         port.set_exhausted_tokens(exhausted_tokens)
         tokens = [ port.peek("new-reader") for i in [1,2,3]]
         port.cancel("new-reader")
-        self.assertEquals(tokens, ["data-%d" % i for i in [1,2,3]])
+        self.assertEqual(tokens, ["data-%d" % i for i in [1,2,3]])
 
     def testExhaust_Empty(self):
         

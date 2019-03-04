@@ -32,9 +32,9 @@ class TestFanoutBalancedFIFO(TestFanoutRoundRobinFIFO):
             data = []
             for j in range(3):
                 data += [self.outport.peek("reader-%d" % i)]
-            self.assertEquals(len(data), 3)
+            self.assertEqual(len(data), 3)
             all_data += data
-        self.assertEquals(set(all_data), set(["data-%d" % i for i in range(1, 10)]))
+        self.assertEqual(set(all_data), set(["data-%d" % i for i in range(1, 10)]))
         for i in [1,2,3]:
             self.assertFalse(self.outport.tokens_available(1, "reader-%d" % i))
 

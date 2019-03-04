@@ -41,7 +41,7 @@ class Evaluate(Actor):
     """
     @manage(['expr'])
     def init(self, expr):
-        self.expr = expr if type(expr) is str or type(expr) is unicode else None
+        self.expr = expr if type(expr) is str or type(expr) is str else None
         self.setup()
 
     def setup(self):
@@ -57,7 +57,7 @@ class Evaluate(Actor):
             result = self.math.eval(self.expr, {'x':a, 'y':b})
         else :
             result = None
-        if isinstance(result, basestring):
+        if isinstance(result, str):
             result = ExceptionToken(result)
         return (result, )
 

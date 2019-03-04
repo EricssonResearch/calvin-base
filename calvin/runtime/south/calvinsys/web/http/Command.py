@@ -197,7 +197,7 @@ class Command(base_calvinsys_object.BaseCalvinsysObject):
             else:
                 # return everything
                 # Headers are case-insensitive, so we downcase everything
-                headers = { k.lower():v for k, v in dict(response.headers).items()}
+                headers = { k.lower():v for k, v in list(dict(response.headers).items())}
                 self.result = {"body": response.text, "status": response.status_code, "headers": headers }
 
         def done(*args, **kwargs):

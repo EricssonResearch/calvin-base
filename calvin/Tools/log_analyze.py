@@ -15,7 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from __future__ import print_function
+
 import argparse
 import json
 import pprint
@@ -61,7 +61,7 @@ re_pid = re.compile("^[0-9,\-,\,, ,:]*[A-Z]* *([0-9]*)-.*")
 class MyPrettyPrinter(pprint.PrettyPrinter):
     def format(self, object, context, maxlevels, level):
         # Pretty print strings unescaped
-        if isinstance(object, basestring):
+        if isinstance(object, str):
             return (object.decode('string_escape'), True, False)
         return pprint.PrettyPrinter.format(self, object, context, maxlevels, level)
 
@@ -126,7 +126,7 @@ def main():
             log.append(logline)
 
     pprint.pprint(pid_to_node_id)
-    int_pid_to_node_id = {int(k): v for k,v in pid_to_node_id.iteritems()}
+    int_pid_to_node_id = {int(k): v for k,v in iter(pid_to_node_id.items())}
     pids = list(pids)
     print("PIDS", pids)
 

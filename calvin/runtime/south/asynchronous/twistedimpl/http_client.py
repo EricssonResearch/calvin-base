@@ -29,8 +29,8 @@ from twisted.web.client import FileBodyProducer
 from twisted.internet.defer import Deferred
 from twisted.internet.protocol import Protocol
 
-from StringIO import StringIO
-from urllib import urlencode
+from io import StringIO
+from urllib.parse import urlencode
 
 from calvin.utilities.calvin_callback import CalvinCBClass
 
@@ -84,7 +84,7 @@ def encode_params(params):
 
 def encode_headers(headers):
     twisted_headers = Headers()
-    for k, v in headers.items():
+    for k, v in list(headers.items()):
         key = k.encode('ascii', 'ignore')
         val = v.encode('ascii', 'ignore')
         twisted_headers.addRawHeader(key, val)

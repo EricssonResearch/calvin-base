@@ -37,7 +37,7 @@ def _testdata(file_dir):
     with open(file_dir+'/tests/services/registry/registry_startup.txt', 'r') as fp:
         _store, _sets = json.load(fp, object_hook=_to_set)
     # Massage keys that are in fact tuples
-    _sets = {_expand(k):v for k, v in _sets.items()}
+    _sets = {_expand(k):v for k, v in list(_sets.items())}
 
     return (_store, _sets)
 

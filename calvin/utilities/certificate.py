@@ -17,9 +17,9 @@
 Openssl wrapper used to generate and sign certificates.
 This module depends on openssl.
 """
-from __future__ import print_function
 
-import ConfigParser
+
+import configparser
 import os
 import subprocess
 import sys

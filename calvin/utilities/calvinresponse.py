@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from __future__ import print_function
+
 import numbers
 from calvin.utilities import calvinlogger
 
@@ -115,9 +115,9 @@ class CalvinResponse(object):
         else:
             self.set_status(status)
             self.data = data
-            self.success_list = range(200, 207)
+            self.success_list = list(range(200, 207))
 
-    def __nonzero__(self):
+    def __bool__(self):
         return self._status()
 
     def __bool__(self):

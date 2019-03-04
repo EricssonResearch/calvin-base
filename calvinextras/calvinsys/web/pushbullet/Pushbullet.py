@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from __future__ import absolute_import
+
 # -*- coding: utf-8 -*-
 
 # Copyright (c) 2017 Ericsson AB
@@ -108,7 +108,7 @@ class Pushbullet(base_calvinsys_object.BaseCalvinsysObject):
         def done(*args, **kwargs):
             self.busy = False
 
-        if isinstance(data, basestring):
+        if isinstance(data, str):
             message = data
             title = self.title
         else :

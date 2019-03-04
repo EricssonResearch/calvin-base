@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from __future__ import print_function
+
 from calvin.runtime.north.calvincontrol import control_api_doc
 
 lines = control_api_doc.split("\n")

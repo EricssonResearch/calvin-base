@@ -15,8 +15,8 @@
 # limitations under the License.
 
 
-from __future__ import print_function
-from __future__ import absolute_import
+
+
 import string
 import random
 import inspect
@@ -104,7 +104,7 @@ class DotRenderer(BaseRenderer):
         return "{}_".format(self._namespace_stack[-1]) if self._namespace_stack else ''
 
     def _random_id(self):
-        return ''.join(random.choice(string.ascii_uppercase) for x in range(8))
+        return ''.join(random.choice(string.ascii_uppercase) for x in list(range(8)))
 
     def _truncate_label(self, label, maxlen=16):
         if len(label) > maxlen:

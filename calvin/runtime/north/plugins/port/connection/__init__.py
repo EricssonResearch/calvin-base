@@ -30,7 +30,7 @@ from calvin.utilities.calvinlogger import get_logger
 _log = get_logger(__name__)
 
 
-for module, class_ in _MODULES.iteritems():
+for module, class_ in _MODULES.items():
     module_obj = __import__(module, globals=globals())
     globals()[class_] = getattr(module_obj, class_)
 
@@ -91,7 +91,7 @@ class ConnectionFactory(object):
 
     def init(self):
         data = {}
-        for class_name in _MODULES.itervalues():
+        for class_name in _MODULES.values():
             _log.debug("Init connection method %s" % class_name)
             C = globals()[class_name]
             data[C.__name__] = C(self.node, PURPOSE.INIT, None, None, None, self, **self.kwargs).init()

@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from __future__ import print_function
+
 from calvin.actor.actor import Actor, manage, condition
 from calvin.utilities.calvinlogger import get_logger
 from calvin.runtime.north.calvinsys import get_calvinsys

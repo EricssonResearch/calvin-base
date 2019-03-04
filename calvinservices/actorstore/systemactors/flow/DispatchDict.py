@@ -47,7 +47,7 @@ class DispatchDict(Actor):
     @stateguard(lambda self: not self.mapped_out and not self.unmapped_out)
     @condition(['dict'], [])
     def get_dict(self, dictionary):
-        for key, value in dictionary.iteritems():
+        for key, value in dictionary.items():
             if key in self.mapping :
                 self.mapped_out[key] = value
             else :
@@ -57,14 +57,14 @@ class DispatchDict(Actor):
     @stateguard(lambda self: self.mapped_out)
     @condition([], ['token'])
     def dispatch_token(self):
-        key = self.mapped_out.keys()[0]
+        key = list(self.mapped_out.keys())[0]
         val = self.mapped_out.pop(key)
         return ({key:val},)
 
     @stateguard(lambda self: self.unmapped_out)
     @condition([], ['default'])
     def dispatch_default(self):
-        key = self.unmapped_out.keys()[0]
+        key = list(self.unmapped_out.keys())[0]
         val = self.unmapped_out.pop(key)
         return (val,)
 

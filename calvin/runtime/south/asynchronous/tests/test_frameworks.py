@@ -68,10 +68,10 @@ class TestFrameworks(object):
                 Just test that all fw have all the API specified.
         """
         for framework in FRAMEWORKS:
-            for module, items in MODULES.iteritems():
+            for module, items in MODULES.items():
                 module_obj = __import__("calvin.runtime.south.asynchronous.%s.%s" % (framework, module),
                                         globals=globals(), fromlist=[''])
-                for item, info in items.iteritems():
+                for item, info in items.items():
                     # Check for existans
                     item_obj = getattr(module_obj, item, None)
                     comp_obj = info['comp']

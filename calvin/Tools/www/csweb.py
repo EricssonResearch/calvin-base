@@ -15,9 +15,9 @@
 # limitations under the License.
 
 import os
-import SimpleHTTPServer
-import BaseHTTPServer
-import SocketServer
+import http.server
+import http.server
+import socketserver
 import argparse
 import socket
 
@@ -34,24 +34,24 @@ def parse_arguments():
     return argparser.parse_args()
 
 
-class CORSRequestHandler (SimpleHTTPServer.SimpleHTTPRequestHandler):
+class CORSRequestHandler (http.server.SimpleHTTPRequestHandler):
     def end_headers (self):
         self.send_header('Access-Control-Allow-Origin', '*')
-        SimpleHTTPServer.SimpleHTTPRequestHandler.end_headers(self)
+        http.server.SimpleHTTPRequestHandler.end_headers(self)
 
 def main():
     os.chdir(os.path.dirname(__file__))
     args = parse_arguments()
     Handler = CORSRequestHandler
-    SocketServer.TCPServer.allow_reuse_address = True
+    socketserver.TCPServer.allow_reuse_address = True
 
     try:
         socket.inet_pton(socket.AF_INET6, args.address)
-        SocketServer.TCPServer.address_family = socket.AF_INET6
+        socketserver.TCPServer.address_family = socket.AF_INET6
     except socket.error:
-        SocketServer.TCPServer.address_family = socket.AF_INET
+        socketserver.TCPServer.address_family = socket.AF_INET
 
-    httpd = SocketServer.TCPServer((args.address, args.port), Handler)
+    httpd = socketserver.TCPServer((args.address, args.port), Handler)
     httpd.serve_forever()
 
 if __name__ == '__main__':

@@ -20,7 +20,7 @@ def _assert_tagged_set(control_api, rt_uri, sink_ids):
         pairs = [x.split('-') for x in actual]
         tags = {p[0] for p in pairs}
         values = sorted([int(p[1]) for p in pairs])
-        assert values[:n_values] == range(1, n_values+1)
+        assert values[:n_values] == list(range(1, n_values+1))
         assert tags == set(["tag1", "tag2", "tag3"])
 
 
@@ -33,7 +33,7 @@ testlist = [
             src.integer > snk.token
         """,
         ['snk'],
-        [range(1, 11)],
+        [list(range(1, 11))],
     ),
     (
         'test_output capture',
@@ -45,7 +45,7 @@ testlist = [
             ity.token > snk.token
         """,
         ['snk'],
-        [range(1, 11)],
+        [list(range(1, 11))],
     ),
     (
         'test_fanout',
@@ -57,7 +57,7 @@ testlist = [
             src.integer > snk2.token
         """,
         ['snk1', 'snk2'],
-        [range(1, 11)]*2,
+        [list(range(1, 11))]*2,
     ),
     (
         'test_fanout_from_component_inports',
@@ -79,7 +79,7 @@ testlist = [
             foo.b > snk2.token
         """,
         ['snk1', 'snk2'],
-        [range(1, 11)]*2,
+        [list(range(1, 11))]*2,
     ),
     (
         'test_map_alternate',
@@ -198,7 +198,7 @@ testlist = [
             cd.dict > snk.token
         """,
         ['snk'],
-        [[{u't2': 'tag-3:3', u't3': 'tag-1:1', u't1': 'tag-2:2'}]*10],
+        [[{'t2': 'tag-3:3', 't3': 'tag-1:1', 't1': 'tag-2:2'}]*10],
     ),
     (
         'test_map_dispatch_collect',

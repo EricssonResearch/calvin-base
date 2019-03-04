@@ -97,7 +97,7 @@ class TestFanoutRandomFIFO(TestFanoutRoundRobinFIFO):
         # check that 1 token has been consumed
         # check that there are 6-consumed tokens total:
         available = 0
-        for r, f in self.outport.fifo.items():
+        for r, f in list(self.outport.fifo.items()):
             while self.outport.tokens_available(1, r):
                 self.outport.peek(r)
                 available += 1

@@ -18,7 +18,7 @@ Openssl wrapper used to generate and sign certificates.
 This module depends on openssl.
 """
 
-import ConfigParser
+import configparser
 import os
 import subprocess
 import sys
@@ -141,7 +141,7 @@ class RuntimeCredentials():
         self.cert_name=None
         self.cert_path=None
         self.configfile = None
-        self.config=ConfigParser.SafeConfigParser()
+        self.config=configparser.SafeConfigParser()
         self.configuration=None
         self.config.optionxform = str
         os.umask(0o077)

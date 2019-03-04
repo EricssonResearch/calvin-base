@@ -72,7 +72,7 @@ class TCPClient(Actor):
     @stateguard(lambda self: self.cc and calvinsys.can_write(self.cc))
     @condition(action_input=['data_in'])
     def send(self, token):
-        if isinstance(token, basestring):
+        if isinstance(token, str):
             token = str(token)
             calvinsys.write(self.cc, token)
         else:

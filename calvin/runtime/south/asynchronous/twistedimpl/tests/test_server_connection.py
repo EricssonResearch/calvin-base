@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from __future__ import print_function
+
 from calvin.runtime.south.asynchronous import asynchronous
 from calvin.runtime.south.asynchronous import server_connection
 from calvin.runtime.south.asynchronous import threads

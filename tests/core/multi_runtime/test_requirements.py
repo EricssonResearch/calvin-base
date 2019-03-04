@@ -91,7 +91,7 @@ def _check_deploy2(setup, app_info, control_api):
     sum_list=[app_info['actor_map']['deploy2:sum{}'.format(i)] for i in range(1,9)]
     sum_place = [0 if a in actors[0] else 1 if a in actors[1] else 2 if a in actors[2] else -1 for a in sum_list]
     assert -1 not in sum_place # assert not any([p==-1 for p in sum_place])
-    assert all(x<=y for x, y in zip(sum_place, sum_place[1:]))
+    assert all(x<=y for x, y in list(zip(sum_place, sum_place[1:])))
 
 
 def _check_deploy3(setup, app_info, control_api):

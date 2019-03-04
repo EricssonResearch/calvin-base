@@ -16,8 +16,8 @@
 
 
 # FIXME: For debugging NoneType object in tree, remove when fixed
-from __future__ import print_function
-from __future__ import absolute_import
+
+
 from .astnode import BaseNode
 
 class Visitor(object):

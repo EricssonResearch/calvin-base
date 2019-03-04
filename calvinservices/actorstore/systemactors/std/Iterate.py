@@ -87,7 +87,7 @@ class Iterate(Actor):
             self.has_data = False
         return (v, k)
 
-    @stateguard(lambda self: self.has_data and isinstance(self.data, basestring))
+    @stateguard(lambda self: self.has_data and isinstance(self.data, str))
     @condition([], ['item', 'index'])
     def produce_stringitem(self):
         res = self.data[0]

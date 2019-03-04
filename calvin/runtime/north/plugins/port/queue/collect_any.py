@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from __future__ import print_function
+
 from calvin.runtime.north.calvin_token import Token
 from calvin.runtime.north.plugins.port.queue.common import QueueEmpty
 from calvin.runtime.north.plugins.port.queue.collect_base import CollectBase
@@ -78,6 +78,6 @@ class CollectAny(CollectBase):
         if not set(mapping.values()) == set(self.writers):
             print(mapping, self.readers)
             raise Exception("Illegal port mapping dictionary")
-        self.tags = { v: k for k,v in mapping.iteritems() }
+        self.tags = { v: k for k,v in iter(mapping.items()) }
 
 

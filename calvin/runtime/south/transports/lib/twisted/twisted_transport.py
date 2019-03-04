@@ -111,7 +111,7 @@ class CalvinTransport(base_transport.BaseTransport):
         msg = _join_request
         msg['id'] = self._rt_id
         msg['sid'] = self._get_msg_uuid()
-        msg['serializers'] = self.get_coders().keys()
+        msg['serializers'] = list(self.get_coders().keys())
         self._join_start = time.time()
         self.send(msg, coder=self._get_join_coder())
 

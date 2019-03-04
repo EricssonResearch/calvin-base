@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from __future__ import absolute_import
+
 from calvinextras.calvinsys.io.servomotor import BaseServo
 from . import Adafruit_PCA9685
 

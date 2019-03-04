@@ -60,7 +60,7 @@ class Format(Actor):
         except Exception:
             res = {}
         retval = self.fmt
-        for key, value in res.iteritems():
+        for key, value in res.items():
             retval = retval.replace('{' + key + '}', str(value))
         retval = retval.replace(r"\{", "{").replace(r"\}", "}")
 

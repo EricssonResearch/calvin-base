@@ -58,7 +58,7 @@ class Mustache(Actor):
     test_kwargs = {'fmt': "City:{{city}} Country:{{country}} Weather:{{weather}} Temperature:{{temperature}} Humidity:{{humidity}} Pressure:{{pressure}}"}
     test_set = [
         {
-            'inports': {'dict': [{'city': u'Manchester', 'temperature': 7.84, 'country': u'GB', 'humidity': 87, 'pressure': 1033, 'weather': u'overcast clouds'}]},
+            'inports': {'dict': [{'city': 'Manchester', 'temperature': 7.84, 'country': 'GB', 'humidity': 87, 'pressure': 1033, 'weather': 'overcast clouds'}]},
             'outports': {'text': ["City:Manchester Country:GB Weather:overcast clouds Temperature:7.84 Humidity:87 Pressure:1033"]}
         }
     ]

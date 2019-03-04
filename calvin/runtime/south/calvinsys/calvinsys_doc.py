@@ -13,7 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from __future__ import print_function
+
 import os
 import os.path
 import json
@@ -70,7 +70,7 @@ class CalvinSysDoc(object):
         if what and what in self.objects:
             data += self.create_doc(what, self.objects[what], formatting)
         else:
-            for obj, schemas in sorted(self.objects.iteritems()):
+            for obj, schemas in sorted(self.objects.items()):
                 data += self.create_doc(obj, schemas, formatting)
         return data
 
@@ -84,7 +84,7 @@ class CalvinSysDoc(object):
         elif isinstance(node, ast.List):
             return list(map(self.convert, node.elts))
         elif isinstance(node, ast.Dict):
-            return dict((self.convert(k), self.convert(v)) for k, v in zip(node.keys, node.values))
+            return dict((self.convert(k), self.convert(v)) for k, v in list(zip(node.keys, node.values)))
         elif isinstance(node, ast.Name):
             return node.id
         raise ValueError('Unknown type')

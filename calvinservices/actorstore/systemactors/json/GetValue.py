@@ -53,7 +53,7 @@ class GetValue(Actor):
     def _check_type_mismatch(self, container, key):
         t_cont = type(container)
         t_key = type(key)
-        mismatch = (t_cont is list and t_key is not int) or (t_cont is dict and not isinstance(key, basestring))
+        mismatch = (t_cont is list and t_key is not int) or (t_cont is dict and not isinstance(key, str))
         if mismatch:
             raise Exception()
 

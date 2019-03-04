@@ -38,7 +38,7 @@ class Source(Actor):
 
     @manage([])
     def init(self, tags):
-        if isinstance(tags, basestring):
+        if isinstance(tags, str):
             tags = [tags]
         self.source= calvinsys.open(self, "data.source", tags=tags)
 

@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from __future__ import print_function
+
 from calvin.runtime.north.plugins.storage.storage_base import StorageBase
 from calvin.runtime.south.asynchronous import asynchronous
 from calvin.utilities import calvinlogger
@@ -50,7 +50,7 @@ class ProxyRegistryClient(StorageBase):
             Starts the service if its needed for the storage service
             cb  is the callback called when the start is finished
         """
-        from urlparse import urlparse
+        from urllib.parse import urlparse
         import socket
         print("PROXY start")
         print("master_uri:", self.master_uri)

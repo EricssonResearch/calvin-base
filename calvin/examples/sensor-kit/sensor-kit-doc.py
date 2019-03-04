@@ -1,4 +1,4 @@
-from __future__ import print_function
+
 import pystache
 import json
 import sys
@@ -209,7 +209,7 @@ for k, device, title, conflicts, comment in meta:
     except:
         pass
     attrs = v.get('attributes', {})
-    pins = [v for k,v in attrs.iteritems() if k.endswith('pin')]
+    pins = [v for k,v in attrs.items() if k.endswith('pin')]
     if pins:
         entry['pins'] = ','.join([str(p) for p in sorted(pins)])
     entry['conflicts'] = ', '.join(conflicts)

@@ -409,7 +409,7 @@ class CalvinProto(CalvinCBClass):
 
     def _get_tunnel(self, peer_node_id, tunnel_type=None):
         try:
-            return [t for t in self.tunnels[peer_node_id].itervalues() if t.tunnel_type == tunnel_type][0]
+            return [t for t in self.tunnels[peer_node_id].values() if t.tunnel_type == tunnel_type][0]
         except:
             return None
 

@@ -14,8 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from __future__ import print_function
-from __future__ import absolute_import
+
+
 import itertools
 import re
 
@@ -65,7 +65,7 @@ def registry(kind, node, host):
     }
     class_ = all_kinds.get(kind.lower())
     if not class_:
-        raise ValueError("Unknown registry type '{}', must be one of: {}".format(kind, ",".join(all_kinds.keys())))
+        raise ValueError("Unknown registry type '{}', must be one of: {}".format(kind, ",".join(list(all_kinds.keys()))))
     print("Instantiating {}({}, {})".format(class_.__name__, node, host))   
     return class_(node, host)        
                 
@@ -266,8 +266,8 @@ class LocalRegistry(StorageBase):
     
     def dump(self):
         data = [ 
-            {str(k): v for k, v in self.localstore.iteritems()},
-            {str(k): list(v['+']) for k, v in self.localstore_sets.iteritems()}
+            {str(k): v for k, v in iter(self.localstore.items())},
+            {str(k): list(v['+']) for k, v in iter(self.localstore_sets.items())}
         ]
         return data   
             
@@ -306,7 +306,7 @@ class LocalRegistry(StorageBase):
         key = tuple(indexes)    
         # Collect a value set from all key-indexes that include the indexes, always compairing full index levels
         local_values = set(itertools.chain(
-            *(v['+'] for k, v in self.localstore_sets.iteritems()
+            *(v['+'] for k, v in self.localstore_sets.items()
                 if all(map(lambda x, y: False if x is None else True if y is None else x==y, k, key)))))
         return local_values       
             

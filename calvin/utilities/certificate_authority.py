@@ -18,7 +18,7 @@ Openssl wrapper used to generate and sign certificates.
 This module depends on openssl.
 """
 
-import ConfigParser
+import configparser
 import os
 import subprocess
 import sys
@@ -197,7 +197,7 @@ class CA():
         _log.debug("__init__")
         self.configfile = None
         self.commonName = commonName or 'runtime'
-        self.config = ConfigParser.SafeConfigParser()
+        self.config = configparser.SafeConfigParser()
         self.config.optionxform = str
         self.enrollment_challenge_db_path =None
         self.enrollment_challenge_db = {}

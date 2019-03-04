@@ -43,7 +43,7 @@ def test_api_present(_registry, call):
     # Check calling with required numbers of args
     method(*args)
     # Check calling with named arguments
-    kwargs = dict(zip([arg[0] if isinstance(arg, (tuple, list, set)) else arg for arg in args], args))
+    kwargs = dict(list(zip([arg[0] if isinstance(arg, (tuple, list, set)) else arg for arg in args], args)))
     method(**kwargs)
 
 # @pytest.mark.parametrize('call', prohibited)

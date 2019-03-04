@@ -489,10 +489,10 @@ class ActorManager(object):
     def _prev_connections_to_connection_list(self, prev_connections):
         """Convert prev_connection format to connection_list format"""
         cl = []
-        for in_port_id, out_list in prev_connections['inports'].iteritems():
+        for in_port_id, out_list in prev_connections['inports'].items():
             for out_id in out_list:
                 cl.append((self.node.id, in_port_id, out_id[0], out_id[1]))
-        for out_port_id, in_list in prev_connections['outports'].iteritems():
+        for out_port_id, in_list in prev_connections['outports'].items():
             for in_id in in_list:
                 cl.append((self.node.id, out_port_id, in_id[0], in_id[1]))
         return cl
@@ -561,10 +561,10 @@ class ActorManager(object):
             self._actor_not_found(actor_id)
 
         actor = self.actors[actor_id]
-        for port in actor.inports.itervalues():
+        for port in actor.inports.values():
             if port.id == port_id:
                 return port.queue._state()
-        for port in actor.outports.itervalues():
+        for port in actor.outports.values():
             if port.id == port_id:
                 return port.queue._state()
         raise Exception("No port with id: %s" % port_id)
@@ -580,13 +580,13 @@ class ActorManager(object):
         return self.actors[actor_id].report(**(kwargs if kwargs and isinstance(kwargs, dict) else {}))
 
     def enabled_actors(self):
-        return [actor for actor in self.actors.itervalues() if actor.enabled()]
+        return [actor for actor in self.actors.values() if actor.enabled()]
 
     def denied_actors(self):
-        return [actor for actor in self.actors.itervalues() if actor.denied()]
+        return [actor for actor in self.actors.values() if actor.denied()]
 
     def migratable_actors(self):
-        return [actor for actor in self.actors.itervalues() if actor.migratable()]
+        return [actor for actor in self.actors.values() if actor.migratable()]
 
     def list_actors(self):
-        return self.actors.keys()
+        return list(self.actors.keys())

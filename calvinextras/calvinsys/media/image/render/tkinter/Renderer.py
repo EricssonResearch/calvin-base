@@ -16,8 +16,8 @@
 
 
 from PIL import ImageTk, Image
-import Tkinter as tkinter
-import StringIO
+import tkinter as tkinter
+import io
 import base64
 from calvin.runtime.south.asynchronous import asynchronous
 from calvin.utilities.calvinlogger import get_logger
@@ -46,7 +46,7 @@ class Renderer(BaseRenderer.BaseRenderer):
             root.update()
             if self._render_in_progress:
                 raw_image = base64.b64decode(self._b64image)
-                buf = StringIO.StringIO(raw_image)
+                buf = io.StringIO(raw_image)
                 pil_image = Image.open(buf)
                 tk_image = ImageTk.PhotoImage(pil_image)
                 if not panel:

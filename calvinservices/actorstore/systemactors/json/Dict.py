@@ -59,7 +59,7 @@ class Dict(Actor):
     @stateguard(lambda self: not self.n and not self.done)
     @condition(['key', 'value'], [])
     def add_entry_EOS(self, key, value):
-        if isinstance(key, basestring):
+        if isinstance(key, str):
             self._dict[key] = value
         else:
             self._bail()
@@ -68,7 +68,7 @@ class Dict(Actor):
     @stateguard(lambda self: self.n and not self.done)
     @condition(['key', 'value'], [])
     def add_entry(self, key, value):
-        if isinstance(key, basestring):
+        if isinstance(key, str):
             self._dict[key]=value
             self.done = bool(len(self._dict) == self.n)
         else:
