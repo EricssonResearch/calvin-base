@@ -36,6 +36,8 @@ from .twistedimpl.server_connection import ServerProtocolFactory
 from .twistedimpl.server_connection import LineProtocol
 from .twistedimpl.server_connection import RawDataProtocol
 
+from .twistedimpl.filedescriptor import FD
+
 from .twistedimpl.pipe import Pipe
 
 from .twistedimpl import client_connection
