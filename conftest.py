@@ -48,7 +48,7 @@ def execute_cmd_check_output():
     def _execute_cmd(cmd):
         if isinstance(cmd, str):
             cmd = shlex.split(cmd)
-        res = subprocess.check_output(cmd)
+        res = subprocess.check_output(cmd, encoding='utf-8')
         return res.strip()
     return _execute_cmd
 

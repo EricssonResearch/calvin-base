@@ -177,7 +177,7 @@ class TwistedCalvinTransport(base_transport.CalvinTransportBase):
 
     def send(self, data):
         if self._proto:
-            self._proto.sendString(data)
+            self._proto.sendString(data.encode('ascii'))
 
     def join(self):
         from twisted.internet._sslverify import OpenSSLCertificateAuthorities

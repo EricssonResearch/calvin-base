@@ -189,7 +189,7 @@ class ProxyHandler(object):
             if payload['compiler'] == 'mpy-cross':
                 try:
                     path = path + '/mpy-cross/' + actor_type.replace('.', '/') + '.mpy'
-                    f = open(path, 'rb')
+                    f = open(path, 'r')
                     data = f.read()
                     f.close()
                     ok = True

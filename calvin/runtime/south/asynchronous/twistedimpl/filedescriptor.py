@@ -75,7 +75,7 @@ class FD(FileDescriptor):
     def readLine(self):
         """Return the first line of the buffer"""
         line, _, self.data = self.data.partition("\n")
-        return line
+        return line.decode('utf-8')
 
     def close(self):
         self.loseConnection()

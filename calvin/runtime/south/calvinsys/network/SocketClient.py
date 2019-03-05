@@ -76,7 +76,7 @@ class SocketClient(base_calvinsys_object.BaseCalvinsysObject):
 
     def init(self, address, port, connection_type, mode="raw", delimiter="\r\n"):
         self.connection = None
-        self.data = b""
+        self.data = ""
         if connection_type == "TCP":
             connection_factory = client_connection.TCPClientProtocolFactory(mode=mode, delimiter=delimiter,
                 server_node_name=None,
@@ -118,7 +118,7 @@ class SocketClient(base_calvinsys_object.BaseCalvinsysObject):
 
     def read(self):
         data = self.data
-        self.data = b""
+        self.data = ""
         return data
 
     def close(self):

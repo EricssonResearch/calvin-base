@@ -43,15 +43,16 @@ def test_simple(system_setup, control_api):
     res = requests.get(reg_uri + "/dumpstorage")
     db = res.json()
     key_value_db, indexed_db = db
-    # print json.dumps(indexed_db, indent=4)
+    print(json.dumps(key_value_db, indent=4))
+    print(json.dumps(indexed_db, indent=4))
     
     assert 'node-{}'.format(server_id) in key_value_db
     assert 'node-{}'.format(client_id) in key_value_db
 
-    assert indexed_db["(u'supernode', u'0')"] == [client_id]
-    assert indexed_db["(u'supernode', u'0', u'1')"] == [server_id]
+    assert indexed_db["('supernode', '0')"] == [client_id]
+    assert indexed_db["('supernode', '0', '1')"] == [server_id]
 
     assert all([set(value) == set([server_id, client_id]) 
         for key, value in indexed_db.items() 
-            if not key.startswith("(u'supernode',") 
-                and not key.startswith("(u'node/attribute', u'node_name'")])
+            if not key.startswith("('supernode',") 
+                and not key.startswith("('node/attribute', 'node_name'")])

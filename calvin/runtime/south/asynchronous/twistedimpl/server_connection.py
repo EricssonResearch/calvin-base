@@ -171,7 +171,7 @@ class LineProtocol(LineReceiver):
             data = self._line_buffer.pop(0)
             if not self._line_buffer:
                 self.data_available = False
-            return data
+            return data.decode('UTF-8') # TODO: Needs discussion
         else:
             raise Exception("Connection error: no data available")
 
@@ -179,7 +179,7 @@ class LineProtocol(LineReceiver):
 class HTTPProtocol(LineReceiver):
 
     def __init__(self, factory, actor_id):
-        self.delimiter = '\r\n\r\n'
+        self.delimiter = b'\r\n\r\n'
         self.data_available = False
         self.connection_lost = False
         self._header = None
@@ -207,6 +207,7 @@ class HTTPProtocol(LineReceiver):
             self.factory.trigger()
 
     def lineReceived(self, line):
+        line = line.decode('utf-8')
         header = [h.strip() for h in line.split("\r\n")]
         self._command = header.pop(0)
         self._header = {}
@@ -222,6 +223,8 @@ class HTTPProtocol(LineReceiver):
 
     def send(self, data):
         # Do not add newlines - data may be binary
+        if isinstance(data, str):
+            data = data.encode('ascii')
         self.transport.write(data)
 
     def close(self):
@@ -245,10 +248,17 @@ class HTTPProtocol(LineReceiver):
 
 
 class ServerProtocolFactory(Factory):
-    def __init__(self, trigger, mode='line', delimiter='\r\n', max_length=8192, actor_id=None, node_name=None):
+    def __init__(self, trigger, mode='line', delimiter=b'\r\n', max_length=8192, actor_id=None, node_name=None):
+
+        # TODO: Is this the way to do it:
+        if isinstance(delimiter, str):
+            self.delimiter = delimiter.encode('ascii')
+        else:
+            # assume bytes
+            self.delimiter = delimiter
+            
         self._trigger            = trigger
         self.mode                = mode
-        self.delimiter           = delimiter
         self.MAX_LENGTH          = max_length
         self.connections         = []
         self.pending_connections = []
