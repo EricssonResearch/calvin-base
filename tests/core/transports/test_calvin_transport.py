@@ -507,7 +507,7 @@ class TestTransportClient(object):
         if error:
             with pytest.raises(ClientJoinFailed):
                 import traceback
-                traceback.print_exc(error)
+                traceback.print_exc()
                 raise error
         else:
             pytest.fail("No exception")
@@ -590,7 +590,7 @@ class TestTransportClient(object):
         if error:
             with pytest.raises(ServerJoinFailed):
                 import traceback
-                traceback.print_exc(error)
+                traceback.print_exc()
                 raise error
         else:
             pytest.fail("No exception")
@@ -673,7 +673,7 @@ class TestTransportClient(object):
         if error:
             with pytest.raises(ConnectionFailed):
                 import traceback
-                traceback.print_exc(error)
+                traceback.print_exc()
                 raise error
         else:
             pytest.fail("No exception")
