@@ -117,9 +117,6 @@ class DynOps(object):
                 return InfiniteElement()
         return self.op()
 
-    def __next__(self):
-        return next(self)
-
     def __repr__(self):
         # Force to use the str, good e.g. when adding tuple elements for Collect.
         # Since otherwise it is just stating an instance of ...
