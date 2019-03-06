@@ -92,7 +92,7 @@ def handle_security_arguments(args):
 def control_deploy(args):
     req_handler = handle_security_arguments(args)
     with open(args.app, 'r') as fd:
-        deployable = json.load(fd, 'utf-8')
+        deployable = json.load(fd)
     response = req_handler.deploy(args.node, deployable)
     return response
 

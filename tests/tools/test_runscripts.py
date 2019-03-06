@@ -54,7 +54,6 @@ def test_cscontrol_compile_deploy_delete_cycle(system_setup, execute_cmd_check_o
     deployable_path = os.path.join(working_dir, script) + ".json"
     assert '' == execute_cmd_check_output(("cscompile", "--output", deployable_path, src_path))
     out = execute_cmd_check_output("cscontrol {} deploy {}".format(uri, deployable_path))
-    print(out)
     status = json.loads(out)
     app_id = status["application_id"]
     assert len(app_id) == 36
