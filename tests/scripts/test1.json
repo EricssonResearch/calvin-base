@@ -1,0 +1,56 @@
+{
+    "app_info": {
+        "name": "test1",
+        "actors": {
+            "test1:src": {
+                "actor_type": "std.CountTimer",
+                "args": {
+                    "start": 1,
+                    "sleep": 0.1,
+                    "steps": 1000000000
+                },
+                "signature": "3bf2bdf645bf20cb21bd6134d016106923c2697f8694137a471b9121b12cb6aa"
+            },
+            "test1:snk": {
+                "actor_type": "test.Sink",
+                "args": {
+                    "store_tokens": 1,
+                    "quiet": 1,
+                    "active": true
+                },
+                "signature": "797d9e5483ae235af0772329ecf3d37bff628542181279a98b73fb8c748a7e7c"
+            }
+        },
+        "connections": {
+            "test1:src.integer": [
+                "test1:snk.token"
+            ]
+        },
+        "port_properties": {
+            "test1:snk": [
+                {
+                    "port": "token",
+                    "direction": "in",
+                    "properties": {
+                        "nbr_peers": 1
+                    }
+                }
+            ],
+            "test1:src": [
+                {
+                    "port": "integer",
+                    "direction": "out",
+                    "properties": {
+                        "nbr_peers": 1
+                    }
+                }
+            ]
+        },
+        "valid": true
+    },
+    "app_info_signature": null,
+    "deploy_info": {
+        "requirements": {},
+        "valid": true
+    }
+}
