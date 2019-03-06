@@ -31,9 +31,9 @@ def test_id(system_setup, execute_cmd_check_output):
     res = res.strip('"')
     assert res == system_setup['runtime']['node_id']
     
-def test_deploy(system_setup, execute_cmd_check_output, file_dir):
+def test_deploy(system_setup, execute_cmd_check_output, tests_dir):
     uri = system_setup['runtime']['uri']
-    deployable_path = os.path.join(file_dir, "tests/scripts/test1.json")
+    deployable_path = os.path.join(tests_dir, "scripts/test1.json")
     res = execute_cmd_check_output(("cscontrol", uri, "deploy", deployable_path))
     deploy_info = json.loads(res)
     assert 'application_id' in res

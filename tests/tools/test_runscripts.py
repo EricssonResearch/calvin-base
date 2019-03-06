@@ -19,9 +19,9 @@ system_config = r"""
 
 
 @pytest.fixture(scope='module')
-def patch_config(file_dir, working_dir):
+def patch_config(tests_dir, working_dir):
     """Patch copy of default.conf in temp dir; set env CALVIN_CONFIG to patched file"""
-    default_config_path = os.path.join(file_dir, "tests/default.conf")
+    default_config_path = os.path.join(tests_dir, "default.conf")
     with open(default_config_path, 'r') as fp:
         config = json.load(fp)
 
@@ -48,9 +48,9 @@ def test_store(system_setup, execute_cmd_check_output):
     assert res.startswith("Module: io")
     
 @pytest.mark.parametrize('script', ['capture_output'])
-def test_cscontrol_compile_deploy_delete_cycle(system_setup, execute_cmd_check_output, file_dir, working_dir, script):
+def test_cscontrol_compile_deploy_delete_cycle(system_setup, execute_cmd_check_output, tests_dir, working_dir, script):
     uri = system_setup['runtime']['uri']
-    src_path = os.path.join(file_dir, "tests/scripts", script) + ".calvin"
+    src_path = os.path.join(tests_dir, "scripts", script) + ".calvin"
     deployable_path = os.path.join(working_dir, script) + ".json"
     assert '' == execute_cmd_check_output(("cscompile", "--output", deployable_path, src_path))
     out = execute_cmd_check_output("cscontrol {} deploy {}".format(uri, deployable_path))

@@ -57,9 +57,9 @@ def execute_cmd_check_output():
 # Provide the path to the directory where this file resides
 # FIXME: Is this too fragile?
 @pytest.fixture(scope='module')
-def file_dir():
+def tests_dir():
     """
-    Return the POSIX path of the root dir as a string.  
+    Return the POSIX path to the tests/ dir as a string.  
     FIXME: Fragile, depends on location of this file.
     """
     return _file_dir()
@@ -76,7 +76,7 @@ def working_dir(tmpdir_factory):
 
 # FIXTURE: patch_config
 @pytest.fixture(scope='module')
-def patch_config(file_dir, working_dir):
+def patch_config(tests_dir, working_dir):
     """
     Override this fixture in test modules to patch the calvin.conf file
     before starting the runtime. See test_runscripts.py for example use.
@@ -114,7 +114,7 @@ def dummy_peer_node():
 
 
 @pytest.fixture(scope='module')
-def system_setup(request, file_dir, working_dir, patch_config):
+def system_setup(request, tests_dir, working_dir, patch_config):
     """
     Setup a test system according to a system config in YAML or JSON and pass 
     the system info to the tests.
@@ -132,7 +132,7 @@ def system_setup(request, file_dir, working_dir, patch_config):
     """
     system_config_file = getattr(request.module, "system_config_file", None)
     if system_config_file:
-        config_file = os.path.join(file_dir, 'tests/systems', system_config_file)
+        config_file = os.path.join(tests_dir, 'systems', system_config_file)
         with open(config_file, 'r') as fp:
             config = yaml.load(fp)
     else:
