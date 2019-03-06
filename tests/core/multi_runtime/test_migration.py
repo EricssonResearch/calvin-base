@@ -1,10 +1,6 @@
-import json
 import time
 
 import pytest
-
-from calvinservices.csparser.cscompiler import compile_source
-
 
 # TODO: 
 # [ ] Create common fixture for this file and single_runtime/test_calvin.py
@@ -59,32 +55,18 @@ system_config = r"""
 
 
 @pytest.fixture(scope='module', params=testlist)
-def deploy_application(request, system_setup, control_api):
+def deploy_application(request, system_setup, deploy_app, destroy_app):
     deploy_rt_uri = system_setup['rt1']['uri']
     name, script, sinks, migrates = request.param
-    deployable, issuetracker = compile_source(script, name)
-    assert issuetracker.errors() == []
-    # Deploy to rt1
-    status, app_info = control_api.deploy(deploy_rt_uri, deployable)
-    assert status == 200
-    # FIXME: Check with app_id instead
-    status, applications = control_api.get_applications(deploy_rt_uri)
-    assert status == 200
+    app_info = deploy_app(deploy_rt_uri, script, name)
     app_id = app_info['application_id']
-    assert app_id in applications
     actor_map = app_info['actor_map']
     sink_ids = [actor_map[name + ':' + sink] for sink in sinks]
     migrate_ids = [actor_map[name + ':' + migrate] for migrate in migrates]
     
     yield (deploy_rt_uri, sink_ids, migrate_ids, app_id)
 
-    # Clean-up section
-    status, _ = control_api.delete_application(deploy_rt_uri, app_id)
-    assert status in range(200, 207)
-    # FIXME: Check with app_id instead
-    status, applications = control_api.get_applications(deploy_rt_uri)
-    assert status == 200
-    assert app_id not in applications
+    destroy_app(deploy_rt_uri, app_info)
 
 
 def _get_report(control_api, rt_uri, sink_id):

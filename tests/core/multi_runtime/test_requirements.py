@@ -2,7 +2,6 @@ import time
 
 import pytest
 
-from calvinservices.csparser.cscompiler import compile_source
 
 # TODO:
 # [ ] Add remaining tests from needs_update/test_requirements.py
@@ -188,31 +187,15 @@ testlist = [
     
 
 @pytest.fixture(scope='module', params=testlist, ids=lambda t: t[0])
-def deploy_application(request, system_setup, control_api):
+def deploy_application(request, system_setup, deploy_app, destroy_app):
     deploy_rt_uri = system_setup['testNode1']['uri']
     name, checker, script = request.param
-    deployable, issuetracker = compile_source(script, name)
-    assert issuetracker.errors() == []
-    # Deploy to rt1
-    status, app_info = control_api.deploy(deploy_rt_uri, deployable)
-    assert status == 200
-    # FIXME: Check with app_id instead
-    status, applications = control_api.get_applications(deploy_rt_uri)
-    assert status == 200
-    app_id = app_info['application_id']
-    assert app_id in applications
-    # actor_map = app_info['actor_map']
-    
+    app_info = deploy_app(deploy_rt_uri, script, name)
+
     yield (system_setup, app_info, checker)
 
     # Clean-up section
-    status, _ = control_api.delete_application(deploy_rt_uri, app_id)
-    assert status in range(200, 207)
-    # FIXME: Check with app_id instead
-    status, applications = control_api.get_applications(deploy_rt_uri)
-    assert status == 200
-    assert app_id not in applications
-
+    destroy_app(deploy_rt_uri, app_info)
 
 
 def test_deployment(deploy_application, control_api):

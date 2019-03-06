@@ -1,7 +1,5 @@
 import pytest
 
-from calvinservices.csparser.cscompiler import compile_source
-
 
 def _assert_tagged_set(control_api, rt_uri, sink_ids):
     """
@@ -236,32 +234,21 @@ system_config = r"""
 """
 
 @pytest.fixture(scope='module', params=testlist)
-def deploy_application(request, system_setup, control_api):
+def deploy_application(request, system_setup, deploy_app, destroy_app):
     """Deploy applications from set of scrips and test output"""
     rt_uri = system_setup['runtime']['uri']
     # expects can be a function
     name, script, sinks, expects = request.param
     if type(expects) in (list, tuple):
         assert len(sinks) == len(expects)
-    deployable, issuetracker = compile_source(script, name)
-    assert issuetracker.errors() == []
-    status, app_info = control_api.deploy(rt_uri, deployable)
-    assert status == 200
-    status, applications = control_api.get_applications(rt_uri)
-    assert status == 200
-    app_id = app_info['application_id']
-    assert app_id in applications
+    app_info = deploy_app(rt_uri, script, name)
     actor_map = app_info['actor_map']
     sink_ids = [actor_map[name + ':' + sink] for sink in sinks]
 
     yield (rt_uri, sink_ids, expects)
 
     # Clean-up section
-    status, _ = control_api.delete_application(rt_uri, app_id)
-    assert status in range(200, 207)
-    status, applications = control_api.get_applications(rt_uri)
-    assert status == 200
-    assert app_id not in applications
+    destroy_app(rt_uri, app_info)
 
 
 def _assert_expectation(control_api, rt_uri, sink_ids, expects):

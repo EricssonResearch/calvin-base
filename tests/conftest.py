@@ -23,10 +23,10 @@ import time
 
 import pytest
 import yaml
-
 from mock import Mock
 import requests
 
+from calvinservices.csparser.cscompiler import compile_source
 from calvin.utilities import calvinuuid
 import tests.orchestration as orchestration
 
@@ -137,6 +137,43 @@ def system_setup(request, tests_dir, working_dir, patch_config):
     yield sysmgr.info
     
     sysmgr.teardown()
+
+@pytest.fixture(scope='module')
+def deploy_app(control_api):
+    """
+    Return an application deployer instance
+    Usage: app_info = deploy_app(rt_uri, script, name)
+    """
+    def _deploy_app(rt_uri, script, name):
+        deployable, issuetracker = compile_source(script, name)
+        assert issuetracker.errors() == []
+        # Deploy to rt1
+        status, app_info = control_api.deploy(rt_uri, deployable)
+        assert status == 200
+        # FIXME: Check with app_id instead
+        status, applications = control_api.get_applications(rt_uri)
+        assert status == 200
+        app_id = app_info['application_id']
+        assert app_id in applications
+        return app_info
+    return _deploy_app
+
+    
+@pytest.fixture(scope='module')
+def destroy_app(control_api):
+    """
+    Return an application destroyer instance
+    Usage: destroy_app(rt_uri, app_info)
+    """
+    def _destroy_app(rt_uri, app_info):
+        app_id = app_info['application_id']
+        status, _ = control_api.delete_application(rt_uri, app_id)
+        assert status in range(200, 207)
+        # FIXME: Check with app_id instead
+        status, applications = control_api.get_applications(rt_uri)
+        assert status == 200
+        assert app_id not in applications
+    return _destroy_app
 
             
 @pytest.fixture(scope='module')
