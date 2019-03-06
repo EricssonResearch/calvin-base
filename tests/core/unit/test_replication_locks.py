@@ -20,7 +20,7 @@ import pytest
 from calvin.runtime.north.replicationmanager import ReplicationData, ReplicationManager
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture()
 def replication_manager(dummy_node):
     rm = ReplicationManager(dummy_node)
     rm.managed_replications = {"RM1": ReplicationData(), "RM2":ReplicationData()}

@@ -20,6 +20,7 @@ from mock import Mock, patch
 
 from calvin.runtime.north.actormanager import ActorManager
 from calvin.runtime.north.plugins.port import queue
+from calvin.utilities import calvinuuid
 
 system_config_file = "actorstore.yaml"
 
@@ -113,13 +114,14 @@ def test_migrate_non_existing_actor_returns_false(actor_manager):
     args, kwargs = callback_mock.call_args
     assert kwargs['status'].status == 500
 
-def test_migrate(actor_manager, dummy_peer_node):
+def test_migrate(actor_manager):
     callback_mock = Mock()
 
     actor, actor_id = _new_actor(actor_manager, 'std.Constantify', {'constant': 42})
     actor.outports['out'].set_queue(queue.fanout_fifo.FanoutFIFO({'queue_length': 4, 'direction': "out"}, {}))
     actor.inports['in'].set_queue(queue.fanout_fifo.FanoutFIFO({'queue_length': 4, 'direction': "in"}, {}))
-    peer_node = dummy_peer_node
+    peer_node = Mock()
+    peer_node.id = calvinuuid.uuid("NODE")    
     assert peer_node != actor_manager.node
 
     actor.will_migrate = Mock()

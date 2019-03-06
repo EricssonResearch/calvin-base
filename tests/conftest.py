@@ -87,30 +87,21 @@ def patch_config(tests_dir, working_dir):
 # Methods previously spread over multiple files, copy-pasted, etc.
 #    
 
-class _DummyNode:
-    def __init__(self):
-        self.id = calvinuuid.uuid("NODE")
-        self.control_uri = "http://localhost:5001"
-        self.pm = Mock()
-        self.storage = Mock()
-        self.control = Mock()
-        self.attributes = Mock()
 
-@pytest.fixture(scope='module')
+@pytest.fixture()
 def dummy_node():
     """
     A dummy node to pass in when unittesting classes that needs a runtime node.
-    FIXME: Somehow parametrize this to return any number of nodes and drop dummy_peer_node
     """
+    class _DummyNode:
+        def __init__(self):
+            self.id = calvinuuid.uuid("NODE")
+            self.control_uri = "http://localhost:5001"
+            self.pm = Mock()
+            self.storage = Mock()
+            self.control = Mock()
+            self.attributes = Mock()
     return _DummyNode()
-
-
-@pytest.fixture(scope='module')
-def dummy_peer_node():
-    """
-    Another dummy node to pass in when unittesting classes that needs a runtime node.
-    """
-    return _DummyNode()         
 
 
 @pytest.fixture(scope='module')

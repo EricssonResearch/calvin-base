@@ -1,4 +1,4 @@
-
+from mock import Mock
 import pytest
 import yaml
 
@@ -55,7 +55,7 @@ storage_configs_x = [
 storage_configs = storage_configs_x[0:4]
 
 @pytest.fixture(scope='module', params=storage_configs)
-def _storage(request, dummy_node):
+def _storage(request):
     """
     Setup a test system according to a system config in YAML or JSON and pass 
     the system info to the tests.
@@ -75,10 +75,11 @@ def _storage(request, dummy_node):
     config = yaml.load(system_config)
     sysmgr = orchestration.SystemManager(config)
     # Give the dummy node communication power (for proxy tests)
-    dummy_node.control = get_calvincontrol()
-    dummy_node.network = CalvinNetwork(dummy_node)
-    dummy_node.proto = CalvinProto(dummy_node, dummy_node.network)
-    storage = Storage(dummy_node, mode, host)
+    node = Mock()
+    node.control = get_calvincontrol()
+    node.network = CalvinNetwork(node)
+    node.proto = CalvinProto(node, node.network)
+    storage = Storage(node, mode, host)
     storage.start()    
 
     yield storage
@@ -141,8 +142,6 @@ def _storage(request, dummy_node):
 
 def test_set_get_delete(_storage):
     def cb(expected, *args, **kwargs):
-        # print
-        print(expected, args, kwargs)
         assert not args
         assert len(kwargs) == 2
         assert 'key' in kwargs 
@@ -270,8 +269,6 @@ def test_get_iter(_storage):
 
 def test_add_remove_get_delete_index(_storage):
     def cb(expected, *args, **kwargs):
-        # print
-        # print expected, args, kwargs
         assert not args
         if 'key' in kwargs:
             # FIXME: Why is this?
