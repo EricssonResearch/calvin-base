@@ -36,9 +36,14 @@ from .twistedimpl.server_connection import ServerProtocolFactory
 from .twistedimpl.server_connection import LineProtocol
 from .twistedimpl.server_connection import RawDataProtocol
 
+from .twistedimpl import filedescriptor
 from .twistedimpl.filedescriptor import FD
 
+from .twistedimpl import pipe
 from .twistedimpl.pipe import Pipe
+
+from .twistedimpl import defer
+from .twistedimpl import threads
 
 from .twistedimpl import client_connection
 from .twistedimpl.client_connection import TCPClientProtocolFactory

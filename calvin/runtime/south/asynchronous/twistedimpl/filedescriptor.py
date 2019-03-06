@@ -55,7 +55,8 @@ class FD(FileDescriptor):
         self.fp.close()
 
     def writeLine(self, data):
-        self.write(data + "\n")
+        line = data + "\n"
+        self.write(line.encode('utf-8'))
 
     def dataRead(self, data):
         self.totalread += len(data)
