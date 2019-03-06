@@ -4,7 +4,7 @@ from calvinservices.actorstore.store import Store
 
 @pytest.fixture(scope='module')
 def store():
-    """Provide an instance of actore store"""
+    """Provide an instance of actor store"""
     store = Store()
     return store
     

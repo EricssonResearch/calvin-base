@@ -11,7 +11,7 @@ from calvin.utilities import dynops
 import tests.orchestration as orchestration
 
 
-storage_configs_x = [
+storage_configs = [
     (
         'local', None, "[]"),
     (
@@ -52,7 +52,7 @@ storage_configs_x = [
     ),
 ]
 
-storage_configs = storage_configs_x[0:4]
+storage_configs = storage_configs
 
 @pytest.fixture(scope='module', params=storage_configs)
 def _storage(request):

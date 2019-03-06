@@ -127,6 +127,7 @@ class MockCalvinLib(CalvinLib):
 
 @pytest.fixture
 def mock_calvinsys():
+    """Mock calvinsys instance"""
     cs = MockCalvinSys()
     cs.init(capabilities={
         "io.button": {
@@ -315,6 +316,7 @@ def mock_calvinsys():
 
 @pytest.fixture
 def mock_calvinlib():
+    """Mock calvinlib instance"""
     cl = MockCalvinLib()    
     cl.init(capabilities={
         "math.arithmetic.compare": {

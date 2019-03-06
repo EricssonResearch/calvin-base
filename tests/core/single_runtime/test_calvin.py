@@ -237,6 +237,7 @@ system_config = r"""
 
 @pytest.fixture(scope='module', params=testlist)
 def deploy_application(request, system_setup, control_api):
+    """Deploy applications from set of scrips and test output"""
     rt_uri = system_setup['runtime']['uri']
     # expects can be a function
     name, script, sinks, expects = request.param

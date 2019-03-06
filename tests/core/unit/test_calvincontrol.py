@@ -30,7 +30,7 @@ def calvincontrol():
     return control
 
 @pytest.fixture(scope="module", params=["prefixed", "non-prefixed"])
-def uuids(request):
+def _uuids(request):
     if request.param == "prefixed":
         return {
             "trace_id": calvinuuid.uuid("TRACE"),
@@ -83,15 +83,15 @@ def test_get_calvincontrol_returns_xxx():
     ("POST /node/resource/mem_avail HTTP/1", ["mem_avail"], "handle_resource_avail")
 ])
 
-def test_routes_correctly(url, match, handler, uuids):
+def test_routes_correctly(url, match, handler, _uuids):
     control = CalvinControl()
-    handler_func, mo = control._handler_for_route(url.format(**uuids))
+    handler_func, mo = control._handler_for_route(url.format(**_uuids))
     assert handler_func is not None
     assert handler_func.__name__ == handler
     assert mo is not None
     if match is not None:
-        # If any of the 'match'es are in uuids we assume they should be uuids
-        match = [uuids.get(m, m) for m in match]
+        # If any of the 'match'es are in _uuids we assume they should be uuids
+        match = [_uuids.get(m, m) for m in match]
         assert list(mo.groups()) == match
 
 def test_send_response():

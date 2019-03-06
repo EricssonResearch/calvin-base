@@ -8,6 +8,7 @@ system_config_file = "actorstore.yaml"
 
 @pytest.fixture(scope='module')
 def docstore(system_setup):
+    """Local DocumentationStore instance"""
     ds = DocumentationStore()
     return ds
 

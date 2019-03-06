@@ -33,21 +33,25 @@ def create_actor(node):
 
 @pytest.fixture
 def actor(dummy_node):
+    """Return std.Identity actor """
     return create_actor(dummy_node)
 
 
 @pytest.fixture
 def inport(actor):
+    """return inport of (actor)"""
     return InPort("inport", actor)
 
 
 @pytest.fixture
 def outport(actor):
+    """return outport of (actor)"""
     return OutPort("outport", actor)
 
     
 @pytest.fixture
 def portpairs(dummy_node):
+    """return inport, outport of two (actor) instances"""
     actor1 = create_actor(dummy_node)
     actor2 = create_actor(dummy_node)
     return (

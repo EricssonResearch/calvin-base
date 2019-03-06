@@ -44,6 +44,7 @@ class Dummy(Base):
 
 @pytest.fixture
 def dummy_actor():
+    """Return actor with inherited _managed set, and properties foo and bar"""
     return Dummy()
             
 

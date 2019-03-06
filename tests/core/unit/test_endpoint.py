@@ -25,6 +25,7 @@ from calvin.runtime.north.plugins.port import queue
 
 @pytest.fixture
 def port_cluster():
+    """Set up port cluster"""
     class PortCluster:
         def __init__(self):        
             self.port = InPort("port", Mock())
@@ -41,6 +42,7 @@ def port_cluster():
     
 @pytest.fixture
 def tunnel_port_cluster():
+    """Set up tunneled port cluster"""
     class TunnelPortCluster:
         def __init__(self):
             self.port = InPort("port", Mock())

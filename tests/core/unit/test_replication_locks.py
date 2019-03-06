@@ -21,7 +21,8 @@ from calvin.runtime.north.replicationmanager import ReplicationData, Replication
 
 
 @pytest.fixture()
-def replication_manager(dummy_node):
+def _replication_manager(dummy_node):
+    """Return ReplicationManager instance"""
     rm = ReplicationManager(dummy_node)
     rm.managed_replications = {"RM1": ReplicationData(), "RM2":ReplicationData()}
     for rid, r in list(rm.managed_replications.items()):
@@ -32,58 +33,58 @@ def replication_manager(dummy_node):
     rm.leaders_cache = {"RM1": rm.node.id, "RM2": rm.node.id}
     return rm
 
-def test_lock1(replication_manager):
+def test_lock1(_replication_manager):
     
     def _print_lock_lists():
-        print("RM1 given  ", replication_manager.managed_replications["RM1"].given_lock_replication_ids)
-        print("RM1 aquired", replication_manager.managed_replications["RM1"].aquired_lock_replication_ids)
-        print("RM1 queued ", replication_manager.managed_replications["RM1"].queued_lock_replication_ids)
-        print("RM2 given  ", replication_manager.managed_replications["RM2"].given_lock_replication_ids)
-        print("RM2 aquired", replication_manager.managed_replications["RM2"].aquired_lock_replication_ids)
-        print("RM2 queued ", replication_manager.managed_replications["RM2"].queued_lock_replication_ids)
+        print("RM1 given  ", _replication_manager.managed_replications["RM1"].given_lock_replication_ids)
+        print("RM1 aquired", _replication_manager.managed_replications["RM1"].aquired_lock_replication_ids)
+        print("RM1 queued ", _replication_manager.managed_replications["RM1"].queued_lock_replication_ids)
+        print("RM2 given  ", _replication_manager.managed_replications["RM2"].given_lock_replication_ids)
+        print("RM2 aquired", _replication_manager.managed_replications["RM2"].aquired_lock_replication_ids)
+        print("RM2 queued ", _replication_manager.managed_replications["RM2"].queued_lock_replication_ids)
     
     def _response1(status):
         print("response1", status)
         _print_lock_lists()
-        assert "RM1" in replication_manager.managed_replications["RM2"].given_lock_replication_ids
-        assert "RM2" in replication_manager.managed_replications["RM1"].aquired_lock_replication_ids
+        assert "RM1" in _replication_manager.managed_replications["RM2"].given_lock_replication_ids
+        assert "RM2" in _replication_manager.managed_replications["RM1"].aquired_lock_replication_ids
 
     def _response2(status):
         print("response2", status)
         _print_lock_lists()
-        assert "RM1" in replication_manager.managed_replications["RM2"].given_lock_replication_ids
-        assert "RM2" in replication_manager.managed_replications["RM1"].aquired_lock_replication_ids
+        assert "RM1" in _replication_manager.managed_replications["RM2"].given_lock_replication_ids
+        assert "RM2" in _replication_manager.managed_replications["RM1"].aquired_lock_replication_ids
 
     def _response3(status):
         print("response3", status)
         _print_lock_lists()
-        assert "RM2" in replication_manager.managed_replications["RM1"].given_lock_replication_ids
-        assert "RM1" in replication_manager.managed_replications["RM2"].aquired_lock_replication_ids
+        assert "RM2" in _replication_manager.managed_replications["RM1"].given_lock_replication_ids
+        assert "RM1" in _replication_manager.managed_replications["RM2"].aquired_lock_replication_ids
     
     print("Test: local")
-    replication_manager.lock_peer_replication("RM1", _response1)
+    _replication_manager.lock_peer_replication("RM1", _response1)
     print("lock")
     _print_lock_lists()
-    replication_manager.release_peer_replication("RM1")
+    _replication_manager.release_peer_replication("RM1")
     print("released 1")
     _print_lock_lists()
-    assert "RM1" not in replication_manager.managed_replications["RM2"].given_lock_replication_ids
-    assert "RM2" not in replication_manager.managed_replications["RM1"].aquired_lock_replication_ids
-    replication_manager.lock_peer_replication("RM1", _response2)
-    replication_manager.lock_peer_replication("RM2", _response3)
+    assert "RM1" not in _replication_manager.managed_replications["RM2"].given_lock_replication_ids
+    assert "RM2" not in _replication_manager.managed_replications["RM1"].aquired_lock_replication_ids
+    _replication_manager.lock_peer_replication("RM1", _response2)
+    _replication_manager.lock_peer_replication("RM2", _response3)
     print("queued")
     _print_lock_lists()
-    assert "RM1" in replication_manager.managed_replications["RM2"].queued_lock_replication_ids
-    replication_manager.release_peer_replication("RM1")
+    assert "RM1" in _replication_manager.managed_replications["RM2"].queued_lock_replication_ids
+    _replication_manager.release_peer_replication("RM1")
     print("release 1 -> lock")
     _print_lock_lists()
-    assert "RM2" in replication_manager.managed_replications["RM1"].given_lock_replication_ids
-    assert "RM1" in replication_manager.managed_replications["RM2"].aquired_lock_replication_ids
-    replication_manager.release_peer_replication("RM2")
+    assert "RM2" in _replication_manager.managed_replications["RM1"].given_lock_replication_ids
+    assert "RM1" in _replication_manager.managed_replications["RM2"].aquired_lock_replication_ids
+    _replication_manager.release_peer_replication("RM2")
     print("released 2")
     _print_lock_lists()
-    assert "RM2" not in replication_manager.managed_replications["RM1"].given_lock_replication_ids
-    assert "RM1" not in replication_manager.managed_replications["RM2"].aquired_lock_replication_ids
+    assert "RM2" not in _replication_manager.managed_replications["RM1"].given_lock_replication_ids
+    assert "RM1" not in _replication_manager.managed_replications["RM2"].aquired_lock_replication_ids
 
 
 
