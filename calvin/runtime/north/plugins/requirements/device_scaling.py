@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.utilities.replication_defs import PRE_CHECK
+from calvin.common.replication_defs import PRE_CHECK
 import random
 import sys
 

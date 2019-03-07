@@ -17,7 +17,7 @@
 import os.path
 import os
 
-from calvin.utilities.calvinlogger import get_logger
+from calvin.common.calvinlogger import get_logger
 from calvin.runtime.south.calvinsys import base_calvinsys_object
 from calvin.runtime.south.asynchronous import filedescriptor
 

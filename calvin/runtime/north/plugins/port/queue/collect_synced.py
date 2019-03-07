@@ -18,7 +18,7 @@
 from calvin.runtime.north.calvin_token import Token
 from calvin.runtime.north.plugins.port.queue.common import QueueFull, QueueEmpty, COMMIT_RESPONSE
 from calvin.runtime.north.plugins.port.queue.collect_base import CollectBase
-from calvin.utilities import calvinlogger
+from calvin.common import calvinlogger
 from calvin.runtime.north.calvin_token import ExceptionToken
 import copy
 

@@ -20,7 +20,7 @@ import tkinter as tkinter
 import io
 import base64
 from calvin.runtime.south.asynchronous import asynchronous
-from calvin.utilities.calvinlogger import get_logger
+from calvin.common.calvinlogger import get_logger
 from calvinextras.calvinsys.media.image.render import BaseRenderer
 
 _log = get_logger(__name__)

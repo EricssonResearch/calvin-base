@@ -14,8 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.utilities.calvin_callback import CalvinCBClass
-from calvin.utilities import calvinlogger
+from calvin.common.calvin_callback import CalvinCBClass
+from calvin.common import calvinlogger
 
 _log = calvinlogger.get_logger(__name__)
 

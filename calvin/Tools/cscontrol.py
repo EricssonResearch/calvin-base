@@ -20,9 +20,9 @@
 import os
 import argparse
 import json
-from calvin.utilities.calvinlogger import get_logger
-from calvin.utilities.security import Security
-from calvin.utilities import certificate
+from calvin.common.calvinlogger import get_logger
+from calvin.common.security import Security
+from calvin.common import certificate
 
 _log = get_logger(__name__)
 _request_handler = None
@@ -148,7 +148,7 @@ def control_nodes(args):
 
 
 def control_storage(args):
-    from calvin.utilities.attribute_resolver import format_index_string
+    from calvin.common.attribute_resolver import format_index_string
     import json
     req_handler= handle_security_arguments(args)
     if args.cmd == 'get_index':

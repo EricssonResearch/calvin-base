@@ -15,7 +15,7 @@
 # limitations under the License.
 
 from calvinextras.calvinsys.io.ds18b20thermometer.BaseDS18B20 import BaseDS18B20
-from calvin.utilities.calvinlogger import get_logger
+from calvin.common.calvinlogger import get_logger
 from calvin.runtime.south.asynchronous import asynchronous
 import glob
 

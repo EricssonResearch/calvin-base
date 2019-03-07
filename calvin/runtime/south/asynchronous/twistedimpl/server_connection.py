@@ -19,14 +19,14 @@ from twisted.internet.protocol import Factory
 from twisted.internet.protocol import DatagramProtocol
 from twisted.protocols.basic import LineReceiver
 from twisted.internet import error
-from calvin.utilities import certificate
-from calvin.utilities import runtime_credentials
+from calvin.common import certificate
+from calvin.common import runtime_credentials
 from twisted.internet import reactor, protocol, ssl, endpoints
 
-from calvin.utilities.calvinlogger import get_logger
+from calvin.common.calvinlogger import get_logger
 _log = get_logger(__name__)
 
-from calvin.utilities import calvinconfig
+from calvin.common import calvinconfig
 _conf = calvinconfig.get()
 
 

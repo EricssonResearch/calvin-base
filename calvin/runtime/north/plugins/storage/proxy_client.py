@@ -17,11 +17,11 @@
 
 from calvin.runtime.north.plugins.storage.storage_base import StorageBase
 from calvin.runtime.south.asynchronous import asynchronous
-from calvin.utilities import calvinlogger
-from calvin.utilities import calvinconfig
-from calvin.utilities.calvin_callback import CalvinCB
-from calvin.utilities import calvinuuid
-from calvin.utilities import calvinresponse
+from calvin.common import calvinlogger
+from calvin.common import calvinconfig
+from calvin.common.calvin_callback import CalvinCB
+from calvin.common import calvinuuid
+from calvin.common import calvinresponse
 
 _conf = calvinconfig.get()
 _log = calvinlogger.get_logger(__name__)

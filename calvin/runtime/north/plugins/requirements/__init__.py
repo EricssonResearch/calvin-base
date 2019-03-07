@@ -18,7 +18,7 @@ import os
 import glob
 import importlib
 
-from calvin.utilities import calvinlogger
+from calvin.common import calvinlogger
 _log = calvinlogger.get_logger(__name__)
 
 # FIXME should be read from calvin config

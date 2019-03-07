@@ -17,8 +17,8 @@
 import os
 import glob
 import json
-from calvin.utilities import calvinuuid
-from calvin.utilities.calvinlogger import get_logger
+from calvin.common import calvinuuid
+from calvin.common.calvinlogger import get_logger
 
 _log = get_logger(__name__)
 

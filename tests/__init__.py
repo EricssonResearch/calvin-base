@@ -1,8 +1,8 @@
 
 from mock import Mock
 
-from calvin.utilities import calvinuuid
-from calvin.utilities import attribute_resolver
+from calvin.common import calvinuuid
+from calvin.common import attribute_resolver
 
 class SerMock(Mock):
     def _todict(self):

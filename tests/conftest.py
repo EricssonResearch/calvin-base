@@ -27,7 +27,7 @@ from mock import Mock
 import requests
 
 from calvinservices.csparser.cscompiler import compile_source
-from calvin.utilities import calvinuuid
+from calvin.common import calvinuuid
 import tests.orchestration as orchestration
 
 

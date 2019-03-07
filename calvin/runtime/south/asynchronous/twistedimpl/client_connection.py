@@ -19,12 +19,12 @@ from twisted.internet import reactor
 from twisted.internet.protocol import Protocol, ClientFactory
 from twisted.internet.protocol import DatagramProtocol
 
-from calvin.utilities.calvinlogger import get_logger
-from calvin.utilities.calvin_callback import CalvinCBClass
+from calvin.common.calvinlogger import get_logger
+from calvin.common.calvin_callback import CalvinCBClass
 
 _log = get_logger(__name__)
 
-from calvin.utilities import calvinconfig
+from calvin.common import calvinconfig
 _conf = calvinconfig.get()
 
 

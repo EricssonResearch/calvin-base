@@ -16,8 +16,8 @@
 
 import re
 import os
-from calvin.utilities.calvin_callback import CalvinCB
-from calvin.utilities.calvinlogger import get_logger
+from calvin.common.calvin_callback import CalvinCB
+from calvin.common.calvinlogger import get_logger
 from passlib.hash import pbkdf2_sha256
 
 _log = get_logger(__name__)

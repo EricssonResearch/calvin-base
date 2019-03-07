@@ -18,17 +18,17 @@ import wrapt
 import functools
 import time
 import copy
-from calvin.utilities import calvinuuid
+from calvin.common import calvinuuid
 from calvin.actor import actorport
-from calvin.utilities.calvinlogger import get_logger
-from calvin.utilities.utils import enum
+from calvin.common.calvinlogger import get_logger
+from calvin.common.utils import enum
 from calvin.runtime.north.calvin_token import Token, ExceptionToken
 # from calvin.runtime.north import calvincontrol
 from calvin.runtime.north.replicationmanager import ReplicationId
-import calvin.utilities.calvinresponse as response
+import calvin.common.calvinresponse as response
 from calvin.runtime.south.asynchronous import asynchronous
 from calvin.runtime.north.plugins.authorization_checks import check_authorization_plugin_list
-from calvin.utilities.calvin_callback import CalvinCB
+from calvin.common.calvin_callback import CalvinCB
 from calvin.actor.port_property_syntax import get_port_property_capabilities, get_port_property_runtime
 from calvin.runtime.north.calvinsys import get_calvinsys
 from calvin.runtime.north.calvinlib import get_calvinlib

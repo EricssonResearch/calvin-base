@@ -22,9 +22,9 @@ import logging
 
 from .monitor import Event_Monitor, VisualizingMonitor
 from calvin.runtime.south.asynchronous import asynchronous
-from calvin.utilities.calvin_callback import CalvinCB
-from calvin.utilities.calvinlogger import get_logger
-from calvin.utilities import calvinconfig
+from calvin.common.calvin_callback import CalvinCB
+from calvin.common.calvinlogger import get_logger
+from calvin.common import calvinconfig
 
 _log = get_logger(__name__)
 _conf = calvinconfig.get()

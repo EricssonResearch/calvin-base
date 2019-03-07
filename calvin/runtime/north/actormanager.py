@@ -15,13 +15,13 @@
 # limitations under the License.
 
 import random
-from calvin.utilities import dynops
-from calvin.utilities.requirement_matching import ReqMatch
+from calvin.common import dynops
+from calvin.common.requirement_matching import ReqMatch
 from calvin.runtime.south.asynchronous import asynchronous
-from calvin.utilities.calvinlogger import get_logger
-from calvin.utilities.calvin_callback import CalvinCB
-import calvin.utilities.calvinresponse as response
-from calvin.utilities.security import Security, security_enabled
+from calvin.common.calvinlogger import get_logger
+from calvin.common.calvin_callback import CalvinCB
+import calvin.common.calvinresponse as response
+from calvin.common.security import Security, security_enabled
 from calvin.actor.actor import ShadowActor
 from calvin.runtime.north.plugins.port import DISCONNECT
 from calvin.runtime.north.calvinsys import get_calvinsys
@@ -38,7 +38,7 @@ def log_callback(reply, **kwargs):
 def class_factory(src, metadata, actor_type):
     co = compile(src, actor_type, 'exec')
     import calvin.actor.actor as caa
-    import calvin.utilities.calvinlogger as clog
+    import calvin.common.calvinlogger as clog
     import calvin.runtime.north.calvin_token as ctok
     import copy as ccopy
     namespace = {

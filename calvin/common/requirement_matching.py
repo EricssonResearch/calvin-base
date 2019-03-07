@@ -14,10 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.utilities import dynops
-from calvin.utilities import calvinlogger
+from calvin.common import dynops
+from calvin.common import calvinlogger
 from calvin.runtime.north.plugins.requirements import req_operations
-import calvin.utilities.calvinresponse as response
+import calvin.common.calvinresponse as response
 from calvin.runtime.south.asynchronous import asynchronous
 
 _log = calvinlogger.get_logger(__name__)

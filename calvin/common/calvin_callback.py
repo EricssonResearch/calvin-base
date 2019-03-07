@@ -17,8 +17,8 @@
 
 import logging
 
-from calvin.utilities import calvinuuid
-from calvin.utilities import calvinlogger
+from calvin.common import calvinuuid
+from calvin.common import calvinlogger
 
 _log = calvinlogger.get_logger(__name__)
 

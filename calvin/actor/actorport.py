@@ -15,11 +15,11 @@
 # limitations under the License.
 
 
-from calvin.utilities import calvinuuid
-from calvin.utilities.calvin_callback import CalvinCB
+from calvin.common import calvinuuid
+from calvin.common.calvin_callback import CalvinCB
 from calvin.runtime.north.plugins.port import queue
-import calvin.utilities.calvinresponse as response
-from calvin.utilities.calvinlogger import get_logger
+import calvin.common.calvinresponse as response
+from calvin.common.calvinlogger import get_logger
 from calvin.runtime.north.plugins.port import DISCONNECT
 from calvin.runtime.north.plugins.port.endpoint.common import Endpoint
 

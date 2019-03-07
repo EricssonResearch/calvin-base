@@ -3,7 +3,7 @@
 import unittest
 import pytest
 
-from calvin.utilities.attribute_resolver import AttributeResolver
+from calvin.common.attribute_resolver import AttributeResolver
 
 class AttributeResolverTester(unittest.TestCase):
 

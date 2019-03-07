@@ -20,7 +20,7 @@ from mock import Mock, patch
 
 from calvin.runtime.north.actormanager import ActorManager
 from calvin.runtime.north.plugins.port import queue
-from calvin.utilities import calvinuuid
+from calvin.common import calvinuuid
 
 system_config_file = "actorstore.yaml"
 

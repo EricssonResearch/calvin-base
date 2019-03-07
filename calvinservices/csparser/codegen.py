@@ -26,7 +26,7 @@ from .visitor import Visitor, search_tree
 from calvin.actor.port_property_syntax import port_property_data
 
 # FIXME: External dependency to be removed
-from  calvin.utilities.actor_signature import signature
+from  calvin.common.actor_signature import signature
 
 
 def _is_local_component(actor_type):

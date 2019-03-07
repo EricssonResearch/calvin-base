@@ -15,7 +15,7 @@
 # limitations under the License.
 
 
-from calvin.utilities import calvinlogger
+from calvin.common import calvinlogger
 from .twisted.twisted_transport import TwistedCalvinServer, TwistedCalvinTransport
 from calvin.runtime.south.transports import base_transport
 from calvin.runtime.south.transports.lib.twisted import twisted_transport

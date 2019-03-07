@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
 from calvin.runtime.south.asynchronous import asynchronous
-from calvin.utilities.calvin_callback import CalvinCB
-from calvin.utilities.attribute_resolver import AttributeResolver
-from calvin.utilities.calvinlogger import get_logger
+from calvin.common.calvin_callback import CalvinCB
+from calvin.common.attribute_resolver import AttributeResolver
+from calvin.common.calvinlogger import get_logger
 
 _log = get_logger(__name__)
 

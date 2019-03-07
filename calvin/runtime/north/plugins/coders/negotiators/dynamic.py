@@ -16,7 +16,7 @@
 
 
 from calvin.runtime.north.plugins.coders.messages import message_coder_factory
-from calvin.utilities import calvinconfig
+from calvin.common import calvinconfig
 from . import negotiator_base
 
 _conf = calvinconfig.get()

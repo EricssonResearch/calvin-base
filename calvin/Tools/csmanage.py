@@ -22,13 +22,13 @@ import os
 import glob
 import shutil
 import json
-from calvin.utilities import certificate
-from calvin.utilities import certificate_authority
-from calvin.utilities import runtime_credentials
-from calvin.utilities import code_signer
-from calvin.utilities.utils import get_home
-from calvin.utilities.attribute_resolver import AttributeResolver
-from calvin.utilities import calvinuuid
+from calvin.common import certificate
+from calvin.common import certificate_authority
+from calvin.common import runtime_credentials
+from calvin.common import code_signer
+from calvin.common.utils import get_home
+from calvin.common.attribute_resolver import AttributeResolver
+from calvin.common import calvinuuid
 from calvin.csparser.codegen import calvin_components
 # from calvin.actorstore.store import ActorStore, install_component
 
@@ -368,7 +368,7 @@ def manage_install_components(args):
             with open(filename, 'r') as source:
                 source_text = source.read()
         except:
-            from calvin.utilities.issuetracker import IssueTracker
+            from calvin.common.issuetracker import IssueTracker
             it = IssueTracker()
             it.add_error('File not found', {'script': filename})
             return [], it
@@ -556,7 +556,7 @@ def manage_runtime_c_rehash(args):
         print("Error, only type={CA, CS} are suppored")
 
 def manage_runtime_get_name(args):
-    from calvin.utilities.attribute_resolver import AttributeResolver
+    from calvin.common.attribute_resolver import AttributeResolver
     # Attributes
     runtime_attr = {}
 

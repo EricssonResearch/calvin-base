@@ -15,7 +15,7 @@
 # limitations under the License.
 
 from calvin.runtime.north.plugins.port.queue.common import QueueFull
-from calvin.utilities import calvinlogger
+from calvin.common import calvinlogger
 from calvin.runtime.north.plugins.port.queue.fanout_ordered_fifo import FanoutOrderedFIFO
 
 _log = calvinlogger.get_logger(__name__)

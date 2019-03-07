@@ -14,13 +14,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.utilities.calvin_callback import CalvinCB
+from calvin.common.calvin_callback import CalvinCB
 from calvin.runtime.north.plugins.port.connection import ConnectionFactory, PURPOSE
 from calvin.actor.actorport import PortMeta
-import calvin.utilities.calvinresponse as response
-from calvin.utilities import calvinlogger
+import calvin.common.calvinresponse as response
+from calvin.common import calvinlogger
 from calvin.actor.actor import ShadowActor
-from calvin.utilities.utils import enum
+from calvin.common.utils import enum
 from calvin.runtime.north.plugins.port import DISCONNECT
 
 _log = calvinlogger.get_logger(__name__)

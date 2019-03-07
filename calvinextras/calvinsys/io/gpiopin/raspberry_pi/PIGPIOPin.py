@@ -15,7 +15,7 @@
 # limitations under the License.
 
 from calvinextras.calvinsys.io.gpiopin import BaseGPIOPin
-from calvin.utilities.calvinlogger import get_logger
+from calvin.common.calvinlogger import get_logger
 import pigpio
 
 _log = get_logger(__name__)

@@ -16,15 +16,15 @@
 
 import os
 import copy
-from calvin.utilities.calvin_callback import CalvinCB
-from calvin.utilities import dynops
-from calvin.utilities import calvinlogger
+from calvin.common.calvin_callback import CalvinCB
+from calvin.common import dynops
+from calvin.common import calvinlogger
 from calvin.runtime.north.plugins.requirements import req_operations
-import calvin.utilities.calvinresponse as response
-from calvin.utilities import calvinuuid
+import calvin.common.calvinresponse as response
+from calvin.common import calvinuuid
 from calvin.runtime.south.asynchronous import asynchronous
-from calvin.utilities.security import Security
-from calvin.utilities.requirement_matching import ReqMatch
+from calvin.common.security import Security
+from calvin.common.requirement_matching import ReqMatch
 
 _log = calvinlogger.get_logger(__name__)
 

@@ -6,8 +6,8 @@ from calvin.runtime.north.storage import Storage
 from calvin.runtime.north.calvincontrol import get_calvincontrol
 from calvin.runtime.north.calvin_network import CalvinNetwork
 from calvin.runtime.north.calvin_proto import CalvinProto
-from calvin.utilities.calvin_callback import CalvinCB
-from calvin.utilities import dynops
+from calvin.common.calvin_callback import CalvinCB
+from calvin.common import dynops
 import tests.orchestration as orchestration
 
 
@@ -118,7 +118,7 @@ def _storage(request):
 #     It is assumed that the prefix and key are strings,
 #     the sum has to be an immutable object.
 #     Value is placed in supplied dynamic iterable it parameter.
-#     The dynamic iterable are of a subclass to calvin.utilities.dynops.DynOps
+#     The dynamic iterable are of a subclass to calvin.common.dynops.DynOps
 #     that supports the append function call (currently only List), see DynOps
 #     for details of how they are used. It is common to call auto_final method
 #     with parameter max_length to number of get_iter calls.
@@ -161,7 +161,7 @@ def test_set_get_delete(_storage):
 #     It is assumed that the prefix and key are strings,
 #     the sum has to be an immutable object.
 #     Value is placed in supplied dynamic iterable it parameter.
-#     The dynamic iterable are of a subclass to calvin.utilities.dynops.DynOps
+#     The dynamic iterable are of a subclass to calvin.common.dynops.DynOps
 #     that supports the append function call (currently only List), see DynOps
 #     for details of how they are used. It is common to call auto_final method
 #     with parameter max_length to number of get_iter calls.
@@ -340,7 +340,7 @@ def test_add_remove_get_delete_index(_storage):
 # returned: Dynamic iterable object
 #     Values are placed in the dynamic iterable object.
 #     The dynamic iterable are of the List subclass to
-#     calvin.utilities.dynops.DynOps, see DynOps for details
+#     calvin.common.dynops.DynOps, see DynOps for details
 #     of how they are used. The final method will be called when
 #     all values are appended to the returned dynamic iterable.
 # """

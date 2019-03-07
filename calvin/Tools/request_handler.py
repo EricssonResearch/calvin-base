@@ -29,7 +29,7 @@ try:
 except:
     session = None
 
-from calvin.utilities.calvinlogger import get_logger
+from calvin.common.calvinlogger import get_logger
 
 DEFAULT_TIMEOUT = 5
 

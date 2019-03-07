@@ -18,7 +18,7 @@
 
 from calvin.actor.actor import Actor, manage, condition, stateguard, calvinlib
 from calvin.runtime.north.calvin_token import  ExceptionToken
-from calvin.utilities.calvinlogger import get_actor_logger
+from calvin.common.calvinlogger import get_actor_logger
 
 _log = get_actor_logger(__name__)
 

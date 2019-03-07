@@ -20,7 +20,7 @@ from calvin.runtime.north.calvin_token import Token
 from calvin.runtime.north.plugins.port.endpoint.common import Endpoint
 from calvin.runtime.north.plugins.port.queue.common import COMMIT_RESPONSE, QueueEmpty, QueueFull
 from calvin.runtime.north.plugins.port import DISCONNECT
-from calvin.utilities.calvinlogger import get_logger
+from calvin.common.calvinlogger import get_logger
 
 _log = get_logger(__name__)
 

@@ -18,18 +18,18 @@
 
 import json
 
-from calvin.utilities import calvinresponse
-from calvin.utilities.calvinlogger import get_logger
-from calvin.utilities.calvin_callback import CalvinCB
-from calvin.utilities.issuetracker import IssueTracker
+from calvin.common import calvinresponse
+from calvin.common.calvinlogger import get_logger
+from calvin.common.calvin_callback import CalvinCB
+from calvin.common.issuetracker import IssueTracker
 # from calvin.csparser import cscompile as compiler
 # from calvin.csparser.dscodegen import calvin_dscodegen
 from calvin.runtime.north.appmanager import Deployer
 from calvin.runtime.north.plugins.port import DISCONNECT
-from calvin.utilities.security import security_enabled
+from calvin.common.security import security_enabled
 from .routes import register, handler
 from .authentication import authentication_decorator
-from calvin.utilities.replication_defs import PRE_CHECK, REPLICATION_STATUS
+from calvin.common.replication_defs import PRE_CHECK, REPLICATION_STATUS
 
 _log = get_logger(__name__)
 

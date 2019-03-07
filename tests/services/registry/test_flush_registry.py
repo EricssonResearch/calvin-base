@@ -9,7 +9,7 @@ import pytest
 from mock import Mock
 from calvin.runtime.north.storage import Storage
 from calvin.runtime.north.plugins.storage.storage_clients import LocalRegistry, NullRegistryClient, DebugRegistryClient
-from calvin.utilities import calvinresponse
+from calvin.common import calvinresponse
 
 
 @pytest.fixture()

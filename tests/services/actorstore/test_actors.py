@@ -28,7 +28,7 @@ from calvin.runtime.north.calvin_token import Token
 from calvin.runtime.north.plugins.port.endpoint import Endpoint
 from calvin.runtime.north import scheduler
 from calvin.runtime.north.plugins.port import queue
-from calvin.utilities import calvinlogger
+from calvin.common import calvinlogger
 
 _log = calvinlogger.get_logger(__name__)
 

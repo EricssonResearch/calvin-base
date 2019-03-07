@@ -16,7 +16,7 @@
 
 
 from calvin.runtime.north.plugins.coders.messages import message_coder_factory
-from calvin.utilities.calvinlogger import get_logger
+from calvin.common.calvinlogger import get_logger
 from . import negotiator_base
 
 

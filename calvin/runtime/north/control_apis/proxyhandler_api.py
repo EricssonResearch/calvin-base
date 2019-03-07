@@ -16,10 +16,10 @@
 
 
 import json
-from calvin.utilities import calvinresponse
+from calvin.common import calvinresponse
 from .routes import handler
 from calvin.runtime.north.proxyhandler import ProxyHandler
-from calvin.utilities.calvinlogger import get_logger
+from calvin.common.calvinlogger import get_logger
 
 _log = get_logger(__name__)
 

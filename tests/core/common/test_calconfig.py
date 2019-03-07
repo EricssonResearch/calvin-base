@@ -20,7 +20,7 @@ import tempfile
 import os
 import pytest
 
-from calvin.utilities.calvinconfig import CalvinConfig
+from calvin.common.calvinconfig import CalvinConfig
 
 
 class TestBase(unittest.TestCase):

@@ -18,8 +18,8 @@ import importlib
 
 from jsonschema import validate
 
-from calvin.utilities import calvinconfig
-from calvin.utilities import calvinlogger
+from calvin.common import calvinconfig
+from calvin.common import calvinlogger
 
 _log = calvinlogger.get_logger(__name__)
 

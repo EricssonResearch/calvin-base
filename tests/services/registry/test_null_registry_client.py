@@ -1,8 +1,8 @@
 import pytest
 from mock import MagicMock, Mock
-from calvin.utilities.calvin_callback import CalvinCB
+from calvin.common.calvin_callback import CalvinCB
 from calvin.runtime.north.plugins.storage.storage_clients import NullRegistryClient
-import calvin.utilities.calvinresponse as calvinresponse
+import calvin.common.calvinresponse as calvinresponse
 
 @pytest.fixture()
 def _registry():

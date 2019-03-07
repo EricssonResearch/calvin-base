@@ -17,8 +17,8 @@
 
 import os
 import json
-from calvin.utilities.calvinlogger import get_logger
-from calvin.utilities.utils import get_home
+from calvin.common.calvinlogger import get_logger
+from calvin.common.utils import get_home
 
 _log = get_logger(__name__)
 _config = None

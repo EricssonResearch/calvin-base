@@ -17,9 +17,9 @@
 import os
 import glob
 import json
-from calvin.utilities import calvinuuid
-from calvin.utilities.calvinlogger import get_logger
-from calvin.utilities import calvinconfig
+from calvin.common import calvinuuid
+from calvin.common.calvinlogger import get_logger
+from calvin.common import calvinconfig
 from passlib.hash import pbkdf2_sha256
 
 _log = get_logger(__name__)

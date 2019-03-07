@@ -23,7 +23,7 @@ from calvin.runtime.north.plugins.port.endpoint import LocalOutEndpoint, LocalIn
 from calvin.runtime.north.plugins.port import queue
 from calvin.runtime.north.calvinsys import get_calvinsys
 from calvin.runtime.north.plugins.port.queue.fanout_fifo import FanoutFIFO
-from calvin.utilities import calvinuuid
+from calvin.common import calvinuuid
 
 class DummyPort:
 

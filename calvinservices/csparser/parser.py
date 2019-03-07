@@ -25,7 +25,7 @@ from . import calvin_rules
 from . import astnode as ast
 from .calvin_rules import tokens as calvin_tokens
 from .astprint import BraceFormatter
-from calvin.utilities.issuetracker import IssueTracker
+from calvin.common.issuetracker import IssueTracker
 
 _parser_instance = None
 def get_parser():

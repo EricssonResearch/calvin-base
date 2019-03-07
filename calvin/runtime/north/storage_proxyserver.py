@@ -1,7 +1,7 @@
 
-from calvin.utilities import calvinresponse
-from calvin.utilities.calvin_callback import CalvinCB
-from calvin.utilities import calvinlogger
+from calvin.common import calvinresponse
+from calvin.common.calvin_callback import CalvinCB
+from calvin.common import calvinlogger
 
 _log = calvinlogger.get_logger(__name__)
 

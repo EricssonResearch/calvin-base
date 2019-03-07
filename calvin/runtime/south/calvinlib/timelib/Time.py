@@ -16,7 +16,7 @@
 
 
 from calvin.runtime.south.calvinlib import base_calvinlib_object
-from calvin.utilities.calvinlogger import get_logger
+from calvin.common.calvinlogger import get_logger
 import time
 import datetime
 

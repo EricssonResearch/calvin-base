@@ -19,12 +19,12 @@ import time
 import glob
 import importlib
 
-from calvin.utilities import calvinuuid
-from calvin.utilities.calvin_callback import CalvinCB
-import calvin.utilities.calvinresponse as response
+from calvin.common import calvinuuid
+from calvin.common.calvin_callback import CalvinCB
+import calvin.common.calvinresponse as response
 from calvin.runtime.south.asynchronous import asynchronous
-from calvin.utilities import calvinlogger
-from calvin.utilities import calvinconfig
+from calvin.common import calvinlogger
+from calvin.common import calvinconfig
 _log = calvinlogger.get_logger(__name__)
 _conf = calvinconfig.get()
 

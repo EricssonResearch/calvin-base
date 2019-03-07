@@ -20,7 +20,7 @@ import requests.auth
 import base64
 
 from calvin.runtime.south.asynchronous import threads
-from calvin.utilities.calvinlogger import get_logger
+from calvin.common.calvinlogger import get_logger
 from calvin.runtime.south.calvinsys import base_calvinsys_object
 
 _log = get_logger(__name__)

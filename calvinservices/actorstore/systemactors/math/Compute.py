@@ -15,7 +15,7 @@
 # limitations under the License.
 
 from calvin.actor.actor import Actor, manage, condition, calvinlib
-from calvin.utilities.calvinlogger import get_actor_logger
+from calvin.common.calvinlogger import get_actor_logger
 from calvin.runtime.north.calvin_token import ExceptionToken
 
 

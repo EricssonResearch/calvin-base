@@ -14,10 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.utilities.calvin_callback import CalvinCBClass
+from calvin.common.calvin_callback import CalvinCBClass
 from calvin.runtime.north.plugins.coders.messages import message_coder_factory
 
-from calvin.utilities import calvinlogger
+from calvin.common import calvinlogger
 from urllib.parse import urlparse
 
 _log = calvinlogger.get_logger(__name__)

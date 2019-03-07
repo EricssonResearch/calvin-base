@@ -14,8 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.utilities import dynops
-from calvin.utilities.attribute_resolver import format_index_string
+from calvin.common import dynops
+from calvin.common.attribute_resolver import format_index_string
 
 req_type = "placement"
 

@@ -17,7 +17,7 @@
 from calvin.runtime.north.calvin_token import Token
 from calvin.runtime.north.plugins.port.queue.common import QueueEmpty, COMMIT_RESPONSE
 from calvin.runtime.north.plugins.port import DISCONNECT
-from calvin.utilities import calvinlogger
+from calvin.common import calvinlogger
 
 _log = calvinlogger.get_logger(__name__)
 

@@ -23,7 +23,7 @@ import yaml
 import jsonschema
 from jsonschema.exceptions import ValidationError
 
-from calvin.utilities.actor_signature import signature
+from calvin.common.actor_signature import signature
 
 
 # Helpers

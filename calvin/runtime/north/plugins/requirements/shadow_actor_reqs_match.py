@@ -14,9 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.utilities.calvin_callback import CalvinCB
-from calvin.utilities import dynops
-from calvin.utilities.calvinlogger import get_logger
+from calvin.common.calvin_callback import CalvinCB
+from calvin.common import dynops
+from calvin.common.calvinlogger import get_logger
 _log = get_logger(__name__)
 
 req_type = "placement"

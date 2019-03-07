@@ -15,8 +15,8 @@
 # limitations under the License.
 
 import json
-from calvin.utilities import calvinresponse
-from calvin.utilities.calvinlogger import get_logger
+from calvin.common import calvinresponse
+from calvin.common.calvinlogger import get_logger
 from calvin.runtime.north.control_apis.routes import handler
 from calvin.runtime.north.control_apis.authentication import authentication_decorator
 

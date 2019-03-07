@@ -19,7 +19,7 @@
 import json
 import sys
 import argparse
-from calvin.utilities.docgen import DocumentationStore         
+from calvin.common.docgen import DocumentationStore         
 
 def main():
 

@@ -17,7 +17,7 @@
 
 from calvin.runtime.north.plugins.port.queue.common import QueueEmpty
 from calvin.runtime.north.plugins.port.queue.collect_unordered import CollectUnordered
-from calvin.utilities import calvinlogger
+from calvin.common import calvinlogger
 import copy
 
 _log = calvinlogger.get_logger(__name__)

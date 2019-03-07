@@ -17,7 +17,7 @@
 
 from calvin.runtime.north.plugins.port.queue.common import QueueFull
 from calvin.runtime.north.plugins.port.queue.fanout_base import FanoutBase
-from calvin.utilities import calvinlogger
+from calvin.common import calvinlogger
 
 _log = calvinlogger.get_logger(__name__)
 

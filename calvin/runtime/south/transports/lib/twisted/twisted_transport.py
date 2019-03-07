@@ -16,9 +16,9 @@
 
 import time
 
-from calvin.utilities.calvin_callback import CalvinCB
-from calvin.utilities import calvinlogger
-from calvin.utilities import calvinuuid
+from calvin.common.calvin_callback import CalvinCB
+from calvin.common import calvinlogger
+from calvin.common import calvinuuid
 from calvin.runtime.south.transports import base_transport
 
 _log = calvinlogger.get_logger(__name__)
@@ -284,7 +284,7 @@ class CalvinServer(base_transport.BaseServer):
                     return self._str
             self._peers[uri]._transport._proto.connectionLost(ErrorMessage("Connection was closed cleanly."))
 
-        from calvin.utilities import calvinconfig
+        from calvin.common import calvinconfig
         _conf = calvinconfig.get()
         runtime_to_runtime_security = _conf.get("security","runtime_to_runtime_security")
         if runtime_to_runtime_security=="tls":

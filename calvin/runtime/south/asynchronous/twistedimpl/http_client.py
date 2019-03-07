@@ -32,9 +32,9 @@ from twisted.internet.protocol import Protocol
 from io import StringIO
 from urllib.parse import urlencode
 
-from calvin.utilities.calvin_callback import CalvinCBClass
+from calvin.common.calvin_callback import CalvinCBClass
 
-from calvin.utilities.calvinlogger import get_logger
+from calvin.common.calvinlogger import get_logger
 _log = get_logger(__name__)
 
 

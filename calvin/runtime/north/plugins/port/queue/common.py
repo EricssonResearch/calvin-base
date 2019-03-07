@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.utilities.utils import enum
+from calvin.common.utils import enum
 
 COMMIT_RESPONSE = enum('handled', 'unhandled', 'invalid')
 

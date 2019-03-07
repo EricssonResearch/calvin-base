@@ -19,7 +19,7 @@
 import os
 import re
 
-from calvin.utilities.issuetracker import IssueTracker
+from calvin.common.issuetracker import IssueTracker
 
 def _expand_path(path):
     return os.path.abspath(os.path.expanduser(path))

@@ -16,8 +16,8 @@
 
 from calvin.runtime.north.plugins.port import endpoint
 from calvin.runtime.north.plugins.port import queue
-import calvin.utilities.calvinresponse as response
-from calvin.utilities import calvinlogger
+import calvin.common.calvinresponse as response
+from calvin.common import calvinlogger
 from calvin.runtime.north.plugins.port.connection.common import BaseConnection
 from calvin.runtime.north.plugins.port import DISCONNECT
 

@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from calvin.utilities.docgen import DocumentationStore
+from calvin.common.docgen import DocumentationStore
 
 system_config_file = "actorstore.yaml"
 

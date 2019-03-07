@@ -15,7 +15,7 @@
 # limitations under the License.
 
 from twisted.python import log as twisted_logger
-from calvin.utilities.calvinlogger import add_logging_handler
+from calvin.common.calvinlogger import add_logging_handler
 
 observer = twisted_logger.PythonLoggingObserver()
 observer.start()

@@ -19,7 +19,7 @@ import os.path
 import json
 import ast
 
-from calvin.utilities import calvinconfig
+from calvin.common import calvinconfig
 _conf = calvinconfig.get()
 schema_names = ["init_schema", "can_read_schema", "read_schema", "can_write_schema", "write_schema"]
 

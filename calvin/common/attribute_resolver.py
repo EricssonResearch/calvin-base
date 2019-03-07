@@ -18,7 +18,7 @@
 
 import re
 
-from calvin.utilities.calvinlogger import get_logger
+from calvin.common.calvinlogger import get_logger
 
 _log = get_logger(__name__)
 
@@ -132,7 +132,7 @@ The public indexed values can be obtained by get_index function or the correspon
 
 To format the index search string an attribute resolver function needs to be used:
 
-    from calvin.utilities.attribute_resolver import format_index_string
+    from calvin.common.attribute_resolver import format_index_string
     format_index_string(attr_obj, trim=True)
 
 where the attr_obj should only contain ONE attribute e.g.

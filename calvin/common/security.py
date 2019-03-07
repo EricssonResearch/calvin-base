@@ -35,14 +35,14 @@ try:
     HAS_JWT = True
 except:
     HAS_JWT = False
-from calvin.utilities import certificate
-from calvin.utilities.certificate import Certificate
-from calvin.utilities.calvinlogger import get_logger
-from calvin.utilities import calvinconfig
-from calvin.utilities.utils import get_home
-from calvin.utilities.runtime_credentials import RuntimeCredentials
-from calvin.utilities.calvin_callback import CalvinCB
-from calvin.utilities.requirement_matching import ReqMatch
+from calvin.common import certificate
+from calvin.common.certificate import Certificate
+from calvin.common.calvinlogger import get_logger
+from calvin.common import calvinconfig
+from calvin.common.utils import get_home
+from calvin.common.runtime_credentials import RuntimeCredentials
+from calvin.common.calvin_callback import CalvinCB
+from calvin.common.requirement_matching import ReqMatch
 
 _conf = calvinconfig.get()
 _log = get_logger(__name__)

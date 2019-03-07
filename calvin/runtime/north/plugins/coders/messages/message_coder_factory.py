@@ -36,9 +36,9 @@
 from . import json_coder
 from . import msgpack_coder
 from . import cbor_coder
-from calvin.utilities import calvinconfig
+from calvin.common import calvinconfig
 
-from calvin.utilities.calvinlogger import get_logger
+from calvin.common.calvinlogger import get_logger
 
 _log = get_logger(__name__)
 _conf = calvinconfig.get()

@@ -16,7 +16,7 @@
 
 from calvin.actor.actor import Actor, manage, condition, calvinsys, stateguard
 
-from calvin.utilities.calvinlogger import get_logger
+from calvin.common.calvinlogger import get_logger
 
 _log = get_logger(__name__)
 

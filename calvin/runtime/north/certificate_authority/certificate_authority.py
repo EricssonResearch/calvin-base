@@ -20,13 +20,13 @@ try:
     HAS_JWT = True
 except:
     HAS_JWT = False
-from calvin.utilities.security import decode_jwt, encode_jwt
-from calvin.utilities.calvin_callback import CalvinCB
+from calvin.common.security import decode_jwt, encode_jwt
+from calvin.common.calvin_callback import CalvinCB
 from calvin.runtime.north.authentication.authentication_decision_point import AuthenticationDecisionPoint
 from calvin.runtime.north.authentication.authentication_retrieval_point import FileAuthenticationRetrievalPoint
-from calvin.utilities.certificate_authority import CA
-from calvin.utilities.calvinlogger import get_logger
-from calvin.utilities import calvinconfig
+from calvin.common.certificate_authority import CA
+from calvin.common.calvinlogger import get_logger
+from calvin.common import calvinconfig
 import os
 
 _log = get_logger(__name__)

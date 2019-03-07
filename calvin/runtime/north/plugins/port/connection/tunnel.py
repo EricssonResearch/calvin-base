@@ -14,13 +14,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.utilities.calvin_callback import CalvinCB
+from calvin.common.calvin_callback import CalvinCB
 from calvin.runtime.north.plugins.port import endpoint
 from calvin.runtime.north.calvin_token import Token
 from calvin.runtime.north.calvin_proto import CalvinTunnel
 from calvin.runtime.north.plugins.port import queue
-import calvin.utilities.calvinresponse as response
-from calvin.utilities import calvinlogger
+import calvin.common.calvinresponse as response
+from calvin.common import calvinlogger
 from calvin.runtime.north.plugins.port.connection.common import BaseConnection, PURPOSE
 from calvin.runtime.north.plugins.port import DISCONNECT
 

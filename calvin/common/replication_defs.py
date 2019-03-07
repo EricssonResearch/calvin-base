@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.utilities.utils import enum
+from calvin.common.utils import enum
 
 REPLICATION_STATUS = enum('UNUSED', 'READY', 'REPLICATING', 'DEREPLICATING')
 PRE_CHECK = enum('NO_OPERATION', 'SCALE_OUT', 'SCALE_OUT_KNOWN', 'SCALE_IN')

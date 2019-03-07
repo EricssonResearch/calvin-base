@@ -16,7 +16,7 @@
 
 
 import json
-from calvin.utilities import calvinresponse
+from calvin.common import calvinresponse
 import calvin.runtime.south.calvinsys.ui.uicalvinsys as ui
 from .routes import handler
 

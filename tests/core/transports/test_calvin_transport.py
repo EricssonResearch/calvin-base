@@ -29,8 +29,8 @@ import traceback
 from mock import Mock
 from twisted.internet import reactor
 
-from calvin.utilities import calvinlogger
-from calvin.utilities.calvin_callback import CalvinCB, CalvinCBClass
+from calvin.common import calvinlogger
+from calvin.common.calvin_callback import CalvinCB, CalvinCBClass
 from calvin.runtime.south.transports.calvinip import calvinip_transport
 
 _log = calvinlogger.get_logger(__name__)

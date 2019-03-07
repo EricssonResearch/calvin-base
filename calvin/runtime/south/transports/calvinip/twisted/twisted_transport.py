@@ -14,10 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.utilities.calvin_callback import CalvinCB, CalvinCBClass
-from calvin.utilities import calvinlogger
-from calvin.utilities import certificate
-from calvin.utilities import runtime_credentials
+from calvin.common.calvin_callback import CalvinCB, CalvinCBClass
+from calvin.common import calvinlogger
+from calvin.common import certificate
+from calvin.common import runtime_credentials
 from calvin.runtime.south.transports.lib.twisted import base_transport
 
 from twisted.protocols.basic import Int32StringReceiver
@@ -26,7 +26,7 @@ from twisted.internet import reactor, protocol, ssl, endpoints
 
 _log = calvinlogger.get_logger(__name__)
 
-from calvin.utilities import calvinconfig
+from calvin.common import calvinconfig
 _conf = calvinconfig.get()
 
 

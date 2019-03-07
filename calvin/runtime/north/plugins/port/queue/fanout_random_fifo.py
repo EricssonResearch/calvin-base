@@ -18,7 +18,7 @@ import random
 from calvin.runtime.north.calvin_token import Token
 from calvin.runtime.north.plugins.port.queue.common import QueueFull, QueueEmpty, COMMIT_RESPONSE
 from calvin.runtime.north.plugins.port import DISCONNECT
-from calvin.utilities import calvinlogger
+from calvin.common import calvinlogger
 from calvin.runtime.north.plugins.port.queue.fanout_ordered_fifo import FanoutOrderedFIFO
 
 

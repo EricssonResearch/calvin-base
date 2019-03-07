@@ -20,14 +20,14 @@ import re
 # from calvin.runtime.north.plugins.storage import storage_factory
 from calvin.actor.port_property_syntax import list_port_property_capabilities
 from calvin.runtime.south.asynchronous import asynchronous
-from calvin.utilities import calvinlogger
-from calvin.utilities.calvin_callback import CalvinCB
+from calvin.common import calvinlogger
+from calvin.common.calvin_callback import CalvinCB
 # from calvin.actor import actorport
 from calvin.actor.actor import ShadowActor
-from calvin.utilities import calvinconfig
-# from calvin.utilities.security import Security, security_enabled
-from calvin.utilities import dynops
-from calvin.utilities import calvinresponse
+from calvin.common import calvinconfig
+# from calvin.common.security import Security, security_enabled
+from calvin.common import dynops
+from calvin.common import calvinresponse
 from calvin.runtime.north.calvinsys import get_calvinsys
 from calvin.runtime.north.calvinlib import get_calvinlib
 from calvin.runtime.north.plugins.storage.storage_clients import LocalRegistry, NullRegistryClient, registry
@@ -312,7 +312,7 @@ class PrivateStorage(object):
             It is assumed that the prefix and key are strings,
             the sum has to be an immutable object.
             Value is placed in supplied dynamic iterable it parameter.
-            The dynamic iterable are of a subclass to calvin.utilities.dynops.DynOps
+            The dynamic iterable are of a subclass to calvin.common.dynops.DynOps
             that supports the append function call (currently only List), see DynOps
             for details of how they are used. It is common to call auto_final method
             with parameter max_length to number of get_iter calls.
@@ -520,7 +520,7 @@ class PrivateStorage(object):
         returned: Dynamic iterable object
             Values are placed in the dynamic iterable object.
             The dynamic iterable are of the List subclass to
-            calvin.utilities.dynops.DynOps, see DynOps for details
+            calvin.common.dynops.DynOps, see DynOps for details
             of how they are used. The final method will be called when
             all values are appended to the returned dynamic iterable.
         """
@@ -596,7 +596,7 @@ class Storage(PrivateStorage):
             self.node.storage.add_index(['certificate',node.id], certstring, root_prefix_level=2, cb=cb)
 
     def _get_runtime_certificate(self, node):
-        from calvin.utilities.runtime_credentials import RuntimeCredentials
+        from calvin.common.runtime_credentials import RuntimeCredentials
         try:
             rt_cred = RuntimeCredentials(node.node_name)
             certpath, cert, certstr = rt_cred.get_own_cert()

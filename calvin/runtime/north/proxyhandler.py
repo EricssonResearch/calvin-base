@@ -16,13 +16,13 @@
 
 import time
 import json
-from calvin.utilities.calvinlogger import get_logger
-from calvin.utilities.calvin_callback import CalvinCB
-import calvin.utilities.calvinresponse as response
-from calvin.utilities.attribute_resolver import AttributeResolver
+from calvin.common.calvinlogger import get_logger
+from calvin.common.calvin_callback import CalvinCB
+import calvin.common.calvinresponse as response
+from calvin.common.attribute_resolver import AttributeResolver
 from calvin.actor.port_property_syntax import list_port_property_capabilities
-from calvin.utilities.requirement_matching import ReqMatch
-from calvin.utilities import calvinconfig
+from calvin.common.requirement_matching import ReqMatch
+from calvin.common import calvinconfig
 
 _log = get_logger(__name__)
 _conf = calvinconfig.get()

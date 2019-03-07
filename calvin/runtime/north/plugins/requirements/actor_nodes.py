@@ -14,8 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.utilities import dynops
-import calvin.utilities.calvinresponse as response
+from calvin.common import dynops
+import calvin.common.calvinresponse as response
 
 req_type = "placement"
 

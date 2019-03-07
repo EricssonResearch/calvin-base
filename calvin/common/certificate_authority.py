@@ -27,15 +27,15 @@ import time
 import random
 import shutil
 import json
-from calvin.utilities import confsort
+from calvin.common import confsort
 import OpenSSL
 from cryptography.x509 import load_pem_x509_certificate
 from cryptography.hazmat.backends import default_backend
-from calvin.utilities import certificate
-from calvin.utilities import calvinuuid
-from calvin.utilities import calvinconfig
-from calvin.utilities.calvinlogger import get_logger
-from calvin.utilities.utils import get_home
+from calvin.common import certificate
+from calvin.common import calvinuuid
+from calvin.common import calvinconfig
+from calvin.common.calvinlogger import get_logger
+from calvin.common.utils import get_home
 
 _log = get_logger(__name__)
 _conf = calvinconfig.get()

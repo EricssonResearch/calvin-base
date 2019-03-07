@@ -15,7 +15,7 @@
 # limitations under the License.
 
 from calvinextras.calvinsys.io.ky040knob import BaseKY040
-from calvin.utilities.calvinlogger import get_logger
+from calvin.common.calvinlogger import get_logger
 import RPi.GPIO as gpio
 
 _log = get_logger(__name__)

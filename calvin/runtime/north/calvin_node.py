@@ -37,14 +37,14 @@ from calvin.runtime.north.calvin_network import CalvinNetwork
 from calvin.runtime.north.calvin_proto import CalvinProto
 from calvin.runtime.north.portmanager import PortManager
 from calvin.runtime.south.asynchronous import asynchronous
-from calvin.utilities.attribute_resolver import AttributeResolver
-from calvin.utilities.calvin_callback import CalvinCB
-from calvin.utilities.security import security_modules_check
-from calvin.utilities.runtime_credentials import RuntimeCredentials
-from calvin.utilities import calvinuuid
-from calvin.utilities import certificate
-from calvin.utilities.calvinlogger import get_logger, set_file
-from calvin.utilities import calvinconfig
+from calvin.common.attribute_resolver import AttributeResolver
+from calvin.common.calvin_callback import CalvinCB
+from calvin.common.security import security_modules_check
+from calvin.common.runtime_credentials import RuntimeCredentials
+from calvin.common import calvinuuid
+from calvin.common import certificate
+from calvin.common.calvinlogger import get_logger, set_file
+from calvin.common import calvinconfig
 from calvin.runtime.north.resource_monitor.cpu import CpuMonitor
 from calvin.runtime.north.resource_monitor.memory import MemMonitor
 from calvin.runtime.north.proxyhandler import ProxyHandler

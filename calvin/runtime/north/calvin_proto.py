@@ -15,12 +15,12 @@
 # limitations under the License.
 
 import time
-from calvin.utilities import calvinuuid
-from calvin.utilities.utils import enum
-from calvin.utilities.calvin_callback import CalvinCB, CalvinCBClass
-from calvin.utilities import calvinlogger
-from calvin.utilities import calvinconfig
-import calvin.utilities.calvinresponse as response
+from calvin.common import calvinuuid
+from calvin.common.utils import enum
+from calvin.common.calvin_callback import CalvinCB, CalvinCBClass
+from calvin.common import calvinlogger
+from calvin.common import calvinconfig
+import calvin.common.calvinresponse as response
 
 _log = calvinlogger.get_logger(__name__)
 _conf = calvinconfig.get()

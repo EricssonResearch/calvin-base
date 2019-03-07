@@ -18,7 +18,7 @@ import pytest
 from mock import Mock, patch
 
 from calvin.runtime.north.calvincontrol import get_calvincontrol, CalvinControl
-from calvin.utilities import calvinuuid
+from calvin.common import calvinuuid
 
 
 def calvincontrol():

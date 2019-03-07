@@ -17,7 +17,7 @@
 from calvinextras.calvinsys.io.sr04distance import BaseSR04
 from calvin.runtime.south.asynchronous import asynchronous
 
-from calvin.utilities.calvinlogger import get_logger
+from calvin.common.calvinlogger import get_logger
 import pigpio
 
 _log = get_logger(__name__)

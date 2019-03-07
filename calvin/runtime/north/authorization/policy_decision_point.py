@@ -18,8 +18,8 @@ import re
 import os
 from calvin.runtime.north.authorization.policy_information_point import PolicyInformationPoint
 from calvin.runtime.north.plugins.authorization_checks import check_authorization_plugin_list
-from calvin.utilities.calvin_callback import CalvinCB
-from calvin.utilities.calvinlogger import get_logger
+from calvin.common.calvin_callback import CalvinCB
+from calvin.common.calvinlogger import get_logger
 
 _log = get_logger(__name__)
 

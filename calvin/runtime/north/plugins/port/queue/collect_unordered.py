@@ -16,7 +16,7 @@
 
 from calvin.runtime.north.plugins.port.queue.common import QueueEmpty
 from calvin.runtime.north.plugins.port.queue.collect_base import CollectBase
-from calvin.utilities import calvinlogger
+from calvin.common import calvinlogger
 
 _log = calvinlogger.get_logger(__name__)
 

@@ -17,7 +17,7 @@
 import pytest
 from mock import Mock
 
-from calvin.utilities.calvin_callback import CalvinCB, CalvinCBGroup, CalvinCBClass
+from calvin.common.calvin_callback import CalvinCB, CalvinCBGroup, CalvinCBClass
 
 
 def test_call_callback():

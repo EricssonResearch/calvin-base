@@ -16,11 +16,11 @@
 
 import functools
 from base64 import b64decode
-from calvin.utilities import calvinresponse
-from calvin.utilities.calvin_callback import CalvinCB
-from calvin.utilities.issuetracker import IssueTracker
-from calvin.utilities.calvinlogger import get_logger
-from calvin.utilities.security import security_enabled
+from calvin.common import calvinresponse
+from calvin.common.calvin_callback import CalvinCB
+from calvin.common.issuetracker import IssueTracker
+from calvin.common.calvinlogger import get_logger
+from calvin.common.security import security_enabled
 
 
 _log = get_logger(__name__)

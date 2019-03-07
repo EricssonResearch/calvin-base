@@ -129,7 +129,7 @@ def runtime(uris, control_uri, attributes=None, dispatch=False):
         raise
 
 def set_loglevel(levels, filename):
-    from calvin.utilities.calvinlogger import get_logger, set_file
+    from calvin.common.calvinlogger import get_logger, set_file
     global _log
 
     if filename:
@@ -160,7 +160,7 @@ def set_loglevel(levels, filename):
 
 
 def set_config_from_args(args):
-    from calvin.utilities import calvinconfig
+    from calvin.common import calvinconfig
     global _conf
     _conf = calvinconfig.get()
     print(args.config_registry)
@@ -214,12 +214,12 @@ def runtime_certificate(rt_attributes):
     import requests
     import sys
     from .request_handler import RequestHandler
-    from calvin.utilities.attribute_resolver import AttributeResolver
-    from calvin.utilities import calvinconfig
-    from calvin.utilities import calvinuuid
-    from calvin.utilities import runtime_credentials
-    from calvin.utilities import certificate
-    from calvin.utilities import certificate_authority
+    from calvin.common.attribute_resolver import AttributeResolver
+    from calvin.common import calvinconfig
+    from calvin.common import calvinuuid
+    from calvin.common import runtime_credentials
+    from calvin.common import certificate
+    from calvin.common import certificate_authority
 
     global _conf
     global _log
@@ -322,7 +322,7 @@ def start_gui(interface4, port, mockdevices):
     from twisted.web.server import Site
     from twisted.web.static import File
     from twisted.internet import endpoints, reactor
-    from calvin.utilities import calvinconfig
+    from calvin.common import calvinconfig
 
     # find installation path of calvinextras package
     extras_path = os.path.dirname(inspect.getfile(calvinextras))

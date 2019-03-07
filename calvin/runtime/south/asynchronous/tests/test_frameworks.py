@@ -20,7 +20,7 @@
 
 import inspect
 
-from calvin.utilities import calvinlogger
+from calvin.common import calvinlogger
 from calvin.runtime.south.asynchronous import get_frameworks
 from calvin.runtime.south.asynchronous import twistedimpl
 from twisted.internet import defer, threads

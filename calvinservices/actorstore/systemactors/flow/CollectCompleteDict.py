@@ -16,7 +16,7 @@
 
 from calvin.actor.actor import Actor, condition, manage
 
-from calvin.utilities.calvinlogger import get_actor_logger
+from calvin.common.calvinlogger import get_actor_logger
 _log = get_actor_logger(__name__)
 
 class CollectCompleteDict(Actor):

@@ -24,7 +24,7 @@
 
 import os
 
-from calvin.utilities import calvinconfig
+from calvin.common import calvinconfig
 
 from .twistedimpl import asynchronous
 from .twistedimpl.asynchronous import DelayedCall

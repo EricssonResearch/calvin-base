@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.utilities import dynops
+from calvin.common import dynops
 
 req_type = "placement"
 

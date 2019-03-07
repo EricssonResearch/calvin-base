@@ -19,10 +19,10 @@ import json
 import pytest
 from mock import patch, Mock
 
-from calvin.utilities import calvinlogger
+from calvin.common import calvinlogger
 
 
-@patch('calvin.utilities.calvinlogger.logging')
+@patch('calvin.common.calvinlogger.logging')
 def test_get_logger(logging_mock):
     calvinlogger._log = None
     log_mock = Mock()
@@ -37,7 +37,7 @@ def test_get_logger(logging_mock):
     assert log == log_mock.getChild("abc")
 
 
-@patch('calvin.utilities.calvinlogger._create_logger')
+@patch('calvin.common.calvinlogger._create_logger')
 def test_get_actor_logger(create_logger):
     log_mock = Mock()
     create_logger.return_value = log_mock
@@ -47,7 +47,7 @@ def test_get_actor_logger(create_logger):
     assert log == log_mock.getChild("abc")
 
 
-@patch('calvin.utilities.calvinlogger._create_logger')
+@patch('calvin.common.calvinlogger._create_logger')
 def test_set_file(create_logger):
     calvinlogger.set_file("filename")
     create_logger.assert_called_with("filename")
