@@ -14,7 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from abc import ABCMeta, abstractmethod
 import os
 import glob
 import json
@@ -26,28 +25,6 @@ from passlib.hash import pbkdf2_sha256
 _log = get_logger(__name__)
 _conf = calvinconfig.get()
 _sec_conf = _conf
-
-# This is an abstract class for the PRP (Policy Retrieval Point)
-class AuthenticationRetrievalPoint(object, metaclass=ABCMeta):
-    @abstractmethod
-    def get_users_db(self):
-        """Return a JSON representation of the policy identified by id"""
-        return
-
-    @abstractmethod
-    def create_users_db(self, data):
-        """Create policy based on the JSON representation in data"""
-        return
-
-    @abstractmethod
-    def update_users_db(self, data):
-        """Change the content of the policy identified by id to data (JSON representation of policy)"""
-        return
-
-    @abstractmethod
-    def delete_users_db(self):
-        """Delete the policy identified by id"""
-        return
 
 
 class FileAuthenticationRetrievalPoint(object):

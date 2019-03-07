@@ -14,7 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from abc import ABCMeta, abstractmethod
 import os
 import glob
 import json
@@ -23,35 +22,7 @@ from calvin.utilities.calvinlogger import get_logger
 
 _log = get_logger(__name__)
 
-# This is an abstract class for the PRP (Policy Retrieval Point)
-class PolicyRetrievalPoint(object, metaclass=ABCMeta):
-    @abstractmethod
-    def get_policy(self, id):
-        """Return a JSON representation of the policy identified by id"""
-        return
-
-    @abstractmethod
-    def get_policies(self, filter):
-        """Return a JSON representation of all policies found by using filter"""
-        return
-
-    @abstractmethod
-    def create_policy(self, data):
-        """Create policy based on the JSON representation in data"""
-        return
-
-    @abstractmethod
-    def update_policy(self, data, id):
-        """Change the content of the policy identified by id to data (JSON representation of policy)"""
-        return
-
-    @abstractmethod
-    def delete_policy(self, id):
-        """Delete the policy identified by id"""
-        return
-
-
-class FilePolicyRetrievalPoint(PolicyRetrievalPoint):
+class FilePolicyRetrievalPoint(object):
 
     def __init__(self, path):
         # Replace ~ by the user's home directory.
