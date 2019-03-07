@@ -15,6 +15,7 @@
 # limitations under the License.
 
 
+import copy
 import importlib
 from functools import partial
 
@@ -57,14 +58,29 @@ class CalvinSys(object):
         self._node = node
         capabilities = _conf.get('calvinsys', 'capabilities') or {}
         blacklist = _conf.get(None, 'capabilities_blacklist') or []
-        for capability in blacklist:
-            _ = capabilities.pop(capability, None)
-        for key, value in capabilities.items():
-            module = value['module']
-            value['path'] = module
-            value['module'] = None
-            _log.info("Capability '%s' registered with module '%s'" % (key, module))
-        self.capabilities = capabilities
+        for cap, props in capabilities.items():
+            # 'cap' is the name of a capability in calvinsys
+            # 'module' refers to an implementation of the above capability 
+            # in a calvinsys plugin '<namespace>/<name>.py'
+            if cap in blacklist:
+                continue
+            # N.B. The 'module' in new_props is not the same 'module' as above 
+            new_props = {
+                # 'path' value will become a proper path after processing 
+                # search paths in _get_class
+                'path': props['module'],
+                # 'module' value will become an actual python module after 
+                # processing in _get_class
+                'module': None,
+                # 'attributes' from the platform config
+                #  updated when driver is open'd based on platform 
+                # config and passed parameters
+                # Since 'attributes' is generic, deepcopy is the safe option 
+                'attributes': copy.deepcopy(props.get('attributes', {}))
+            }
+            self.capabilities[cap] = new_props
+            _log.debug("Capability '%s' registered with module '%s'" % (cap, props['module']))
+                
 
     def _get_class(self, capability_name):
         """
@@ -87,9 +103,11 @@ class CalvinSys(object):
                     failed_paths.append(search_path)
             if pymodule is None:
                 raise Exception("Failed to import module '{}'\nTried:{}".format(capability_name, failed_paths))
+            else:
+                _log.info("Capability '%s' loaded from '%s'" % (capability_name, search_path))
             capability['module'] = pymodule
-        class_name = capability["path"].rsplit(".", 1)
-        pyclass = getattr(pymodule, class_name[1])
+        _, class_name = capability["path"].rsplit(".", 1)
+        pyclass = getattr(pymodule, class_name)
         if not pyclass:
             raise Exception("No entry %s in %s" % (capability_name, capability['path']))
         return capability, pyclass
