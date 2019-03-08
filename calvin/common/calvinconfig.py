@@ -92,15 +92,10 @@ class CalvinConfig(object):
                 'framework': 'twistedimpl',
                 'storage_type': 'local', # supports rest, local, and proxy
                 'storage_host': None,
-                'storage_sql': {},  # For SQL, should have the kwargs to connect + db-name. Defaults to insecure local
                 'capabilities_blacklist': [],
-                'remote_coder_negotiator': 'static',
                 'static_coder': ['json', 'msgpack'],
-                'display_plugin': 'stdout_impl',
-                'stdout_plugin': 'defaultimpl',
                 'transports': ['calvinip'],
                 'control_proxy': None,
-                'fcm_server_secret': None,
                 'compiled_actors_path': None,
                 "calvinsys_paths": ['calvin/runtime/south/calvinsys', 'calvinextras/calvinsys']
             },
