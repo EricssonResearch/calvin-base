@@ -1,5 +1,5 @@
 import pytest
-from mock import MagicMock, Mock
+from unittest.mock import MagicMock, Mock
 
 @pytest.fixture()
 def org_cb():

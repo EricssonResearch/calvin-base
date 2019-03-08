@@ -6,7 +6,7 @@ import time
 import json
 from copy import deepcopy
 import pytest
-from mock import Mock
+from unittest.mock import Mock
 from calvin.runtime.north.storage import Storage
 from calvin.runtime.north.plugins.storage.storage_clients import LocalRegistry, NullRegistryClient, DebugRegistryClient
 from calvin.common import calvinresponse

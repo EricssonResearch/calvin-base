@@ -15,7 +15,7 @@
 # limitations under the License.
 
 import pytest
-from mock import Mock
+from unittest.mock import Mock
 
 from calvin.actor.actorport import InPort, OutPort
 from calvin.runtime.north.calvin_token import Token

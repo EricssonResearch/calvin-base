@@ -30,7 +30,6 @@ setup(name='er-calvin',
       author="Team Calvin @ Ericsson Research",
       author_email="labs@ericsson.com",
       tests_require=[
-          'mock>1.0.1',
           'pytest>=1.4.25',
           'pytest-twisted'
       ],

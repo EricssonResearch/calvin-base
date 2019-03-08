@@ -1,5 +1,5 @@
 
-from mock import Mock
+from unittest.mock import Mock
 
 from calvin.common import calvinuuid
 from calvin.common import attribute_resolver

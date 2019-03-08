@@ -1,5 +1,5 @@
 import pytest
-from mock import Mock
+from unittest.mock import Mock
 
 import calvin.runtime.north.calvinsys as calvinsys
 

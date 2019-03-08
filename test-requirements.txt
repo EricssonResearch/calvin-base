@@ -1,6 +1,5 @@
 -r requirements.txt
-mock>=1.0.1
-pytest>=1.4.25
+pytest>=4.3.0
 pytest-twisted
 tox
 requests-futures

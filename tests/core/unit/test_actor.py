@@ -15,7 +15,7 @@
 # limitations under the License.
 
 import pytest
-from mock import Mock
+from unittest.mock import Mock
 
 from calvin.actor.actor import Actor
 from calvin.runtime.north.actormanager import ActorManager

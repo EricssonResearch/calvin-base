@@ -23,7 +23,7 @@ import time
 
 import pytest
 import yaml
-from mock import Mock
+from unittest.mock import Mock
 import requests
 
 from calvinservices.csparser.cscompiler import compile_source

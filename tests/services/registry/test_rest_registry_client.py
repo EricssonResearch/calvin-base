@@ -5,7 +5,7 @@ import subprocess
 import time
 
 import pytest
-from mock import MagicMock, Mock
+from unittest.mock import MagicMock, Mock
 from calvin.common.calvin_callback import CalvinCB
 from calvin.runtime.north.plugins.storage.storage_clients import RESTRegistryClient
 import calvin.common.calvinresponse as calvinresponse

@@ -15,7 +15,7 @@
 # limitations under the License.
 
 import pytest
-from mock import Mock, patch
+from unittest.mock import Mock, patch
 
 from calvin.runtime.north.calvincontrol import get_calvincontrol, CalvinControl
 from calvin.common import calvinuuid

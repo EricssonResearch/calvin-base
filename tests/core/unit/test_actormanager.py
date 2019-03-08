@@ -16,7 +16,7 @@
 
 
 import pytest
-from mock import Mock, patch
+from unittest.mock import Mock, patch
 
 from calvin.runtime.north.actormanager import ActorManager
 from calvin.runtime.north.plugins.port import queue
