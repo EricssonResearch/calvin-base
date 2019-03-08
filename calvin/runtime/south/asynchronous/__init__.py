@@ -22,73 +22,41 @@
 # FIXME: Here we actually need to be able to switch between twisted and asyncio,
 #        at least while testing until the asyncio version is feature complete. 
 
-import os
-
 from calvin.common import calvinconfig
 
-from .twistedimpl import asynchronous
-from .twistedimpl.asynchronous import DelayedCall
-from .twistedimpl.asynchronous import run_ioloop
-from .twistedimpl.asynchronous import stop_ioloop
+_conf = calvinconfig.get()
+async_impl = _conf.get('GLOBAL', 'framework')
 
-from .twistedimpl import server_connection
-from .twistedimpl.server_connection import ServerProtocolFactory
-from .twistedimpl.server_connection import LineProtocol
-from .twistedimpl.server_connection import RawDataProtocol
 
-from .twistedimpl import filedescriptor
-from .twistedimpl.filedescriptor import FD
+if async_impl == 'twisted':
+    from .twistedimpl import asynchronous
+    from .twistedimpl.asynchronous import DelayedCall
+    from .twistedimpl.asynchronous import run_ioloop
+    from .twistedimpl.asynchronous import stop_ioloop
 
-from .twistedimpl import pipe
-from .twistedimpl.pipe import Pipe
+    from .twistedimpl import server_connection
+    from .twistedimpl.server_connection import ServerProtocolFactory
+    from .twistedimpl.server_connection import LineProtocol
+    from .twistedimpl.server_connection import RawDataProtocol
 
-from .twistedimpl import defer
-from .twistedimpl import threads
+    from .twistedimpl import filedescriptor
+    from .twistedimpl.filedescriptor import FD
 
-from .twistedimpl import client_connection
-from .twistedimpl.client_connection import TCPClientProtocolFactory
-from .twistedimpl.client_connection import UDPClientProtocolFactory
+    from .twistedimpl import pipe
+    from .twistedimpl.pipe import Pipe
 
-from .twistedimpl.http_client import HTTPClient
+    from .twistedimpl import defer
+    from .twistedimpl import threads
 
-from .twistedimpl import sse_event_source 
-from .twistedimpl.sse_event_source import EventSource
+    from .twistedimpl import client_connection
+    from .twistedimpl.client_connection import TCPClientProtocolFactory
+    from .twistedimpl.client_connection import UDPClientProtocolFactory
 
-# Spec
-_MODULES = {'asynchronous': ['DelayedCall', 'run_ioloop', 'stop_ioloop'],
-            'filedescriptor': ['FD'],
-            'pipe': ['Pipe'],
-            'defer': [],
-            'threads': [],
-            'server_connection': ['ServerProtocolFactory', 'LineProtocol', 'RawDataProtocol'],
-            'sse_event_source': ['EventSource'],
-            'client_connection': ['TCPClientProtocolFactory', 'UDPClientProtocolFactory'],
-            'http_client': ['HTTPClient']}
+    from .twistedimpl.http_client import HTTPClient
 
-_FW_MODULES = []
+    from .twistedimpl import sse_event_source 
+    from .twistedimpl.sse_event_source import EventSource
+else:
+    pass
+
 __all__ = []
-
-if not _FW_MODULES:
-    DIRNAME = os.path.dirname(__file__)
-    DIRS = os.listdir(DIRNAME)
-    for i, fw_module in enumerate(DIRS):
-        if "impl" in fw_module:
-            _FW_MODULES.append(fw_module)
-
-_CONF = calvinconfig.get()
-_FW_PATH = _CONF.get(None, 'framework')
-
-
-# Unused
-def get_framework():
-    """
-        Get the framework used on the runtime
-    """
-    return _FW_PATH
-
-# Used by test_frameworks
-def get_frameworks():
-    """
-        Get all frameworks in the system
-    """
-    return _FW_MODULES

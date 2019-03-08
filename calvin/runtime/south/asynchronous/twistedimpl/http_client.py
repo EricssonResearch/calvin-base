@@ -14,6 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import warnings
+warnings.warn("Replaced by web.http.Command in runtime.south", DeprecationWarning)
+
+
 # from twisted.internet.task import react
 from twisted.internet import reactor
 from twisted.web.client import Agent

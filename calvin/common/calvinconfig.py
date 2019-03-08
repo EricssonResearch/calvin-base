@@ -89,7 +89,7 @@ class CalvinConfig(object):
             'global': {
                 'comment': 'User definable section',
                 'actor_paths': ['systemactors'],
-                'framework': 'twistedimpl',
+                'framework': 'twisted',
                 'storage_type': 'local', # supports rest, local, and proxy
                 'storage_host': None,
                 'capabilities_blacklist': [],
