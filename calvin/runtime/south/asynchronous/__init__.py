@@ -57,6 +57,6 @@ if async_impl == 'twisted':
     from .twistedimpl import sse_event_source 
     from .twistedimpl.sse_event_source import EventSource
 else:
-    pass
+    raise AssertionError("Unknown asynchronous implementation: '{}'".format(async_impl))
 
 __all__ = []

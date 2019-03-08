@@ -54,11 +54,11 @@ class CalvinConfig(object):
 
     Printing the config object provides a great deal of information about the configuration.
     """
-    def __init__(self):
+    def __init__(self, override_file=None):
         super(CalvinConfig, self).__init__()
         self.config = {}
         self.wildcards = []
-        self.override_path = os.environ.get('CALVIN_CONFIG', None)
+        self.override_path = override_file or os.environ.get('CALVIN_CONFIG', None)
         self.extra_paths = os.environ.get('CALVIN_CONFIG_PATH', None)
 
         # Setting CALVIN_CONFIG takes preceedence over all other configs
@@ -68,7 +68,7 @@ class CalvinConfig(object):
                 self.set_config(config)
             else:
                 self.override_path = None
-                _log.info("CALVIN_CONFIG does not point to a valid config file.")
+                _log.info("{} does not point to a valid config file.".format(override_file or "CALVIN_CONFIG"))
 
         # This is the normal config procedure
         if self.override_path is None:
@@ -101,7 +101,6 @@ class CalvinConfig(object):
             },
             'testing': {
                 'comment': 'Test settings',
-                'unittest_loops': 2
             },
             'developer': {
                 'comment': 'Experimental settings',
@@ -448,10 +447,14 @@ class CalvinConfig(object):
         return self.__class__.__name__ + " : " + json.dumps(d, indent=4, sort_keys=True)
 
 
-def get():
+def get(override_file=None):
     global _config
-    if _config is None:
-        _config = CalvinConfig()
+    if _config:
+        if override_file:
+            raise AssertionError("Attempt to re-initialize config using 'override_file' argument")
+    else:
+        _config = CalvinConfig(override_file)
+
     return _config
 
 

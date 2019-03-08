@@ -49,14 +49,15 @@ Start runtime, compile calvinscript and deploy application.
     argparser.add_argument('--gui-if', metavar='<gui interface>', type=str, dest="guiif",
                            default="localhost", help="use ipv4 interface <gui interface> for gui server")
                            
-    argparser.add_argument('--registry', metavar='<config>', type=yaml.load, default={},
+    group = argparser.add_mutually_exclusive_group()
+    group.add_argument('--registry', metavar='<config>', type=yaml.load, default={},
                             help="configuration dict for registry with keys: type, uri",
                             dest='config_registry')
-                           
-    argparser.add_argument('--name', metavar='<name>', type=str,
-                            help="shortcut for attribute indexed_public/node_name/name",
-                            dest='name')
 
+    group.add_argument('--config-file', metavar='<config>', type=str,
+                           help='File with config for runtime the will be used as the only source of configuration information',
+                           dest='config_file', default=None)
+                           
     argparser.add_argument('-n', '--host', metavar='<host>', type=str,
                            help='ip address/hostname of calvin runtime',
                            dest='host')
@@ -87,6 +88,10 @@ Start runtime, compile calvinscript and deploy application.
     argparser.add_argument('-y', '--external-control', metavar='<url>', type=str,
                            help="exposed external control url (e.g. outside of container)",
                            dest='control_ext')
+
+    argparser.add_argument('--name', metavar='<name>', type=str,
+                            help="shortcut for attribute indexed_public/node_name/name",
+                            dest='name')
 
     argparser.add_argument('--attr', metavar='<attr>', type=yaml.load,
                            help='JSON coded attributes for started node '
@@ -162,7 +167,7 @@ def set_loglevel(levels, filename):
 def set_config_from_args(args):
     from calvin.common import calvinconfig
     global _conf
-    _conf = calvinconfig.get()
+    _conf = calvinconfig.get(override_file=args.config_file)
     print(args.config_registry)
     if 'type' in args.config_registry:
         _conf.set('global', 'storage_type', args.config_registry['type'])
