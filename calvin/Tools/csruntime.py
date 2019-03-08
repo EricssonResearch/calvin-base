@@ -168,11 +168,7 @@ def set_config_from_args(args):
         _conf.set('global', 'storage_type', args.config_registry['type'])
     if 'uri' in args.config_registry:
         _conf.set('global', 'storage_host', args.config_registry['uri'])
-    _conf.add_section("ARGUMENTS")
-    for arg in vars(args):
-        if getattr(args, arg) is not None:
-            _log.debug("Adding ARGUMENTS to config {}={}".format(arg, getattr(args, arg)))
-            _conf.set("ARGUMENTS", arg, getattr(args, arg))
+
 
 def discover(timeout=2, retries=5):
     return []

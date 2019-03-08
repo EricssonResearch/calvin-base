@@ -49,8 +49,8 @@ class CalvinConfig(object):
     disregarding even the built-in settings.
 
     Finally, wildcard environment variables on the form CALVIN_<SECTION>_<OPTION> may override
-    options read from defaults or config files. <SECTION> must be one of GLOBAL, TESTING, DEVELOPER, or
-    ARGUMENTS e.g. CALVIN_TESTING_UNITTEST_LOOPS=42
+    options read from defaults or config files. <SECTION> must be one of GLOBAL, TESTING, DEVELOPER,
+    e.g. CALVIN_TESTING_UNITTEST_LOOPS=42
 
     Printing the config object provides a great deal of information about the configuration.
     """
@@ -264,15 +264,6 @@ class CalvinConfig(object):
         except:
             pass
 
-    # FIXME: Get rid off
-    def get_in_order(self, option, default=None):
-        v = self.get('ARGUMENTS', option)
-        if v is None:
-            v = self.get('GLOBAL', option)
-        if v is None:
-            v = default
-        return v
-
     def get_section(self, section):
         """Get value of option in named section, if section is None 'global' section is implied."""
         try:
@@ -374,6 +365,13 @@ class CalvinConfig(object):
             conf = None
         return conf
 
+    def write_config(self, filepath):
+        try:
+            with open(filepath, 'w') as fp:
+                json.dump(self.config, fp)
+        except Exception as error:
+            _log.info("Could not write config at '{}': {}".format(filepath, error))
+
     def update_config(self, delta_config):
         """
         Update config using delta_config.
@@ -432,7 +430,7 @@ class CalvinConfig(object):
         wildcards = [e for e in os.environ if e.startswith('CALVIN_') and not e.startswith('CALVIN_CONFIG')]
         for wildcard in wildcards:
             parts = wildcard.split('_', 2)
-            if len(parts) < 3 or parts[1] not in ['GLOBAL', 'TESTING', 'DEVELOPER', 'ARGUMENTS']:
+            if len(parts) < 3 or parts[1] not in ['GLOBAL', 'TESTING', 'DEVELOPER']:
                 _log.info("Malformed environment variable {}, skipping.".format(wildcard))
                 continue
             section, option = parts[1:3]
@@ -443,8 +441,6 @@ class CalvinConfig(object):
             except Exception as e:
                 _log.warning("Value {} of environment variable {} is malformed, skipping.".format(repr(value), wildcard))
 
-    def save(self, path, skip_arguments=True):
-        json.dump({k: v for k, v in iter(self.config.items()) if k != "arguments" or not skip_arguments}, open(path, 'w'))
 
     def __str__(self):
         d = {}
