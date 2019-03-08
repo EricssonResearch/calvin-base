@@ -27,13 +27,14 @@ import tempfile
 import time
 import random
 import shutil
+
 import OpenSSL
 from cryptography.x509 import load_pem_x509_certificate
 from cryptography.hazmat.backends import default_backend
+
 from calvin.common import calvinuuid
 from calvin.common import calvinconfig
 from calvin.common.calvinlogger import get_logger
-from calvin.common.utils import get_home
 
 _log = get_logger(__name__)
 _conf = calvinconfig.get()
@@ -260,7 +261,7 @@ def get_security_credentials_path(security_dir=None):
     elif security_dir_in_conf:
         return security_dir_in_conf
     else:
-        homefolder = get_home()
+        homefolder = os.path.expanduser("~")
         return os.path.join(homefolder, ".calvin", "security")
 
 def get_runtimes_credentials_path(security_dir=None):
@@ -784,7 +785,7 @@ class TrustStore():
 
 class Certificate():
     def __init__(self, security_dir=None):
-        homefolder = get_home()
+        homefolder = os.path.expanduser("~")
         default_path = os.path.join(homefolder, ".calvin", "security")
         self.security_dir = security_dir if security_dir else self._get_security_credentials_path()
         self.runtimes_dir = os.path.join(self.security_dir, "runtimes")
@@ -808,7 +809,7 @@ class Certificate():
         if security_dir_in_conf:
             return security_dir_in_conf
         else:
-            homefolder = get_home()
+            homefolder = os.path.expanduser("~")
             return os.path.join(homefolder, ".calvin", "security")
 
     def get_runtimes_credentials_path(self):

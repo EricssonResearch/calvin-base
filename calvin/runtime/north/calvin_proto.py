@@ -14,9 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import time
+
 from calvin.common import calvinuuid
-from calvin.common.utils import enum
+from calvin.common.enum import enum
 from calvin.common.calvin_callback import CalvinCB, CalvinCBClass
 from calvin.common import calvinlogger
 from calvin.common import calvinconfig

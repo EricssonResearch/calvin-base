@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2017 Ericsson AB
+# Copyright (c) 2015-2016 Ericsson AB
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,7 +14,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.common.enum import enum
+import warnings
 
-REPLICATION_STATUS = enum('UNUSED', 'READY', 'REPLICATING', 'DEREPLICATING')
-PRE_CHECK = enum('NO_OPERATION', 'SCALE_OUT', 'SCALE_OUT_KNOWN', 'SCALE_IN')
+warnings.warn("calvin.common.enum should be replaced by python's enum.", DeprecationWarning)
+
+def enum(*sequential, **named):
+    enums = dict(list(zip(sequential, list(range(len(sequential))))), **named)
+    reverse = dict((value, key) for key, value in iter(enums.items()))
+    enums['reverse_mapping'] = reverse
+    return type('Enum', (), enums)
+

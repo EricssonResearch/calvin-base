@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.common.utils import enum
+from calvin.common.enum import enum
 PURPOSE = enum('INIT', 'CONNECT', 'DISCONNECT')
 
 class BaseConnection(object):

@@ -20,7 +20,7 @@ from calvin.actor.actorport import PortMeta
 import calvin.common.calvinresponse as response
 from calvin.common import calvinlogger
 from calvin.actor.actor import ShadowActor
-from calvin.common.utils import enum
+from calvin.common.enum import enum
 from calvin.runtime.north.plugins.port import DISCONNECT
 
 _log = calvinlogger.get_logger(__name__)

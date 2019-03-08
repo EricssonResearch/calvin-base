@@ -17,8 +17,8 @@
 
 import os
 import json
+
 from calvin.common.calvinlogger import get_logger
-from calvin.common.utils import get_home
 
 _log = get_logger(__name__)
 _config = None
@@ -408,7 +408,8 @@ class CalvinConfig(object):
 
         inst_loc = self.install_location()
         curr_loc = os.getcwd()
-        home = get_home() or curr_loc
+        home_loc = os.path.expanduser("~")
+        home = home_loc or curr_loc
         paths = [inst_loc, home]
 
         insert_index = len(paths)

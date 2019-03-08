@@ -27,15 +27,16 @@ import time
 import random
 import shutil
 import json
-from calvin.common import confsort
+
 import OpenSSL
 from cryptography.x509 import load_pem_x509_certificate
 from cryptography.hazmat.backends import default_backend
+
 from calvin.common import certificate
 from calvin.common import calvinuuid
 from calvin.common import calvinconfig
+from calvin.common import confsort
 from calvin.common.calvinlogger import get_logger
-from calvin.common.utils import get_home
 
 _log = get_logger(__name__)
 _conf = calvinconfig.get()
@@ -210,7 +211,7 @@ class CA():
         if security_dir:
             self.configfile = os.path.join(security_dir, domain, "openssl.conf")
         else:
-            homefolder = get_home()
+            homefolder = os.path.expanduser("~")
             self.configfile = os.path.join(homefolder, ".calvin",
                                            "security", domain,
                                            "openssl.conf")
@@ -397,7 +398,7 @@ class CA():
         Remove an existing domain uses default security
         directory if not supplied.
         """
-        homefolder = get_home()
+        homefolder = os.path.expanduser("~")
         domaindir = directory or os.path.join(homefolder, ".calvin", "security", domain)
         configfile = os.path.join(domaindir, "openssl.conf")
         if os.path.isfile(configfile):
@@ -717,7 +718,7 @@ class CA():
             if self.security_dir:
                 cert_conf_file = os.path.join(self.security_dir, domain_name, "openssl.conf")
             else:
-                homefolder = get_home()
+                homefolder = os.path.expanduser("~")
                 cert_conf_file = os.path.join(homefolder,"security",domain_name,"openssl.conf")
             return cert_conf_file
         else:

@@ -28,7 +28,7 @@ from calvin.runtime.south.asynchronous import asynchronous
 from calvin.runtime.north.plugins.requirements import req_operations
 from calvin.actor.actorport import PortMeta
 from calvin.runtime.north.plugins.port import DISCONNECT
-from calvin.common.utils import enum
+from calvin.common.enum import enum
 
 _log = get_logger(__name__)
 

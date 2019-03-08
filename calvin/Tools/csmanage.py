@@ -22,11 +22,11 @@ import os
 import glob
 import shutil
 import json
+
 from calvin.common import certificate
 from calvin.common import certificate_authority
 from calvin.common import runtime_credentials
 from calvin.common import code_signer
-from calvin.common.utils import get_home
 from calvin.common.attribute_resolver import AttributeResolver
 from calvin.common import calvinuuid
 from calvin.csparser.codegen import calvin_components

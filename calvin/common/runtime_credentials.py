@@ -27,13 +27,14 @@ import time
 import random
 import shutil
 import socket
-from calvin.common import confsort
+
 import OpenSSL
 from cryptography.x509 import load_pem_x509_certificate
 from cryptography.hazmat.backends import default_backend
+
+from calvin.common import confsort
 from calvin.common import calvinconfig
 from calvin.common.calvinlogger import get_logger
-from calvin.common.utils import get_home
 from calvin.common import certificate
 from calvin.common.certificate import Certificate
 from calvin.common.calvin_callback import CalvinCB

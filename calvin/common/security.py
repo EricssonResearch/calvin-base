@@ -18,6 +18,7 @@ import os
 import glob
 import json
 from datetime import datetime, timedelta
+
 try:
     import OpenSSL.crypto
     HAS_OPENSSL = True
@@ -35,11 +36,11 @@ try:
     HAS_JWT = True
 except:
     HAS_JWT = False
+
 from calvin.common import certificate
 from calvin.common.certificate import Certificate
 from calvin.common.calvinlogger import get_logger
 from calvin.common import calvinconfig
-from calvin.common.utils import get_home
 from calvin.common.runtime_credentials import RuntimeCredentials
 from calvin.common.calvin_callback import CalvinCB
 from calvin.common.requirement_matching import ReqMatch

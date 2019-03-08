@@ -14,14 +14,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import wrapt
 import functools
 import time
 import copy
+
+import wrapt
+
 from calvin.common import calvinuuid
 from calvin.actor import actorport
 from calvin.common.calvinlogger import get_logger
-from calvin.common.utils import enum
+from calvin.common.enum import enum
 from calvin.runtime.north.calvin_token import Token, ExceptionToken
 # from calvin.runtime.north import calvincontrol
 from calvin.runtime.north.replicationmanager import ReplicationId
