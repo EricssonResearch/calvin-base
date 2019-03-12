@@ -239,11 +239,12 @@ system_config = r"""
 def deploy_application(request, system_setup, deploy_app, destroy_app):
     """Deploy applications from set of scrips and test output"""
     rt_uri = system_setup['runtime']['uri']
+    actorstore_uri = system_setup['actorstore']['uri']
     # expects can be a function
     name, script, sinks, expects = request.param
     if type(expects) in (list, tuple):
         assert len(sinks) == len(expects)
-    app_info = deploy_app(rt_uri, script, name)
+    app_info = deploy_app(rt_uri, script, name, actorstore_uri)
     actor_map = app_info['actor_map']
     sink_ids = [actor_map[name + ':' + sink] for sink in sinks]
 

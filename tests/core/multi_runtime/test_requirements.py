@@ -188,9 +188,10 @@ testlist = [
 
 @pytest.fixture(scope='module', params=testlist, ids=lambda t: t[0])
 def deploy_application(request, system_setup, deploy_app, destroy_app):
+    actorstore_uri = system_setup['actorstore']['uri']
     deploy_rt_uri = system_setup['testNode1']['uri']
     name, checker, script = request.param
-    app_info = deploy_app(deploy_rt_uri, script, name)
+    app_info = deploy_app(deploy_rt_uri, script, name, actorstore_uri)
 
     yield (system_setup, app_info, checker)
 

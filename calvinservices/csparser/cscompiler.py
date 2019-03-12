@@ -38,8 +38,8 @@ def preprocess(filename, include_paths):
     sourceText, it = pp.process(filename)
     return (sourceText, it)
 
-def compile_source(source, appname):
-    app_info, issuetracker = calvin_codegen(source, appname, verify=True)
+def compile_source(source, appname, actorstore_uri):
+    app_info, issuetracker = calvin_codegen(source, appname, actorstore_uri, verify=True)
     deploy_info, issuetracker2 = calvin_dscodegen(source, appname)
     issuetracker.merge(issuetracker2)
     deployable = {
@@ -49,12 +49,12 @@ def compile_source(source, appname):
     }
     return (deployable, issuetracker)
 
-def compile_file(filepath, include_paths):
+def compile_file(filepath, include_paths, actorstore_uri):
     source, issuetracker = preprocess(filepath, include_paths)
     if issuetracker.error_count > 0:
         return ({}, issuetracker)
     appname = appname_from_filename(filepath)
-    return compile_source(source, appname)
+    return compile_source(source, appname, actorstore_uri)
 
 def sign_deployable(deployable, organization, common_name):
     signer = code_signer.CS(organization=organization, commonName=common_name)
@@ -70,6 +70,7 @@ def main():
     # FIXME: Add credentials and verify arguments
     argparser = argparse.ArgumentParser(description=long_description)
 
+    argparser.add_argument('--actorstore', dest='actorstore_uri', default="http://127.0.0.1:4999", type=str, help='URI of actorstore')
     argparser.add_argument('file', metavar='<filename>', type=str,
                            help="source file to compile, use '-' to read from stdin")
     argparser.add_argument('--compact', dest='indent', action='store_const', const=None, default=4,
@@ -97,7 +98,7 @@ def main():
 
     # Compile
     infile = '/dev/stdin' if args.file == '-' else args.file
-    deployable, issuetracker = compile_file(infile, args.include_paths)
+    deployable, issuetracker = compile_file(infile, args.include_paths, args.actorstore_uri)
 
     # Report errors and (optionally) warnings
     if issuetracker.error_count:

@@ -137,8 +137,8 @@ def deploy_app(control_api):
     Return an application deployer instance
     Usage: app_info = deploy_app(rt_uri, script, name)
     """
-    def _deploy_app(rt_uri, script, name):
-        deployable, issuetracker = compile_source(script, name)
+    def _deploy_app(rt_uri, script, name, actorstore_uri):
+        deployable, issuetracker = compile_source(script, name, actorstore_uri)
         assert issuetracker.errors() == []
         # Deploy to rt1
         status, app_info = control_api.deploy(rt_uri, deployable)

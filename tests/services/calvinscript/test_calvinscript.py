@@ -19,8 +19,8 @@ import pytest
 
 from calvinservices.csparser.codegen import calvin_codegen
 
-def parse(test, source_text=None, verify=True):
-    deployable, issuetracker = calvin_codegen(source_text, test, verify=verify)
+def parse(test, source_text, actorstore_uri):
+    deployable, issuetracker = calvin_codegen(source_text, test, actorstore_uri, verify=True)
     errors = issuetracker.errors(sort_key='reason')
     warnings = issuetracker.warnings(sort_key='reason')
 
@@ -35,7 +35,7 @@ def testCheckSimpleScript(system_setup):
 
     a.integer > b.token
     """
-    result, errors, warnings = parse('inline', script)
+    result, errors, warnings = parse('inline', script, system_setup['actorstore']['uri'])
     assert not errors
 
 def testCheckSimpleScript2(system_setup):
@@ -43,7 +43,7 @@ def testCheckSimpleScript2(system_setup):
     a:Foo()
     b:Bar()
     """
-    result, errors, warnings = parse('inline', script)
+    result, errors, warnings = parse('inline', script, system_setup['actorstore']['uri'])
     assert errors
 
 def testCheckLocalComponent(system_setup):
@@ -56,7 +56,7 @@ def testCheckLocalComponent(system_setup):
     b:test.Sink(store_tokens=false, quiet=false, active=true)
     a.out > b.token
     """
-    result, errors, warnings = parse('inline', script)
+    result, errors, warnings = parse('inline', script, system_setup['actorstore']['uri'])
     assert not errors
 
 
@@ -68,14 +68,14 @@ def testCheckOutportConnections(system_setup):
     c:test.Sink(store_tokens=false, quiet=false, active=true)
     a.integer > c.token
     """
-    result, errors, warnings = parse('inline', script)
+    result, errors, warnings = parse('inline', script, system_setup['actorstore']['uri'])
     assert errors[0]['reason'] == "Actor b (std.CountTimer) is missing connection to outport 'integer'" 
 
 def testCheckInportConnections1(system_setup):
     script = """
     c:test.Sink(store_tokens=false, quiet=false, active=true)
     """
-    result, errors, warnings = parse('inline', script)
+    result, errors, warnings = parse('inline', script, system_setup['actorstore']['uri'])
     assert len(errors) == 1 
     assert errors[0]['reason'] == "Actor c (test.Sink) is missing connection to inport 'token'" 
 
@@ -87,7 +87,7 @@ def testCheckInportConnections2(system_setup):
     a.integer > c.token
     b.integer > c.token
     """
-    result, errors, warnings = parse('inline', script)
+    result, errors, warnings = parse('inline', script, system_setup['actorstore']['uri'])
     assert len(errors) == 1 
     # assert errors[0]['reason'] == "Input port 'c.token' with multiple connections ('a.integer') must have a routing port property." 
     # assert errors[1]['reason'] == "Input port 'c.token' with multiple connections ('b.integer') must have a routing port property." 
@@ -104,7 +104,7 @@ def testBadComponent1(system_setup):
     b:test.Sink(store_tokens=false, quiet=false, active=true)
     a.out > b.token
     """
-    result, errors, warnings = parse('inline', script)
+    result, errors, warnings = parse('inline', script, system_setup['actorstore']['uri'])
     assert len(errors) == 1 
     assert errors[0]['reason'] == "Actor b (std.CountTimer) is missing connection to outport 'integer'" 
 
@@ -119,7 +119,7 @@ def testBadComponent2(system_setup):
     b:test.Sink(store_tokens=false, quiet=false, active=true)
     a.out > b.token
     """
-    result, errors, warnings = parse('inline', script)
+    result, errors, warnings = parse('inline', script, system_setup['actorstore']['uri'])
     assert len(errors) == 1 
     assert errors[0]['reason'] == "Component Foo is missing connection to outport 'out'" 
 
@@ -134,7 +134,7 @@ def testBadComponent3(system_setup):
     b:test.Sink(store_tokens=false, quiet=false, active=true)
     a.out > b.token
     """
-    result, errors, warnings = parse('inline', script)
+    result, errors, warnings = parse('inline', script, system_setup['actorstore']['uri'])
     assert len(errors) == 1 
     # assert errors[0]['reason'] == "Input port 'b.token' with multiple connections ('a:a.integer') must have a routing port property." 
 
@@ -147,7 +147,7 @@ def testBadComponent4(system_setup):
     a:std.CountTimer(sleep=0.1, start=1, steps=100)
     a.integer > b.in
     """
-    result, errors, warnings = parse('inline', script)
+    result, errors, warnings = parse('inline', script, system_setup['actorstore']['uri'])
     assert len(errors) == 2 
     assert errors[0]['reason'] == "Actor a (test.Sink) is missing connection to inport 'token'" 
     assert errors[1]['reason'] == "Component Foo is missing connection to inport 'in'" 
@@ -162,7 +162,7 @@ def testBadComponent5(system_setup):
     a:std.CountTimer(sleep=0.1, start=1, steps=100)
     a.integer > b.in
     """
-    result, errors, warnings = parse('inline', script)
+    result, errors, warnings = parse('inline', script, system_setup['actorstore']['uri'])
     assert len(errors) == 2 
     assert errors[0]['reason'] == "Component Foo has no inport 'foo'" 
     assert errors[1]['reason'] == "Component Foo is missing connection to inport 'in'" 
@@ -177,7 +177,7 @@ def testBadComponent6(system_setup):
     a:test.Sink(store_tokens=false, quiet=false, active=true)
     b.out > a.token
     """
-    result, errors, warnings = parse('inline', script)
+    result, errors, warnings = parse('inline', script, system_setup['actorstore']['uri'])
     assert len(errors) == 2 
     assert errors[0]['reason'] == "Component Foo has no outport 'foo'" 
     assert errors[1]['reason'] == "Component Foo is missing connection to outport 'out'" 
@@ -188,7 +188,7 @@ def testBadComponent7(system_setup):
         .in > .out
     }
     """
-    result, errors, warnings = parse('inline', script)
+    result, errors, warnings = parse('inline', script, system_setup['actorstore']['uri'])
     print(errors)
     assert len(errors) == 1 
     assert errors[0]['reason'] == "Component inport connected directly to outport." 
@@ -199,7 +199,7 @@ def testUndefinedActors(system_setup):
     script = """
     a.token > b.token
     """
-    result, errors, warnings = parse('inline', script)
+    result, errors, warnings = parse('inline', script, system_setup['actorstore']['uri'])
     assert len(errors) == 2 
     assert errors[0]['reason'] == "Undefined actor: 'a'" 
     assert errors[1]['reason'] == "Undefined actor: 'b'" 
@@ -211,7 +211,7 @@ def testUndefinedArguments(system_setup):
     b:test.Sink(store_tokens=false, quiet=false, active=true)
     a.token > b.token
     """
-    result, errors, warnings = parse('inline', script)
+    result, errors, warnings = parse('inline', script, system_setup['actorstore']['uri'])
     assert len(errors) == 1 
     assert errors[0]['reason'] == "Missing argument: 'data'" 
 
@@ -221,7 +221,7 @@ def testExcessArguments(system_setup):
     b:test.Sink(store_tokens=false, quiet=false, active=true)
     a.token > b.token
     """
-    result, errors, warnings = parse('inline', script)
+    result, errors, warnings = parse('inline', script, system_setup['actorstore']['uri'])
     assert len(errors) == 1 
     assert errors[0]['reason'] == "Excess argument: 'bar'" 
 
@@ -236,7 +236,7 @@ def testComponentUndefinedArgument(system_setup):
     a:std.CountTimer(sleep=0.1, start=1, steps=100)
     a.integer > b.in
     """
-    result, errors, warnings = parse('inline', script)
+    result, errors, warnings = parse('inline', script, system_setup['actorstore']['uri'])
     assert len(errors) == 2 
     assert errors[0]['reason'] == "Missing argument: 'file'" 
     assert errors[1]['reason'] == "Unused argument: 'file'" 
@@ -251,7 +251,7 @@ def testComponentUnusedArgument(system_setup):
     a:std.CountTimer(sleep=0.1, start=1, steps=100)
     a.integer > b.in
     """
-    result, errors, warnings = parse('inline', script)
+    result, errors, warnings = parse('inline', script, system_setup['actorstore']['uri'])
     assert len(errors) == 1 
     assert errors[0]['reason'] == "Unused argument: 'file'" 
 
@@ -264,7 +264,7 @@ def testComponentExcessArgument(system_setup):
     b:io.Print()
     a.out > b.token
     """
-    result, errors, warnings = parse('inline', script)
+    result, errors, warnings = parse('inline', script, system_setup['actorstore']['uri'])
     assert len(errors) == 1 
     assert errors[0]['reason'] == "Excess argument: 'bar'" 
 
@@ -291,7 +291,7 @@ def testLocalComponentRecurse(system_setup):
     a.integer > b.in
     b.out > c.token
     """
-    result, errors, warnings = parse('inline', script)
+    result, errors, warnings = parse('inline', script, system_setup['actorstore']['uri'])
     assert len(errors) == 0 
 
 def testLocalComponentBad(system_setup):
@@ -316,7 +316,7 @@ def testLocalComponentBad(system_setup):
     a.integer > b.in
     b.out > c.token
     """
-    result, errors, warnings = parse('inline', script)
+    result, errors, warnings = parse('inline', script, system_setup['actorstore']['uri'])
     assert len(errors) == 0 
 
 def testLocalBadComponentCauseCrash1(system_setup):
@@ -326,7 +326,7 @@ def testLocalBadComponentCauseCrash1(system_setup):
       .in  > snk1.token
     }
     """
-    result, errors, warnings = parse('inline', script)
+    result, errors, warnings = parse('inline', script, system_setup['actorstore']['uri'])
     assert len(errors) == 1 
 
 def testLocalBadComponentCauseCrash2(system_setup):
@@ -337,7 +337,7 @@ def testLocalBadComponentCauseCrash2(system_setup):
     }
     foo : Foo()
     """
-    result, errors, warnings = parse('inline', script)
+    result, errors, warnings = parse('inline', script, system_setup['actorstore']['uri'])
     assert len(errors) == 3 
     assert errors[0]['reason'] == "Component Foo is missing connection to outport 'out'" 
     assert errors[1]['reason'] == "Component foo (local.Foo) is missing connection to inport 'in'" 
@@ -352,7 +352,7 @@ def testLocalBadComponentCauseCrash3(system_setup):
     foo : Foo()
     1 > foo.in
     """
-    result, errors, warnings = parse('inline', script)
+    result, errors, warnings = parse('inline', script, system_setup['actorstore']['uri'])
     print(errors)
     assert len(errors) == 2 
     assert errors[0]['reason'] == "Component Foo is missing connection to outport 'out'" 
@@ -367,7 +367,7 @@ def testNoSuchPort(system_setup):
     src.integer > i.foo
     i.bar > dst.token
     """
-    result, errors, warnings = parse('inline', script)
+    result, errors, warnings = parse('inline', script, system_setup['actorstore']['uri'])
     assert len(errors) == 4 
     assert errors[0]['reason'] == "Actor i (std.Identity) has no inport 'foo'" 
     assert errors[1]['reason'] == "Actor i (std.Identity) has no outport 'bar'" 
@@ -383,7 +383,7 @@ def testRedefineInstance(system_setup):
     src.integer > i.token
     i.token > dst.token
     """
-    result, errors, warnings = parse('inline', script)
+    result, errors, warnings = parse('inline', script, system_setup['actorstore']['uri'])
     assert len(errors) == 1 
     assert errors[0]['reason'] == "Instance identifier 'i' redeclared" 
 
@@ -393,7 +393,7 @@ def testUndefinedActorInComponent(system_setup):
       b.out > .out
     }
     """
-    result, errors, warnings = parse('inline', script)
+    result, errors, warnings = parse('inline', script, system_setup['actorstore']['uri'])
     assert len(errors) == 1 
 
 
@@ -403,7 +403,7 @@ def testUndefinedConstant(system_setup):
     snk : test.Sink(store_tokens=false, quiet=false, active=true)
     src.token > snk.token
     """
-    result, errors, warnings = parse('inline', script)
+    result, errors, warnings = parse('inline', script, system_setup['actorstore']['uri'])
     assert len(errors) == 1 
     assert errors[0]['reason'] == "Undefined identifier: 'FOO'" 
 
@@ -414,7 +414,7 @@ def testUnusedConstant(system_setup):
     sink : flow.Terminator()
     1 > sink.void
     """
-    result, errors, warnings = parse('inline', script)
+    result, errors, warnings = parse('inline', script, system_setup['actorstore']['uri'])
     assert len(errors) == 1 
     assert errors[0]['reason'] == "Unused constant: 'FOO'" 
 
@@ -426,7 +426,7 @@ def testDefinedConstant(system_setup):
     snk : test.Sink(store_tokens=false, quiet=false, active=true)
     src.token > snk.token
     """
-    result, errors, warnings = parse('inline', script)
+    result, errors, warnings = parse('inline', script, system_setup['actorstore']['uri'])
     assert len(errors) == 0 
 
 def testUndefinedRecursiveConstant(system_setup):
@@ -436,7 +436,7 @@ def testUndefinedRecursiveConstant(system_setup):
     snk : test.Sink(store_tokens=false, quiet=false, active=true)
     src.token > snk.token
     """
-    result, errors, warnings = parse('inline', script)
+    result, errors, warnings = parse('inline', script, system_setup['actorstore']['uri'])
     assert len(errors) == 2 
     assert errors[0]['reason'] == "Constant 'BAR' is undefined" 
     assert errors[1]['reason'] == "Undefined identifier: 'FOO'" 
@@ -450,7 +450,7 @@ def testDefinedRecursiveConstant(system_setup):
     snk : test.Sink(store_tokens=false, quiet=false, active=true)
     src.token > snk.token
     """
-    result, errors, warnings = parse('inline', script)
+    result, errors, warnings = parse('inline', script, system_setup['actorstore']['uri'])
     assert len(errors) == 0 
 
 
@@ -459,7 +459,7 @@ def testLiteralOnPort(system_setup):
     snk : test.Sink(store_tokens=false, quiet=false, active=true)
     42 > snk.token
     """
-    result, errors, warnings = parse('inline', script)
+    result, errors, warnings = parse('inline', script, system_setup['actorstore']['uri'])
     assert len(errors) == 0 
 
 def testComponentArgumentOnInternalPort(system_setup):
@@ -468,7 +468,7 @@ def testComponentArgumentOnInternalPort(system_setup):
         foo > .out
     }
     """
-    result, errors, warnings = parse('inline', script)
+    result, errors, warnings = parse('inline', script, system_setup['actorstore']['uri'])
     assert len(errors) == 0 
 
 def testLiteralOnInternalPort(system_setup):
@@ -477,7 +477,7 @@ def testLiteralOnInternalPort(system_setup):
         1 > .out
     }
     """
-    result, errors, warnings = parse('inline', script)
+    result, errors, warnings = parse('inline', script, system_setup['actorstore']['uri'])
     assert len(errors) == 0 
 
 
@@ -490,7 +490,7 @@ def testBadLocalPort(system_setup):
     src : std.Counter()
     src.integer > .in
     """
-    result, errors, warnings = parse('inline', script)
+    result, errors, warnings = parse('inline', script, system_setup['actorstore']['uri'])
     assert len(errors) == 1 
     assert errors[0]['reason'] == "Internal port '.in' outside component definition" 
 
@@ -502,7 +502,7 @@ def testVoidOnInPort(system_setup):
     voidport > iip.in
     iip.out > print.token
     """
-    result, errors, warnings = parse('inline', script)
+    result, errors, warnings = parse('inline', script, system_setup['actorstore']['uri'])
     assert len(errors) == 0 
     assert len(warnings) == 1 
     assert warnings[0]['reason'] == "Using 'void' as input to 'iip.in'" 
@@ -513,7 +513,7 @@ def testVoidOnOutPort(system_setup):
     src : std.Counter()
     src.integer > voidport
     """
-    result, errors, warnings = parse('inline', script)
+    result, errors, warnings = parse('inline', script, system_setup['actorstore']['uri'])
     assert len(errors) == 0 
 
 def testVoidInvalidUse1(system_setup):
@@ -522,7 +522,7 @@ def testVoidInvalidUse1(system_setup):
         .in > voidport
     }
     """
-    result, errors, warnings = parse('inline', script)
+    result, errors, warnings = parse('inline', script, system_setup['actorstore']['uri'])
     assert len(errors) == 1 
     assert errors[0]['reason'] == "Syntax error." 
 
@@ -532,7 +532,7 @@ def testVoidInvalidUse2(system_setup):
         voidport > .out
     }
     """
-    result, errors, warnings = parse('inline', script)
+    result, errors, warnings = parse('inline', script, system_setup['actorstore']['uri'])
     assert len(errors) == 1 
     assert errors[0]['reason'] == "Syntax error." 
 
@@ -540,7 +540,7 @@ def testVoidInvalidUse3(system_setup):
     script = """
     1 > voidport
     """
-    result, errors, warnings = parse('inline', script)
+    result, errors, warnings = parse('inline', script, system_setup['actorstore']['uri'])
     assert len(errors) == 1 
     assert errors[0]['reason'] == "Syntax error." 
 
@@ -549,7 +549,7 @@ def testVoidInvalidUse4(system_setup):
     define BAR=1
     BAR > voidport
     """
-    result, errors, warnings = parse('inline', script)
+    result, errors, warnings = parse('inline', script, system_setup['actorstore']['uri'])
     assert len(errors) == 1 
     assert errors[0]['reason'] == "Syntax error." 
 
@@ -560,7 +560,7 @@ def testPortlist2(system_setup):
     snk2 : io.Print()
     src.integer > snk1.token, snk2.token
     """
-    result, errors, warnings = parse('inline', script)
+    result, errors, warnings = parse('inline', script, system_setup['actorstore']['uri'])
     assert len(errors) == 0 
 
 def testPortlist3(system_setup):
@@ -571,7 +571,7 @@ def testPortlist3(system_setup):
     snk3 : io.Print()
     src.integer > snk1.token, snk2.token, snk3.token
     """
-    result, errors, warnings = parse('inline', script)
+    result, errors, warnings = parse('inline', script, system_setup['actorstore']['uri'])
     assert len(errors) == 0 
 
 def testPortlistLiteral(system_setup):
@@ -580,7 +580,7 @@ def testPortlistLiteral(system_setup):
     snk2 : io.Print()
     1 > snk1.token, snk2.token
     """
-    result, errors, warnings = parse('inline', script)
+    result, errors, warnings = parse('inline', script, system_setup['actorstore']['uri'])
     assert len(errors) == 0 
 
 
@@ -594,7 +594,7 @@ def testPortlistInternalOutPort(system_setup):
     snk : Foo()
     1 > snk.in
     """
-    result, errors, warnings = parse('inline', script)
+    result, errors, warnings = parse('inline', script, system_setup['actorstore']['uri'])
     assert len(errors) == 0 
 
 def testPortlistInternalInPort(system_setup):
@@ -605,7 +605,7 @@ def testPortlistInternalInPort(system_setup):
         1  > snk1.token, snk2.token, .out
     }
     """
-    result, errors, warnings = parse('inline', script)
+    result, errors, warnings = parse('inline', script, system_setup['actorstore']['uri'])
     assert len(errors) == 0 
 
 def testPortlistInternalInPort2(system_setup):
@@ -617,7 +617,7 @@ def testPortlistInternalInPort2(system_setup):
         src.integer  > snk1.token, snk2.token, .out
     }
     """
-    result, errors, warnings = parse('inline', script)
+    result, errors, warnings = parse('inline', script, system_setup['actorstore']['uri'])
     assert len(errors) == 0 
 
 
@@ -628,7 +628,7 @@ def testPortlistInternalOutPortPassthrough(system_setup):
         .in  > snk1.token, .out
     }
     """
-    result, errors, warnings = parse('inline', script)
+    result, errors, warnings = parse('inline', script, system_setup['actorstore']['uri'])
     assert len(errors) == 1 
     assert errors[0]['reason'] == "Component inport connected directly to outport." 
 
@@ -637,7 +637,7 @@ def testTokenTransform(system_setup):
     snk1 : io.Print()
     1 > /2/ snk1.token
     """
-    result, errors, warnings = parse('inline', script)
+    result, errors, warnings = parse('inline', script, system_setup['actorstore']['uri'])
     assert len(errors) == 0 
 
 def testTokenTransformBad(system_setup):
@@ -645,7 +645,7 @@ def testTokenTransformBad(system_setup):
     snk1 : io.Print()
     1 /2/ > snk1.token
     """
-    result, errors, warnings = parse('inline', script)
+    result, errors, warnings = parse('inline', script, system_setup['actorstore']['uri'])
     assert len(errors) == 2 
 
 def testTokenTransformInternalInport(system_setup):
@@ -657,7 +657,7 @@ def testTokenTransformInternalInport(system_setup):
     f : Foo()
     1 > f.in
     """
-    result, errors, warnings = parse('inline', script)
+    result, errors, warnings = parse('inline', script, system_setup['actorstore']['uri'])
     assert len(errors) == 0 
 
 def testTokenTransformInternalInportBad(system_setup):
@@ -669,7 +669,7 @@ def testTokenTransformInternalInportBad(system_setup):
     f : Foo()
     1 > f.in
     """
-    result, errors, warnings = parse('inline', script)
+    result, errors, warnings = parse('inline', script, system_setup['actorstore']['uri'])
     assert len(errors) == 4 
 
 def testTokenTransformInternalOutport(system_setup):
@@ -681,7 +681,7 @@ def testTokenTransformInternalOutport(system_setup):
     f : Foo()
     f.out > voidport
     """
-    result, errors, warnings = parse('inline', script)
+    result, errors, warnings = parse('inline', script, system_setup['actorstore']['uri'])
     assert len(errors) == 0 
 
 def testTokenTransformInternalOutportBad(system_setup):
@@ -693,7 +693,7 @@ def testTokenTransformInternalOutportBad(system_setup):
     f : Foo()
     f.out > voidport
     """
-    result, errors, warnings = parse('inline', script)
+    result, errors, warnings = parse('inline', script, system_setup['actorstore']['uri'])
     assert len(errors) == 3 
 
 def testStringLiteral(system_setup):
@@ -702,7 +702,7 @@ def testStringLiteral(system_setup):
     out: io.Print()
     "{\"x\": \"X\n\"}" > out.token
     """
-    result, errors, warnings = parse('inline', script)
+    result, errors, warnings = parse('inline', script, system_setup['actorstore']['uri'])
     assert len(errors) == 0 
 
 def testStringLiteralNoLinebreaks(system_setup):
@@ -711,7 +711,7 @@ def testStringLiteralNoLinebreaks(system_setup):
     define FOO = "abc
                   def"
     """
-    result, errors, warnings = parse('inline', script)
+    result, errors, warnings = parse('inline', script, system_setup['actorstore']['uri'])
     assert len(errors) == 1 
 
 def testStringLiteralConcatenation(system_setup):
@@ -720,7 +720,7 @@ def testStringLiteralConcatenation(system_setup):
     define FOO = "abc\n"
                  "def"
     """
-    result, errors, warnings = parse('inline', script)
+    result, errors, warnings = parse('inline', script, system_setup['actorstore']['uri'])
     assert len(errors) == 0 
 
 def testLabelConstant(system_setup):
@@ -730,7 +730,7 @@ def testLabelConstant(system_setup):
     :foo 1 > print1.token
     foo.token > print2.token
     """
-    result, errors, warnings = parse('inline', script)
+    result, errors, warnings = parse('inline', script, system_setup['actorstore']['uri'])
     assert len(errors) == 0 
 
 def testLabelConstantify(system_setup):
@@ -740,7 +740,7 @@ def testLabelConstantify(system_setup):
     1 > /:foo 2/ print1.token
     foo.out > print2.token
     """
-    result, errors, warnings = parse('inline', script)
+    result, errors, warnings = parse('inline', script, system_setup['actorstore']['uri'])
     assert len(errors) == 0 
 
 def testPortRef(system_setup):
@@ -748,7 +748,7 @@ def testPortRef(system_setup):
     print1 : io.Print()
     &print1.token >  print1.token
     """
-    result, errors, warnings = parse('inline', script)
+    result, errors, warnings = parse('inline', script, system_setup['actorstore']['uri'])
     assert len(errors) == 0 
 
 @pytest.mark.xfail()
@@ -758,7 +758,7 @@ def testPortRefMissingSyntaxCheck(system_setup):
     print1 : io.Print()
     &print1.token[out] >  print1.token
     """
-    result, errors, warnings = parse('inline', script)
+    result, errors, warnings = parse('inline', script, system_setup['actorstore']['uri'])
     assert len(errors) == 1 
 
 @pytest.mark.xfail()
@@ -767,7 +767,7 @@ def testPortRefAsKey(system_setup):
     print1 : io.Print()
     {&print1.token:"Comment"} >  print1.token
     """
-    result, errors, warnings = parse('inline', script)
+    result, errors, warnings = parse('inline', script, system_setup['actorstore']['uri'])
     self.assertTrue(len(errors) > 0)
 
 # def testAmbigousPortProperty1(system_setup):
@@ -779,7 +779,7 @@ def testPortRefAsKey(system_setup):
 #     i.token > snk.token
 #     i.token(routing="round-robin")
 #     """
-#     result, errors, warnings = parse('inline', script)
+#     result, errors, warnings = parse('inline', script, system_setup['actorstore']['uri'])
 #     assert len(errors) == 2 
 
 # def testAmbigousPortProperty2(system_setup):
@@ -791,7 +791,7 @@ def testPortRefAsKey(system_setup):
 #     i.token > snk.token
 #     i.token[in](routing="round-robin")
 #     """
-#     result, errors, warnings = parse('inline', script)
+#     result, errors, warnings = parse('inline', script, system_setup['actorstore']['uri'])
 #     assert len(errors) == 1 
 
 # def testAmbigousPortProperty3(system_setup):
@@ -803,7 +803,7 @@ def testPortRefAsKey(system_setup):
 #     i.token > snk.token
 #     i.token[out](routing="round-robin")
 #     """
-#     result, errors, warnings = parse('inline', script)
+#     result, errors, warnings = parse('inline', script, system_setup['actorstore']['uri'])
 #     assert len(errors) == 0 
 
 def testComponentToComponent1(system_setup):
@@ -823,7 +823,7 @@ def testComponentToComponent1(system_setup):
 
     out_comp.out > in_comp.in
     """
-    result, errors, warnings = parse('inline', script)
+    result, errors, warnings = parse('inline', script, system_setup['actorstore']['uri'])
     for e in errors:
         print(e['reason'])
     assert len(errors) == 0 
@@ -843,7 +843,7 @@ def testCompToCompWithFanoutFromInternalInport(system_setup):
     snk : Right()
     src.out > snk.in
     """
-    result, errors, warnings = parse('inline', script)
+    result, errors, warnings = parse('inline', script, system_setup['actorstore']['uri'])
     for e in errors:
         print(e['reason'])
     assert len(errors) == 0 

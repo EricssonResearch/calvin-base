@@ -19,6 +19,8 @@
 
 import numbers
 
+import requests
+
 from . import astnode as ast
 from . import astprint
 from .parser import calvin_parse
@@ -28,15 +30,6 @@ from calvin.actor.port_property_syntax import port_property_data
 # FIXME: External dependency to be removed
 from  calvin.common.actor_signature import signature
 
-
-def _is_local_component(actor_type):
-    return '.' not in actor_type
-
-def _root(node):
-    root = node
-    while root.parent:
-        root = root.parent
-    return root
 
 def _construct_metadata(node):
     # FIXME: Actually construct metadata
@@ -51,41 +44,56 @@ def _construct_metadata(node):
         }
     }
 
-CACHE = {}
 
-def _lookup(node, issue_tracker):
-    if _is_local_component(node.actor_type):
-        comps = query(_root(node), kind=ast.Component, attributes={'name':node.actor_type})
-        if not comps:
-            reason = "Missing local component definition: '{}'".format(node.actor_type)
-            issue_tracker.add_error(reason, node)
-            return {'is_known': False}
-        comp = comps[0]
-        metadata = {
-            'is_known': True,
-            'name': comp.name,
-            'type': 'component',
-            'ports': [{'direction': 'out', 'name': name} for name in comp.outports] +
-                     [{'direction': 'in', 'name': name} for name in comp.inports],
-            'args': [{'mandatory': True, 'name':name} for name in comp.arg_names],
-            'definition': comp.children[0]
-        }
-    else:
-        if node.actor_type in CACHE:
-            return CACHE[node.actor_type]
-        ns, name = node.actor_type.split('.') 
-        import requests
-        r = requests.get('http://127.0.0.1:4999/actors/{}/{}'.format(ns, name))
-        if r.status_code != 200:
-            raise("BAD STORE")
-        res = r.json()
-        metadata = res['properties']
-        if not metadata['is_known']:
-            reason = "Not validating actor type: '{}'".format(node.actor_type)
-            issue_tracker.add_warning(reason, node)
-        CACHE[node.actor_type] = metadata    
 
-    return metadata
+class ActorLookup(object):
+    """docstring for ActorLookup"""
+    def __init__(self, actorstore_uri):
+        super(ActorLookup, self).__init__()
+        self.actorstore_uri = actorstore_uri
+        self.cache = {}
+
+    def _root(self, node):
+        root = node
+        while root.parent:
+            root = root.parent
+        return root
+
+    def _is_local_component(self, actor_type):
+        return '.' not in actor_type    
+    
+    def _lookup(self, node, issue_tracker):
+        if self._is_local_component(node.actor_type):
+            comps = query(self._root(node), kind=ast.Component, attributes={'name':node.actor_type})
+            if not comps:
+                reason = "Missing local component definition: '{}'".format(node.actor_type)
+                issue_tracker.add_error(reason, node)
+                return {'is_known': False}
+            comp = comps[0]
+            metadata = {
+                'is_known': True,
+                'name': comp.name,
+                'type': 'component',
+                'ports': [{'direction': 'out', 'name': name} for name in comp.outports] +
+                         [{'direction': 'in', 'name': name} for name in comp.inports],
+                'args': [{'mandatory': True, 'name':name} for name in comp.arg_names],
+                'definition': comp.children[0]
+            }
+        else:
+            if node.actor_type in self.cache:
+                return self.cache[node.actor_type]
+            ns, name = node.actor_type.split('.') 
+            r = requests.get('{}/actors/{}/{}'.format(self.actorstore_uri, ns, name))
+            if r.status_code != 200:
+                raise("BAD STORE")
+            res = r.json()
+            metadata = res['properties']
+            if not metadata['is_known']:
+                reason = "Not validating actor type: '{}'".format(node.actor_type)
+                issue_tracker.add_warning(reason, node)
+            self.cache[node.actor_type] = metadata    
+
+        return metadata
 
 
 def _check_arguments(assignment, issue_tracker):
@@ -323,7 +331,8 @@ class Expander(Visitor):
     """
     Expands a tree with components provided as a subtree
     """
-    def __init__(self, issue_tracker):
+    def __init__(self, lookup, issue_tracker):
+        self.lookup = lookup 
         self.issue_tracker = issue_tracker
 
     def process(self, root, verify=True):
@@ -335,7 +344,7 @@ class Expander(Visitor):
 
     def visit_Assignment(self, node):
         if not node.metadata:
-            node.metadata = _lookup(node, self.issue_tracker)
+            node.metadata = self.lookup._lookup(node, self.issue_tracker)
         if node.metadata['is_known'] and node.metadata['type'] == 'actor':
             # Nothing more to do
             return
@@ -718,8 +727,9 @@ class ConsistencyCheck(Visitor):
 
        Run before expansion.
     """
-    def __init__(self, issue_tracker):
+    def __init__(self, lookup, issue_tracker):
         super(ConsistencyCheck, self).__init__()
+        self.lookup = lookup
         self.issue_tracker = issue_tracker
         self.block = None
         self.component = None
@@ -770,7 +780,7 @@ class ConsistencyCheck(Visitor):
         self._visit_children(port_props)
 
     def visit_Assignment(self, node):
-        node.metadata = _lookup(node, self.issue_tracker)
+        node.metadata = self.lookup._lookup(node, self.issue_tracker)
         if not node.metadata['is_known']:
             # error issued in _lookup
             return
@@ -852,8 +862,9 @@ class CodeGen(object):
     Generate code from a source file
     FIXME: Use a writer class to generate output in various formats
     """
-    def __init__(self, ast_root, script_name):
+    def __init__(self, ast_root, script_name, actorstore_uri):
         super(CodeGen, self).__init__()
+        self.lookup = ActorLookup(actorstore_uri)
         self.root = ast_root
         # self.verify = verify
         self.app_info = {
@@ -905,7 +916,7 @@ class CodeGen(object):
         # self.dump_tree('RESOLVED CONSTANTS')
 
     def consistency_check(self, issue_tracker):
-        cc = ConsistencyCheck(issue_tracker)
+        cc = ConsistencyCheck(self.lookup, issue_tracker)
         cc.process(self.root)
         self.dump_tree('Consistency Check')
 
@@ -915,7 +926,7 @@ class CodeGen(object):
         self.dump_tree('Collected port properties')
 
     def expand_components(self, issue_tracker, verify):
-        expander = Expander(issue_tracker)
+        expander = Expander(self.lookup, issue_tracker)
         expander.process(self.root, verify)
         self.dump_tree('EXPANDED')
 
@@ -997,37 +1008,37 @@ def query(root, kind=None, attributes=None, maxdepth=-1):
     query = match_query(kind=kind, attributes=attributes)
     return search_tree(root, query, maxdepth)
 
-def _calvin_cg(source_text, app_name):
+def _calvin_cg(source_text, app_name, actorstore_uri):
     ast_root, issuetracker = calvin_parse(source_text)
-    cg = CodeGen(ast_root, app_name)
+    cg = CodeGen(ast_root, app_name, actorstore_uri)
     return cg, issuetracker
 
 # FIXME: [PP] Change calvin_ to calvinscript_
-def calvin_codegen(source_text, app_name, verify=True):
+def calvin_codegen(source_text, app_name, actorstore_uri, verify=True):
     """
     Generate application code from script, return deployable and issuetracker.
 
     Parameter app_name is required to provide a namespace for the application.
     Optional parameter verify is deprecated, defaults to True.
     """
-    cg, issuetracker = _calvin_cg(source_text, app_name)
+    cg, issuetracker = _calvin_cg(source_text, app_name, actorstore_uri)
     cg.generate_code(issuetracker, verify)
     return cg.app_info, issuetracker
 
-def calvin_astgen(source_text, app_name, verify=True):
+def calvin_astgen(source_text, app_name, actorstore_uri, verify=True):
     """
     Generate AST from script, return processed AST and issuetracker.
 
     Parameter app_name is required to provide a namespace for the application.
     Optional parameter verify is deprecated, defaults to True.
     """
-    cg, issuetracker = _calvin_cg(source_text, app_name)
+    cg, issuetracker = _calvin_cg(source_text, app_name, actorstore_uri)
     cg.phase1(issuetracker)
     cg.phase2(issuetracker, verify)
     return cg.root, issuetracker
 
 
-def calvin_components(source_text, names=None):
+def calvin_components(source_text, actorstore_uri, names=None):
     """
     Generate AST from script, return requested components and issuetracker.
 
@@ -1035,7 +1046,7 @@ def calvin_components(source_text, names=None):
     Optional parameter names is a list of components to extract, if present (or None)
     return all components found in script.
     """
-    cg, issuetracker = _calvin_cg(source_text, '')
+    cg, issuetracker = _calvin_cg(source_text, '', actorstore_uri)
     cg.phase1(issuetracker)
 
     if issuetracker.error_count:

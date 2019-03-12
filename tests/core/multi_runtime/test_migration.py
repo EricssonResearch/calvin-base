@@ -57,8 +57,9 @@ system_config = r"""
 @pytest.fixture(scope='module', params=testlist)
 def deploy_application(request, system_setup, deploy_app, destroy_app):
     deploy_rt_uri = system_setup['rt1']['uri']
+    actorstore_uri = system_setup['actorstore']['uri']
     name, script, sinks, migrates = request.param
-    app_info = deploy_app(deploy_rt_uri, script, name)
+    app_info = deploy_app(deploy_rt_uri, script, name, actorstore_uri)
     app_id = app_info['application_id']
     actor_map = app_info['actor_map']
     sink_ids = [actor_map[name + ':' + sink] for sink in sinks]
