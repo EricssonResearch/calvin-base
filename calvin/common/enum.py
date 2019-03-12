@@ -18,9 +18,14 @@ import warnings
 
 warnings.warn("calvin.common.enum should be replaced by python's enum.", DeprecationWarning)
 
-def enum(*sequential, **named):
-    enums = dict(list(zip(sequential, list(range(len(sequential))))), **named)
-    reverse = dict((value, key) for key, value in iter(enums.items()))
-    enums['reverse_mapping'] = reverse
+# FIXME: Some of our code relies on the fact that enums are really ints, and  
+#        that ENUM.FOO can be serialized over tunnels/rt2rt communication
+#        This is probably easier to fix once we have modernized the code.
+# FIXME: Somewhere in our code, an assumption is made that the first
+#        enumeration index is 0 (test by changing start to 1 in code below)
+
+def enum(*sequence):
+    enums = {name:index for index, name in enumerate(sequence, start=0)}
+    enums['reverse_mapping'] = {index:name for name, index in enums.items()}
     return type('Enum', (), enums)
 
