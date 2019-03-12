@@ -31,8 +31,6 @@ def test_API():
     assert asynchronous.stop_ioloop
     assert asynchronous.filedescriptor
     assert asynchronous.filedescriptor.FD
-    assert asynchronous.pipe
-    assert asynchronous.pipe.Pipe
     assert asynchronous.defer
     assert asynchronous.defer.Deferred
     assert asynchronous.defer.DeferredList
@@ -53,7 +51,13 @@ def test_API():
 
 def test_removed_API():
     with pytest.raises(AttributeError):
-        foo = asynchronous.http_client   
+        foo = asynchronous.http_client  
+    with pytest.raises(AttributeError):
+        foo =  asynchronous.pipe
+    with pytest.raises(AttributeError):    
+        foo =  asynchronous.pipe.Pipe
+           
+         
     
 # def test_deprecated_API():
 #     with pytest.deprecated_call():

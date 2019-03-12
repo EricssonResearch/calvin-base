@@ -42,9 +42,6 @@ if async_impl == 'twisted':
     from .twistedimpl import filedescriptor
     from .twistedimpl.filedescriptor import FD
 
-    from .twistedimpl import pipe
-    from .twistedimpl.pipe import Pipe
-
     from .twistedimpl import defer
     from .twistedimpl import threads
 
