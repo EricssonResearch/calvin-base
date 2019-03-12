@@ -36,14 +36,10 @@ if async_impl == 'twisted':
     from .twistedimpl.asynchronous import run_ioloop
     from .twistedimpl.asynchronous import stop_ioloop
 
-    # No need to expose?
-    from .twistedimpl import server_connection
     # CalvinControl, CalvinControlTunnel, TCPServer
     from .twistedimpl.server_connection import ServerProtocolFactory
-    # No need to expose?
-    from .twistedimpl.server_connection import LineProtocol
-    # No need to expose?
-    from .twistedimpl.server_connection import RawDataProtocol
+    # calvinsys.network.UDPListener
+    from .twistedimpl.server_connection import UDPServerProtocol
 
     # Used to get filedescriptor.FDStdIn in calvinsys.io.filehandler.Stdin.py
     from .twistedimpl import filedescriptor

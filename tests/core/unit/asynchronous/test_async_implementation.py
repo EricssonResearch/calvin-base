@@ -34,10 +34,8 @@ def test_API():
     assert asynchronous.threads
     assert asynchronous.threads.defer_to_thread
     assert asynchronous.threads.call_multiple_in_thread
-    assert asynchronous.server_connection
     assert asynchronous.ServerProtocolFactory
-    assert asynchronous.LineProtocol
-    assert asynchronous.server_connection.RawDataProtocol
+    assert asynchronous.UDPServerProtocol
     assert asynchronous.sse_event_source
     assert asynchronous.sse_event_source.EventSource
     assert asynchronous.client_connection
@@ -63,6 +61,12 @@ def test_removed_API():
         foo = asynchronous.defer.inline_callbacks
     with pytest.raises(AttributeError):    
         foo = asynchronous.defer.maybe_deferred
+    with pytest.raises(AttributeError):    
+        foo = asynchronous.LineProtocol
+    with pytest.raises(AttributeError):    
+        foo = asynchronous.RawDataProtocol
+    with pytest.raises(AttributeError): 
+        foo = asynchronous.server_connection
            
          
     

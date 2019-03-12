@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.runtime.south.asynchronous import server_connection
+from calvin.runtime.south.asynchronous import ServerProtocolFactory
 from calvin.runtime.south.calvinsys import base_calvinsys_object
 from calvin.common.calvinlogger import get_logger
 
@@ -95,7 +95,7 @@ class TCPServer(base_calvinsys_object.BaseCalvinsysObject):
     }
 
     def init(self, host, port, mode, delimiter, max_length):
-        self._server = server_connection.ServerProtocolFactory(trigger=self.calvinsys._node.sched.schedule_calvinsys,
+        self._server = ServerProtocolFactory(trigger=self.calvinsys._node.sched.schedule_calvinsys,
             mode=mode,
             delimiter=delimiter,
             max_length=max_length,
