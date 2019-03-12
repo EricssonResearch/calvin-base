@@ -54,7 +54,6 @@ def execute_cmd_check_output():
     return _execute_cmd
 
 
-# FIXTURE: file_dir
 # Provide the path to the directory where this file resides
 # FIXME: Is this too fragile?
 @pytest.fixture(scope='module')
@@ -66,10 +65,12 @@ def tests_dir():
     return _file_dir()
 
 
-# FIXTURE: working_dir
 @pytest.fixture(scope='module')
 def working_dir(tmpdir_factory, tests_dir):
-    """Return string with POSIX path to temp dir (module scope)"""
+    """
+    Return string with POSIX path to temp dir (module scope)
+    The directory is pre-populated with a default.conf file.
+    """
     wdir = tmpdir_factory.mktemp('work')
     wdir = str(wdir)
     # prepare a config file here
@@ -98,7 +99,7 @@ def dummy_node():
 @pytest.fixture(scope='module')
 def system_setup(request, tests_dir, working_dir):
     """
-    Setup a test system according to a system config in YAML or JSON and pass 
+    Setup a test system according to a system config in YAML and pass 
     the system info to the tests.
     
     The test module must define either 
@@ -117,7 +118,6 @@ def system_setup(request, tests_dir, working_dir):
         config_file = os.path.join(tests_dir, 'systems', system_config_file)
         with open(config_file, 'r') as fp:
             system_config = fp.read()
-            #config = yaml.load(fp)
     else:
         system_config = getattr(request.module, "system_config", None)
         if not system_config: 

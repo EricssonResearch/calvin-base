@@ -237,16 +237,20 @@ class CalvinConfig(object):
         }
         return default
 
+    # unused
     def sections(self):
         return list(self.config.keys())
 
+    # unused
     def has_section(self, section):
         return section in self.config
 
+    # make private?
     def add_section(self, section):
         """Add a named section"""
         self.config.setdefault(section.lower(), {})
 
+    # unused
     def remove_section(self, section):
         """Remove a named section if it exist"""
         try:
@@ -277,11 +281,13 @@ class CalvinConfig(object):
             _log.error("Error reading option {}.{}: {}".format(_section, _option, e))
             return None
 
+    # Used when arguments to csruntime override defaults 
     def set(self, section, option, value):
         """Set value of option in named section"""
         _section = self.config[section.lower()]
         _section[option.lower()] = value
 
+    # Make private?
     def append(self, section, option, value):
         """Append value (list) of option in named section"""
         _section = self.config[section.lower()]
@@ -294,6 +300,7 @@ class CalvinConfig(object):
 
         _section[_option] = value + [ v for v in _section[_option] if v not in value ]
 
+    # Make private?
     def update(self, section, option, value):
         """Set value of option in named section"""
         _section = self.config[section.lower()]
@@ -460,21 +467,3 @@ def get(override_file=None):
         _config = CalvinConfig(override_file)
 
     return _config
-
-
-if __name__ == "__main__":
-    os.environ['CALVIN_CONFIG_PATH'] = '/Users/eperspe/Source/spikes/ConfigParser'
-    os.environ['CALVIN_TESTING_UNITTEST_LOOPS'] = '44'
-    a = get()
-
-    print(a)
-    p = a.get('global', 'actor_paths')
-    print((p, type(p)))
-
-    p = a.get(None, 'framework')
-    print((p, type(p)))
-    p = a.get(None, 'unittest_loops')
-    print((p, type(p)))
-
-    p = a.get('Testing', 'unittest_loops')
-    print((p, type(p)))
