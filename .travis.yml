@@ -1,6 +1,6 @@
 language: python
 python:
-  - "2.7"
+  - "3.7"
 # command to install dependencies
 install:
   - "pip install tox"
@@ -8,4 +8,4 @@ install:
 script:
   - tox
 env:
-  - TOXENV=py27
+  - TOXENV=py37
