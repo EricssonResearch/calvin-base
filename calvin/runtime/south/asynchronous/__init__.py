@@ -30,26 +30,40 @@ async_impl = _conf.get('GLOBAL', 'framework')
 
 if async_impl == 'twisted':
     from .twistedimpl import asynchronous
+    # Very much used
     from .twistedimpl.asynchronous import DelayedCall
+    # north.scheduler
     from .twistedimpl.asynchronous import run_ioloop
     from .twistedimpl.asynchronous import stop_ioloop
 
+    # No need to expose?
     from .twistedimpl import server_connection
+    # CalvinControl, CalvinControlTunnel, TCPServer
     from .twistedimpl.server_connection import ServerProtocolFactory
+    # No need to expose?
     from .twistedimpl.server_connection import LineProtocol
+    # No need to expose?
     from .twistedimpl.server_connection import RawDataProtocol
 
+    # Used to get filedescriptor.FDStdIn in calvinsys.io.filehandler.Stdin.py
     from .twistedimpl import filedescriptor
+    # calvinsys.io.filehandler
     from .twistedimpl.filedescriptor import FD
 
+    # Unused?
     from .twistedimpl import defer
+    # Very much used
     from .twistedimpl import threads
 
+    # No need to expose?
     from .twistedimpl import client_connection
+    # Used in calvinsys.network.SocketClient.py
     from .twistedimpl.client_connection import TCPClientProtocolFactory
     from .twistedimpl.client_connection import UDPClientProtocolFactory
 
+    # No need to expose?
     from .twistedimpl import sse_event_source 
+    # Used in calvinsys.ui.uicalvinsys.py
     from .twistedimpl.sse_event_source import EventSource
 else:
     raise AssertionError("Unknown asynchronous implementation: '{}'".format(async_impl))
