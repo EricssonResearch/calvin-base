@@ -39,7 +39,8 @@ Start runtime, compile calvinscript and deploy application.
   """
 
     argparser = argparse.ArgumentParser(description=long_description)
-
+    
+    argparser.add_argument('--actorstore', dest='actorstore_uri', default="http://127.0.0.1:4999", type=str, help='URI of actorstore')
     group = argparser.add_mutually_exclusive_group()
     group.add_argument('--gui', dest="gui", action="store_true", help="start Calvin GUI")
     group.add_argument('--gui-mock-devices', dest="guimockdevices", action="store_true",
@@ -167,7 +168,8 @@ def set_config_from_args(args):
     from calvin.common import calvinconfig
     global _conf
     _conf = calvinconfig.get(override_file=args.config_file)
-    print(args.config_registry)
+    # print(args.config_registry)
+    _conf.set('global', 'actorstore', args.actorstore_uri)
     if 'type' in args.config_registry:
         _conf.set('global', 'storage_type', args.config_registry['type'])
     if 'uri' in args.config_registry:

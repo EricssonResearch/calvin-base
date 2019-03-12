@@ -27,7 +27,7 @@ system_config_file = "actorstore.yaml"
 @pytest.fixture()
 def actor_manager(system_setup, dummy_node):
     """Return an ActorManager instance"""
-    dummy_node.am = ActorManager(node=dummy_node)
+    dummy_node.am = ActorManager(dummy_node, system_setup['actorstore']['uri'])
     dummy_node.pm.remove_ports_of_actor = Mock(return_value = [])
     return dummy_node.am
 

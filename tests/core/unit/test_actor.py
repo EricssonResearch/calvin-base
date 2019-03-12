@@ -42,8 +42,8 @@ class DummyPort:
         return self.peers
 
 
-def create_actor(node):
-    actor_manager = ActorManager(node)
+def create_actor(node, actorstore_uri):
+    actor_manager = ActorManager(node, actorstore_uri)
     actor_id = actor_manager.new('std.Identity', {"dump":False})
     actor = actor_manager.actors[actor_id]
     actor.inports['token'].set_queue(queue.fanout_fifo.FanoutFIFO({'queue_length': 4, 'direction': "in"}, {}))
@@ -57,7 +57,7 @@ system_config_file = "actorstore.yaml"
 def actor(system_setup, dummy_node):
     """FIXME: Generalize test file and merge with services/actorstore tests"""
     get_calvinsys()._node = Mock()
-    return create_actor(dummy_node)
+    return create_actor(dummy_node, system_setup['actorstore']['uri'])
 
 
 @pytest.mark.parametrize("inport_ret_val,outport_ret_val,expected", [

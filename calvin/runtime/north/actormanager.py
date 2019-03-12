@@ -15,6 +15,9 @@
 # limitations under the License.
 
 import random
+
+import requests
+
 from calvin.common import dynops
 from calvin.common.requirement_matching import ReqMatch
 from calvin.runtime.south.asynchronous import asynchronous
@@ -72,8 +75,9 @@ class ActorManager(object):
 
     """docstring for ActorManager"""
 
-    def __init__(self, node):
+    def __init__(self, node, actorstore_uri):
         super(ActorManager, self).__init__()
+        self.actorstore_uri = actorstore_uri
         self.actors = {}
         self.node = node
 
@@ -309,8 +313,7 @@ class ActorManager(object):
 
     def new_actorstore_lookup(self, actor_type):
         ns, name = actor_type.split('.') 
-        import requests
-        r = requests.get('http://127.0.0.1:4999/actors/{}/{}'.format(ns, name))
+        r = requests.get('{}/actors/{}/{}'.format(self.actorstore_uri, ns, name))
         if r.status_code != 200:
             raise("BAD STORE")
         res = r.json()

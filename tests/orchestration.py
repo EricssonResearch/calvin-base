@@ -39,7 +39,7 @@ class Process(object):
 
     def cmd(self):
         raise NotImplementedError("Subclass must override.")
-    
+
     def __repr__(self):
         return self.cmd()
 
@@ -54,7 +54,7 @@ class Process(object):
 
     def ack_ok_action(self, response):
         pass
-        
+
     def wait_for_ack(self):
         req = self.sysdef["uri"] + self.ack_path
         for i in range(20):
@@ -86,7 +86,7 @@ class RegistryProcess(Process):
 
     info_exports = ["name", "uri", "type"]
     ack_path = "/dumpstorage"
-    
+
     def cmd(self):
         return "csregistry --host {host} --port {port}".format(**self.sysdef)
 
@@ -98,14 +98,14 @@ class RuntimeProcess(Process):
 
     info_exports = ["name", "uri", "rt2rt", "node_id", "actorstore", "registry"]
     ack_path = "/id"
-    
+
     def __init__(self, sysdef, port_numbers, tmp_dir):
         super(RuntimeProcess, self).__init__(sysdef, port_numbers, tmp_dir)
         self._prepare_rt_config_file(tmp_dir)
         self.sysdef.setdefault('rt2rt_port', port_numbers.pop(0))
         self.sysdef["rt2rt"] = "calvinip://{host}:{rt2rt_port}".format(**self.sysdef)
         self.sysdef["node_id"] = ""
-        
+
     def _prepare_rt_config_file(self, tmp_dir):
         default_config_file = os.path.join(tmp_dir, 'default.conf')
         runtime_config_file = os.path.join(tmp_dir, '{name}.conf'.format(**self.sysdef))
@@ -117,13 +117,13 @@ class RuntimeProcess(Process):
         # load config, patch, and write
         with open(default_config_file, 'r') as fp:
             conf = json.load(fp)
-        for key, value in self.sysdef['config'].items():   
+        for key, value in self.sysdef['config'].items():
             conf[key].update(value)
         with open(runtime_config_file, 'w') as fp:
             json.dump(conf, fp)
-                
+
     def _attributes_option(self):
-        attrs = self.sysdef.get("attributes")   
+        attrs = self.sysdef.get("attributes")
         if not attrs:
             return ""
         if isinstance(attrs, str):
@@ -133,18 +133,20 @@ class RuntimeProcess(Process):
         return ' --attr "{}"'.format(attrs)
 
     def cmd(self):
+        # print("sysdef", self.sysdef)
         cmd = "csruntime --host {host} -p {rt2rt_port} -c {port}".format(**self.sysdef)
-        opt1 = ' --registry "{registry}"'.format(**self.sysdef) if 'registry' in self.sysdef else ""
+        store = ' --actorstore {actorstore[uri]}'.format(**self.sysdef) if 'actorstore' in self.sysdef else ''
+        opt1 = ' --registry "{registry}"'.format(**self.sysdef) if 'registry' in self.sysdef else ''
         opt2 = ' --name "{name}"'.format(**self.sysdef)
         conf = ' --config-file "{}"'.format(self.runtime_config_file)
         attrs = self._attributes_option()
         debug = ' -l DEBUG'
-        return cmd + opt1 + opt2 + conf + attrs # + debug
+        return cmd + store + opt1 + opt2 + conf + attrs # + debug
 
     def ack_ok_action(self, response):
         data = response.json()
         self.sysdef["node_id"] = data['id']
-        
+
 
 factories = {
     'REGISTRY': RegistryProcess,
@@ -187,11 +189,11 @@ class SystemManager(object):
         self.port_numbers = _random_ports(2 * len(system_config))
         self._system = []
         self.process_config(system_config, tmp_dir)
-        # print "System startup sequence:"
-        # print "------------------------"
+        # print("System startup sequence:")
+        # print("------------------------")
         # for s in self._system:
-        #     print s
-        # print "------------------------"
+        #     print(s)
+        # print("------------------------")
         if not start:
             return
         try:

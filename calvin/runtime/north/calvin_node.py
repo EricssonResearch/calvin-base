@@ -108,7 +108,8 @@ class Node(object):
         self.certificate_authority = certificate_authority.CertificateAuthority(self)
         self.authentication = authentication.Authentication(self)
         self.authorization = authorization.Authorization(self)
-        self.am = actormanager.ActorManager(self)
+        actorstore_uri = _conf.get('global', 'actorstore')
+        self.am = actormanager.ActorManager(self, actorstore_uri)
         self.rm = replicationmanager.ReplicationManager(self)
         self.control = calvincontrol.get_calvincontrol()
 

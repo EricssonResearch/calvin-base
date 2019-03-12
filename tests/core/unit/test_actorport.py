@@ -23,18 +23,19 @@ from calvin.runtime.north.plugins.port.endpoint import LocalOutEndpoint, LocalIn
 from calvin.runtime.north.plugins.port import queue
 from calvin.runtime.north.plugins.port.endpoint.common import Endpoint
 
+system_config_file = "actorstore.yaml"
 
-def create_actor(node):
-    actor_manager = ActorManager(node)
+def create_actor(node, actorstore_uri):
+    actor_manager = ActorManager(node, actorstore_uri)
     actor_id = actor_manager.new('std.Identity', {"dump":False})
     actor = actor_manager.actors[actor_id]
     return actor
 
 
 @pytest.fixture
-def actor(dummy_node):
+def actor(system_setup, dummy_node):
     """Return std.Identity actor """
-    return create_actor(dummy_node)
+    return create_actor(dummy_node, system_setup['actorstore']['uri'])
 
 
 @pytest.fixture
@@ -50,10 +51,10 @@ def outport(actor):
 
     
 @pytest.fixture
-def portpairs(dummy_node):
+def portpairs(system_setup, dummy_node):
     """return inport, outport of two (actor) instances"""
-    actor1 = create_actor(dummy_node)
-    actor2 = create_actor(dummy_node)
+    actor1 = create_actor(dummy_node, system_setup['actorstore']['uri'])
+    actor2 = create_actor(dummy_node, system_setup['actorstore']['uri'])
     return (
         InPort("inport", actor1), OutPort("outport", actor1),
         InPort("inport", actor2), OutPort("outport", actor2)
