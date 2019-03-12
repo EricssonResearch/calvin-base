@@ -56,7 +56,7 @@ class CalvinSys(object):
         Get and setup capabilities from config
         """
         self._node = node
-        capabilities = _conf.get('calvinsys', 'capabilities') or {}
+        capabilities = _conf.get_section('calvinsys') or {}
         blacklist = _conf.get(None, 'capabilities_blacklist') or []
         for cap, props in capabilities.items():
             # 'cap' is the name of a capability in calvinsys

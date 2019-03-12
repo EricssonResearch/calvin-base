@@ -50,7 +50,7 @@ class CalvinLib(object):
         """
         Get and setup capabilities from config
         """
-        capabilities = _conf.get('calvinlib', 'capabilities') or {}
+        capabilities = _conf.get_section('calvinlib') or {}
         blacklist = _conf.get(None, 'capabilities_blacklist') or []
         for capability in blacklist:
             capabilities.pop(capability, None)

@@ -110,132 +110,128 @@ class CalvinConfig(object):
                 'certificate_authority':{}
             },
             'calvinsys': {
-                "capabilities": {
-                    "sys.schedule": {
-                        "module": "sys.timer.Timer",
-                        "attributes": { "repeats": False, "period": 0}
-                    },
-                    "sys.timer.once": {
-                        "module": "sys.timer.Timer",
-                        "attributes": {}
-                    },
-                    "sys.timer.repeating": {
-                        "module": "sys.timer.Timer",
-                        "attributes": {"repeats": True }
-                    },
-                    "sys.attribute.indexed": {
-                        "module": "sys.attribute.Attribute",
-                        "attributes": { "type": "indexed" }
-                    },
-                    "sys.attribute.public": {
-                        "module": "sys.attribute.Attribute",
-                        "attributes": { "type": "public" }
-                    },
-                    "io.stdout": {
-                        "module": "term.StandardOut",
-                        "attributes": {}
-                    },
-                    "log.info": {
-                        "module": "term.Log",
-                        "attributes": { "level": "info"}
-                    },
-                    "log.warning": {
-                        "module": "term.Log",
-                        "attributes": { "level": "warning"}
-                    },
-                    "log.error": {
-                        "module": "term.Log",
-                        "attributes": { "level": "error"}
-                    },
-                    "http.delete": {
-                        "module": "web.http.Command",
-                        "attributes": {
-                            "cmd": "DELETE"
-                        }
-                    },
-                    "http.get": {
-                        "module": "web.http.Command",
-                        "attributes": {
-                            "cmd": "GET"
-                        }
-                    },
-                    "http.post": {
-                        "module": "web.http.Command",
-                        "attributes": {
-                            "cmd": "POST"
-                        }
-                    },
-                    "http.put": {
-                        "module": "web.http.Command",
-                        "attributes": {
-                            "cmd": "PUT"
-                        }
-                    },
-                    "io.filereader": {
-                        "module": "io.filehandler.Descriptor",
-                        "attributes": {"basedir": ".", "mode": "r"}
-                    },
-                    "io.filewriter": {
-                        "module": "io.filehandler.Descriptor",
-                        "attributes": {"basedir": ".", "mode": "w"}
-                    },
-                    "io.filesize": {
-                        "module": "io.filehandler.GetSize",
-                        "attributes": {"basedir": "."}
-                    },
-                    "io.stdin": {
-                        "module": "io.filehandler.StdIn",
-                        "attributes": {}
-                    },
-                    "network.socketclient": {
-                        "module": "network.SocketClient",
-                        "attributes": {}
-                    },
-                    "network.udplistener": {
-                        "module": "network.UDPListener",
-                        "attributes": {}
-                    },
-                    "network.tcpserver": {
-                        "module": "network.TCPServer",
-                        "attributes": {}
+                "sys.schedule": {
+                    "module": "sys.timer.Timer",
+                    "attributes": { "repeats": False, "period": 0}
+                },
+                "sys.timer.once": {
+                    "module": "sys.timer.Timer",
+                    "attributes": {}
+                },
+                "sys.timer.repeating": {
+                    "module": "sys.timer.Timer",
+                    "attributes": {"repeats": True }
+                },
+                "sys.attribute.indexed": {
+                    "module": "sys.attribute.Attribute",
+                    "attributes": { "type": "indexed" }
+                },
+                "sys.attribute.public": {
+                    "module": "sys.attribute.Attribute",
+                    "attributes": { "type": "public" }
+                },
+                "io.stdout": {
+                    "module": "term.StandardOut",
+                    "attributes": {}
+                },
+                "log.info": {
+                    "module": "term.Log",
+                    "attributes": { "level": "info"}
+                },
+                "log.warning": {
+                    "module": "term.Log",
+                    "attributes": { "level": "warning"}
+                },
+                "log.error": {
+                    "module": "term.Log",
+                    "attributes": { "level": "error"}
+                },
+                "http.delete": {
+                    "module": "web.http.Command",
+                    "attributes": {
+                        "cmd": "DELETE"
                     }
+                },
+                "http.get": {
+                    "module": "web.http.Command",
+                    "attributes": {
+                        "cmd": "GET"
+                    }
+                },
+                "http.post": {
+                    "module": "web.http.Command",
+                    "attributes": {
+                        "cmd": "POST"
+                    }
+                },
+                "http.put": {
+                    "module": "web.http.Command",
+                    "attributes": {
+                        "cmd": "PUT"
+                    }
+                },
+                "io.filereader": {
+                    "module": "io.filehandler.Descriptor",
+                    "attributes": {"basedir": ".", "mode": "r"}
+                },
+                "io.filewriter": {
+                    "module": "io.filehandler.Descriptor",
+                    "attributes": {"basedir": ".", "mode": "w"}
+                },
+                "io.filesize": {
+                    "module": "io.filehandler.GetSize",
+                    "attributes": {"basedir": "."}
+                },
+                "io.stdin": {
+                    "module": "io.filehandler.StdIn",
+                    "attributes": {}
+                },
+                "network.socketclient": {
+                    "module": "network.SocketClient",
+                    "attributes": {}
+                },
+                "network.udplistener": {
+                    "module": "network.UDPListener",
+                    "attributes": {}
+                },
+                "network.tcpserver": {
+                    "module": "network.TCPServer",
+                    "attributes": {}
                 }
             },
             'calvinlib': {
-                "capabilities": {
-                    "math.arithmetic.compare": {
-                        "module": "mathlib.Arithmetic"
-                    },
-                    "math.arithmetic.operator": {
-                        "module": "mathlib.Arithmetic"
-                    },
-                    "math.arithmetic.eval": {
-                        "module": "mathlib.Arithmetic"
-                    },
-                    "math.random": {
-                        "module": "mathlib.Random"
-                    },
-                    "math.hash": {
-                        "module": "hash.Hash",
-                    },
-                    "json": {
-                        "module": "jsonlib.Json"
-                    },
-                    "base64": {
-                        "module": "base64lib.Base64"
-                    },
-                    "copy": {
-                        "module": "datalib.Copy"
-                    },
-                    "mustache": {
-                        "module": "textformatlib.Pystache",
-                    },
-                    "time": {
-                        "module": "timelib.Time",
-                    },
-                    "regexp": {
-                        "module": "regexp.PyRegexp",
-                    }
+                "math.arithmetic.compare": {
+                    "module": "mathlib.Arithmetic"
+                },
+                "math.arithmetic.operator": {
+                    "module": "mathlib.Arithmetic"
+                },
+                "math.arithmetic.eval": {
+                    "module": "mathlib.Arithmetic"
+                },
+                "math.random": {
+                    "module": "mathlib.Random"
+                },
+                "math.hash": {
+                    "module": "hash.Hash",
+                },
+                "json": {
+                    "module": "jsonlib.Json"
+                },
+                "base64": {
+                    "module": "base64lib.Base64"
+                },
+                "copy": {
+                    "module": "datalib.Copy"
+                },
+                "mustache": {
+                    "module": "textformatlib.Pystache",
+                },
+                "time": {
+                    "module": "timelib.Time",
+                },
+                "regexp": {
+                    "module": "regexp.PyRegexp",
                 }
             }
         }
