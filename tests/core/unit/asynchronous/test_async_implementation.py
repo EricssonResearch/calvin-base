@@ -51,7 +51,9 @@ def test_API():
 
 def test_removed_API():
     with pytest.raises(AttributeError):
-        foo = asynchronous.http_client  
+        foo = asynchronous.http_client
+    with pytest.raises(AttributeError):
+        foo = asynchronous.HTTPClient  
     with pytest.raises(AttributeError):
         foo =  asynchronous.pipe
     with pytest.raises(AttributeError):    

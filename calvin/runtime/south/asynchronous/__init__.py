@@ -49,8 +49,6 @@ if async_impl == 'twisted':
     from .twistedimpl.client_connection import TCPClientProtocolFactory
     from .twistedimpl.client_connection import UDPClientProtocolFactory
 
-    from .twistedimpl.http_client import HTTPClient
-
     from .twistedimpl import sse_event_source 
     from .twistedimpl.sse_event_source import EventSource
 else:
