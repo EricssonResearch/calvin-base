@@ -32,7 +32,9 @@ storage_configs = [
           name: runtime1
           port: 5001
           rt2rt_port: 5000
-          registry: {'type':'local', 'uri':null}
+          registry:
+            type: local
+            uri: null
         """
     ),
     (

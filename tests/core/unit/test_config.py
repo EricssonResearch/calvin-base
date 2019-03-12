@@ -26,16 +26,6 @@ def test_default_config(working_dir):
 
 testlist = [
     (
-        'dumb_patch_global', 
-        """
-        - class: RUNTIME
-          name: runtime
-          config:
-            global: {}
-        """,
-        {},
-    ),
-    (
         'patch_global',
         """
         - class: RUNTIME
@@ -57,14 +47,13 @@ testlist = [
           name: runtime
           config:
             calvinsys:
-              capabilities:
-                io.stdout:
-                  module: io.filehandler.Descriptor
-                  attributes:
-                    basedir: foo
-                    filename: stdout.txt
-                    mode: w
-                    newline: true
+              io.stdout:
+                module: io.filehandler.Descriptor
+                attributes:
+                  basedir: foo
+                  filename: stdout.txt
+                  mode: w
+                  newline: true
         """, 
         {
             "calvinsys:io.stdout": {

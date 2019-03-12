@@ -78,21 +78,7 @@ def working_dir(tmpdir_factory, tests_dir):
     shutil.copyfile(src_path, dst_path)
     return wdir   
     
-
-# # FIXTURE: patch_config
-# @pytest.fixture(scope='module')
-# def patch_config(tests_dir, working_dir):
-#     """
-#     Override this fixture in test modules to patch the calvin.conf file
-#     before starting the runtime. See test_runscripts.py for example use.
-#     """
-#     pass
     
-#
-# Methods previously spread over multiple files, copy-pasted, etc.
-#    
-
-
 @pytest.fixture()
 def dummy_node():
     """
@@ -130,12 +116,14 @@ def system_setup(request, tests_dir, working_dir):
     if system_config_file:
         config_file = os.path.join(tests_dir, 'systems', system_config_file)
         with open(config_file, 'r') as fp:
-            config = yaml.load(fp)
+            system_config = fp.read()
+            #config = yaml.load(fp)
     else:
         system_config = getattr(request.module, "system_config", None)
         if not system_config: 
             pytest.fail("Need system config!")
-        config = yaml.load(system_config)    
+    system_config = system_config.format(working_dir=working_dir)        
+    config = yaml.load(system_config)    
         
     sysmgr = orchestration.SystemManager(config, working_dir)
 

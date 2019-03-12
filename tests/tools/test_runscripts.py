@@ -14,28 +14,19 @@ system_config = r"""
 - class: RUNTIME
   name: runtime
   actorstore: $actorstore
-  registry: '{type: local, uri: null}'
+  registry:
+    type: local
+    uri: null
+  config:
+    calvinsys:
+      io.stdout:
+        module: io.filehandler.Descriptor
+        attributes:
+          basedir: {working_dir}
+          filename: stdout.txt
+          mode: w
+          newline: true
 """
-
-
-@pytest.fixture(scope='module')
-def patch_config(tests_dir, working_dir):
-    """Patch copy of default.conf in temp dir; set env CALVIN_CONFIG to patched file"""
-    default_config_path = os.path.join(tests_dir, "default.conf")
-    with open(default_config_path, 'r') as fp:
-        config = json.load(fp)
-
-    config["calvinsys"]["capabilities"]["io.stdout"] = {
-        "module": "io.filehandler.Descriptor",
-        "attributes": {"basedir": "{}".format(working_dir), "filename": "stdout.txt", "mode": "w", "newline": True}
-    }
-
-    config_path = os.path.join(working_dir, "calvin.conf")
-    with open(config_path, 'w') as fp:
-        json.dump(config, fp)
-    os.environ["CALVIN_CONFIG"] = config_path
-    yield
-    os.environ.pop("CALVIN_CONFIG", None)
 
 def test_rt(system_setup, execute_cmd_check_output):
     res = execute_cmd_check_output("cscontrol {} id".format(system_setup['runtime']['uri']))

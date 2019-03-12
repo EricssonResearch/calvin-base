@@ -13,7 +13,9 @@ system_config = r"""
 - class: RUNTIME
   name: runtime
   actorstore: $actorstore
-  registry: '{type: local, uri: null}'
+  registry:
+    type: local
+    uri: null
 """
 
 
