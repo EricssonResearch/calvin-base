@@ -349,11 +349,9 @@ class DocFormatter(object):
 
 class DocumentationStore(object):
     """docstring for DocumentationStore"""
-    def __init__(self, host="127.0.0.1", port=4999):
+    def __init__(self, actorstore_uri):
         super(DocumentationStore, self).__init__()
-        self.host = host
-        self.port = port
-        self.base_request = "http://{}:{}/actors".format(host, port)
+        self.base_request = "{}/actors".format(actorstore_uri)
     
     def _retrieve_metadata(self, what):
         ns, name = self._format_what(what)

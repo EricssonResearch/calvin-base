@@ -30,6 +30,7 @@ def main():
     default_format = 'compact' if sys.argv[0].endswith('csdocs') else 'detailed'
 
     argparser = argparse.ArgumentParser(description=long_description)
+    argparser.add_argument('--actorstore', dest='actorstore_uri', default="http://127.0.0.1:4999", type=str, help='URI of actorstore')
     group = argparser.add_mutually_exclusive_group()
     group.add_argument('what', metavar='<actor or module>', type=str, nargs='?', default='',
                        help='What to look up documentation for, if empty show top level documentation')
@@ -43,7 +44,7 @@ def main():
                            help='When "--format detailed" is in use, this options allows a choice between plain text and markdown')
 
     args = argparser.parse_args()
-    store = DocumentationStore()
+    store = DocumentationStore(args.actorstore_uri)
 
     if args.all:
         print(store.documentation())
