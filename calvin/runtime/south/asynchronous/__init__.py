@@ -50,8 +50,6 @@ if async_impl == 'twisted':
     # calvinsys.io.filehandler
     from .twistedimpl.filedescriptor import FD
 
-    # Unused?
-    from .twistedimpl import defer
     # Very much used
     from .twistedimpl import threads
 

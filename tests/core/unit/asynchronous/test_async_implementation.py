@@ -30,18 +30,13 @@ def test_API():
     assert asynchronous.run_ioloop
     assert asynchronous.stop_ioloop
     assert asynchronous.filedescriptor
-    assert asynchronous.filedescriptor.FD
-    assert asynchronous.defer
-    assert asynchronous.defer.Deferred
-    assert asynchronous.defer.DeferredList
-    assert asynchronous.defer.inline_callbacks
-    assert asynchronous.defer.maybe_deferred
+    assert asynchronous.FD
     assert asynchronous.threads
     assert asynchronous.threads.defer_to_thread
     assert asynchronous.threads.call_multiple_in_thread
     assert asynchronous.server_connection
-    assert asynchronous.server_connection.ServerProtocolFactory
-    assert asynchronous.server_connection.LineProtocol
+    assert asynchronous.ServerProtocolFactory
+    assert asynchronous.LineProtocol
     assert asynchronous.server_connection.RawDataProtocol
     assert asynchronous.sse_event_source
     assert asynchronous.sse_event_source.EventSource
@@ -58,6 +53,16 @@ def test_removed_API():
         foo =  asynchronous.pipe
     with pytest.raises(AttributeError):    
         foo =  asynchronous.pipe.Pipe
+    with pytest.raises(AttributeError):    
+        foo = asynchronous.defer
+    with pytest.raises(AttributeError):    
+        foo = asynchronous.defer.Deferred
+    with pytest.raises(AttributeError):    
+        foo = asynchronous.defer.DeferredList
+    with pytest.raises(AttributeError):    
+        foo = asynchronous.defer.inline_callbacks
+    with pytest.raises(AttributeError):    
+        foo = asynchronous.defer.maybe_deferred
            
          
     
