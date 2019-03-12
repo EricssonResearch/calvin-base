@@ -49,12 +49,11 @@ Start runtime, compile calvinscript and deploy application.
     argparser.add_argument('--gui-if', metavar='<gui interface>', type=str, dest="guiif",
                            default="localhost", help="use ipv4 interface <gui interface> for gui server")
                            
-    group = argparser.add_mutually_exclusive_group()
-    group.add_argument('--registry', metavar='<config>', type=yaml.load, default={},
+    argparser.add_argument('--registry', metavar='<config>', type=yaml.load, default={},
                             help="configuration dict for registry with keys: type, uri",
                             dest='config_registry')
 
-    group.add_argument('--config-file', metavar='<config>', type=str,
+    argparser.add_argument('--config-file', metavar='<path>', type=str,
                            help='File with config for runtime the will be used as the only source of configuration information',
                            dest='config_file', default=None)
                            

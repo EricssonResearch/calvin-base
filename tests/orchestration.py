@@ -1,6 +1,8 @@
 
+import os
 import subprocess
 import shlex
+import shutil
 import socket
 import json
 import time
@@ -23,17 +25,17 @@ class Process(object):
     # Define the path to use in wait_for_ack
     ack_path = ""
 
-    def __init__(self, config, port_numbers):
+    def __init__(self, sysdef, port_numbers, tmp_dir):
         super(Process, self).__init__()
-        self.config = config
-        self.config.setdefault('host', '127.0.0.1')
-        self.config.setdefault('port', port_numbers.pop(0))
-        self.config["uri"] = "http://{host}:{port}".format(**self.config)
+        self.sysdef = sysdef
+        self.sysdef.setdefault('host', '127.0.0.1')
+        self.sysdef.setdefault('port', port_numbers.pop(0))
+        self.sysdef["uri"] = "http://{host}:{port}".format(**self.sysdef)
         self.proc_handle = None
         self.ack_status = False
 
     def info(self):
-        return {k: self.config[k] for k in self.info_exports if k in self.config}
+        return {k: self.sysdef[k] for k in self.info_exports if k in self.sysdef}
 
     def cmd(self):
         raise NotImplementedError("Subclass must override.")
@@ -54,7 +56,7 @@ class Process(object):
         pass
         
     def wait_for_ack(self):
-        req = self.config["uri"] + self.ack_path
+        req = self.sysdef["uri"] + self.ack_path
         for i in range(20):
             try:
                 r = requests.get(req)
@@ -76,7 +78,7 @@ class ActorstoreProcess(Process):
     ack_path = "/actors/"
 
     def cmd(self):
-        return "csactorstore --host {host} --port {port}".format(**self.config)
+        return "csactorstore --host {host} --port {port}".format(**self.sysdef)
 
 
 class RegistryProcess(Process):
@@ -86,7 +88,7 @@ class RegistryProcess(Process):
     ack_path = "/dumpstorage"
     
     def cmd(self):
-        return "csregistry --host {host} --port {port}".format(**self.config)
+        return "csregistry --host {host} --port {port}".format(**self.sysdef)
 
 
 class RuntimeProcess(Process):
@@ -97,14 +99,31 @@ class RuntimeProcess(Process):
     info_exports = ["name", "uri", "rt2rt", "node_id", "actorstore", "registry"]
     ack_path = "/id"
     
-    def __init__(self, config, port_numbers):
-        super(RuntimeProcess, self).__init__(config, port_numbers)
-        self.config.setdefault('rt2rt_port', port_numbers.pop(0))
-        self.config["rt2rt"] = "calvinip://{host}:{rt2rt_port}".format(**self.config)
-        self.config["node_id"] = ""
-
+    def __init__(self, sysdef, port_numbers, tmp_dir):
+        super(RuntimeProcess, self).__init__(sysdef, port_numbers, tmp_dir)
+        self._prepare_rt_config_file(tmp_dir)
+        self.sysdef.setdefault('rt2rt_port', port_numbers.pop(0))
+        self.sysdef["rt2rt"] = "calvinip://{host}:{rt2rt_port}".format(**self.sysdef)
+        self.sysdef["node_id"] = ""
+        
+    def _prepare_rt_config_file(self, tmp_dir):
+        default_config_file = os.path.join(tmp_dir, 'default.conf')
+        runtime_config_file = os.path.join(tmp_dir, '{name}.conf'.format(**self.sysdef))
+        self.runtime_config_file = runtime_config_file
+        if 'config' not in self.sysdef:
+            shutil.copyfile(default_config_file, runtime_config_file)
+            return
+        print(self.sysdef)
+        # load config, patch, and write
+        with open(default_config_file, 'r') as fp:
+            conf = json.load(fp)
+        for key, value in self.sysdef['config'].items():   
+            conf[key].update(value)
+        with open(runtime_config_file, 'w') as fp:
+            json.dump(conf, fp)
+                
     def _attributes_option(self):
-        attrs = self.config.get("attributes")   
+        attrs = self.sysdef.get("attributes")   
         if not attrs:
             return ""
         if isinstance(attrs, str):
@@ -114,16 +133,17 @@ class RuntimeProcess(Process):
         return ' --attr "{}"'.format(attrs)
 
     def cmd(self):
-        cmd = "csruntime --host {host} -p {rt2rt_port} -c {port}".format(**self.config)
-        opt1 = ' --registry "{registry}"'.format(**self.config) if 'registry' in self.config else ""
-        opt2 = ' --name "{name}"'.format(**self.config)
+        cmd = "csruntime --host {host} -p {rt2rt_port} -c {port}".format(**self.sysdef)
+        opt1 = ' --registry "{registry}"'.format(**self.sysdef) if 'registry' in self.sysdef else ""
+        opt2 = ' --name "{name}"'.format(**self.sysdef)
+        conf = ' --config-file "{}"'.format(self.runtime_config_file)
         attrs = self._attributes_option()
         debug = ' -l DEBUG'
-        return cmd + opt1 + opt2 + attrs # + debug
+        return cmd + opt1 + opt2 + conf + attrs # + debug
 
     def ack_ok_action(self, response):
         data = response.json()
-        self.config["node_id"] = data['id']
+        self.sysdef["node_id"] = data['id']
         
 
 factories = {
@@ -133,9 +153,9 @@ factories = {
 }
 
 
-def factory(entity, port_numbers):
+def factory(entity, port_numbers, tmp_dir):
     class_ = factories[entity['class']]
-    return class_(entity, port_numbers)
+    return class_(entity, port_numbers, tmp_dir)
 
 
 def _random_ports(n):
@@ -160,19 +180,21 @@ def _random_ports(n):
 class SystemManager(object):
     """Read a system config file (JSON, YAML), set up a system accordingly."""
 
-    def __init__(self, system_config):
+    def __init__(self, system_config, tmp_dir, start=True):
         super(SystemManager, self).__init__()
         # Prepare a range of port numbers, use maximum number
         # of potentially undefined ports:
         self.port_numbers = _random_ports(2 * len(system_config))
         self._system = []
+        self.process_config(system_config, tmp_dir)
+        # print "System startup sequence:"
+        # print "------------------------"
+        # for s in self._system:
+        #     print s
+        # print "------------------------"
+        if not start:
+            return
         try:
-            self.process_config(system_config)
-            # print "System startup sequence:"
-            # print "------------------------"
-            # for s in self._system:
-            #     print s
-            # print "------------------------"
             self.start_system()
             self.wait_for_system()
         except Exception as err:
@@ -190,14 +212,14 @@ class SystemManager(object):
             if not s.ack_status:
                 print("TIMEOUT for ", s.info())
 
-    def process_config(self, system_config):
+    def process_config(self, system_config, tmp_dir):
         for entity in system_config:
-            self._system.append(self.process_entity(entity))
+            self._system.append(self.process_entity(entity, tmp_dir))
 
-    def process_entity(self, entity):
+    def process_entity(self, entity, tmp_dir):
         self.expand(entity, 'registry')
         self.expand(entity, 'actorstore')
-        return factory(entity, self.port_numbers)
+        return factory(entity, self.port_numbers, tmp_dir)
 
     def expand(self, entity, entry):
         value = entity.get(entry, "")

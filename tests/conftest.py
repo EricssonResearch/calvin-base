@@ -19,6 +19,7 @@ import os
 import shlex
 import subprocess
 import json
+import shutil
 import time
 
 import pytest
@@ -67,21 +68,25 @@ def tests_dir():
 
 # FIXTURE: working_dir
 @pytest.fixture(scope='module')
-def working_dir(tmpdir_factory):
+def working_dir(tmpdir_factory, tests_dir):
     """Return string with POSIX path to temp dir (module scope)"""
     wdir = tmpdir_factory.mktemp('work')
     wdir = str(wdir)
+    # prepare a config file here
+    src_path = os.path.join(tests_dir, "default.conf")
+    dst_path = os.path.join(wdir, "default.conf")
+    shutil.copyfile(src_path, dst_path)
     return wdir   
     
 
-# FIXTURE: patch_config
-@pytest.fixture(scope='module')
-def patch_config(tests_dir, working_dir):
-    """
-    Override this fixture in test modules to patch the calvin.conf file
-    before starting the runtime. See test_runscripts.py for example use.
-    """
-    pass
+# # FIXTURE: patch_config
+# @pytest.fixture(scope='module')
+# def patch_config(tests_dir, working_dir):
+#     """
+#     Override this fixture in test modules to patch the calvin.conf file
+#     before starting the runtime. See test_runscripts.py for example use.
+#     """
+#     pass
     
 #
 # Methods previously spread over multiple files, copy-pasted, etc.
@@ -105,7 +110,7 @@ def dummy_node():
 
 
 @pytest.fixture(scope='module')
-def system_setup(request, tests_dir, working_dir, patch_config):
+def system_setup(request, tests_dir, working_dir):
     """
     Setup a test system according to a system config in YAML or JSON and pass 
     the system info to the tests.
@@ -132,7 +137,7 @@ def system_setup(request, tests_dir, working_dir, patch_config):
             pytest.fail("Need system config!")
         config = yaml.load(system_config)    
         
-    sysmgr = orchestration.SystemManager(config)
+    sysmgr = orchestration.SystemManager(config, working_dir)
 
     yield sysmgr.info
     

@@ -55,7 +55,7 @@ storage_configs = [
 storage_configs = storage_configs
 
 @pytest.fixture(scope='module', params=storage_configs)
-def _storage(request):
+def _storage(request, working_dir):
     """
     Setup a test system according to a system config in YAML or JSON and pass 
     the system info to the tests.
@@ -73,7 +73,7 @@ def _storage(request):
     """
     mode, host, system_config = request.param
     config = yaml.load(system_config)
-    sysmgr = orchestration.SystemManager(config)
+    sysmgr = orchestration.SystemManager(config, working_dir)
     # Give the dummy node communication power (for proxy tests)
     node = Mock()
     node.control = get_calvincontrol()

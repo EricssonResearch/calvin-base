@@ -359,12 +359,20 @@ class CalvinConfig(object):
             conf = None
         return conf
 
-    def write_config(self, filepath):
+
+    def _write_config(self, data, filepath):
         try:
             with open(filepath, 'w') as fp:
-                json.dump(self.config, fp)
+                json.dump(data, fp)
         except Exception as error:
             _log.info("Could not write config at '{}': {}".format(filepath, error))
+
+
+    def write_config(self, filepath):
+        self._write_config(self.config, filepath)
+
+    def write_default_config(self, filepath):
+        self._write_config(self.default_config(), filepath)
 
     def update_config(self, delta_config):
         """
