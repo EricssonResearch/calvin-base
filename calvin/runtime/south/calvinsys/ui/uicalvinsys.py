@@ -1,8 +1,8 @@
-from calvin.runtime.south.asynchronous import sse_event_source as sse
+from calvin.runtime.south.asynchronous import EventSource
 from calvin.common import calvinresponse
 
 try:
-    _eventsource = sse.EventSource(port=7777)
+    _eventsource = EventSource(port=7777)
 except:
     _eventsource = None
 

@@ -51,14 +51,10 @@ if async_impl == 'twisted':
     # Very much used
     from .twistedimpl.threads import defer_to_thread
 
-    # No need to expose?
-    from .twistedimpl import client_connection
     # Used in calvinsys.network.SocketClient.py
     from .twistedimpl.client_connection import TCPClientProtocolFactory
     from .twistedimpl.client_connection import UDPClientProtocolFactory
 
-    # No need to expose?
-    from .twistedimpl import sse_event_source 
     # Used in calvinsys.ui.uicalvinsys.py
     from .twistedimpl.sse_event_source import EventSource
 else:

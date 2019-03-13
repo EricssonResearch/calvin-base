@@ -20,7 +20,7 @@
 
 import pytest
 
-import calvin.runtime.south.asynchronous as asynchronous
+from calvin.runtime.south import asynchronous
 
 
 FRAMEWORKS = ["twistedimpl"]
@@ -37,15 +37,12 @@ def test_API():
     assert asynchronous.StdInFileDescriptor
     
     assert asynchronous.ServerProtocolFactory
+    assert asynchronous.TCPClientProtocolFactory    
     assert asynchronous.UDPServerProtocol
+    assert asynchronous.UDPClientProtocolFactory
+
+    assert asynchronous.EventSource
     
-    assert asynchronous.client_connection
-    assert asynchronous.client_connection.UDPClientProtocolFactory
-    assert asynchronous.client_connection.TCPClientProtocolFactory    
-
-    assert asynchronous.sse_event_source
-    assert asynchronous.sse_event_source.EventSource
-
 def test_removed_API():
     with pytest.raises(AttributeError):
         foo = asynchronous.http_client
@@ -77,5 +74,8 @@ def test_removed_API():
         foo = asynchronous.threads.call_multiple_in_thread
     with pytest.raises(AttributeError):
         foo = asynchronous.threads           
-         
+    with pytest.raises(AttributeError):
+        foo = asynchronous.client_connection
+    with pytest.raises(AttributeError):
+        foo = asynchronous.sse_event_source     
 
