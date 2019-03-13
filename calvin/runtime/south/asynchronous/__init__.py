@@ -42,9 +42,9 @@ if async_impl == 'twisted':
     from .twistedimpl.server_connection import UDPServerProtocol
 
     # Used to get filedescriptor.FDStdIn in calvinsys.io.filehandler.Stdin.py
-    from .twistedimpl import filedescriptor
+    from .twistedimpl.filedescriptor import StdInFileDescriptor
     # calvinsys.io.filehandler
-    from .twistedimpl.filedescriptor import FD
+    from .twistedimpl.filedescriptor import GenericFileDescriptor
 
     # Very much used
     from .twistedimpl import threads

@@ -29,8 +29,8 @@ def test_API():
     assert asynchronous.DelayedCall
     assert asynchronous.run_ioloop
     assert asynchronous.stop_ioloop
-    assert asynchronous.filedescriptor
-    assert asynchronous.FD
+    assert asynchronous.GenericFileDescriptor
+    assert asynchronous.StdInFileDescriptor
     assert asynchronous.threads
     assert asynchronous.threads.defer_to_thread
     assert asynchronous.threads.call_multiple_in_thread
@@ -67,6 +67,8 @@ def test_removed_API():
         foo = asynchronous.RawDataProtocol
     with pytest.raises(AttributeError): 
         foo = asynchronous.server_connection
+    with pytest.raises(AttributeError):    
+        foo = asynchronous.filedescriptor
            
          
     

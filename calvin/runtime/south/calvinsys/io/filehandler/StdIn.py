@@ -15,7 +15,7 @@
 # limitations under the License.
 
 from calvin.runtime.south.calvinsys import base_calvinsys_object
-from calvin.runtime.south.asynchronous import filedescriptor
+from calvin.runtime.south.asynchronous import StdInFileDescriptor
 
 class StdIn(base_calvinsys_object.BaseCalvinsysObject):
     """
@@ -36,7 +36,7 @@ class StdIn(base_calvinsys_object.BaseCalvinsysObject):
     }
 
     def init(self, **kwargs):
-        self.fd = filedescriptor.FDStdIn(self.actor, self.calvinsys.scheduler_wakeup)
+        self.fd = StdInFileDescriptor(self.actor, self.calvinsys.scheduler_wakeup)
 
     def can_read(self):
         if self.fd.hasData():

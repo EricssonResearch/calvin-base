@@ -19,7 +19,7 @@ import os
 
 from calvin.common.calvinlogger import get_logger
 from calvin.runtime.south.calvinsys import base_calvinsys_object
-from calvin.runtime.south.asynchronous import filedescriptor
+from calvin.runtime.south.asynchronous import GenericFileDescriptor
 
 _log = get_logger(__name__)
 
@@ -85,7 +85,7 @@ class Descriptor(base_calvinsys_object.BaseCalvinsysObject):
         if 'w' in mode and not access_allowed(path):
             raise Exception("Cannot create file")
 
-        self.fd = filedescriptor.FD(self.actor, self.calvinsys.scheduler_wakeup, path, mode)
+        self.fd = GenericFileDescriptor(self.actor, self.calvinsys.scheduler_wakeup, path, mode)
         self.mode = mode
         self.newline = newline
 

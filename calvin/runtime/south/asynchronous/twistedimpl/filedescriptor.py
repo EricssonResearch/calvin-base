@@ -21,10 +21,10 @@ from twisted.internet.abstract import FileDescriptor
 from twisted.internet import fdesc
 
 
-class FD(FileDescriptor):
+class GenericFileDescriptor(FileDescriptor):
     """A Calvin file object"""
     def __init__(self, actor, trigger, fname, mode):
-        super(FD, self).__init__()
+        super(GenericFileDescriptor, self).__init__()
         self.actor = actor
         self.trigger = trigger
         self._init_fp(fname, mode)
@@ -88,9 +88,9 @@ class FD(FileDescriptor):
         return data
 
 
-class FDStdIn(FD):
+class StdInFileDescriptor(GenericFileDescriptor):
     def __init__(self, actor, trigger):
-        super(FDStdIn, self).__init__(actor, trigger, None, None)
+        super(GenericFileDescriptor, self).__init__(actor, trigger, None, None)
 
     def _init_fp(self, *args):
         self.fp = sys.stdin
