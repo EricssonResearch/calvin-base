@@ -19,7 +19,7 @@ import re
 
 # from calvin.runtime.north.plugins.storage import storage_factory
 from calvin.actor.port_property_syntax import list_port_property_capabilities
-from calvin.runtime.south.asynchronous import asynchronous
+from calvin.runtime.south import asynchronous
 from calvin.common import calvinlogger
 from calvin.common.calvin_callback import CalvinCB
 # from calvin.actor import actorport

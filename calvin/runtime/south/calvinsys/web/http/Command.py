@@ -17,7 +17,7 @@
 import requests
 from requests.auth import HTTPBasicAuth, HTTPDigestAuth
 
-from calvin.runtime.south.asynchronous import threads
+from calvin.runtime.south.asynchronous import defer_to_thread
 from calvin.common.calvinlogger import get_logger
 from calvin.runtime.south.calvinsys import base_calvinsys_object
 
@@ -227,7 +227,7 @@ class Command(base_calvinsys_object.BaseCalvinsysObject):
             if data.get("data"):
                 http_data = data.get("data")
 
-        defer = threads.defer_to_thread(self.command, url=url, data=http_data,
+        defer = defer_to_thread(self.command, url=url, data=http_data,
                                         timeout=self.settings.get("timeout"), headers=headers,
                                         params=params, auth=auth)
         defer.addCallback(success)

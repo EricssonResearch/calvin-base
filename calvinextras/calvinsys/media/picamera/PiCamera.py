@@ -34,7 +34,7 @@
 from . import picamera
 
 from calvin.runtime.south.calvinsys import base_calvinsys_object
-from calvin.runtime.south.asynchronous import threads
+from calvin.runtime.south.asynchronous import defer_to_thread
 from calvin.common.calvinlogger import get_logger
 
 _log = get_logger(__name__)
@@ -169,7 +169,7 @@ class PiCamera(base_calvinsys_object.BaseCalvinsysObject):
         self.scheduler_wakeup()
 
     def write(self, _):
-        self._in_progress = threads.defer_to_thread(self._read_image)
+        self._in_progress = defer_to_thread(self._read_image)
         self._in_progress.addCallback(self._image_ready)
         self._in_progress.addCallback(self._image_error)
 

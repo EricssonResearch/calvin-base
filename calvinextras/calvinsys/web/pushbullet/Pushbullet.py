@@ -32,7 +32,7 @@
 # limitations under the License.
 
 from . import pushbullet
-from calvin.runtime.south.asynchronous import threads, asynchronous
+from calvin.runtime.south.asynchronous import defer_to_thread, asynchronous
 from calvin.common.calvinlogger import get_logger
 from calvin.runtime.south.calvinsys import base_calvinsys_object
 
@@ -90,7 +90,7 @@ class Pushbullet(base_calvinsys_object.BaseCalvinsysObject):
 
         self.title = title
         self.busy = True
-        in_progress = threads.defer_to_thread(init_pb)
+        in_progress = defer_to_thread(init_pb)
         in_progress.addCallback(done)
 
 
@@ -116,7 +116,7 @@ class Pushbullet(base_calvinsys_object.BaseCalvinsysObject):
             title = data.get("title")
 
         self.busy = True
-        in_progress = threads.defer_to_thread(send)
+        in_progress = defer_to_thread(send)
         in_progress.addBoth(done)
 
     def close(self):

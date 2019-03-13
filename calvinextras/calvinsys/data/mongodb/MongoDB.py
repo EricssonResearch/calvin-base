@@ -16,7 +16,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.runtime.south.asynchronous import threads, asynchronous
+from calvin.runtime.south import asynchronous
 from calvin.common.calvinlogger import get_logger
 from calvin.runtime.south.calvinsys import base_calvinsys_object
 import pymongo
@@ -114,7 +114,7 @@ class MongoDB(base_calvinsys_object.BaseCalvinsysObject):
 
         if not self.busy and self.client is None and self.collection is None:
             self.busy = True
-            deferred = threads.defer_to_thread(get_collection)
+            deferred = asynchronous.defer_to_thread(get_collection)
             deferred.addCallback(done)
             deferred.addErrback(error)
 
@@ -147,7 +147,7 @@ class MongoDB(base_calvinsys_object.BaseCalvinsysObject):
 
         print("Inserting documents {}".format(json.dumps(documents, indent=2)))
         self.busy = True
-        deferred = threads.defer_to_thread(insert, documents)
+        deferred = asynchronous.defer_to_thread(insert, documents)
         deferred.addCallback(done)
 
     def close(self):

@@ -21,7 +21,7 @@ import random
 import logging
 
 from .monitor import Event_Monitor, VisualizingMonitor
-from calvin.runtime.south.asynchronous import asynchronous
+from calvin.runtime.south import asynchronous
 from calvin.common.calvin_callback import CalvinCB
 from calvin.common.calvinlogger import get_logger
 from calvin.common import calvinconfig

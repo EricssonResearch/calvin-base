@@ -15,7 +15,7 @@
 # limitations under the License.
 
 from calvinextras.calvinsys.io.sr04distance import BaseSR04
-from calvin.runtime.south.asynchronous import asynchronous
+from calvin.runtime.south import asynchronous
 
 from calvin.common.calvinlogger import get_logger
 import pigpio

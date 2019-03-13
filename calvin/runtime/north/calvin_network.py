@@ -22,7 +22,7 @@ import importlib
 from calvin.common import calvinuuid
 from calvin.common.calvin_callback import CalvinCB
 import calvin.common.calvinresponse as response
-from calvin.runtime.south.asynchronous import asynchronous
+from calvin.runtime.south import asynchronous
 from calvin.common import calvinlogger
 from calvin.common import calvinconfig
 _log = calvinlogger.get_logger(__name__)

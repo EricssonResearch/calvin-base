@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.runtime.south.asynchronous import threads
+from calvin.runtime.south.asynchronous import defer_to_thread
 from calvin.common.calvinlogger import get_logger
 import sense_hat
 
@@ -40,18 +40,18 @@ class SenseHat(object):
             self._sensehat.set_rotation(r=rotation, redraw=True)
 
     def read_temperature(self, cb):
-        d = threads.defer_to_thread(self._sensehat.get_temperature)
+        d = defer_to_thread(self._sensehat.get_temperature)
         d.addBoth(cb)
 
     def read_humidity(self, cb):
-        d = threads.defer_to_thread(self._sensehat.get_humidity)
+        d = defer_to_thread(self._sensehat.get_humidity)
         d.addBoth(cb)
 
     def read_pressure(self, cb):
-        d = threads.defer_to_thread(self._sensehat.get_pressure)
+        d = defer_to_thread(self._sensehat.get_pressure)
         d.addBoth(cb)
 
     def show_message(self, msg, cb):
-        d = threads.defer_to_thread(self._sensehat.show_message, text_string=msg, text_colour=self._textcolor,
+        d = defer_to_thread(self._sensehat.show_message, text_string=msg, text_colour=self._textcolor,
             back_colour=self._backgroundcolor)
         d.addBoth(cb)

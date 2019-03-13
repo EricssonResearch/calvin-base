@@ -18,7 +18,7 @@ import time
 from collections import deque
 from socket import error as socket_error
 import opcua
-from calvin.runtime.south.asynchronous import asynchronous, threads
+from calvin.runtime.south import asynchronous
 from calvin.runtime.south.calvinsys import base_calvinsys_object
 from calvin.common.calvinlogger import get_logger
 from calvin.common.calvinlogger import add_logging_handler
@@ -211,7 +211,7 @@ class Source(base_calvinsys_object.BaseCalvinsysObject):
             if not self.data_changed:
                 _log.info("Warning: No change in %d seconds; checking connection" % (timeout,))
                 # check connection here, possibly reconnect
-                check_connection = threads.defer_to_thread(check_connection)
+                check_connection = asynchronous.defer_to_thread(check_connection)
                 check_connection.addBoth(result)
             else :
                 self.data_changed = False
@@ -309,7 +309,7 @@ class Source(base_calvinsys_object.BaseCalvinsysObject):
 
         def setup():
             _log.info("(Re-)setting connection")
-            defer = threads.defer_to_thread(connect_and_subscribe)
+            defer = asynchronous.defer_to_thread(connect_and_subscribe)
             defer.addCallback(setup_done)
             defer.addErrback(setup_failed)
 

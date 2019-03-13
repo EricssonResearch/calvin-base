@@ -15,7 +15,7 @@
 # limitations under the License.
 
 import requests
-from calvin.runtime.south.asynchronous import threads
+from calvin.runtime.south.asynchronous import defer_to_thread
 from calvin.common.calvinlogger import get_logger
 from calvin.runtime.south.calvinsys import base_calvinsys_object
 
@@ -127,7 +127,7 @@ class OpenWeatherMap(base_calvinsys_object.BaseCalvinsysObject):
             return
 
         url = "http://api.openweathermap.org/data/2.5/weather?q={location}&appid={appid}".format(location=location, appid=self._api_key)
-        self._in_progress = threads.defer_to_thread(requests.get, url)
+        self._in_progress = defer_to_thread(requests.get, url)
         self._in_progress.addCallback(_new_data)
         self._in_progress.addErrback(_no_data)
 

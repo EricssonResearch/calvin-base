@@ -15,7 +15,7 @@
 # limitations under the License.
 
 from calvinextras.calvinsys.io.adafruit16x2lcd.BaseDisplay import BaseDisplay
-from calvin.runtime.south.asynchronous import threads
+from calvin.runtime.south.asynchronous import defer_to_thread
 import Adafruit_CharLCD as LCD
 
 
@@ -41,7 +41,7 @@ class Plate(BaseDisplay):
     def show_text(self, text):
         if self.defer is None:
             self.clear()
-            self.defer = threads.defer_to_thread(self.lcd.message, text)
+            self.defer = defer_to_thread(self.lcd.message, text)
             self.defer.addCallback(self.cb_show_text)
             self.defer.addErrback(self.cb_show_text)
 

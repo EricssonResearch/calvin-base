@@ -20,7 +20,6 @@ import requests
 
 from calvin.common import dynops
 from calvin.common.requirement_matching import ReqMatch
-from calvin.runtime.south.asynchronous import asynchronous
 from calvin.common.calvinlogger import get_logger
 from calvin.common.calvin_callback import CalvinCB
 import calvin.common.calvinresponse as response

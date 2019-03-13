@@ -19,5 +19,4 @@ from twisted.internet import threads
 # Some callbacks functionallity
 # Thread function
 defer_to_thread = threads.deferToThread
-call_multiple_in_thread = threads.callMultipleInThread
 

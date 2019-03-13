@@ -16,7 +16,7 @@
 
 import pygame
 
-from calvin.runtime.south.asynchronous import threads
+from calvin.runtime.south.asynchronous import defer_to_thread
 from calvin.common.calvinlogger import get_logger
 from calvinextras.calvinsys.media.audio.play import BasePlay
 
@@ -35,7 +35,7 @@ class Play(BasePlay.BasePlay):
         self.is_playing = None
         self.player = None
 
-        defered = threads.defer_to_thread(pygame.mixer.init)
+        defered = defer_to_thread(pygame.mixer.init)
         defered.addBoth(done)
 
     def can_write(self):
@@ -67,7 +67,7 @@ class Play(BasePlay.BasePlay):
         if self.audiofile:
             audiofile = self.audiofile
 
-        defered = threads.defer_to_thread(play_it, player=self.player, audiofile=audiofile)
+        defered = defer_to_thread(play_it, player=self.player, audiofile=audiofile)
         defered.addCallback(finished)
         defered.addBoth(done)
         _log.info("Done")

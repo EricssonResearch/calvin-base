@@ -15,9 +15,7 @@
 # limitations under the License.
 
 
-from calvin.runtime.south.asynchronous import asynchronous
-from calvin.runtime.south.asynchronous import server_connection
-from calvin.runtime.south.asynchronous import threads
+from calvin.runtime.south import asynchronous
 from calvin.common.calvinlogger import get_logger
 
 import pytest
@@ -86,7 +84,7 @@ class TestServer(object):
         print_header("TEST_DEFAULT_LINE_MODE")
         print_header("Setup")
         scheduler = Scheduler_stub()
-        self.factory = server_connection.ServerProtocolFactory(scheduler.trigger_loop)
+        self.factory = asynchronous.ServerProtocolFactory(scheduler.trigger_loop)
         self.factory.start('localhost', 8123)
         self.conn = None
         self.client_socket = None
@@ -97,8 +95,8 @@ class TestServer(object):
         assert not self.factory.connections
         assert not self.factory.pending_connections
 
-        yield threads.defer_to_thread(self.client_socket.connect, ('localhost', 8123))
-        yield threads.defer_to_thread(connection_made, self.factory)
+        yield asynchronous.defer_to_thread(self.client_socket.connect, ('localhost', 8123))
+        yield asynchronous.defer_to_thread(connection_made, self.factory)
         assert self.factory.pending_connections
 
         _, self.conn = self.factory.accept()
@@ -109,13 +107,13 @@ class TestServer(object):
         print_header("Test_Line_Received")
         ####################################################################
         assert self.conn.data_available is False
-        yield threads.defer_to_thread(self.client_socket.send, "sending string \r\n")
-        yield threads.defer_to_thread(data_available, self.conn)
+        yield asynchronous.defer_to_thread(self.client_socket.send, b"sending string \r\n")
+        yield asynchronous.defer_to_thread(data_available, self.conn)
         assert self.conn.data_get() == "sending string "
 
         print_header("Teardown")
         self.factory.stop()
-        yield threads.defer_to_thread(no_more_connections, self.factory)
+        yield asynchronous.defer_to_thread(no_more_connections, self.factory)
 
     @pytest.mark.essential
     @pytest_twisted.inlineCallbacks
@@ -123,34 +121,34 @@ class TestServer(object):
         print_header("TEST_ARGS_IN_LINE_MODE")
         print_header("Setup")
         scheduler = Scheduler_stub()
-        self.factory = server_connection.ServerProtocolFactory(scheduler.trigger_loop, delimiter='end', max_length=3)
+        self.factory = asynchronous.ServerProtocolFactory(scheduler.trigger_loop, delimiter='end', max_length=3)
         self.factory.start('localhost', 8123)
         self.conn = None
         self.client_socket = None
 
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        yield threads.defer_to_thread(self.client_socket.connect, ('localhost', 8123))
-        yield threads.defer_to_thread(connection_made, self.factory)
+        yield asynchronous.defer_to_thread(self.client_socket.connect, ('localhost', 8123))
+        yield asynchronous.defer_to_thread(connection_made, self.factory)
 
         _, self.conn = self.factory.accept()
 
         print_header("Test_Short_Line_Received")
         ####################################################################
-        yield threads.defer_to_thread(self.client_socket.send, "123end")
-        yield threads.defer_to_thread(data_available, self.conn)
+        yield asynchronous.defer_to_thread(self.client_socket.send, b"123end")
+        yield asynchronous.defer_to_thread(data_available, self.conn)
 
         assert self.conn.data_get() == "123"
 
         print_header("Test_Long_Line_Received")
         ####################################################################
-        yield threads.defer_to_thread(self.client_socket.send, "1234end")
-        yield threads.defer_to_thread(data_available, self.conn)
+        yield asynchronous.defer_to_thread(self.client_socket.send, b"1234end")
+        yield asynchronous.defer_to_thread(data_available, self.conn)
 
         assert self.conn.data_get() == "1234"
 
         print_header("Teardown")
         self.factory.stop()
-        yield threads.defer_to_thread(no_more_connections, self.factory)
+        yield asynchronous.defer_to_thread(no_more_connections, self.factory)
 
     @pytest.mark.essential
     @pytest_twisted.inlineCallbacks
@@ -158,7 +156,7 @@ class TestServer(object):
         print_header("TEST_RAW_MODE")
         print_header("Setup")
         scheduler = Scheduler_stub()
-        self.factory = server_connection.ServerProtocolFactory(scheduler.trigger_loop, mode='raw', max_length=10)
+        self.factory = asynchronous.ServerProtocolFactory(scheduler.trigger_loop, mode='raw', max_length=10)
         self.factory.start('localhost', 8123)
         self.conn = None
         self.client_socket = None
@@ -167,8 +165,8 @@ class TestServer(object):
         ##################################################################
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-        yield threads.defer_to_thread(self.client_socket.connect, ('localhost', 8123))
-        yield threads.defer_to_thread(connection_made, self.factory)
+        yield asynchronous.defer_to_thread(self.client_socket.connect, ('localhost', 8123))
+        yield asynchronous.defer_to_thread(connection_made, self.factory)
         assert self.factory.pending_connections
 
         _, self.conn = self.factory.accept()
@@ -177,16 +175,16 @@ class TestServer(object):
         print_header("Test_Data_Received")
         ####################################################################
         assert self.conn.data_available is False
-        yield threads.defer_to_thread(self.client_socket.send, "abcdefghijklmnopqrstuvxyz123456789")
-        yield threads.defer_to_thread(data_available, self.conn)
-        assert self.conn.data_get() == "abcdefghij"
-        assert self.conn.data_get() == "klmnopqrst"
-        assert self.conn.data_get() == "uvxyz12345"
-        assert self.conn.data_get() == "6789"
+        yield asynchronous.defer_to_thread(self.client_socket.send, b"abcdefghijklmnopqrstuvxyz123456789")
+        yield asynchronous.defer_to_thread(data_available, self.conn)
+        assert self.conn.data_get() == b"abcdefghij"
+        assert self.conn.data_get() == b"klmnopqrst"
+        assert self.conn.data_get() == b"uvxyz12345"
+        assert self.conn.data_get() == b"6789"
 
         print_header("Teardown")
         self.factory.stop()
-        yield threads.defer_to_thread(no_more_connections, self.factory)
+        yield asynchronous.defer_to_thread(no_more_connections, self.factory)
 
     @pytest.mark.slow
     @pytest_twisted.inlineCallbacks
@@ -194,7 +192,7 @@ class TestServer(object):
         print_header("TEST_MANY_CLIENTS")
         print_header("Setup")
         scheduler = Scheduler_stub()
-        self.factory = server_connection.ServerProtocolFactory(scheduler.trigger_loop, mode='raw', max_length=10)
+        self.factory = asynchronous.ServerProtocolFactory(scheduler.trigger_loop, mode='raw', max_length=10)
         self.factory.start('localhost', 8123)
         self.conn = None
         self.client_socket = None
@@ -206,9 +204,9 @@ class TestServer(object):
             clients.append(socket.socket(socket.AF_INET, socket.SOCK_STREAM))
 
         for c in clients:
-            yield threads.defer_to_thread(c.connect, ('localhost', 8123))
+            yield asynchronous.defer_to_thread(c.connect, ('localhost', 8123))
 
-        yield threads.defer_to_thread(hundred_connection_made, self.factory)
+        yield asynchronous.defer_to_thread(hundred_connection_made, self.factory)
 
         assert len(self.factory.pending_connections) == 100
 

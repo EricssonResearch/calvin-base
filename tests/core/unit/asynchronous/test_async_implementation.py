@@ -29,18 +29,22 @@ def test_API():
     assert asynchronous.DelayedCall
     assert asynchronous.run_ioloop
     assert asynchronous.stop_ioloop
+    assert asynchronous.call_from_thread
+    assert asynchronous.call_in_thread
+    assert asynchronous.defer_to_thread
+    
     assert asynchronous.GenericFileDescriptor
     assert asynchronous.StdInFileDescriptor
-    assert asynchronous.threads
-    assert asynchronous.threads.defer_to_thread
-    assert asynchronous.threads.call_multiple_in_thread
+    
     assert asynchronous.ServerProtocolFactory
     assert asynchronous.UDPServerProtocol
-    assert asynchronous.sse_event_source
-    assert asynchronous.sse_event_source.EventSource
+    
     assert asynchronous.client_connection
     assert asynchronous.client_connection.UDPClientProtocolFactory
     assert asynchronous.client_connection.TCPClientProtocolFactory    
+
+    assert asynchronous.sse_event_source
+    assert asynchronous.sse_event_source.EventSource
 
 def test_removed_API():
     with pytest.raises(AttributeError):
@@ -69,14 +73,9 @@ def test_removed_API():
         foo = asynchronous.server_connection
     with pytest.raises(AttributeError):    
         foo = asynchronous.filedescriptor
-           
+    with pytest.raises(AttributeError):
+        foo = asynchronous.threads.call_multiple_in_thread
+    with pytest.raises(AttributeError):
+        foo = asynchronous.threads           
          
-    
-# def test_deprecated_API():
-#     with pytest.deprecated_call():
-#         foo = asynchronous.HTTPClient
-#     # with pytest.warns(DeprecationWarning):
-#     #     foo = asynchronous.HTTPClient
-    
-
 

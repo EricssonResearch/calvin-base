@@ -19,7 +19,7 @@ import requests
 import requests.auth
 import base64
 
-from calvin.runtime.south.asynchronous import threads
+from calvin.runtime.south.asynchronous import defer_to_thread
 from calvin.common.calvinlogger import get_logger
 from calvin.runtime.south.calvinsys import base_calvinsys_object
 
@@ -123,7 +123,7 @@ class AxisCamera(base_calvinsys_object.BaseCalvinsysObject):
             self.scheduler_wakeup()
 
         url = "http://{address}/axis-cgi/jpg/image.cgi?{params}".format(address=self._address, params=self._params)
-        self._in_progress = threads.defer_to_thread(requests.get, url, auth=requests.auth.HTTPBasicAuth(self._username, self._password))
+        self._in_progress = defer_to_thread(requests.get, url, auth=requests.auth.HTTPBasicAuth(self._username, self._password))
         self._in_progress.addCallback(_new_data)
         self._in_progress.addErrback(_no_data)
 

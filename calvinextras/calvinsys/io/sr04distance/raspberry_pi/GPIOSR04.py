@@ -16,7 +16,7 @@
 
 from calvinextras.calvinsys.io.sr04distance import BaseSR04
 from calvin.common.calvinlogger import get_logger
-from calvin.runtime.south.asynchronous import asynchronous
+from calvin.runtime.south import asynchronous
 
 import time
 import RPi.GPIO as gpio

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from calvin.runtime.south.asynchronous import asynchronous
+from calvin.runtime.south import asynchronous
 from calvin.runtime.north.resource_monitor.helper import ResourceMonitorHelper
 from calvin.common.calvinlogger import get_logger
 

@@ -17,7 +17,7 @@
 import json
 import os.path
 from twisted.enterprise import adbapi
-from calvin.runtime.south.asynchronous import asynchronous
+from calvin.runtime.south import asynchronous
 from calvin.common.calvinlogger import get_logger
 from calvin.runtime.south.calvinsys import base_calvinsys_object
 

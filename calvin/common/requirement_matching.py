@@ -18,7 +18,7 @@ from calvin.common import dynops
 from calvin.common import calvinlogger
 from calvin.runtime.north.plugins.requirements import req_operations
 import calvin.common.calvinresponse as response
-from calvin.runtime.south.asynchronous import asynchronous
+from calvin.runtime.south import asynchronous
 
 _log = calvinlogger.get_logger(__name__)
 

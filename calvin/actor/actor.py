@@ -28,7 +28,7 @@ from calvin.runtime.north.calvin_token import Token, ExceptionToken
 # from calvin.runtime.north import calvincontrol
 from calvin.runtime.north.replicationmanager import ReplicationId
 import calvin.common.calvinresponse as response
-from calvin.runtime.south.asynchronous import asynchronous
+from calvin.runtime.south import asynchronous
 from calvin.runtime.north.plugins.authorization_checks import check_authorization_plugin_list
 from calvin.common.calvin_callback import CalvinCB
 from calvin.actor.port_property_syntax import get_port_property_capabilities, get_port_property_runtime

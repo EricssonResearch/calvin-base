@@ -21,7 +21,7 @@ import re
 
 from .storage_base import StorageBase
 from calvin.common import calvinresponse
-from calvin.runtime.south.asynchronous import asynchronous
+from calvin.runtime.south import asynchronous
 from .proxy_client import ProxyRegistryClient
 
 # _log = calvinlogger.get_logger(__name__)

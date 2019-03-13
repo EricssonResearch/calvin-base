@@ -19,7 +19,7 @@ import json
 from calvin.common import calvinresponse
 from calvin.common.calvinlogger import get_logger
 from calvin.common.calvin_callback import CalvinCB
-from calvin.runtime.south.asynchronous import asynchronous
+from calvin.runtime.south import asynchronous
 from .routes import handler, register
 from .authentication import authentication_decorator
 from calvin.runtime.north.calvinsys import get_calvinsys

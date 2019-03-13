@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from calvin.runtime.south.asynchronous import asynchronous
+from calvin.runtime.south import asynchronous
 from calvin.common.calvin_callback import CalvinCB
 from calvin.common.attribute_resolver import AttributeResolver
 from calvin.common.calvinlogger import get_logger

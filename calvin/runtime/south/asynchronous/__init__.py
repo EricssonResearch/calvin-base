@@ -29,12 +29,14 @@ async_impl = _conf.get('GLOBAL', 'framework')
 
 
 if async_impl == 'twisted':
-    from .twistedimpl import asynchronous
     # Very much used
     from .twistedimpl.asynchronous import DelayedCall
     # north.scheduler
     from .twistedimpl.asynchronous import run_ioloop
     from .twistedimpl.asynchronous import stop_ioloop
+    # In various actors
+    from .twistedimpl.asynchronous import call_from_thread
+    from .twistedimpl.asynchronous import call_in_thread
 
     # CalvinControl, CalvinControlTunnel, TCPServer
     from .twistedimpl.server_connection import ServerProtocolFactory
@@ -47,7 +49,7 @@ if async_impl == 'twisted':
     from .twistedimpl.filedescriptor import GenericFileDescriptor
 
     # Very much used
-    from .twistedimpl import threads
+    from .twistedimpl.threads import defer_to_thread
 
     # No need to expose?
     from .twistedimpl import client_connection

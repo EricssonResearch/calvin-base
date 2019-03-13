@@ -16,7 +16,7 @@
 
 import requests
 
-from calvin.runtime.south.asynchronous import threads
+from calvin.runtime.south.asynchronous import defer_to_thread
 from calvin.common.calvinlogger import get_logger
 from calvin.runtime.south.calvinsys import base_calvinsys_object
 
@@ -119,7 +119,7 @@ class Post(base_calvinsys_object.BaseCalvinsysObject):
             data = write_data
         elif url is None:
             url = write_data
-        self._in_progress = threads.defer_to_thread(self._cmd, url, data=data, timeout=self._timeout, headers=self._headers)
+        self._in_progress = defer_to_thread(self._cmd, url, data=data, timeout=self._timeout, headers=self._headers)
         self._in_progress.addCallback(finished)
         self._in_progress.addErrback(error)
         self._in_progress.addBoth(reset)

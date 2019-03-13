@@ -24,7 +24,7 @@ from calvin.common.calvinlogger import get_logger
 from calvin.common import dynops
 from calvin.common.requirement_matching import ReqMatch
 from calvin.common.replication_defs import REPLICATION_STATUS, PRE_CHECK
-from calvin.runtime.south.asynchronous import asynchronous
+from calvin.runtime.south import asynchronous
 from calvin.runtime.north.plugins.requirements import req_operations
 from calvin.actor.actorport import PortMeta
 from calvin.runtime.north.plugins.port import DISCONNECT

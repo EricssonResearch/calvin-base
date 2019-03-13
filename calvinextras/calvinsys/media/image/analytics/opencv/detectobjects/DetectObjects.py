@@ -16,7 +16,7 @@
 
 from calvin.runtime.south.calvinsys import base_calvinsys_object
 from calvin.common.calvinlogger import get_logger
-from calvin.runtime.south.asynchronous import threads
+from calvin.runtime.south.asynchronous import defer_to_thread
 import cv2
 import numpy
 import base64
@@ -115,7 +115,7 @@ class DetectObjects(base_calvinsys_object.BaseCalvinsysObject):
 
         def done(*args, **kwargs):
             self.scheduler_wakeup()
-        defered = threads.defer_to_thread(self.detect_objects, b64image)
+        defered = defer_to_thread(self.detect_objects, b64image)
         defered.addCallback(success)
         defered.addBoth(done)
 

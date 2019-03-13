@@ -17,7 +17,7 @@
 import time
 import tweepy
 
-from calvin.runtime.south.asynchronous import threads, asynchronous
+from calvin.runtime.south.asynchronous import defer_to_thread
 from calvin.runtime.south.calvinsys import base_calvinsys_object
 from calvin.common.calvinlogger import get_logger
 
@@ -77,7 +77,7 @@ class Twitter(base_calvinsys_object.BaseCalvinsysObject):
 
         _log.info("Setting up twitter")
         self.busy = True
-        defer = threads.defer_to_thread(setup_twitter)
+        defer = defer_to_thread(setup_twitter)
         defer.addCallback(done)
 
     def can_write(self):
@@ -95,7 +95,7 @@ class Twitter(base_calvinsys_object.BaseCalvinsysObject):
             self.busy = False
             _log.info("Message posted")
         self.busy = True
-        defer = threads.defer_to_thread(post_update, message)
+        defer = defer_to_thread(post_update, message)
         defer.addBoth(done)
 
     def close(self):
