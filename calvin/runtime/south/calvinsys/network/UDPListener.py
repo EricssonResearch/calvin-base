@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from calvin.runtime.south.asynchronous import UDPServerProtocol
+from calvin.runtime.south import asynchronous
 from calvin.runtime.south.calvinsys import base_calvinsys_object
 from calvin.common.calvinlogger import get_logger
 
@@ -51,7 +51,7 @@ class UDPListener(base_calvinsys_object.BaseCalvinsysObject):
     }
 
     def init(self, host, port):
-        self._listener = UDPServerProtocol(self.calvinsys._node.sched.schedule_calvinsys, self.actor.id)
+        self._listener = asynchronous.UDPServer(self.calvinsys._node.sched.schedule_calvinsys, self.actor.id)
         self._listener.start(host, port)
 
     def can_read(self):

@@ -57,7 +57,7 @@ def reactor_listen(node_name, factory, host, port):
     return listener
 
 
-class UDPServerProtocol(DatagramProtocol):
+class UDPServer(DatagramProtocol):
     def __init__(self, trigger, actor_id):
         self._trigger = trigger
         self._actor_id = actor_id
@@ -294,3 +294,16 @@ class ServerProtocolFactory(Factory):
         if not self.pending_connections:
             self.connection_pending = False
         return addr, conn
+
+
+class TCPServer(ServerProtocolFactory):
+    pass
+
+class HTTPServer(ServerProtocolFactory):
+    """docstring for HTTPServer"""
+    def __init__(self, callback, node_name):
+        super(HTTPServer, self).__init__(callback, mode='http', node_name=node_name)
+        
+        
+        
+         

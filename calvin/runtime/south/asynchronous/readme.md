@@ -61,7 +61,7 @@ If a return value is required, it must be in the form of a callback passed to `f
         close()
 
 - [ ] Simplify trigger(actor_id) handling (partial?)
-- [ ] Rename
+- [ ] Rename?
 
 `StdInFileDescriptor` is a subclass of `GenericFileDescriptor`
 
@@ -78,8 +78,8 @@ If a return value is required, it must be in the form of a callback passed to `f
 
 This is the basis for TCPServer and HTTPServer instances. 
 
-- [ ] Split API into TCPServer() and HTTPServer()
-- [ ] Drop moot arguments accordingly
+- [√] Split API into TCPServer() and HTTPServer()
+- [√] Drop moot arguments accordingly
 - [ ] Simplify trigger(actor_id) handling (partial?)
  
 
@@ -92,7 +92,7 @@ This is the basis for TCPServer and HTTPServer instances.
          server_node_name : unused?
          callbacks : dict with key:[callbacks] where callbacks are called when 'key' happens 
 
-- [ ] Rename to TCPClient for consistency
+- [√] Rename to TCPClient for consistency
 - [ ] Drop unused arguments
 - [ ] Don't expose callbacks this way (needs knowledge of implementation details)
 
@@ -103,7 +103,7 @@ This is the basis for TCPServer and HTTPServer instances.
       trigger : a function to be called when data becomes available, typically `scheduler_wakeup`
       actor_id : argument for trigger()
 
-- [ ] Rename to UDPServer for consistency
+- [√] Rename to UDPServer for consistency
 - [ ] Simplify trigger(actor_id) handling (partial?)
 
 
@@ -112,6 +112,7 @@ This is the basis for TCPServer and HTTPServer instances.
     UDPClientProtocolFactory(callbacks=None):
       callbacks : dict with callbacks for event, e.g. {'data_received': [CalvinCB(self._data_received)]}
 
+- [√] Rename to UDPClient for consistency
 - [ ] Don't expose callbacks this way (needs knowledge of implementation details)
 
 

@@ -20,7 +20,7 @@ from random import randint
 from urllib.parse import urlparse
 from calvin.common.calvinlogger import get_logger
 from calvin.common.calvin_callback import CalvinCB
-from calvin.runtime.south.asynchronous import ServerProtocolFactory
+from calvin.runtime.south import asynchronous
 from calvin.common import calvinresponse
 from calvin.common.security import Security
 from calvin.common import calvinuuid
@@ -89,7 +89,7 @@ class CalvinControl(object):
                 self.external_host = self.host
             _log.info("Control API listening on: %s:%s" % (self.host, self.port))
 
-            self.server = ServerProtocolFactory(self.handle_request, "http", node_name=node.node_name)
+            self.server = asynchronous.HTTPServer(self.handle_request, node_name=node.node_name)
             self.server.start(self.host, self.port)
 
             # Create tunnel server
@@ -294,7 +294,7 @@ class CalvinControlTunnel(object):
         for x in range(0, 10):
             try:
                 self.port = randint(5100, 5200)
-                self.server = ServerProtocolFactory(self.handle_request, "http")
+                self.server = asynchronous.HTTPServer(self.handle_request, node_name=None)
                 self.server.start(self.host, self.port)
                 _log.info("Control proxy for %s listening on: %s:%s" % (tunnel.peer_node_id, self.host, self.port))
                 break

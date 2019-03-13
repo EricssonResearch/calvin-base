@@ -137,9 +137,9 @@ class BaseClientProtocolFactory(CalvinCBClass, ClientFactory):
         self._callback_execute('connection_failed', (self._addr, self._port), reason.getErrorMessage())
 
 
-class UDPClientProtocolFactory(BaseClientProtocolFactory):
+class UDPClient(BaseClientProtocolFactory):
     def __init__(self, callbacks=None):
-        super(UDPClientProtocolFactory, self).__init__(callbacks)
+        super(UDPClient, self).__init__(callbacks)
         self._addr = ""
         self._port = 0
         self._protocol_factory = UDPRawProtocol
@@ -151,9 +151,9 @@ class UDPClientProtocolFactory(BaseClientProtocolFactory):
         return self._connector
 
 
-class TCPClientProtocolFactory(BaseClientProtocolFactory):
+class TCPClient(BaseClientProtocolFactory):
     def __init__(self, mode, delimiter="\r\n", node_name=None, server_node_name=None, callbacks=None):
-        super(TCPClientProtocolFactory, self).__init__(callbacks)
+        super(TCPClient, self).__init__(callbacks)
         self._protocol_factory = None
         self._protocol_type = mode
         self.protocol = None

@@ -78,11 +78,11 @@ class SocketClient(base_calvinsys_object.BaseCalvinsysObject):
         self.connection = None
         self.data = ""
         if connection_type == "TCP":
-            connection_factory = asynchronous.TCPClientProtocolFactory(mode=mode, delimiter=delimiter,
+            connection_factory = asynchronous.TCPClient(mode=mode, delimiter=delimiter,
                 server_node_name=None,
                 callbacks={'data_received':[CalvinCB(self._data_received)]})
         elif connection_type == "UDP":
-            connection_factory = asynchronous.UDPClientProtocolFactory(callbacks={'data_received': [CalvinCB(self._data_received)]})
+            connection_factory = asynchronous.UDPClient(callbacks={'data_received': [CalvinCB(self._data_received)]})
 
         connection_factory.callback_register('connected', CalvinCB(self._connected, connection_factory))
         connection_factory.callback_register('disconnected', CalvinCB(self._disconnected))

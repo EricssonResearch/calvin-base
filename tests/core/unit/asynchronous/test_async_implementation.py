@@ -36,10 +36,11 @@ def test_API():
     assert asynchronous.GenericFileDescriptor
     assert asynchronous.StdInFileDescriptor
     
-    assert asynchronous.ServerProtocolFactory
-    assert asynchronous.TCPClientProtocolFactory    
-    assert asynchronous.UDPServerProtocol
-    assert asynchronous.UDPClientProtocolFactory
+    assert asynchronous.TCPServer
+    assert asynchronous.HTTPServer
+    assert asynchronous.UDPServer
+    assert asynchronous.TCPClient
+    assert asynchronous.UDPClient
 
     assert asynchronous.EventSource
     
@@ -77,5 +78,15 @@ def test_removed_API():
     with pytest.raises(AttributeError):
         foo = asynchronous.client_connection
     with pytest.raises(AttributeError):
-        foo = asynchronous.sse_event_source     
+        foo = asynchronous.sse_event_source
+    with pytest.raises(AttributeError):
+        foo = asynchronous.TCPServerProtocolFactory
+    with pytest.raises(AttributeError):
+        foo = asynchronous.UDPServerProtocol
+    with pytest.raises(AttributeError):
+        foo = asynchronous.TCPClientProtocolFactory    
+    with pytest.raises(AttributeError):
+        foo = asynchronous.UDPClientProtocolFactory
+            
+            
 

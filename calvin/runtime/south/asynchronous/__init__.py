@@ -39,9 +39,10 @@ if async_impl == 'twisted':
     from .twistedimpl.asynchronous import call_in_thread
 
     # CalvinControl, CalvinControlTunnel, TCPServer
-    from .twistedimpl.server_connection import ServerProtocolFactory
+    from .twistedimpl.server_connection import TCPServer
+    from .twistedimpl.server_connection import HTTPServer
     # calvinsys.network.UDPListener
-    from .twistedimpl.server_connection import UDPServerProtocol
+    from .twistedimpl.server_connection import UDPServer
 
     # Used to get filedescriptor.FDStdIn in calvinsys.io.filehandler.Stdin.py
     from .twistedimpl.filedescriptor import StdInFileDescriptor
@@ -52,8 +53,8 @@ if async_impl == 'twisted':
     from .twistedimpl.threads import defer_to_thread
 
     # Used in calvinsys.network.SocketClient.py
-    from .twistedimpl.client_connection import TCPClientProtocolFactory
-    from .twistedimpl.client_connection import UDPClientProtocolFactory
+    from .twistedimpl.client_connection import TCPClient
+    from .twistedimpl.client_connection import UDPClient
 
     # Used in calvinsys.ui.uicalvinsys.py
     from .twistedimpl.sse_event_source import EventSource
