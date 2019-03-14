@@ -84,7 +84,7 @@ class TestServer(object):
         print_header("TEST_DEFAULT_LINE_MODE")
         print_header("Setup")
         scheduler = Scheduler_stub()
-        self.factory = asynchronous.ServerProtocolFactory(scheduler.trigger_loop)
+        self.factory = asynchronous.TCPServer(scheduler.trigger_loop)
         self.factory.start('localhost', 8123)
         self.conn = None
         self.client_socket = None
@@ -121,7 +121,7 @@ class TestServer(object):
         print_header("TEST_ARGS_IN_LINE_MODE")
         print_header("Setup")
         scheduler = Scheduler_stub()
-        self.factory = asynchronous.ServerProtocolFactory(scheduler.trigger_loop, delimiter='end', max_length=3)
+        self.factory = asynchronous.TCPServer(scheduler.trigger_loop, delimiter='end', max_length=3)
         self.factory.start('localhost', 8123)
         self.conn = None
         self.client_socket = None
@@ -156,7 +156,7 @@ class TestServer(object):
         print_header("TEST_RAW_MODE")
         print_header("Setup")
         scheduler = Scheduler_stub()
-        self.factory = asynchronous.ServerProtocolFactory(scheduler.trigger_loop, mode='raw', max_length=10)
+        self.factory = asynchronous.TCPServer(scheduler.trigger_loop, mode='raw', max_length=10)
         self.factory.start('localhost', 8123)
         self.conn = None
         self.client_socket = None
@@ -192,7 +192,7 @@ class TestServer(object):
         print_header("TEST_MANY_CLIENTS")
         print_header("Setup")
         scheduler = Scheduler_stub()
-        self.factory = asynchronous.ServerProtocolFactory(scheduler.trigger_loop, mode='raw', max_length=10)
+        self.factory = asynchronous.TCPServer(scheduler.trigger_loop, mode='raw', max_length=10)
         self.factory.start('localhost', 8123)
         self.conn = None
         self.client_socket = None
