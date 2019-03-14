@@ -71,14 +71,14 @@ def compare(dut, ref):
         # print "basestring"
         # print "Comparing {} and {}".format(dut, ref)
         assert dut == ref
-    elif isinstance(ref, collections.Mapping):
+    elif isinstance(ref, collections.abc.Mapping):
         # print "mapping"
         # print "Comparing {} and {}".format(dut, ref)
         keys = set(ref.keys())
         assert set(dut.keys()) == keys
         for key in keys:
             compare(dut[key], ref[key])
-    elif isinstance(ref, collections.Iterable):
+    elif isinstance(ref, collections.abc.Iterable):
         # print "iterable"
         # print "Comparing {} and {}".format(dut, ref)
         assert len(dut) == len(ref)
