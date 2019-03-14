@@ -75,7 +75,7 @@ def signature_old(desc):
 def test_valid_docstring(actor_file, actor_properties_schema):
     src = read_file(actor_file)
     _, docs, _ = src.split('"""', 2)
-    data = yaml.load(docs)
+    data = yaml.load(docs, Loader=yaml.SafeLoader)
     result = True
     try:
         jsonschema.validate(data, actor_properties_schema)

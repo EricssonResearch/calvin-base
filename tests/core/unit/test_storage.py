@@ -74,7 +74,7 @@ def _storage(request, working_dir):
     monkeypatching environment etc.    
     """
     mode, host, system_config = request.param
-    config = yaml.load(system_config)
+    config = yaml.load(system_config, Loader=yaml.SafeLoader)
     sysmgr = orchestration.SystemManager(config, working_dir)
     # Give the dummy node communication power (for proxy tests)
     node = Mock()

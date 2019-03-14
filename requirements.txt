@@ -16,5 +16,5 @@ pystache==0.5.4
 jsonschema>=3.0.1
 u-msgpack-python==2.4.1
 cbor==1.0.0
-PyYAML==3.13
+PyYAML>=5.1
 Flask==0.11.1

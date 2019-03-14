@@ -123,7 +123,7 @@ def system_setup(request, tests_dir, working_dir):
         if not system_config: 
             pytest.fail("Need system config!")
     system_config = system_config.format(working_dir=working_dir)        
-    config = yaml.load(system_config)    
+    config = yaml.load(system_config, Loader=yaml.SafeLoader)    
         
     sysmgr = orchestration.SystemManager(config, working_dir)
 

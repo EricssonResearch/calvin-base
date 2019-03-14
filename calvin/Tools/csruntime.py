@@ -50,7 +50,7 @@ Start runtime, compile calvinscript and deploy application.
     argparser.add_argument('--gui-if', metavar='<gui interface>', type=str, dest="guiif",
                            default="localhost", help="use ipv4 interface <gui interface> for gui server")
                            
-    argparser.add_argument('--registry', metavar='<config>', type=yaml.load, default={},
+    argparser.add_argument('--registry', metavar='<config>', type=yaml.safe_load, default={},
                             help="configuration dict for registry with keys: type, uri",
                             dest='config_registry')
 
@@ -93,7 +93,7 @@ Start runtime, compile calvinscript and deploy application.
                             help="shortcut for attribute indexed_public/node_name/name",
                             dest='name')
 
-    argparser.add_argument('--attr', metavar='<attr>', type=yaml.load,
+    argparser.add_argument('--attr', metavar='<attr>', type=yaml.safe_load,
                            help='JSON coded attributes for started node '
                                 'e.g. \'{"indexed_public": {"owner": {"personOrGroup": "Me"}}}\''
                                 ', see documentation',

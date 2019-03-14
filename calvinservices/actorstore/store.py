@@ -146,12 +146,12 @@ class Store(object):
         return codeobject.co_firstlineno - 1        
                 
     def parse_actor_docs(self, docs):
-        props = yaml.load(docs)
+        props = yaml.load(docs, Loader=yaml.SafeLoader)
         jsonschema.validate(props, self.actor_properties_schema)
         return props
 
     def parse_module_docs(self, docs):
-        props = yaml.load(docs)
+        props = yaml.load(docs, Loader=yaml.SafeLoader)
         jsonschema.validate(props, self.module_properties_schema)
         return props
 

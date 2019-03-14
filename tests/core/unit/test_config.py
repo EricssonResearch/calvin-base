@@ -74,7 +74,7 @@ testlist = [
 def test_patching(working_dir, test):
     name, sys_yaml, expected = test
     
-    sys_def = yaml.load(sys_yaml)
+    sys_def = yaml.load(sys_yaml, Loader=yaml.SafeLoader)
     sm = orchestration.SystemManager(sys_def, working_dir, start=False)
     rt_name = list(sm.info.keys())[0]
     rt_config_file = os.path.join(working_dir, "{}.conf".format(rt_name))
