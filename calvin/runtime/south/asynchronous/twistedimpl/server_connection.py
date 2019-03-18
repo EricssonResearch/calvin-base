@@ -57,52 +57,15 @@ def reactor_listen(node_name, factory, host, port):
     return listener
 
 
-class UDPServer(DatagramProtocol):
-    def __init__(self, trigger, actor_id):
-        self._trigger = trigger
-        self._actor_id = actor_id
-        self._port = None
-        self._data = []
-
-    def datagramReceived(self, data, host_port_tuple):
-        (host, port) = host_port_tuple
-        message = {"host": host, "port": port, "data": data}
-        self._data.append(message)
-        self._trigger(self._actor_id)
-
-    def have_data(self):
-        return len(self._data) > 0
-
-    def data_get(self):
-        if len(self._data) > 0:
-            return self._data.pop(0)
-        else:
-            raise Exception("No data available")
-
-    def start(self, interface, port):
-        try:
-            self._port = reactor.listenUDP(port, self, interface=interface)
-        except error.CannotListenError:
-            _log.exception("Could not listen on port %s:%s", interface, port)
-            raise
-        except Exception as exc:
-            _log.exception("Failed when trying listening on port %s:%s", interface, port)
-            raise
-
-
-    def stop(self):
-        self._port.close()
-
-
+# Local use only
 class RawDataProtocol(Protocol):
     """A Calvin Server object"""
-    def __init__(self, factory, max_length, actor_id):
+    def __init__(self, factory, max_length):
         self.MAX_LENGTH          = max_length
         self.data_available      = False
         self.connection_lost     = False
         self.factory             = factory
         self._data_buffer        = []
-        self._actor_id = actor_id
 
     def connectionMade(self):
         self.factory.connections.append(self)
@@ -136,14 +99,14 @@ class RawDataProtocol(Protocol):
             raise Exception("Connection error: no data available")
 
 
+# Local use only
 class LineProtocol(LineReceiver):
-    def __init__(self, factory, delimiter, actor_id):
+    def __init__(self, factory, delimiter):
         self.delimiter           = delimiter
         self.data_available      = False
         self.connection_lost     = False
-        self._line_buffer             = []
+        self._line_buffer        = []
         self.factory             = factory
-        self._actor_id = actor_id
 
     def connectionMade(self):
         self.factory.connections.append(self)
@@ -176,9 +139,10 @@ class LineProtocol(LineReceiver):
             raise Exception("Connection error: no data available")
 
 
+# Local use only
 class HTTPProtocol(LineReceiver):
 
-    def __init__(self, factory, actor_id):
+    def __init__(self, factory):
         self.delimiter = b'\r\n\r\n'
         self.data_available = False
         self.connection_lost = False
@@ -186,7 +150,6 @@ class HTTPProtocol(LineReceiver):
         self._data_buffer = b""
         self._data = None
         self.factory = factory
-        self._actor_id = actor_id
         self._expected_length = 0
 
         self.factory.connections.append(self)
@@ -247,8 +210,97 @@ class HTTPProtocol(LineReceiver):
         raise Exception("Connection error: no data available")
 
 
-class ServerProtocolFactory(Factory):
-    def __init__(self, trigger, mode='line', delimiter=b'\r\n', max_length=8192, actor_id=None, node_name=None):
+# Local use only
+# class ServerProtocolFactory(Factory):
+#     def __init__(self, trigger, mode='line', delimiter=b'\r\n', max_length=8192, actor_id=None, node_name=None):
+#
+#         # TODO: Is this the way to do it:
+#         if isinstance(delimiter, str):
+#             self.delimiter = delimiter.encode('ascii')
+#         else:
+#             # assume bytes
+#             self.delimiter = delimiter
+#
+#         self._trigger            = trigger
+#         self.mode                = mode
+#         self.MAX_LENGTH          = max_length
+#         self.connections         = []
+#         self.pending_connections = []
+#         self._port               = None
+#         self._actor_id           = actor_id
+#         self._node_name          = node_name
+#
+#     def trigger(self):
+#         self._trigger(self._actor_id)
+#
+#     def buildProtocol(self, addr):
+#         if self.mode == 'line':
+#             connection = LineProtocol(self, self.delimiter, actor_id=self._actor_id)
+#         elif self.mode == 'raw':
+#             connection = RawDataProtocol(self, self.MAX_LENGTH, actor_id=self._actor_id)
+#         elif self.mode == 'http':
+#             connection = HTTPProtocol(self, actor_id=self._actor_id)
+#         else:
+#             raise Exception("ServerProtocolFactory: Protocol not supported")
+#         self.pending_connections.append((addr, connection))
+#         return connection
+#
+#     def start(self, host, port):
+#         self._port = reactor_listen(self._node_name, self, host, port)
+#
+#     def stop(self):
+#         self._port.stopListening()
+#         for c in self.connections:
+#             c.transport.loseConnection()
+#
+#     def accept(self):
+#         addr, conn = self.pending_connections.pop()
+#         if not self.pending_connections:
+#             self.connection_pending = False
+#         return addr, conn
+
+# ----------------------
+# -     Public API     -
+# ----------------------
+
+class UDPServer(DatagramProtocol):
+    def __init__(self, host, port, callback):
+        self._callback = callback
+        self.host = host
+        self.port = port
+        self._port = None
+        self._data = []
+
+    def datagramReceived(self, data, host_port_tuple):
+        (host, port) = host_port_tuple
+        message = {"host": host, "port": port, "data": data}
+        self._data.append(message)
+        self._callback()
+
+    def have_data(self):
+        return len(self._data) > 0
+
+    def data_get(self):
+        return self._data.pop(0)
+
+    def start(self):
+        try:
+            self._port = reactor.listenUDP(self.port, self, interface=self.host)
+        except Exception as exc:
+            _log.exception(exc)
+            _log.exception("Failed listening on port %s:%s", self.host, self.port)
+            raise(exc)
+
+    def stop(self):
+        try:
+            self._port.close()
+        except Exception as exc:
+            _log.info(exc)
+            
+
+
+class TCPServer(Factory):
+    def __init__(self, callback, host, port, mode='line', delimiter=b'\r\n', max_length=8192, node_name=None):
 
         # TODO: Is this the way to do it:
         if isinstance(delimiter, str):
@@ -257,32 +309,31 @@ class ServerProtocolFactory(Factory):
             # assume bytes
             self.delimiter = delimiter
             
-        self._trigger            = trigger
+        self._callback           = callback
         self.mode                = mode
         self.MAX_LENGTH          = max_length
         self.connections         = []
         self.pending_connections = []
+        self.host                = host
+        self.port                = port
         self._port               = None
-        self._actor_id           = actor_id
         self._node_name          = node_name
 
     def trigger(self):
-        self._trigger(self._actor_id)
+        self._callback()
 
     def buildProtocol(self, addr):
         if self.mode == 'line':
-            connection = LineProtocol(self, self.delimiter, actor_id=self._actor_id)
+            connection = LineProtocol(self, self.delimiter)
         elif self.mode == 'raw':
-            connection = RawDataProtocol(self, self.MAX_LENGTH, actor_id=self._actor_id)
-        elif self.mode == 'http':
-            connection = HTTPProtocol(self, actor_id=self._actor_id)
+            connection = RawDataProtocol(self, self.MAX_LENGTH)
         else:
-            raise Exception("ServerProtocolFactory: Protocol not supported")
+            raise Exception("TCPServer: Protocol %s not supported" % self.mode)
         self.pending_connections.append((addr, connection))
         return connection
 
-    def start(self, host, port):
-        self._port = reactor_listen(self._node_name, self, host, port)
+    def start(self):
+        self._port = reactor_listen(self._node_name, self, self.host, self.port)
 
     def stop(self):
         self._port.stopListening()
@@ -296,13 +347,38 @@ class ServerProtocolFactory(Factory):
         return addr, conn
 
 
-class TCPServer(ServerProtocolFactory):
-    pass
+class HTTPServer(Factory):
+    def __init__(self, callback, host, port, node_name=None):
+        self._callback           = callback
+        self.connections         = []
+        self.pending_connections = []
+        self.host                = host
+        self.port                = port
+        self._port               = None
+        self._node_name          = node_name
 
-class HTTPServer(ServerProtocolFactory):
-    """docstring for HTTPServer"""
-    def __init__(self, callback, node_name):
-        super(HTTPServer, self).__init__(callback, mode='http', node_name=node_name)
+    def trigger(self):
+        self._callback()
+
+    def buildProtocol(self, addr):
+        connection = HTTPProtocol(self)
+        self.pending_connections.append((addr, connection))
+        return connection
+
+    def start(self):
+        self._port = reactor_listen(self._node_name, self, self.host, self.port)
+
+    def stop(self):
+        self._port.stopListening()
+        for c in self.connections:
+            c.transport.loseConnection()
+
+    def accept(self):
+        addr, conn = self.pending_connections.pop()
+        if not self.pending_connections:
+            self.connection_pending = False
+        return addr, conn
+        
         
         
         

@@ -50,9 +50,12 @@ class UDPListener(base_calvinsys_object.BaseCalvinsysObject):
         "description": "Read data"
     }
 
+    def _data_received(self):
+        self.calvinsys._node.sched.schedule_calvinsys(self.actor.id)
+        
     def init(self, host, port):
-        self._listener = asynchronous.UDPServer(self.calvinsys._node.sched.schedule_calvinsys, self.actor.id)
-        self._listener.start(host, port)
+        self._listener = asynchronous.UDPServer(host, port, self._data_received)
+        self._listener.start()
 
     def can_read(self):
         return self._listener.have_data()
@@ -61,7 +64,4 @@ class UDPListener(base_calvinsys_object.BaseCalvinsysObject):
         return self._listener.data_get()
 
     def close(self):
-        try:
-            self._listener.stop()
-        except:
-            pass
+        self._listener.stop()

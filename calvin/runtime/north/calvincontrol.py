@@ -89,8 +89,8 @@ class CalvinControl(object):
                 self.external_host = self.host
             _log.info("Control API listening on: %s:%s" % (self.host, self.port))
 
-            self.server = asynchronous.HTTPServer(self.handle_request, node_name=node.node_name)
-            self.server.start(self.host, self.port)
+            self.server = asynchronous.HTTPServer(self.handle_request, self.host, self.port, node_name=node.node_name)
+            self.server.start()
 
             # Create tunnel server
             self.tunnel_server = CalvinControlTunnelServer(self.node)
@@ -110,6 +110,7 @@ class CalvinControl(object):
             if logger.handle == handle:
                 del self.loggers[user_id]
 
+    # FIXME: Move to abstraction layer
     def handle_request(self, actor_ids=None):
         """ Handle incoming requests on socket
         """
@@ -131,6 +132,7 @@ class CalvinControl(object):
                 return handler, match_object
         return None, None
 
+    # FIXME: For now, make this a callback from the server object
     def route_request(self, handle, connection, command, headers, data):
         if self.node.quitting:
             # Answer internal error on all requests while quitting, assume client can handle that
@@ -294,8 +296,8 @@ class CalvinControlTunnel(object):
         for x in range(0, 10):
             try:
                 self.port = randint(5100, 5200)
-                self.server = asynchronous.HTTPServer(self.handle_request, node_name=None)
-                self.server.start(self.host, self.port)
+                self.server = asynchronous.HTTPServer(self.handle_request, self.host, self.port, node_name=None)
+                self.server.start()
                 _log.info("Control proxy for %s listening on: %s:%s" % (tunnel.peer_node_id, self.host, self.port))
                 break
             except:

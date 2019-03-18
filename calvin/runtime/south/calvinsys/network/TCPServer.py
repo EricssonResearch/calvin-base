@@ -37,9 +37,9 @@ class TCPServer(base_calvinsys_object.BaseCalvinsysObject):
                 "type": "number"
             },
             "mode": {
-                "description": "Mode (line, raw, http), default=line",
+                "description": "Mode (line, raw), default=line",
                 "type": "string",
-                "enum": ["line", "raw", "http"]
+                "enum": ["line", "raw"]
             },
             "delimiter": {
                 "description": "Delimiter, default='\r\n'",
@@ -95,13 +95,16 @@ class TCPServer(base_calvinsys_object.BaseCalvinsysObject):
     }
 
     def init(self, host, port, mode, delimiter, max_length):
-        self._server = asynchronous.TCPServer(trigger=self.calvinsys._node.sched.schedule_calvinsys,
+        self._server = asynchronous.TCPServer(
+            self._data_received,
             mode=mode,
             delimiter=delimiter,
-            max_length=max_length,
-            actor_id=self.actor.id)
-        self._server.start(host, port)
+            max_length=max_length)
+        self._server.start()
         self._connections = {}
+
+    def _data_received(self):
+        self.calvinsys._node.sched.schedule_calvinsys(self.actor.id)
 
     def can_read(self):
         if self._server.pending_connections:
@@ -131,5 +134,5 @@ class TCPServer(base_calvinsys_object.BaseCalvinsysObject):
     def close(self):
         try:
             self._server.stop()
-        except:
-            pass
+        except Exception as exc:
+            _log.exception(exc)
