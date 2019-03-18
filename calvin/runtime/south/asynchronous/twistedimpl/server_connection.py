@@ -300,9 +300,10 @@ class UDPServer(DatagramProtocol):
 
 
 class TCPServer(Factory):
-    def __init__(self, callback, host, port, mode='line', delimiter=b'\r\n', max_length=8192, node_name=None):
+    def __init__(self, callback, host, port, mode='line', node_name=None, **kwargs):
 
         # TODO: Is this the way to do it:
+        delimiter = kwargs.get('delimiter', b'\r\n')
         if isinstance(delimiter, str):
             self.delimiter = delimiter.encode('ascii')
         else:
@@ -311,7 +312,7 @@ class TCPServer(Factory):
             
         self._callback           = callback
         self.mode                = mode
-        self.MAX_LENGTH          = max_length
+        self.MAX_LENGTH          = kwargs.get('max_length', 8192)
         self.connections         = []
         self.pending_connections = []
         self.host                = host
