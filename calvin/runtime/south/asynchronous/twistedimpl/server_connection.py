@@ -353,13 +353,27 @@ class HTTPServer(Factory):
         self._callback           = callback
         self.connections         = []
         self.pending_connections = []
+        self.connection_map      = {}
         self.host                = host
         self.port                = port
         self._port               = None
         self._node_name          = node_name
 
     def trigger(self):
-        self._callback()
+        """ Handle incoming requests on socket
+        """
+        print("trigger")
+        if self.pending_connections:
+            addr, conn = self.accept()
+            self.connection_map[addr] = conn
+
+        # N.B. Must use copy of connections.items here
+        for handle, connection in list(self.connection_map.items()):
+            if connection.data_available:
+                command, headers, data = connection.data_get()
+                print(handle, connection, command, headers, data)
+                self._callback(handle, connection, command, headers, data)
+    
 
     def buildProtocol(self, addr):
         connection = HTTPProtocol(self)
@@ -379,6 +393,16 @@ class HTTPServer(Factory):
         if not self.pending_connections:
             self.connection_pending = False
         return addr, conn
+        
+    def send_response(self, handle, header, data):
+        connection = self.connection_map[handle]
+        if not connection.connection_lost:
+            connection.send(header)
+            if data:
+                connection.send(data)
+            connection.close()
+        del self.connection_map[handle]
+    
         
         
         

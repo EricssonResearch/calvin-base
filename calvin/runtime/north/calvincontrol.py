@@ -60,7 +60,7 @@ class CalvinControl(object):
         self.node = None
         self.loggers = {}
         self.server = None
-        self.connections = {}
+        # self.connections = {}
         self.tunnel = None
         self.host = None
         self.tunnel_server = None
@@ -89,7 +89,7 @@ class CalvinControl(object):
                 self.external_host = self.host
             _log.info("Control API listening on: %s:%s" % (self.host, self.port))
 
-            self.server = asynchronous.HTTPServer(self.handle_request, self.host, self.port, node_name=node.node_name)
+            self.server = asynchronous.HTTPServer(self.route_request, self.host, self.port, node_name=node.node_name)
             self.server.start()
 
             # Create tunnel server
@@ -109,20 +109,6 @@ class CalvinControl(object):
         for user_id, logger in self.loggers:
             if logger.handle == handle:
                 del self.loggers[user_id]
-
-    # FIXME: Move to abstraction layer
-    def handle_request(self, actor_ids=None):
-        """ Handle incoming requests on socket
-        """
-        if self.server.pending_connections:
-            addr, conn = self.server.accept()
-            self.connections[addr] = conn
-
-        # N.B. Must use copy of connections.items here
-        for handle, connection in list(self.connections.items()):
-            if connection.data_available:
-                command, headers, data = connection.data_get()
-                self.route_request(handle, connection, command, headers, data)
 
     def _handler_for_route(self, command):
         for re_route, handler in self.routes:
@@ -175,12 +161,7 @@ class CalvinControl(object):
             msg = {"cmd": "httpresp", "msgid": handle, "header": header, "data": data}
             self.tunnel_client.send(msg)
         else:
-            if not connection.connection_lost:
-                connection.send(header)
-                if data:
-                    connection.send(data)
-                connection.close()
-            del self.connections[handle]
+            self.server.send_response(handle, header, data)
 
     def send_streamheader(self, handle, connection):
         """ Send response header for text/event-stream
