@@ -67,29 +67,22 @@ class CalvinControl(object):
         self.security = None
         self.token_dict = None
         self.routes = routes.install_handlers(self)
-        self._start(node, uri, external_uri)
-
-    def _start(self, node, uri, external_uri):
-        """ If not tunnel, start listening on uri and handle http requests.
-            If tunnel, setup a tunnel to uri and handle requests.
-        """
         self.node = node
-        self.security = Security(self.node)
-        schema, _ = uri.split(':', 1)
-        # if tunnel:
-        #     # Connect to tunnel server
-        #     self.tunnel_client = CalvinControlTunnelClient(uri, self)
-        # else:
+        
+        # schema, _ = uri.split(':', 1)
         url = urlparse(uri)
         self.port = int(url.port)
         self.host = url.hostname
-        if external_uri is not None:
-            self.external_host = urlparse(external_uri).hostname
-        else:
-            self.external_host = self.host
+        self.external_host = urlparse(external_uri).hostname if external_uri is not None else self.host
+
+    def start(self):
+        """ If not tunnel, start listening on uri and handle http requests.
+            If tunnel, setup a tunnel to uri and handle requests.
+        """
+        self.security = Security(self.node)
         _log.info("Control API listening on: %s:%s" % (self.host, self.port))
 
-        self.server = asynchronous.HTTPServer(self.route_request, self.host, self.port, node_name=node.node_name)
+        self.server = asynchronous.HTTPServer(self.route_request, self.host, self.port, node_name=self.node.node_name)
         self.server.start()
 
         # Create tunnel server

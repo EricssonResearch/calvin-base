@@ -252,6 +252,7 @@ class Node(object):
             # Create ordinary CalvinControl object here
             # self.control.start(node=self, uri=self.control_uri, external_uri=self.external_control_uri)
             self.control = calvincontrol.CalvinControl(node=self, uri=self.control_uri, external_uri=self.external_control_uri)
+            self.control.start()
             # Also start tunnel server as separate entity
             self.tunnel_server = calvincontrol.CalvinControlTunnelServer(self)
 

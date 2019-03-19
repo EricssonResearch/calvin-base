@@ -3,7 +3,7 @@ import pytest
 import yaml
 
 from calvin.runtime.north.storage import Storage
-from calvin.runtime.north.calvincontrol import get_calvincontrol
+from calvin.runtime.north.calvincontrol import CalvinControl
 from calvin.runtime.north.calvin_network import CalvinNetwork
 from calvin.runtime.north.calvin_proto import CalvinProto
 from calvin.common.calvin_callback import CalvinCB
@@ -76,9 +76,10 @@ def _storage(request, working_dir):
     mode, host, system_config = request.param
     config = yaml.load(system_config, Loader=yaml.SafeLoader)
     sysmgr = orchestration.SystemManager(config, working_dir)
+    print(config)
     # Give the dummy node communication power (for proxy tests)
     node = Mock()
-    node.control = get_calvincontrol()
+    node.control = CalvinControl(node, "http://localhost:5001")
     node.network = CalvinNetwork(node)
     node.proto = CalvinProto(node, node.network)
     storage = Storage(node, mode, host)

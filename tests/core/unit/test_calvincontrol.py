@@ -17,7 +17,7 @@
 import pytest
 from unittest.mock import Mock, patch
 
-from calvin.runtime.north.calvincontrol import get_calvincontrol, CalvinControl
+from calvin.runtime.north.calvincontrol import CalvinControl
 from calvin.common import calvinuuid
 
 
@@ -48,10 +48,6 @@ def _uuids(request):
             "actor_id": calvinuuid.uuid("")
         }
 
-
-def test_get_calvincontrol_returns_xxx():
-    control = get_calvincontrol()
-    assert control == get_calvincontrol()
 
 @pytest.mark.parametrize("url, match, handler", [
     ("POST /log HTTP/1", None, "handle_post_log"),
@@ -84,7 +80,7 @@ def test_get_calvincontrol_returns_xxx():
 ])
 
 def test_routes_correctly(url, match, handler, _uuids):
-    control = CalvinControl()
+    control = CalvinControl(node=Mock(), uri="http://localhost:5101")
     handler_func, mo = control._handler_for_route(url.format(**_uuids))
     assert handler_func is not None
     assert handler_func.__name__ == handler
@@ -95,49 +91,46 @@ def test_routes_correctly(url, match, handler, _uuids):
         assert list(mo.groups()) == match
 
 def test_send_response():
-    control = CalvinControl()
-    control.tunnel_client = Mock()
-
-    handle = Mock()
+    control = CalvinControl(node=Mock(), uri="http://localhost:5101")
+    control.start()
+    handle = 'foo'
     connection = Mock()
+    connection.connection_lost = False
     data = {'value': 1}
     status = 200
 
-    control.connections[handle] = connection
-    control.send_response(handle, None, data, status)
-    assert control.tunnel_client.send.called
-
-    control.connections[handle] = connection
-    connection.connection_lost = True
-    control.send_response(handle, connection, data, status)
-    assert not connection.send.called
-
-    control.connections[handle] = connection
-    connection.connection_lost = False
-    control.send_response(handle, connection, data, status)
-    assert connection.send.called
-    connection.send.assert_called_with(data)
-
-    assert handle not in control.connections
-
-
-def test_send_streamhader():
-    control = CalvinControl()
-    control.tunnel_client = Mock()
-
-    handle = Mock()
+    control.server.connection_map = {handle:connection}
+    control.send_response(handle, data, status)
+    connection.send.assert_called()
+    callseq = ['send', 'send', 'close']
+    assert len(connection.method_calls) == len(callseq)
+    for index, call_ in enumerate(connection.method_calls):
+        name, args, kwargs = call_
+        # print(name, args, kwargs)
+        assert name == callseq[index]
+    assert handle not in control.server.connection_map
+    control.stop()
+    
+    
+def test_send_streamheader():
+    control = CalvinControl(node=Mock(), uri="http://localhost:5101")
+    control.start()
+    handle = 'foo'
     connection = Mock()
-
-    control.connections[handle] = connection
-    control.send_streamheader(handle, None)
-    assert control.tunnel_client.send.called
-
-    control.connections[handle] = connection
-    connection.connection_lost = True
-    control.send_streamheader(handle, connection)
-    assert not connection.send.called
-
-    control.connections[handle] = connection
     connection.connection_lost = False
-    control.send_streamheader(handle, connection)
-    assert connection.send.called
+    data = {'value': 1}
+    status = 200
+
+    control.server.connection_map = {handle:connection}
+    control.send_streamheader(handle)
+    connection.send.assert_called()
+    callseq = ['send', 'close']
+    assert len(connection.method_calls) == len(callseq)
+    for index, call_ in enumerate(connection.method_calls):
+        name, args, kwargs = call_
+        # print(name, args, kwargs)
+        assert name == callseq[index]
+    assert handle not in control.server.connection_map
+    control.stop()
+    
+
