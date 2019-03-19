@@ -18,13 +18,13 @@
 import json
 from random import randint
 from urllib.parse import urlparse
+
 from calvin.common.calvinlogger import get_logger
 from calvin.common.calvin_callback import CalvinCB
 from calvin.runtime.south import asynchronous
 from calvin.common import calvinresponse
 from calvin.common.security import Security
 from calvin.common import calvinuuid
-from calvin.common.issuetracker import IssueTracker
 #
 # Dynamically build selected set of APIs
 #
@@ -39,16 +39,6 @@ from .control_apis import uicalvinsys_api
 from .control_apis import proxyhandler_api
 
 _log = get_logger(__name__)
-
-# _calvincontrol = None
-#
-# def get_calvincontrol():
-#     """ Returns the CalvinControl singleton
-#     """
-#     global _calvincontrol
-#     if _calvincontrol is None:
-#         _calvincontrol = CalvinControl()
-#     return _calvincontrol
 
 
 class CalvinControl(object):
@@ -68,13 +58,12 @@ class CalvinControl(object):
         self.token_dict = None
         self.routes = routes.install_handlers(self)
         self.node = node
-        
         # schema, _ = uri.split(':', 1)
         url = urlparse(uri)
         self.port = int(url.port)
         self.host = url.hostname
         self.external_host = urlparse(external_uri).hostname if external_uri is not None else self.host
-
+    
     def start(self):
         """ If not tunnel, start listening on uri and handle http requests.
             If tunnel, setup a tunnel to uri and handle requests.
@@ -85,16 +74,9 @@ class CalvinControl(object):
         self.server = asynchronous.HTTPServer(self.route_request, self.host, self.port, node_name=self.node.node_name)
         self.server.start()
 
-        # Create tunnel server
-        # self.tunnel_server = CalvinControlTunnelServer(self.node)
-
     def stop(self):
         """ Stop """
         self.server.stop()
-        # if self.tunnel_server is not None:
-        #     self.tunnel_server.stop()
-        # if self.tunnel_client is not None:
-        #     self.tunnel_client.stop()
 
     def close_log_tunnel(self, handle):
         """ Close log tunnel
@@ -119,7 +101,6 @@ class CalvinControl(object):
             self.send_response(handle, None, status=calvinresponse.INTERNAL_ERROR)
             return
         try:
-            issuetracker = IssueTracker()
             handler, match = self._handler_for_route(command)
             if handler:
                 credentials = None
@@ -150,11 +131,6 @@ class CalvinControl(object):
             "Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS\n" + \
             "Access-Control-Allow-Origin: *\r\n" + "\n"
 
-        # if connection is None:
-        #     msg = {"cmd": "httpresp", "msgid": handle, "header": header, "data": data}
-        #     self.tunnel_client.send(msg)
-        # else:
-        #     self.server.send_response(handle, header, data)
         self.server.send_response(handle, header, data)
 
     def send_streamheader(self, handle):
@@ -163,12 +139,6 @@ class CalvinControl(object):
         response = "HTTP/1.0 200 OK\n" + "Content-Type: text/event-stream\n" + \
             "Access-Control-Allow-Origin: *\r\n" + "\n"
 
-        # if connection is not None:
-        #     if not connection.connection_lost:
-        #         connection.send(response)
-        # elif self.tunnel_client is not None:
-        #         msg = {"cmd": "logresp", "msgid": handle, "header": response, "data": None}
-        #         self.tunnel_client.send(msg)
         self.server.send_response(handle, response)
 
     #
@@ -220,6 +190,8 @@ class CalvinControlTunnelServer(object):
         self.controltunnels = {}
         # Register for incoming control proxy requests
         self.node.proto.register_tunnel_handler("control", CalvinCB(self.tunnel_request_handles))
+        self.host = node.control.host
+        self.external_host = node.control.external_host
 
     def stop(self):
         for _, control in self.controltunnels.items():
@@ -230,8 +202,9 @@ class CalvinControlTunnelServer(object):
             Start a socket server and update peer node with control uri
         """
         # Register tunnel
+        print("******** {} ********".format(tunnel))
         self.tunnels[tunnel.peer_node_id] = tunnel
-        self.controltunnels[tunnel.peer_node_id] = CalvinControlTunnel(tunnel)
+        self.controltunnels[tunnel.peer_node_id] = CalvinControlTunnel(tunnel, self.host, self.external_host)
         tunnel.register_tunnel_down(CalvinCB(self.tunnel_down, tunnel))
         tunnel.register_tunnel_up(CalvinCB(self.tunnel_up, tunnel))
         tunnel.register_recv(CalvinCB(self.tunnel_recv_handler, tunnel))
@@ -262,100 +235,120 @@ class CalvinControlTunnel(object):
     """ A Calvin control socket to tunnel proxy
     """
 
-    def __init__(self, tunnel):
+    def __init__(self, tunnel, host, external_host):
         self.tunnel = tunnel
         self.connections = {}
 
         # Start a socket server on same interface as calvincontrol
-        self.host = get_calvincontrol().host
+        self.host = host
 
         for x in range(0, 10):
             try:
                 self.port = randint(5100, 5200)
-                self.server = asynchronous.HTTPServer(self.handle_request, self.host, self.port, node_name=None)
+                self.server = asynchronous.HTTPTunnelServer(self.handle_request, self.host, self.port, node_name=None)
                 self.server.start()
                 _log.info("Control proxy for %s listening on: %s:%s" % (tunnel.peer_node_id, self.host, self.port))
                 break
-            except:
-                pass
+            except Exception as exc:
+                _log.exception(exc)
+                
 
         # Tell peer node that we a listening and on what uri
-        msg = {"cmd": "started",
-               "controluri": "http://" + get_calvincontrol().external_host + ":" + str(self.port)}
+        msg = {"cmd": "started", "controluri": "http://" + external_host + ":" + str(self.port)}
         self.tunnel.send(msg)
 
     def close(self):
         self.server.stop()
 
-    def handle_request(self, actor_ids=None):
+    def handle_request(self, msg_id, command, headers, data):
         """ Handle connections and tunnel requests
         """
-        if self.server.pending_connections:
-            addr, conn = self.server.accept()
-            msg_id = calvinuuid.uuid("MSGID")
-            self.connections[msg_id] = conn
-            _log.debug("New connection msg_id: %s" % msg_id)
-
-        for msg_id, connection in self.connections.items():
-            if connection.data_available:
-                command, headers, data = connection.data_get()
-                _log.debug("CalvinControlTunnel handle_request msg_id: %s command: %s" % (msg_id, command))
-                msg = {"cmd": "httpreq",
-                       "msgid": msg_id,
-                       "command": command,
-                       "headers": headers,
-                       "data": data}
-                self.tunnel.send(msg)
+        msg = {"cmd": "httpreq",
+               "msgid": msg_id,
+               "command": command,
+               "headers": headers,
+               "data": data}
+        self.tunnel.send(msg)
 
     def handle_response(self, payload):
         """ Handle a tunnel response
         """
-        if "msgid" in payload:
-            msgid = payload["msgid"]
-            if msgid in self.connections:
-                if "cmd" in payload and "header" in payload and "data" in payload:
-                    cmd = payload["cmd"]
-                    if cmd == "httpresp":
-                        self.send_response(msgid, payload["header"], payload["data"], True)
-                        return
-                    elif cmd == "logresp":
-                        self.send_response(msgid, payload["header"], payload["data"], False)
-                        return
-                    elif cmd == "logevent":
-                        result = self.send_response(msgid, payload["header"], payload["data"], False)
-                        if not result:
-                            msg = {"cmd": "logclose"}
-                            self.tunnel.send(msg)
-                        return
-        _log.error("Unknown control proxy response %s" % payload)
-
-    def send_response(self, msgid, header, data, closeConnection):
-        """ Send response header text/html
-        """
-        connection = self.connections[msgid]
-        if not connection.connection_lost:
-            if header is not None:
-                connection.send(str(header))
-            if data is not None:
-                connection.send(str(data))
-            if closeConnection:
-                connection.close()
-                del self.connections[msgid]
-            return True
-        del self.connections[msgid]
-        return False
+        msgid = payload.get("msgid")
+        
+        if "cmd" in payload and "header" in payload and "data" in payload:
+            
+            cmd = payload["cmd"]
+            if cmd == "httpresp":
+                self.server.send_response(msgid, payload["header"], payload["data"], True)
+                return
+            
+            if cmd == "logresp":
+                self.server.send_response(msgid, payload["header"], payload["data"], False)
+                return
+            
+            if cmd == "logevent":
+                result = self.server.send_response(msgid, payload["header"], payload["data"], False)
+                if not result:
+                    msg = {"cmd": "logclose"}
+                    self.tunnel.send(msg)
+                return
+                
+        _log.error("Malformed %s" % payload)
 
 
+# FIXME: Subclass CalvinControl once tests are up and running
 class CalvinControlTunnelClient(object):
 
     """ A Calvin control tunnel client
     """
-
-    def __init__(self, uri, calvincontrol):
+    
+    def __init__(self, uri, node):
+        self.node = node
+        self.routes = routes.install_handlers(self)
+        self.loggers = {}
         self.uri = uri
-        self.calvincontrol = calvincontrol
         self.tunnel = None
-        self.calvincontrol.node.network.join([uri], CalvinCB(self._start_link_cb))
+        self.node.network.join([uri], CalvinCB(self._start_link_cb))
+
+    def close_log_tunnel(self, handle):
+        """ Close log tunnel
+        """
+        for user_id, logger in self.loggers:
+            if logger.handle == handle:
+                del self.loggers[user_id]
+
+    def _handler_for_route(self, command):
+        for re_route, handler in self.routes:
+            match_object = re_route.match(command)
+            if match_object:
+                # FIXME: Return capture groups instead
+                return handler, match_object
+        return None, None
+
+    # FIXME: For now, make this a callback from the server object
+    def route_request(self, handle, command, headers, data):
+        if self.node.quitting:
+            # Answer internal error on all requests while quitting, assume client can handle that
+            # TODO: Answer permantely moved (301) instead with header Location: <another-calvin-runtime>???
+            self.send_response(handle, None, status=calvinresponse.INTERNAL_ERROR)
+            return
+        try:
+            handler, match = self._handler_for_route(command)
+            if handler:
+                credentials = None
+                if data:
+                    data = json.loads(data)
+                _log.debug("Calvin control handles:%s\n%s\n---------------" % (command, data))
+                handler(handle, match, data, headers)
+            else:
+                _log.error("No route found for: %s\n%s" % (command, data))
+                self.send_response(handle, None, status=404)
+        except Exception as e:
+            _log.info("Failed to parse request", exc_info=e)
+            self.send_response(handle, None, status=calvinresponse.BAD_REQUEST)
+
+    def start(self):
+        pass
 
     def stop(self):
         pass
@@ -365,7 +358,7 @@ class CalvinControlTunnelClient(object):
             return
         # Got link set up tunnel
         master_id = peer_node_id
-        self.tunnel = self.calvincontrol.node.proto.tunnel_new(master_id, 'control', {})
+        self.tunnel = self.node.proto.tunnel_new(master_id, 'control', {})
         self.tunnel.register_tunnel_down(CalvinCB(self.tunnel_down))
         self.tunnel.register_tunnel_up(CalvinCB(self.tunnel_up))
         self.tunnel.register_recv(self.tunnel_recv_handler)
@@ -390,22 +383,51 @@ class CalvinControlTunnelClient(object):
         if "cmd" in payload:
             if payload["cmd"] == "httpreq":
                 try:
-                    self.calvincontrol.route_request(
-                        payload["msgid"], None, payload["command"], payload["headers"], payload["data"])
+                    self.route_request(
+                        payload["msgid"], payload["command"], payload["headers"], payload["data"])
                 except:
                     _log.exception("FIXME! Caught exception in calvincontrol when tunneling.")
-                    self.calvincontrol.send_response(payload["msgid"], None, None, status=calvinresponse.INTERNAL_ERROR)
+                    self.send_response(payload["msgid"], None, status=calvinresponse.INTERNAL_ERROR)
             elif payload["cmd"] == "started":
-                self.calvincontrol.node.external_control_uri = payload["controluri"]
-                self.calvincontrol.node.storage.add_node(self.calvincontrol.node)
+                self.node.external_control_uri = payload["controluri"]
+                self.node.storage.add_node(self.node)
                 return
             elif payload["cmd"] == "logclose":
-                self.calvincontrol.close_log_tunnel(payload["msg_id"])
+                self.close_log_tunnel(payload["msg_id"])
                 return
         _log.error("Tunnel client received unknown command %s" % payload['cmd'] if 'cmd' in payload else "")
+
+    def send_response(self, handle, data, status=200, content_type=None):
+        """ Send response header text/html
+        """
+        content_type = content_type or "Content-Type: application/json"
+        content_type += "\n"
+
+        # No data return 204 no content
+        if data is None and status in range(200, 207):
+            status = 204
+
+        header = "HTTP/1.0 " + \
+            str(status) + " " + calvinresponse.RESPONSE_CODES[status] + \
+            "\n" + ("" if data is None else content_type ) + \
+            "Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS\n" + \
+            "Access-Control-Allow-Origin: *\r\n" + "\n"
+
+        msg = {"cmd": "httpresp", "msgid": handle, "header": header, "data": data}
+        self.send(msg)
+            
+    def send_streamheader(self, handle):
+        """ Send response header for text/event-stream
+        """
+        response = "HTTP/1.0 200 OK\n" + "Content-Type: text/event-stream\n" + \
+            "Access-Control-Allow-Origin: *\r\n" + "\n"
+
+        msg = {"cmd": "logresp", "msgid": handle, "header": response, "data": None}
+        self.send(msg)
 
     def send(self, msg):
         if self.tunnel:
             self.tunnel.send(msg)
         else:
             _log.error("No tunnel connected")
+

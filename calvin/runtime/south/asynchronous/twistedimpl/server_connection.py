@@ -353,6 +353,7 @@ class HTTPServer(Factory):
         del self.connection_map[handle]
     
 
+# FIXME: Subclass HTTPServer instead when tests are up and running
 class HTTPTunnelServer(Factory):
     def __init__(self, callback, host, port, node_name=None):
         self._callback           = callback
@@ -362,21 +363,24 @@ class HTTPTunnelServer(Factory):
         self.host                = host
         self.port                = port
         self._port               = None
-        self._node_name          = node_name
-
+        self._node_name          = node_name 
+    
     def request_handler(self):
         """ Handle incoming requests on socket
         """
         if self.pending_connections:
             addr, conn = self.accept()
-            self.connection_map[addr] = conn
+            msg_id = calvinuuid.uuid("MSGID")
+            self.connection_map[msg_id] = conn
+            _log.debug("New connection msg_id: %s" % msg_id)
 
         # N.B. Must use copy of connections.items here
-        for handle, connection in list(self.connection_map.items()):
+        for msg_id, connection in list(self.connection_map.items()):
             if connection.data_available:
                 command, headers, data = connection.data_get()
-                print(handle, command, headers, data)
-                self._callback(handle, command, headers, data)
+                _log.debug("CalvinControlTunnel handle_request msg_id: %s command: %s" % (msg_id, command))
+                print(msg_id, command, headers, data)
+                self._callback(msg_id, command, headers, data)
     
 
     def buildProtocol(self, addr):
@@ -396,18 +400,26 @@ class HTTPTunnelServer(Factory):
         addr, conn = self.pending_connections.pop()
         if not self.pending_connections:
             self.connection_pending = False
-        return addr, conn
+        return addr, conn        
         
-    def send_response(self, handle, header, data=None):
-        connection = self.connection_map[handle]
+    def send_response(self, msgid, header, data, closeConnection):
+        """ Send response header text/html
+        """
+        if msgid or msgid not in self.connections:
+             _log.error("Bad message ID %s" % msgid)
+             return
+        connection = self.connection_map[msgid]
         if not connection.connection_lost:
-            connection.send(header)
-            if data:
-                connection.send(data)
-            connection.close()
-        del self.connection_map[handle]
-        
-        
+            if header is not None:
+                connection.send(str(header))  # FIXME: str() is redundant?
+            if data is not None:
+                connection.send(str(data))  # FIXME: str() is redundant?
+            if closeConnection:
+                connection.close()
+                del self.self.connection_map[msgid]
+            return True
+        del self.connection_map[msgid]
+        return False
         
         
          
