@@ -33,45 +33,45 @@ _log = get_logger(__name__)
 # Can't be access controlled, as it is needed to find authorization server
 # @authentication_decorator
 @handler(method="GET", path="/id")
-def handle_get_node_id(self, handle, connection, match, data, hdr):
+def handle_get_node_id(self, handle, match, data, hdr):
     """
     GET /id
     Get id of this calvin node
     Response status code: OK
     Response: node-id
     """
-    self.send_response(handle, connection, json.dumps({'id': self.node.id}))
+    self.send_response(handle, json.dumps({'id': self.node.id}))
 
 
 # USED BY: GUI, CSWEB
 @handler(method="GET", path="/capabilities")
-def handle_get_node_capabilities(self, handle, connection, match, data, hdr):
+def handle_get_node_capabilities(self, handle, match, data, hdr):
     """
     GET /capabilities
     Get capabilities of this calvin node
     Response status code: OK
     Response: list of capabilities
     """
-    self.send_response(handle, connection, json.dumps(get_calvinsys().list_capabilities() + get_calvinlib().list_capabilities()))
+    self.send_response(handle, json.dumps(get_calvinsys().list_capabilities() + get_calvinlib().list_capabilities()))
 
 
 # USED BY: CSWEB, CSCONTROL
 @handler(method="GET", path="/nodes")
 @authentication_decorator
-def handle_get_nodes(self, handle, connection, match, data, hdr):
+def handle_get_nodes(self, handle, match, data, hdr):
     """
     GET /nodes
     List nodes in network (excluding self) known to self
     Response status code: OK
     Response: List of node-ids
     """
-    self.send_response(handle, connection, json.dumps(self.node.network.list_links()))
+    self.send_response(handle, json.dumps(self.node.network.list_links()))
 
 
 # USED BY: CSWEB, CSCONTROL
 @handler(method="DELETE", path="/node", optional=["/now", "/migrate", "/clean"])
 @authentication_decorator
-def handle_quit(self, handle, connection, match, data, hdr):
+def handle_quit(self, handle, match, data, hdr):
     """
     DELETE /node{/now|/migrate|/clean}
     Stop (this) calvin node
@@ -90,13 +90,13 @@ def handle_quit(self, handle, connection, match, data, hdr):
         stop_method = self.node.stop_with_cleanup
 
     asynchronous.DelayedCall(.2, stop_method)
-    self.send_response(handle, connection, None, status=calvinresponse.ACCEPTED)
+    self.send_response(handle, None, status=calvinresponse.ACCEPTED)
 
 
 # DEPRECATED: What is this supposed to do?
 @handler(method="OPTIONS", path=r"/{path}")
 @authentication_decorator
-def handle_options(self, handle, connection, match, data, hdr):
+def handle_options(self, handle, match, data, hdr):
     """
     OPTIONS /url
     Request for information about the communication options available on url

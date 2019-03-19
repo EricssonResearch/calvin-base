@@ -22,17 +22,17 @@ from .routes import handler
 
 # USED BY: GUI
 @handler(method="GET", path="/uicalvinsys/{uuid}")
-def handle_get_uicalvinsys(self, handle, connection, match, data, hdr):
+def handle_get_uicalvinsys(self, handle, match, data, hdr):
     """
     GET /uicalvinsys/<uuid>
     Get UI definitions
     Response status code: UI definitions
     """
-    self.send_response(handle, connection, json.dumps(ui.ui_definitions()), status=calvinresponse.OK)
+    self.send_response(handle, json.dumps(ui.ui_definitions()), status=calvinresponse.OK)
 
 # USED BY: GUI
 @handler(method="POST", path="/uicalvinsys")
-def handle_post_uicalvinsys(self, handle, connection, match, data, hdr):
+def handle_post_uicalvinsys(self, handle, match, data, hdr):
     """
     POST /uicalvinsys
     Update UICalvinSys state
@@ -44,5 +44,5 @@ def handle_post_uicalvinsys(self, handle, connection, match, data, hdr):
     Response status code: OK or BAD_REQUEST
     """
     status = ui.update(data)
-    self.send_response(handle, connection, None, status=calvinresponse.OK)
+    self.send_response(handle, None, status=calvinresponse.OK)
 

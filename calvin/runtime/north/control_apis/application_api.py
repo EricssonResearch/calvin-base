@@ -37,19 +37,19 @@ _log = get_logger(__name__)
 # USED BY: GUI, CSWEB, CSCONTROL
 @handler(method="GET", path="/applications")
 @authentication_decorator
-def handle_get_applications(self, handle, connection, match, data, hdr):
+def handle_get_applications(self, handle, match, data, hdr):
     """
     GET /applications
     Get applications launched from this node
     Response status code: OK
     Response: List of application ids
     """
-    self.send_response(handle, connection, json.dumps(self.node.app_manager.list_applications()))
+    self.send_response(handle, json.dumps(self.node.app_manager.list_applications()))
 
 # USED BY: GUI, CSWEB, CSCONTROL
 @handler(method="DELETE", path="/application/{application_id}")
 @authentication_decorator
-def handle_del_application(self, handle, connection, match, data, hdr):
+def handle_del_application(self, handle, match, data, hdr):
     """
     DELETE /application/{application-id}
     Stop application (only applications launched from this node)
@@ -58,23 +58,23 @@ def handle_del_application(self, handle, connection, match, data, hdr):
     """
     try:
         self.node.app_manager.destroy(match.group(1), cb=CalvinCB(self.handle_del_application_cb,
-                                                                    handle, connection))
+                                                                    handle))
     except:
         _log.exception("Destroy application failed")
-        self.send_response(handle, connection, None, status=calvinresponse.INTERNAL_ERROR)
+        self.send_response(handle, None, status=calvinresponse.INTERNAL_ERROR)
 
 @register
-def handle_del_application_cb(self, handle, connection, status=None):
+def handle_del_application_cb(self, handle, status=None):
     if not status and status.data:
         data = json.dumps(status.data)
     else:
         data = None
-    self.send_response(handle, connection, data, status=status.status)
+    self.send_response(handle, data, status=status.status)
 
 # USED BY: GUI, CSCONTROL
 @handler(method="GET", path="/actors")
 @authentication_decorator
-def handle_get_actors(self, handle, connection, match, data, hdr):
+def handle_get_actors(self, handle, match, data, hdr):
     """
     GET /actors
     Get list of actors on this runtime
@@ -83,10 +83,10 @@ def handle_get_actors(self, handle, connection, match, data, hdr):
     """
     actors = self.node.am.list_actors()
     self.send_response(
-        handle, connection, json.dumps(actors))
+        handle, json.dumps(actors))
 
 @register
-def _actor_report(self, handle, connection, match, data, hdr):
+def _actor_report(self, handle, match, data, hdr):
     try:
         # Now we allow passing in arguments (must be dictionary or None)
         report = self.node.am.report(match.group(1), data)
@@ -95,51 +95,51 @@ def _actor_report(self, handle, connection, match, data, hdr):
         _log.exception("Actor report failed")
         report = None
         status = calvinresponse.NOT_FOUND
-    self.send_response(handle, connection, json.dumps([]) if report is None else json.dumps(report, default=repr), status=status)
+    self.send_response(handle, json.dumps([]) if report is None else json.dumps(report, default=repr), status=status)
 
 # DEPRECATED: Perhaps used in Kappa?
 @handler(method="GET", path="/actor/{actor_id}/report")
 @authentication_decorator
-def handle_get_actor_report(self, handle, connection, match, data, hdr):
+def handle_get_actor_report(self, handle, match, data, hdr):
     """
     GET /actor/{actor-id}/report
     Some actor store statistics on inputs and outputs, this reports these. Not always present.
     Response status code: OK or NOT_FOUND
     Response: Depends on actor
     """
-    self._actor_report(handle, connection, match, data, hdr)
+    self._actor_report(handle, match, data, hdr)
 
 # DEPRECATED: Perhaps used in Kappa?
 @handler(method="POST", path="/actor/{actor_id}/report")
 @authentication_decorator
-def handle_post_actor_report(self, handle, connection, match, data, hdr):
+def handle_post_actor_report(self, handle, match, data, hdr):
     """
     POST /actor/{actor-id}/report
     Some actors accept external input using this function. Not always present.
     Response status code: OK or NOT_FOUND
     Response: Depends on actor
     """
-    self._actor_report(handle, connection, match, data, hdr)
+    self._actor_report(handle, match, data, hdr)
 
 
 @register
-def handle_actor_migrate_proto_cb(self, handle, connection, status, *args, **kwargs):
-    self.send_response(handle, connection, None, status=status.status)
+def handle_actor_migrate_proto_cb(self, handle, status, *args, **kwargs):
+    self.send_response(handle, None, status=status.status)
 
 @register
-def handle_actor_migrate_lookup_peer_cb(self, key, value, handle, connection, actor_id, peer_node_id):
+def handle_actor_migrate_lookup_peer_cb(self, key, value, handle, actor_id, peer_node_id):
     if calvinresponse.isnotfailresponse(value):
         self.node.proto.actor_migrate_direct(value['node_id'],
-            CalvinCB(self.handle_actor_migrate_proto_cb, handle, connection),
+            CalvinCB(self.handle_actor_migrate_proto_cb, handle),
             actor_id,
             peer_node_id)
     else:
-        self.send_response(handle, connection, None, status=calvinresponse.NOT_FOUND)
+        self.send_response(handle, None, status=calvinresponse.NOT_FOUND)
 
 # USED BY: GUI, CSWEB, CSCONTROL
 @handler(method="POST", path="/actor/{actor_id}/migrate")
 @authentication_decorator
-def handle_actor_migrate(self, handle, connection, match, data, hdr):
+def handle_actor_migrate(self, handle, match, data, hdr):
     """
     POST /actor/{actor-id}/migrate
     Migrate actor to (other) node, either explicit node_id or by updated requirements
@@ -166,20 +166,20 @@ def handle_actor_migrate(self, handle, connection, match, data, hdr):
         if actor_id in self.node.am.list_actors():
             try:
                 self.node.am.migrate(actor_id, data['peer_node_id'],
-                                 callback=CalvinCB(self.actor_migrate_cb, handle, connection))
+                                 callback=CalvinCB(self.actor_migrate_cb, handle))
             except:
                 _log.exception("Migration failed")
                 status = calvinresponse.INTERNAL_ERROR
         else:
             self.node.storage.get_actor(actor_id,
-                CalvinCB(func=self.handle_actor_migrate_lookup_peer_cb, handle=handle, connection=connection,
+                CalvinCB(func=self.handle_actor_migrate_lookup_peer_cb, handle=handle,
                     actor_id=actor_id, peer_node_id=data['peer_node_id']))
     elif 'requirements' in data:
         try:
             self.node.am.update_requirements(match.group(1), data['requirements'],
                 extend=data['extend'] if 'extend' in data else False,
                 move=data['move'] if 'move' in data else False,
-                callback=CalvinCB(self.actor_migrate_cb, handle, connection))
+                callback=CalvinCB(self.actor_migrate_cb, handle))
         except:
             _log.exception("Migration failed")
             status = calvinresponse.INTERNAL_ERROR
@@ -187,18 +187,18 @@ def handle_actor_migrate(self, handle, connection, match, data, hdr):
         status=calvinresponse.BAD_REQUEST
 
     if status != calvinresponse.OK:
-        self.send_response(handle, connection, None, status=status)
+        self.send_response(handle, None, status=status)
 
 @register
-def actor_migrate_cb(self, handle, connection, status, *args, **kwargs):
+def actor_migrate_cb(self, handle, status, *args, **kwargs):
     """ Migrate actor respons
     """
-    self.send_response(handle, connection, None, status=status.status)
+    self.send_response(handle, None, status=status.status)
 
 # USED BY: CSWEB
 @handler(method="POST", path="/actor/{replication_id}/replicate")
 @authentication_decorator
-def handle_actor_replicate(self, handle, connection, match, data, hdr):
+def handle_actor_replicate(self, handle, match, data, hdr):
     """
     POST /actor/{replication-id}/replicate
     Will replicate an actor having manual_scaling requirement applied
@@ -215,7 +215,7 @@ def handle_actor_replicate(self, handle, connection, match, data, hdr):
         if (self.node.rm.managed_replications[replication_id].operation != PRE_CHECK.NO_OPERATION or
             self.node.rm.managed_replications[replication_id].status != REPLICATION_STATUS.READY):
             # Can't order another operation while processing previous
-            self.send_response(handle, connection, None, calvinresponse.SERVICE_UNAVAILABLE)
+            self.send_response(handle, None, calvinresponse.SERVICE_UNAVAILABLE)
             _log.debug("MANUAL REPLICATION NOT APPLIED %s" % PRE_CHECK.reverse_mapping[op])
             return
         # This must be done on the node that is elected leader for the replication_id
@@ -224,19 +224,19 @@ def handle_actor_replicate(self, handle, connection, match, data, hdr):
         self.node.rm.managed_replications[replication_id].selected_node_id = node_id
         self.node.sched.replication_direct(replication_id=replication_id)
         _log.debug("MANUAL REPLICATION APPLIED %s" % PRE_CHECK.reverse_mapping[op])
-        self.send_response(handle, connection, None, calvinresponse.OK)
+        self.send_response(handle, None, calvinresponse.OK)
     except:
         _log.exception("Failed manual replication")
-        self.send_response(handle, connection, None, calvinresponse.NOT_FOUND)
+        self.send_response(handle, None, calvinresponse.NOT_FOUND)
 
 @register
-def handle_actor_replicate_cb(self, handle, connection, status):
-    self.send_response(handle, connection, json.dumps(status.data), status=status.status)
+def handle_actor_replicate_cb(self, handle, status):
+    self.send_response(handle, json.dumps(status.data), status=status.status)
 
 # USED BY: GUI, CSWEB
 @handler(method="GET", path="/actor/{actor_id}/port/{port_id}/state")
 @authentication_decorator
-def handle_get_port_state(self, handle, connection, match, data, hdr):
+def handle_get_port_state(self, handle, match, data, hdr):
     """
     GET /actor/{actor-id}/port/{port-id}/state
     Get port state {port-id} of actor {actor-id}
@@ -248,13 +248,13 @@ def handle_get_port_state(self, handle, connection, match, data, hdr):
         status = calvinresponse.OK
     except:
         status = calvinresponse.NOT_FOUND
-    self.send_response(handle, connection, json.dumps(state), status)
+    self.send_response(handle, json.dumps(state), status)
 
 # FIXME: Check integrity according to policy
 # USED BY: GUI, CSWEB, CSCONTROL
 @handler(method="POST", path="/deploy")
 @authentication_decorator
-def handle_deploy(self, handle, connection, match, data, hdr):
+def handle_deploy(self, handle, match, data, hdr):
     """
     POST /deploy
     Compile and deploy a calvin script to this calvin node
@@ -284,7 +284,7 @@ def handle_deploy(self, handle, connection, match, data, hdr):
                 node=self.node,
                 security=self.security,
                 verify=True,
-                cb=CalvinCB(self.handle_deploy_cb, handle, connection)
+                cb=CalvinCB(self.handle_deploy_cb, handle)
             )
         print(self.node.id, "Deployer instantiated")
         d.deploy()
@@ -298,11 +298,11 @@ def handle_deploy(self, handle, connection, match, data, hdr):
         )
 
 @register
-def handle_deploy_cb(self, handle, connection, status, deployer, **kwargs):
+def handle_deploy_cb(self, handle, status, deployer, **kwargs):
     _log.analyze(self.node.id, "+ DEPLOYED", {'status': status.status})
     if status:
         print("DEPLOY STATUS", str(status))
-        self.send_response(handle, connection,
+        self.send_response(handle,
                            json.dumps({'application_id': deployer.app_id,
                                        'actor_map': deployer.actor_map,
                                        'replication_map': deployer.replication_map,
@@ -311,13 +311,13 @@ def handle_deploy_cb(self, handle, connection, status, deployer, **kwargs):
                                       ) if deployer.app_id else None,
                            status=status.status)
     else:
-        self.send_response(handle, connection, None, status=status.status)
+        self.send_response(handle, None, status=status.status)
 
 
 # USED BY: GUI, CSWEB, CSCONTROL
 @handler(method="POST", path="/application/{application_id}/migrate")
 @authentication_decorator
-def handle_post_application_migrate(self, handle, connection, match, data, hdr):
+def handle_post_application_migrate(self, handle, match, data, hdr):
     """
     POST /application/{application-id}/migrate
     Update deployment requirements of application application-id
@@ -344,13 +344,13 @@ def handle_post_application_migrate(self, handle, connection, match, data, hdr):
         self.node.app_manager.migrate_with_requirements(app_id,
                                                deploy_info=data["deploy_info"] if "deploy_info" in data else None,
                                                move=data["move"] if "move" in data else False,
-                                               cb=CalvinCB(self.handle_post_application_migrate_cb, handle, connection))
+                                               cb=CalvinCB(self.handle_post_application_migrate_cb, handle))
     except:
         _log.exception("App migration failed")
-        self.send_response(handle, connection, None, status=calvinresponse.INTERNAL_ERROR)
+        self.send_response(handle, None, status=calvinresponse.INTERNAL_ERROR)
 
 @register
-def handle_post_application_migrate_cb(self, handle, connection, status, **kwargs):
+def handle_post_application_migrate_cb(self, handle, status, **kwargs):
     _log.analyze(self.node.id, "+ MIGRATED", {'status': status.status})
-    self.send_response(handle, connection, None, status=status.status)
+    self.send_response(handle, None, status=status.status)
 

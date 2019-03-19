@@ -111,7 +111,7 @@ class Node(object):
         actorstore_uri = _conf.get('global', 'actorstore')
         self.am = actormanager.ActorManager(self, actorstore_uri)
         self.rm = replicationmanager.ReplicationManager(self)
-        self.control = calvincontrol.get_calvincontrol()
+        self.control = None
 
         # _scheduler = scheduler.DebugScheduler if _log.getEffectiveLevel() <= logging.DEBUG else scheduler.Scheduler
         # _scheduler = scheduler.NonPreemptiveScheduler
@@ -240,12 +240,20 @@ class Node(object):
 
         # Start control API
         proxy_control_uri = _conf.get(None, 'control_proxy')
-        _log.debug("Start control API on %s with uri: %s and proxy: %s" % (self.id, self.control_uri, proxy_control_uri))
-        if proxy_control_uri is not None:
-            self.control.start(node=self, uri=proxy_control_uri, tunnel=True)
+        if (self.control_uri is None and proxy_control_uri is None) or (self.control_uri and proxy_control_uri):
+            raise Exception("Must specify 'control_uri' OR 'proxy_control_uri'") 
+        msg = "Start %scontrol API on %s with uri: %s"
+        _log.debug(msg % ("proxy_" if proxy_control_uri else "", self.id, proxy_control_uri or self.control_uri))
+        if proxy_control_uri:
+            # Create CalvinControlTunnelClient object here
+            # self.control.start(node=self, uri=proxy_control_uri, tunnel=True)
+            self.control = calvincontrol.CalvinControlTunnelClient(proxy_control_uri)
         else:
-            if self.control_uri is not None:
-                self.control.start(node=self, uri=self.control_uri, external_uri=self.external_control_uri)
+            # Create ordinary CalvinControl object here
+            # self.control.start(node=self, uri=self.control_uri, external_uri=self.external_control_uri)
+            self.control = calvincontrol.CalvinControl(node=self, uri=self.control_uri, external_uri=self.external_control_uri)
+            # Also start tunnel server as separate entity
+            self.tunnel_server = calvincontrol.CalvinControlTunnelServer(self)
 
     def stop(self, callback=None):
         # TODO: Handle blocking in poorly implemented calvinsys/runtime south.
@@ -255,6 +263,8 @@ class Node(object):
             _log.debug(args)
             self.sched.stop()
             _log.analyze(self.id, "+ SCHED STOPPED", {'args': args})
+            if self.tunnel_server:
+                self.tunnel_server.stop()
             self.control.stop()
             _log.analyze(self.id, "+ CONTROL STOPPED", {'args': args})
 

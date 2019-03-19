@@ -32,7 +32,7 @@ _log = get_logger(__name__)
 # FIXME: Can't be access controlled, as it is needed to find authorization server
 # @authentication_decorator
 @handler(method="GET", path="/index/{path}", optional=[r"\?root_prefix_level=(\d+)"])
-def handle_get_index(self, handle, connection, match, data, hdr):
+def handle_get_index(self, handle, match, data, hdr):
     """
     GET /index/{key}?root_prefix_level={level}
     Fetch values under index key
@@ -43,20 +43,20 @@ def handle_get_index(self, handle, connection, match, data, hdr):
     if match.group(3) is not None:
         kwargs['root_prefix_level'] = int(match.group(3))
     self.node.storage.get_index(
-        match.group(1), cb=CalvinCB(self.get_index_cb, handle, connection), **kwargs)
+        match.group(1), cb=CalvinCB(self.get_index_cb, handle), **kwargs)
 
 @register
-def get_index_cb(self, handle, connection, value, *args, **kwargs):
+def get_index_cb(self, handle, value, *args, **kwargs):
     """ Index operation response
     """
     _log.debug("get index cb (in control) %s" % (value))
-    self.send_response(handle, connection, None if value is None else json.dumps({'result': value}),
+    self.send_response(handle, None if value is None else json.dumps({'result': value}),
                        status=calvinresponse.NOT_FOUND if value is None else calvinresponse.OK)
 
 # DEPRECATED: Move to debug API
 @handler(method="GET", path="/dumpstorage")
 @authentication_decorator
-def handle_dump_storage(self, handle, connection, match, data, hdr):
+def handle_dump_storage(self, handle, match, data, hdr):
     """
     GET /dumpstorage
     Dump storage to temporary file in /tmp when available
@@ -64,20 +64,20 @@ def handle_dump_storage(self, handle, connection, match, data, hdr):
     Response: none
     """
     name = self.node.storage.dump()
-    self.send_response(handle, connection, json.dumps(name), status=calvinresponse.OK)
+    self.send_response(handle, json.dumps(name), status=calvinresponse.OK)
 
 
 
 @register
-def storage_cb(self, key, value, handle, connection):
+def storage_cb(self, key, value, handle):
     missing = calvinresponse.isfailresponse(value)
-    self.send_response(handle, connection, None if missing else json.dumps(value),
+    self.send_response(handle, None if missing else json.dumps(value),
                        status=calvinresponse.NOT_FOUND if missing else calvinresponse.OK)
 
 # USED BY: GUI, CSWEB, CSCONTROL, NODECONTROL
 @handler(method="GET", path="/node/{node_id}")
 @authentication_decorator
-def handle_get_node(self, handle, connection, match, data, hdr):
+def handle_get_node(self, handle, match, data, hdr):
     """
     GET /node/{node-id}
     Get information on node node-id
@@ -90,12 +90,12 @@ def handle_get_node(self, handle, connection, match, data, hdr):
     }
     """
     self.node.storage.get_node(match.group(1), CalvinCB(
-        func=self.storage_cb, handle=handle, connection=connection))
+        func=self.storage_cb, handle=handle))
 
 # USED BY: CSWEB, CSCONTROL
 @handler(method="GET", path="/application/{application_id}")
 @authentication_decorator
-def handle_get_application(self, handle, connection, match, data, hdr):
+def handle_get_application(self, handle, match, data, hdr):
     """
     GET /application/{application-id}
     Get information on application application-id
@@ -109,13 +109,13 @@ def handle_get_application(self, handle, connection, match, data, hdr):
     }
     """
     self.node.storage.get_application(match.group(1), CalvinCB(
-        func=self.storage_cb, handle=handle, connection=connection))
+        func=self.storage_cb, handle=handle))
 
 
 # USED BY: GUI, CSWEB, CSCONTROL
 @handler(method="GET", path="/actor/{actor_id}")
 @authentication_decorator
-def handle_get_actor(self, handle, connection, match, data, hdr):
+def handle_get_actor(self, handle, match, data, hdr):
     """
     GET /actor/{actor-id}
     Get information on actor
@@ -131,25 +131,25 @@ def handle_get_actor(self, handle, connection, match, data, hdr):
     }
     """
     self.node.storage.get_actor(match.group(1), CalvinCB(
-        func=self.storage_cb, handle=handle, connection=connection))
+        func=self.storage_cb, handle=handle))
 
 # USED BY: CSWEB
 # @authentication_decorator # Disabled in original code
 @handler(method="GET", path="/actor/{actor_id}/port/{port_id}")
-def handle_get_port(self, handle, connection, match, data, hdr):
+def handle_get_port(self, handle, match, data, hdr):
     """
         GET /actor/{actor-id}/port/{port-id}
         Get information on port {port-id} of actor {actor-id}
         Response status code: OK or NOT_FOUND
     """
     self.node.storage.get_port(match.group(2), CalvinCB(
-        func=self.storage_cb, handle=handle, connection=connection))
+        func=self.storage_cb, handle=handle))
 
 
 # FIXME: This doesn't belong here? Move to runtime_api
 @handler(method="POST", path="/node/resource/", optional=["mem_avail", "cpu_avail", "memAvail", "cpuAvail"])
 @authentication_decorator
-def handle_resource_avail(self, handle, connection, match, data, hdr):
+def handle_resource_avail(self, handle, match, data, hdr):
     """
     POST /node/resource/{mem_avail|cpu_avail}
     Updates {mem|cpu]} availability in the local node
@@ -163,14 +163,14 @@ def handle_resource_avail(self, handle, connection, match, data, hdr):
     Response: none
     """
     if match.group(1) in ['mem_avail', "memAvail"]:
-        self.node.mem_monitor.set_avail(data['value'], CalvinCB(self.index_cb, handle, connection))
+        self.node.mem_monitor.set_avail(data['value'], CalvinCB(self.index_cb, handle))
     elif match.group(1) in ['cpu_avail', "cpuAvail"]:
-        self.node.cpu_monitor.set_avail(data['value'], CalvinCB(self.index_cb, handle, connection))
+        self.node.cpu_monitor.set_avail(data['value'], CalvinCB(self.index_cb, handle))
     else:
-        self.send_response(handle, connection, None, status=calvinresponse.NOT_FOUND)
+        self.send_response(handle, None, status=calvinresponse.NOT_FOUND)
         
 @register
-def index_cb(self, handle, connection, *args, **kwargs):
+def index_cb(self, handle, *args, **kwargs):
     """ Index operation response
     """
     _log.debug("index cb (in control) %s, %s" % (args, kwargs))
@@ -178,6 +178,6 @@ def index_cb(self, handle, connection, *args, **kwargs):
         value = kwargs['value']
     else:
         value = None
-    self.send_response(handle, connection, None,
+    self.send_response(handle, None,
                        status=calvinresponse.INTERNAL_ERROR if value is None else calvinresponse.OK)
         

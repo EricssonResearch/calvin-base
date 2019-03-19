@@ -27,7 +27,7 @@ _log = get_logger(__name__)
 
 # USED BY: CSWEB
 @handler(method="GET", path="/proxy/{node_id}/capabilities")
-def handle_get_proxy_capabilities(self, handle, connection, match, data, hdr):
+def handle_get_proxy_capabilities(self, handle, match, data, hdr):
     """
     GET /proxy/{node-id}/capabilities
     Get capabilities from proxy peer {node-id}
@@ -39,12 +39,12 @@ def handle_get_proxy_capabilities(self, handle, connection, match, data, hdr):
     except:
         _log.exception("handle_get_proxy_capabilities")
         status = calvinresponse.NOT_FOUND
-    self.send_response(handle, connection,
+    self.send_response(handle,
             json.dumps(data) if status == calvinresponse.OK else None, status=status)
 
 # USED BY: CSWEB
 @handler(method="DELETE", path="/proxy/{node_id}", optional=["/now", "/migrate", "/clean"])
-def handle_delete_proxy(self, handle, connection, match, data, hdr):
+def handle_delete_proxy(self, handle, match, data, hdr):
     """
     DELETE /proxy/{node-id}/{/now|/migrate|/clean}
     Stop (this) calvin node
@@ -60,4 +60,4 @@ def handle_delete_proxy(self, handle, connection, match, data, hdr):
     except Exception as e:
         _log.exception("Failed to destroy peer")
         status = calvinresponse.NOT_FOUND
-    self.send_response(handle, connection, None, status=status)
+    self.send_response(handle, None, status=status)

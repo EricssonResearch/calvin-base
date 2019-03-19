@@ -371,8 +371,8 @@ class HTTPServer(Factory):
         for handle, connection in list(self.connection_map.items()):
             if connection.data_available:
                 command, headers, data = connection.data_get()
-                print(handle, connection, command, headers, data)
-                self._callback(handle, connection, command, headers, data)
+                print(handle, command, headers, data)
+                self._callback(handle, command, headers, data)
     
 
     def buildProtocol(self, addr):
@@ -394,7 +394,7 @@ class HTTPServer(Factory):
             self.connection_pending = False
         return addr, conn
         
-    def send_response(self, handle, header, data):
+    def send_response(self, handle, header, data=None):
         connection = self.connection_map[handle]
         if not connection.connection_lost:
             connection.send(header)

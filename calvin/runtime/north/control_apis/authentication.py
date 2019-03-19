@@ -29,10 +29,10 @@ _log = get_logger(__name__)
 def authentication_decorator(func):
 
     @functools.wraps(func)
-    def wrapper(self, handle, connection, match, data, hdr):
+    def wrapper(self, handle, match, data, hdr):
 
         def _unauthorized_response():
-            self.send_response(handle, connection, None, status=calvinresponse.UNAUTHORIZED)
+            self.send_response(handle, None, status=calvinresponse.UNAUTHORIZED)
 
         def _handle_authentication_decision(authentication_decision):
             _log.debug("control_apis.authentication::_handle_authentication_decision, authentication_decision={}".format(authentication_decision))
@@ -54,13 +54,13 @@ def authentication_decorator(func):
                 _unauthorized_response()
                 return
             # Yay! We made it!
-            func(self, handle, connection, match, data, hdr)
+            func(self, handle, match, data, hdr)
 
         #
         # Exit early if security disabled
         #
         if not security_enabled():
-            func(self, handle, connection, match, data, hdr)
+            func(self, handle, match, data, hdr)
             return
         #
         # Verify the request against credentials and policy

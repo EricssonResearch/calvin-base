@@ -28,7 +28,7 @@ _log = get_logger(__name__)
 # No authentication decorator, this is called by the runtimes when deployed
 # without a certificate
 @handler(method="POST", path="/certificate_authority/certificate_signing_request")
-def handle_post_certificate_signing_request(self, handle, connection, match, data, hdr):
+def handle_post_certificate_signing_request(self, handle, match, data, hdr):
     """
     POST /certificate_authority/certificate_signing_request
     Send CSR to CA, that creates a x509 certificate and returns it
@@ -45,14 +45,14 @@ def handle_post_certificate_signing_request(self, handle, connection, match, dat
     except:
         _log.exception("handle_post_certificate_signing_request")
         status = calvinresponse.INTERNAL_ERROR
-    self.send_response(handle, connection, json.dumps({"certificate": cert}) if status == calvinresponse.OK else None,
+    self.send_response(handle, json.dumps({"certificate": cert}) if status == calvinresponse.OK else None,
                        status=status)
 
 #Only authorized users, e.g., an admin, should be allowed to query certificate enrollment passwords
 # from the CA runtime
 @handler(method="GET", path="/certificate_authority/certificate_enrollment_password/{path}")
 @authentication_decorator
-def handle_get_certificate_enrollment_password(self, handle, connection, match, data, hdr):
+def handle_get_certificate_enrollment_password(self, handle, match, data, hdr):
     """
     GET /certiticate_authority/certificate_enrollment_password/{node_name}
     Request a password to be later user as authorization for the Certificate Signing Request from the runtime
@@ -66,7 +66,7 @@ def handle_get_certificate_enrollment_password(self, handle, connection, match, 
     except:
         _log.exception("handle_post_certificate_enrollment_password")
         status = calvinresponse.INTERNAL_ERROR
-    self.send_response(handle, connection, json.dumps({"enrollment_password": password}) if status == calvinresponse.OK else None,
+    self.send_response(handle, json.dumps({"enrollment_password": password}) if status == calvinresponse.OK else None,
                        status=status)
 
 
@@ -74,7 +74,7 @@ def handle_get_certificate_enrollment_password(self, handle, connection, match, 
 # from the CA runtime
 @handler(method="PUT", path="/certificate_authority/certificate_enrollment_password/{path}")
 @authentication_decorator
-def handle_edit_certificate_enrollment_password(self, handle, connection, match, data, hdr):
+def handle_edit_certificate_enrollment_password(self, handle, match, data, hdr):
     """
     PUT /certiticate_authority/certificate_enrollment_password/{node_name}
     Set a password to be later user as authorization for the Certificate Signing Request from the runtime
@@ -91,12 +91,12 @@ def handle_edit_certificate_enrollment_password(self, handle, connection, match,
     except:
         _log.exception("handle_post_certificate_enrollment_password")
         status = calvinresponse.INTERNAL_ERROR
-    self.send_response(handle, connection, None, status=status)
+    self.send_response(handle, None, status=status)
 
 
 @handler(method="GET", path="/authentication/users_db")
 @authentication_decorator
-def handle_get_authentication_users_db(self, handle, connection, match, data, hdr):
+def handle_get_authentication_users_db(self, handle, match, data, hdr):
     """
     GET /authentication/users_db
     Get user database on this runtime
@@ -117,13 +117,13 @@ def handle_get_authentication_users_db(self, handle, connection, match, data, hd
     except:
         _log.exception("handle_get_authentication_users_db")
         status = calvinresponse.INTERNAL_ERROR
-    self.send_response(handle, connection, json.dumps({"users_db": users_db}) if status == calvinresponse.OK else None,
+    self.send_response(handle, json.dumps({"users_db": users_db}) if status == calvinresponse.OK else None,
                        status=status)
 
 
 @handler(method="PUT", path="/authentication/users_db")
 @authentication_decorator
-def handle_edit_authentication_users_db(self, handle, connection, match, data, hdr):
+def handle_edit_authentication_users_db(self, handle, match, data, hdr):
     """
     PUT /authentication/users_db
     Update user database
@@ -145,12 +145,12 @@ def handle_edit_authentication_users_db(self, handle, connection, match, data, h
     else:
         _log.exception("handle_edit_authentication_users_db: no users_db in data\n\tdata={}".format(data))
         status = calvinresponse.NOT_FOUND
-    self.send_response(handle, connection, None, status=status)
+    self.send_response(handle, None, status=status)
 
 
 @handler(method="GET", path="/authentication/groups_db")
 @authentication_decorator
-def handle_get_authentication_groups_db(self, handle, connection, match, data, hdr):
+def handle_get_authentication_groups_db(self, handle, match, data, hdr):
     """
     GET /authentication/groups_db
     Get user database on this runtime
@@ -168,7 +168,7 @@ def handle_get_authentication_groups_db(self, handle, connection, match, data, h
 
 @handler(method="PUT", path="/authentication/groups_db")
 @authentication_decorator
-def handle_edit_authentication_groups_db(self, handle, connection, match, data, hdr):
+def handle_edit_authentication_groups_db(self, handle, match, data, hdr):
     """
     PUT /authentication/groups_db
     Update user database
@@ -182,7 +182,7 @@ def handle_edit_authentication_groups_db(self, handle, connection, match, data, 
 
 @handler(method="POST", path="/authorization/policies")
 @authentication_decorator
-def handle_new_authorization_policy(self, handle, connection, match, data, hdr):
+def handle_new_authorization_policy(self, handle, match, data, hdr):
     """
     POST /authorization/policies
     Create a new policy
@@ -198,13 +198,13 @@ def handle_new_authorization_policy(self, handle, connection, match, data, hdr):
         policy_id = None
         _log.exception("handle_new_authorization_policy")
         status = calvinresponse.INTERNAL_ERROR
-    self.send_response(handle, connection, None if policy_id is None else json.dumps({'policy_id': policy_id}),
+    self.send_response(handle, None if policy_id is None else json.dumps({'policy_id': policy_id}),
                        status=status)
 
 
 @handler(method="GET", path="/authorization/policies")
 @authentication_decorator
-def handle_get_authorization_policies(self, handle, connection, match, data, hdr):
+def handle_get_authorization_policies(self, handle, match, data, hdr):
     """
     GET /authorization/policies
     Get all policies on this runtime
@@ -223,13 +223,13 @@ def handle_get_authorization_policies(self, handle, connection, match, data, hdr
     except:
         _log.exception("handle_get_authorization_policies")
         status = calvinresponse.INTERNAL_ERROR
-    self.send_response(handle, connection, json.dumps({"policies": policies}) if status == calvinresponse.OK else None,
+    self.send_response(handle, json.dumps({"policies": policies}) if status == calvinresponse.OK else None,
                        status=status)
 
 
 @handler(method="GET", path="/authorization/policies/{policy_id}")
 @authentication_decorator
-def handle_get_authorization_policy(self, handle, connection, match, data, hdr):
+def handle_get_authorization_policy(self, handle, match, data, hdr):
     """
     GET /authorization/policies/{policy-id}
     Get policy
@@ -245,12 +245,12 @@ def handle_get_authorization_policy(self, handle, connection, match, data, hdr):
     except:
         _log.exception("handle_get_authorization_policy")
         status = calvinresponse.INTERNAL_ERROR
-    self.send_response(handle, connection, json.dumps({"policy": data}) if status == calvinresponse.OK else None,
+    self.send_response(handle, json.dumps({"policy": data}) if status == calvinresponse.OK else None,
                        status=status)
 
 @handler(method="PUT", path="/authorization/policies/{policy_id}")
 @authentication_decorator
-def handle_edit_authorization_policy(self, handle, connection, match, data, hdr):
+def handle_edit_authorization_policy(self, handle, match, data, hdr):
     """
     PUT /authorization/policies/{policy-id}
     Update policy
@@ -268,11 +268,11 @@ def handle_edit_authorization_policy(self, handle, connection, match, data, hdr)
     except:
         _log.exception("handle_edit_authorization_policy")
         status = calvinresponse.INTERNAL_ERROR
-    self.send_response(handle, connection, None, status=status)
+    self.send_response(handle, None, status=status)
 
 @handler(method="DELETE", path="/authorization/policies/{policy_id}")
 @authentication_decorator
-def handle_del_authorization_policy(self, handle, connection, match, data, hdr):
+def handle_del_authorization_policy(self, handle, match, data, hdr):
     """
     DELETE /authorization/policies/{policy-id}
     Delete policy
@@ -289,4 +289,4 @@ def handle_del_authorization_policy(self, handle, connection, match, data, hdr):
     except:
         _log.exception("handle_del_authorization_policy")
         status = calvinresponse.INTERNAL_ERROR
-    self.send_response(handle, connection, None, status=status)
+    self.send_response(handle, None, status=status)

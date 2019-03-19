@@ -40,15 +40,15 @@ from .control_apis import proxyhandler_api
 
 _log = get_logger(__name__)
 
-_calvincontrol = None
-
-def get_calvincontrol():
-    """ Returns the CalvinControl singleton
-    """
-    global _calvincontrol
-    if _calvincontrol is None:
-        _calvincontrol = CalvinControl()
-    return _calvincontrol
+# _calvincontrol = None
+#
+# def get_calvincontrol():
+#     """ Returns the CalvinControl singleton
+#     """
+#     global _calvincontrol
+#     if _calvincontrol is None:
+#         _calvincontrol = CalvinControl()
+#     return _calvincontrol
 
 
 class CalvinControl(object):
@@ -56,11 +56,10 @@ class CalvinControl(object):
     """ A HTTP REST API for calvin nodes
     """
 
-    def __init__(self):
+    def __init__(self, node, uri, external_uri=None):
         self.node = None
         self.loggers = {}
         self.server = None
-        # self.connections = {}
         self.tunnel = None
         self.host = None
         self.tunnel_server = None
@@ -68,40 +67,41 @@ class CalvinControl(object):
         self.security = None
         self.token_dict = None
         self.routes = routes.install_handlers(self)
+        self._start(node, uri, external_uri)
 
-    def start(self, node, uri, tunnel=False, external_uri=None):
+    def _start(self, node, uri, external_uri):
         """ If not tunnel, start listening on uri and handle http requests.
             If tunnel, setup a tunnel to uri and handle requests.
         """
         self.node = node
         self.security = Security(self.node)
         schema, _ = uri.split(':', 1)
-        if tunnel:
-            # Connect to tunnel server
-            self.tunnel_client = CalvinControlTunnelClient(uri, self)
+        # if tunnel:
+        #     # Connect to tunnel server
+        #     self.tunnel_client = CalvinControlTunnelClient(uri, self)
+        # else:
+        url = urlparse(uri)
+        self.port = int(url.port)
+        self.host = url.hostname
+        if external_uri is not None:
+            self.external_host = urlparse(external_uri).hostname
         else:
-            url = urlparse(uri)
-            self.port = int(url.port)
-            self.host = url.hostname
-            if external_uri is not None:
-                self.external_host = urlparse(external_uri).hostname
-            else:
-                self.external_host = self.host
-            _log.info("Control API listening on: %s:%s" % (self.host, self.port))
+            self.external_host = self.host
+        _log.info("Control API listening on: %s:%s" % (self.host, self.port))
 
-            self.server = asynchronous.HTTPServer(self.route_request, self.host, self.port, node_name=node.node_name)
-            self.server.start()
+        self.server = asynchronous.HTTPServer(self.route_request, self.host, self.port, node_name=node.node_name)
+        self.server.start()
 
-            # Create tunnel server
-            self.tunnel_server = CalvinControlTunnelServer(self.node)
+        # Create tunnel server
+        # self.tunnel_server = CalvinControlTunnelServer(self.node)
 
     def stop(self):
         """ Stop """
         self.server.stop()
-        if self.tunnel_server is not None:
-            self.tunnel_server.stop()
-        if self.tunnel_client is not None:
-            self.tunnel_client.stop()
+        # if self.tunnel_server is not None:
+        #     self.tunnel_server.stop()
+        # if self.tunnel_client is not None:
+        #     self.tunnel_client.stop()
 
     def close_log_tunnel(self, handle):
         """ Close log tunnel
@@ -119,11 +119,11 @@ class CalvinControl(object):
         return None, None
 
     # FIXME: For now, make this a callback from the server object
-    def route_request(self, handle, connection, command, headers, data):
+    def route_request(self, handle, command, headers, data):
         if self.node.quitting:
             # Answer internal error on all requests while quitting, assume client can handle that
             # TODO: Answer permantely moved (301) instead with header Location: <another-calvin-runtime>???
-            self.send_response(handle, connection, None, status=calvinresponse.INTERNAL_ERROR)
+            self.send_response(handle, None, status=calvinresponse.INTERNAL_ERROR)
             return
         try:
             issuetracker = IssueTracker()
@@ -133,15 +133,15 @@ class CalvinControl(object):
                 if data:
                     data = json.loads(data)
                 _log.debug("Calvin control handles:%s\n%s\n---------------" % (command, data))
-                handler(handle, connection, match, data, headers)
+                handler(handle, match, data, headers)
             else:
                 _log.error("No route found for: %s\n%s" % (command, data))
-                self.send_response(handle, connection, None, status=404)
+                self.send_response(handle, None, status=404)
         except Exception as e:
             _log.info("Failed to parse request", exc_info=e)
-            self.send_response(handle, connection, None, status=calvinresponse.BAD_REQUEST)
+            self.send_response(handle, None, status=calvinresponse.BAD_REQUEST)
 
-    def send_response(self, handle, connection, data, status=200, content_type=None):
+    def send_response(self, handle, data, status=200, content_type=None):
         """ Send response header text/html
         """
         content_type = content_type or "Content-Type: application/json"
@@ -157,24 +157,26 @@ class CalvinControl(object):
             "Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS\n" + \
             "Access-Control-Allow-Origin: *\r\n" + "\n"
 
-        if connection is None:
-            msg = {"cmd": "httpresp", "msgid": handle, "header": header, "data": data}
-            self.tunnel_client.send(msg)
-        else:
-            self.server.send_response(handle, header, data)
+        # if connection is None:
+        #     msg = {"cmd": "httpresp", "msgid": handle, "header": header, "data": data}
+        #     self.tunnel_client.send(msg)
+        # else:
+        #     self.server.send_response(handle, header, data)
+        self.server.send_response(handle, header, data)
 
-    def send_streamheader(self, handle, connection):
+    def send_streamheader(self, handle):
         """ Send response header for text/event-stream
         """
         response = "HTTP/1.0 200 OK\n" + "Content-Type: text/event-stream\n" + \
             "Access-Control-Allow-Origin: *\r\n" + "\n"
 
-        if connection is not None:
-            if not connection.connection_lost:
-                connection.send(response)
-        elif self.tunnel_client is not None:
-                msg = {"cmd": "logresp", "msgid": handle, "header": response, "data": None}
-                self.tunnel_client.send(msg)
+        # if connection is not None:
+        #     if not connection.connection_lost:
+        #         connection.send(response)
+        # elif self.tunnel_client is not None:
+        #         msg = {"cmd": "logresp", "msgid": handle, "header": response, "data": None}
+        #         self.tunnel_client.send(msg)
+        self.server.send_response(handle, response)
 
     #
     # Logging hooks

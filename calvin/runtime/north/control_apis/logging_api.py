@@ -47,7 +47,7 @@ class Logger(object):
         self.actors = actors
         self.events = events
 
-    def set_connection(self, handle, connection):
+    def set_connection(self, handle):
         self.handle = handle
         self.connection = connection
 
@@ -332,7 +332,7 @@ def log_log_message(self, message):
 
 @handler(method="POST", path="/log")
 @authentication_decorator
-def handle_post_log(self, handle, connection, match, data, hdr):
+def handle_post_log(self, handle, match, data, hdr):
     """
     POST /log
     Register for log events and set actor and event filter.
@@ -398,7 +398,7 @@ def handle_post_log(self, handle, connection, match, data, hdr):
     else:
         status = calvinresponse.BAD_REQUEST
 
-    self.send_response(handle, connection,
+    self.send_response(handle,
                        json.dumps({'user_id': user_id, 'epoch_year': time.gmtime(0).tm_year})
                        if status == calvinresponse.OK else None,
                        status=status)
@@ -406,7 +406,7 @@ def handle_post_log(self, handle, connection, match, data, hdr):
 
 @handler(method="DELETE", path="/log/{trace_id}")
 @authentication_decorator
-def handle_delete_log(self, handle, connection, match, data, hdr):
+def handle_delete_log(self, handle, match, data, hdr):
     """
     DELETE /log/{user-id}
     Unregister for trace
@@ -418,11 +418,11 @@ def handle_delete_log(self, handle, connection, match, data, hdr):
         status = calvinresponse.OK
     else:
         status = calvinresponse.NOT_FOUND
-    self.send_response(handle, connection, None, status=status)
+    self.send_response(handle, None, status=status)
 
 @handler(method="GET", path="/log/{trace_id}")
 @authentication_decorator
-def handle_get_log(self, handle, connection, match, data, hdr):
+def handle_get_log(self, handle, match, data, hdr):
     """
     GET /log/{user-id}
     Get streamed log
@@ -448,7 +448,7 @@ def handle_get_log(self, handle, connection, match, data, hdr):
     }
     """
     if match.group(1) in self.loggers:
-        self.loggers[match.group(1)].set_connection(handle, connection)
-        self.send_streamheader(handle, connection)
+        self.loggers[match.group(1)].set_connection(handle)
+        self.send_streamheader(handle)
     else:
-        self.send_response(handle, connection, None, calvinresponse.NOT_FOUND)
+        self.send_response(handle, None, calvinresponse.NOT_FOUND)

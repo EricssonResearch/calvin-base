@@ -23,7 +23,7 @@ from .authentication import authentication_decorator
 
 @handler(method="GET", path="/")
 @authentication_decorator
-def handle_get_base_doc(self, handle, connection, match, data, hdr):
+def handle_get_base_doc(self, handle, match, data, hdr):
     """
     GET /
     Document the REST API
@@ -61,7 +61,7 @@ def handle_get_base_doc(self, handle, connection, match, data, hdr):
         </body>
         </html>
         """
-        self.send_response(handle, connection, data, status=200, content_type="Content-Type: text/HTML")
+        self.send_response(handle, data, status=200, content_type="Content-Type: text/HTML")
     else:
         data = []
         block = []
@@ -75,4 +75,4 @@ def handle_get_base_doc(self, handle, connection, match, data, hdr):
                 # same block
                 block.append(line)
 
-        self.send_response(handle, connection, json.dumps(data), status=200)
+        self.send_response(handle, json.dumps(data), status=200)
