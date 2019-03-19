@@ -69,19 +69,19 @@ class RawDataProtocol(Protocol):
 
     def connectionMade(self):
         self.factory.connections.append(self)
-        self.factory.trigger()
+        self.factory.request_handler()
 
     def connectionLost(self, reason):
         self.connection_lost = True
         self.factory.connections.remove(self)
-        self.factory.trigger()
+        self.factory.request_handler()
 
     def dataReceived(self, data):
         self.data_available = True
         while len(data) > 0:
             self._data_buffer.append(data[:self.MAX_LENGTH])
             data = data[self.MAX_LENGTH:]
-        self.factory.trigger()
+        self.factory.request_handler()
 
     def send(self, data):
         self.transport.write(data)
@@ -110,17 +110,17 @@ class LineProtocol(LineReceiver):
 
     def connectionMade(self):
         self.factory.connections.append(self)
-        self.factory.trigger()
+        self.factory.request_handler()
 
     def connectionLost(self, reason):
         self.connection_lost = True
         self.factory.connections.remove(self)
-        self.factory.trigger()
+        self.factory.request_handler()
 
     def lineReceived(self, line):
         self.data_available = True
         self._line_buffer.append(line)
-        self.factory.trigger()
+        self.factory.request_handler()
 
     def send(self, data):
         LineReceiver.sendLine(self, data)  # LineReceiver is an old style class.
@@ -153,12 +153,12 @@ class HTTPProtocol(LineReceiver):
         self._expected_length = 0
 
         self.factory.connections.append(self)
-        self.factory.trigger()
+        self.factory.request_handler()
 
     def connectionLost(self, reason):
         self.connection_lost = True
         self.factory.connections.remove(self)
-        self.factory.trigger()
+        self.factory.request_handler()
 
     def rawDataReceived(self, data):
         self._data_buffer += data
@@ -167,7 +167,7 @@ class HTTPProtocol(LineReceiver):
             self._data = self._data_buffer
             self._data_buffer = b""
             self.data_available = True
-            self.factory.trigger()
+            self.factory.request_handler()
 
     def lineReceived(self, line):
         line = line.decode('utf-8')
@@ -182,7 +182,7 @@ class HTTPProtocol(LineReceiver):
             self.setRawMode()
         else:
             self.data_available = True
-            self.factory.trigger()
+            self.factory.request_handler()
 
     def send(self, data):
         # Do not add newlines - data may be binary
@@ -208,56 +208,6 @@ class HTTPProtocol(LineReceiver):
             self._expected_length = 0
             return command, headers, data
         raise Exception("Connection error: no data available")
-
-
-# Local use only
-# class ServerProtocolFactory(Factory):
-#     def __init__(self, trigger, mode='line', delimiter=b'\r\n', max_length=8192, actor_id=None, node_name=None):
-#
-#         # TODO: Is this the way to do it:
-#         if isinstance(delimiter, str):
-#             self.delimiter = delimiter.encode('ascii')
-#         else:
-#             # assume bytes
-#             self.delimiter = delimiter
-#
-#         self._trigger            = trigger
-#         self.mode                = mode
-#         self.MAX_LENGTH          = max_length
-#         self.connections         = []
-#         self.pending_connections = []
-#         self._port               = None
-#         self._actor_id           = actor_id
-#         self._node_name          = node_name
-#
-#     def trigger(self):
-#         self._trigger(self._actor_id)
-#
-#     def buildProtocol(self, addr):
-#         if self.mode == 'line':
-#             connection = LineProtocol(self, self.delimiter, actor_id=self._actor_id)
-#         elif self.mode == 'raw':
-#             connection = RawDataProtocol(self, self.MAX_LENGTH, actor_id=self._actor_id)
-#         elif self.mode == 'http':
-#             connection = HTTPProtocol(self, actor_id=self._actor_id)
-#         else:
-#             raise Exception("ServerProtocolFactory: Protocol not supported")
-#         self.pending_connections.append((addr, connection))
-#         return connection
-#
-#     def start(self, host, port):
-#         self._port = reactor_listen(self._node_name, self, host, port)
-#
-#     def stop(self):
-#         self._port.stopListening()
-#         for c in self.connections:
-#             c.transport.loseConnection()
-#
-#     def accept(self):
-#         addr, conn = self.pending_connections.pop()
-#         if not self.pending_connections:
-#             self.connection_pending = False
-#         return addr, conn
 
 # ----------------------
 # -     Public API     -
@@ -320,7 +270,7 @@ class TCPServer(Factory):
         self._port               = None
         self._node_name          = node_name
 
-    def trigger(self):
+    def request_handler(self):
         self._callback()
 
     def buildProtocol(self, addr):
@@ -359,10 +309,9 @@ class HTTPServer(Factory):
         self._port               = None
         self._node_name          = node_name
 
-    def trigger(self):
+    def request_handler(self):
         """ Handle incoming requests on socket
         """
-        print("trigger")
         if self.pending_connections:
             addr, conn = self.accept()
             self.connection_map[addr] = conn
@@ -403,6 +352,60 @@ class HTTPServer(Factory):
             connection.close()
         del self.connection_map[handle]
     
+
+class HTTPTunnelServer(Factory):
+    def __init__(self, callback, host, port, node_name=None):
+        self._callback           = callback
+        self.connections         = []
+        self.pending_connections = []
+        self.connection_map      = {}
+        self.host                = host
+        self.port                = port
+        self._port               = None
+        self._node_name          = node_name
+
+    def request_handler(self):
+        """ Handle incoming requests on socket
+        """
+        if self.pending_connections:
+            addr, conn = self.accept()
+            self.connection_map[addr] = conn
+
+        # N.B. Must use copy of connections.items here
+        for handle, connection in list(self.connection_map.items()):
+            if connection.data_available:
+                command, headers, data = connection.data_get()
+                print(handle, command, headers, data)
+                self._callback(handle, command, headers, data)
+    
+
+    def buildProtocol(self, addr):
+        connection = HTTPProtocol(self)
+        self.pending_connections.append((addr, connection))
+        return connection
+
+    def start(self):
+        self._port = reactor_listen(self._node_name, self, self.host, self.port)
+
+    def stop(self):
+        self._port.stopListening()
+        for c in self.connections:
+            c.transport.loseConnection()
+
+    def accept(self):
+        addr, conn = self.pending_connections.pop()
+        if not self.pending_connections:
+            self.connection_pending = False
+        return addr, conn
+        
+    def send_response(self, handle, header, data=None):
+        connection = self.connection_map[handle]
+        if not connection.connection_lost:
+            connection.send(header)
+            if data:
+                connection.send(data)
+            connection.close()
+        del self.connection_map[handle]
         
         
         
