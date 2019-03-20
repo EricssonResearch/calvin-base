@@ -95,8 +95,8 @@ class CalvinTransport(base_transport.BaseTransport):
             self._transport.send(raw_payload)
             # TODO: Set timeout of send
             return True
-        except:
-            _log.exception("Send message failed!!")
+        except Exception as exc:
+            _log.exception(exc)
             _log.error("Payload = '%s'" % repr(payload))
         return False
 

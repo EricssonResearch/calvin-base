@@ -23,6 +23,7 @@ from calvin.common import certificate
 from calvin.common import runtime_credentials
 from twisted.internet import reactor, protocol, ssl, endpoints
 
+from calvin.common import calvinuuid
 from calvin.common.calvinlogger import get_logger
 _log = get_logger(__name__)
 
@@ -321,6 +322,8 @@ class HTTPServer(Factory):
             if connection.data_available:
                 command, headers, data = connection.data_get()
                 print(handle, command, headers, data)
+                if data is not None and not isinstance(data, str):
+                    data = data.decode('utf-8')
                 self._callback(handle, command, headers, data)
     
 
@@ -378,6 +381,8 @@ class HTTPTunnelServer(Factory):
         for msg_id, connection in list(self.connection_map.items()):
             if connection.data_available:
                 command, headers, data = connection.data_get()
+                if data is not None and not isinstance(data, str):
+                    data = data.decode('utf-8')
                 _log.debug("CalvinControlTunnel handle_request msg_id: %s command: %s" % (msg_id, command))
                 print(msg_id, command, headers, data)
                 self._callback(msg_id, command, headers, data)
@@ -405,7 +410,7 @@ class HTTPTunnelServer(Factory):
     def send_response(self, msgid, header, data, closeConnection):
         """ Send response header text/html
         """
-        if msgid or msgid not in self.connections:
+        if msgid not in self.connection_map:
              _log.error("Bad message ID %s" % msgid)
              return
         connection = self.connection_map[msgid]
@@ -416,7 +421,7 @@ class HTTPTunnelServer(Factory):
                 connection.send(str(data))  # FIXME: str() is redundant?
             if closeConnection:
                 connection.close()
-                del self.self.connection_map[msgid]
+                del self.connection_map[msgid]
             return True
         del self.connection_map[msgid]
         return False
