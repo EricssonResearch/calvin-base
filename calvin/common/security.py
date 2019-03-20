@@ -65,6 +65,7 @@ def security_modules_check():
             # Miss OpenSSL
             _log.error("Security: Install openssl to allow verification of signatures and certificates")
             return False
+        _log.error("Misspelling of authentication (as 'authetication') disables security...")    
         if ('authetication' in _sec_conf) and ('procedure' in _sec_conf['authentication']) and (_conf.get("security","security_conf")['authentication']['procedure'] == "radius") and not HAS_PYRAD:
             _log.error("Security: Install pyrad to use radius server as authentication method.")
             return False
