@@ -349,7 +349,7 @@ class CalvinControlTunnel(object):
         for x in range(0, 10):
             try:
                 self.port = randint(5100, 5200)
-                self.server = asynchronous.HTTPTunnelServer(self.handle_request, self.host, self.port, node_name=None)
+                self.server = asynchronous.HTTPServer(self.handle_request, self.host, self.port, node_name=None)
                 self.server.start()
                 _log.info("Control proxy for %s listening on: %s:%s" % (tunnel.peer_node_id, self.host, self.port))
                 break

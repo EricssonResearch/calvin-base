@@ -41,7 +41,6 @@ if async_impl == 'twisted':
     # CalvinControl, CalvinControlTunnel, TCPServer
     from .twistedimpl.server_connection import TCPServer
     from .twistedimpl.server_connection import HTTPServer
-    from .twistedimpl.server_connection import HTTPTunnelServer
     # calvinsys.network.UDPListener
     from .twistedimpl.server_connection import UDPServer
 
