@@ -17,10 +17,10 @@
 import functools
 import time
 import copy
+import uuid
 
 import wrapt
 
-from calvin.common import calvinuuid
 from calvin.actor import actorport
 from calvin.common.calvinlogger import get_logger
 from calvin.common.enum import enum
@@ -336,7 +336,7 @@ class Actor(object):
         super(Actor, self).__init__()
         self._type = actor_type
         self._name = name  # optional: human_readable_name
-        self._id = actor_id or calvinuuid.uuid("ACTOR")
+        self._id = actor_id or str(uuid.uuid4())
         _log.debug("New actor id: %s, supplied actor id %s" % (self._id, actor_id))
         self._deployment_requirements = []
         self._port_property_capabilities = None

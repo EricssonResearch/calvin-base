@@ -15,9 +15,9 @@
 # limitations under the License.
 
 
+import uuid
 import logging
 
-from calvin.common import calvinuuid
 from calvin.common import calvinlogger
 
 _log = calvinlogger.get_logger(__name__)
@@ -44,7 +44,7 @@ class CalvinCB(object):
     def __init__(self, func, *args, **kwargs):
         super(CalvinCB, self).__init__()
         self._debug_info = get_debug_info()
-        self._id = calvinuuid.uuid("CB")
+        self._id = str(uuid.uuid4())
         self.func = func
         self.args = list(args)
         self.kwargs = kwargs
@@ -96,7 +96,7 @@ class CalvinCBGroup(object):
     """
     def __init__(self, funcs=None):
         super(CalvinCBGroup, self).__init__()
-        self._id = calvinuuid.uuid("CBG")
+        self._id = str(uuid.uuid4())
         self.funcs = funcs if funcs else []
 
     def func_append(self, func):

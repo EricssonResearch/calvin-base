@@ -14,11 +14,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
+import uuid
+
 import pytest
 from unittest.mock import Mock, patch
 
 from calvin.runtime.north.calvincontrol import CalvinControl
-from calvin.common import calvinuuid
 
 
 def calvincontrol():
@@ -33,19 +35,19 @@ def calvincontrol():
 def _uuids(request):
     if request.param == "prefixed":
         return {
-            "trace_id": calvinuuid.uuid("TRACE"),
-            "app_id": calvinuuid.uuid("APP"),
-            "port_id": calvinuuid.uuid("PORT"),
-            "node_id": calvinuuid.uuid("NODE"),
-            "actor_id": calvinuuid.uuid("ACTOR")
+            "trace_id": str(uuid.uuid4()),
+            "app_id": str(uuid.uuid4()),
+            "port_id": str(uuid.uuid4()),
+            "node_id": str(uuid.uuid4()),
+            "actor_id": str(uuid.uuid4())
         }
     elif request.param == "non-prefixed":
         return {
-            "trace_id": calvinuuid.uuid(""),
-            "app_id": calvinuuid.uuid(""),
-            "port_id": calvinuuid.uuid(""),
-            "node_id": calvinuuid.uuid(""),
-            "actor_id": calvinuuid.uuid("")
+            "trace_id": str(uuid.uuid4()),
+            "app_id": str(uuid.uuid4()),
+            "port_id": str(uuid.uuid4()),
+            "node_id": str(uuid.uuid4()),
+            "actor_id": str(uuid.uuid4())
         }
 
 

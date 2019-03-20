@@ -17,8 +17,9 @@
 
 import json
 import time
+import uuid
+
 from calvin.common import calvinresponse
-from calvin.common import calvinuuid
 from .routes import register, handler
 from .authentication import authentication_decorator
 
@@ -358,7 +359,7 @@ def handle_post_log(self, handle, match, data, hdr):
     if data and 'user_id' in data:
         user_id = data['user_id']
     else:
-        user_id = calvinuuid.uuid("TRACE")
+        user_id = str(uuid.uuid4())
 
     if user_id not in self.loggers:
         if 'actors' in data and data['actors']:

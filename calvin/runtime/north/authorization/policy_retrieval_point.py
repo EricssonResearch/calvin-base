@@ -17,7 +17,8 @@
 import os
 import glob
 import json
-from calvin.common import calvinuuid
+import uuid
+
 from calvin.common.calvinlogger import get_logger
 
 _log = get_logger(__name__)
@@ -61,7 +62,7 @@ class FilePolicyRetrievalPoint(object):
 
     def create_policy(self, data):
         """Create policy based on the JSON representation in data"""
-        policy_id = calvinuuid.uuid("POLICY")
+        policy_id = str(uuid.uuid4())
         with open(os.path.join(self.path, policy_id + ".json"), "w") as file:
             json.dump(data, file)
         return policy_id

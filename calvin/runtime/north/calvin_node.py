@@ -20,10 +20,10 @@ import sys
 import os
 import trace
 import logging
+import uuid
 
 from calvin.runtime.north.calvinsys import get_calvinsys
 from calvin.runtime.north.calvinlib import get_calvinlib
-
 from calvin.runtime.north import actormanager
 from calvin.runtime.north import replicationmanager
 from calvin.runtime.north import appmanager
@@ -41,7 +41,6 @@ from calvin.common.attribute_resolver import AttributeResolver
 from calvin.common.calvin_callback import CalvinCB
 from calvin.common.security import security_modules_check
 from calvin.common.runtime_credentials import RuntimeCredentials
-from calvin.common import calvinuuid
 from calvin.common import certificate
 from calvin.common.calvinlogger import get_logger, set_file
 from calvin.common import calvinconfig
@@ -104,7 +103,7 @@ class Node(object):
         except Exception as err:
             _log.debug("No runtime credentials, err={}".format(err))
             self.runtime_credentials = None
-            self.id = calvinuuid.uuid("Node")
+            self.id = str(uuid.uuid4())
         self.certificate_authority = certificate_authority.CertificateAuthority(self)
         self.authentication = authentication.Authentication(self)
         self.authorization = authorization.Authorization(self)
@@ -171,7 +170,7 @@ class Node(object):
         asynchronous.DelayedCall(0, self.start)
 
     def insert_local_reply(self):
-        msg_id = calvinuuid.uuid("LMSG")
+        msg_id = str(uuid.uuid4())
         self.async_msg_ids[msg_id] = None
         return msg_id
 

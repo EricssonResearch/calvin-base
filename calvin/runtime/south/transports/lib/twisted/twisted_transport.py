@@ -15,10 +15,10 @@
 # limitations under the License.
 
 import time
+import uuid
 
 from calvin.common.calvin_callback import CalvinCB
 from calvin.common import calvinlogger
-from calvin.common import calvinuuid
 from calvin.runtime.south.transports import base_transport
 
 _log = calvinlogger.get_logger(__name__)
@@ -104,7 +104,7 @@ class CalvinTransport(base_transport.BaseTransport):
         return self.get_coders()['json']
 
     def _get_msg_uuid(self):
-        return calvinuuid.uuid("MSGID")
+        return str(uuid.uuid4())
 
     def _send_join(self):
         self._callback_execute('peer_connected', self, self.get_uri())

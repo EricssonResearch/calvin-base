@@ -15,12 +15,13 @@
 # limitations under the License.
 
 
+import uuid
+
 import pytest
 from unittest.mock import Mock, patch
 
 from calvin.runtime.north.actormanager import ActorManager
 from calvin.runtime.north.plugins.port import queue
-from calvin.common import calvinuuid
 
 system_config_file = "actorstore.yaml"
 
@@ -122,7 +123,7 @@ def test_migrate(actor_manager):
     actor.outports['out'].set_queue(queue.fanout_fifo.FanoutFIFO({'queue_length': 4, 'direction': "out"}, {}))
     actor.inports['in'].set_queue(queue.fanout_fifo.FanoutFIFO({'queue_length': 4, 'direction': "in"}, {}))
     peer_node = Mock()
-    peer_node.id = calvinuuid.uuid("NODE")    
+    peer_node.id = str(uuid.uuid4())    
     assert peer_node != actor_manager.node
 
     actor.will_migrate = Mock()

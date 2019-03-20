@@ -14,6 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
+import uuid
+
 import pytest
 from unittest.mock import Mock
 
@@ -23,12 +26,11 @@ from calvin.runtime.north.plugins.port.endpoint import LocalOutEndpoint, LocalIn
 from calvin.runtime.north.plugins.port import queue
 from calvin.runtime.north.calvinsys import get_calvinsys
 from calvin.runtime.north.plugins.port.queue.fanout_fifo import FanoutFIFO
-from calvin.common import calvinuuid
 
 class DummyPort:
 
     def __init__(self, name, direction):
-        self.id = calvinuuid.uuid("PORT")
+        self.id = str(uuid.uuid4())
         self.name = name
         self.direction = direction
         self.peers = None

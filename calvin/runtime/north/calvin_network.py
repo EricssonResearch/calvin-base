@@ -18,8 +18,8 @@ import os
 import time
 import glob
 import importlib
+import uuid
 
-from calvin.common import calvinuuid
 from calvin.common.calvin_callback import CalvinCB
 import calvin.common.calvinresponse as response
 from calvin.runtime.south import asynchronous
@@ -131,7 +131,7 @@ class CalvinLink(CalvinBaseLink):
         """ Adds a message id to the message and send it,
             also registers the callback for the reply.
         """
-        msg_id = calvinuuid.uuid("MSGID")
+        msg_id = str(uuid.uuid4())
         self.replies[msg_id] = {'callback': callback, 'send_time': time.time()}
         self.replies_timeout[msg_id] = asynchronous.DelayedCall(10.0, CalvinCB(self.reply_timeout, msg_id))
         msg['msg_uuid'] = msg_id

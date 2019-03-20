@@ -27,12 +27,12 @@ import tempfile
 import time
 import random
 import shutil
+import uuid
 
 import OpenSSL
 from cryptography.x509 import load_pem_x509_certificate
 from cryptography.hazmat.backends import default_backend
 
-from calvin.common import calvinuuid
 from calvin.common import calvinconfig
 from calvin.common.calvinlogger import get_logger
 

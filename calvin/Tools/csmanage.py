@@ -22,13 +22,13 @@ import os
 import glob
 import shutil
 import json
+import uuid
 
 from calvin.common import certificate
 from calvin.common import certificate_authority
 from calvin.common import runtime_credentials
 from calvin.common import code_signer
 from calvin.common.attribute_resolver import AttributeResolver
-from calvin.common import calvinuuid
 from calvin.csparser.codegen import calvin_components
 # from calvin.actorstore.store import ActorStore, install_component
 
@@ -514,7 +514,7 @@ def manage_runtime_create(args):
         raise Exception("please supply name and organization of runtime")
     attributes=AttributeResolver(attr)
     node_name=attributes.get_node_name_as_str()
-    nodeid = calvinuuid.uuid("NODE")
+    nodeid = str(uuid.uuid4())
     rt_cred = runtime_credentials.RuntimeCredentials(node_name, domain=args.domain, security_dir=args.dir, nodeid=nodeid, hostnames=args.hostnames)
     print("node_name_start<{}>node_name_stop".format(rt_cred.get_node_name()))
 

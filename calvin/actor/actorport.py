@@ -15,7 +15,8 @@
 # limitations under the License.
 
 
-from calvin.common import calvinuuid
+import uuid
+
 from calvin.common.calvin_callback import CalvinCB
 from calvin.runtime.north.plugins.port import queue
 import calvin.common.calvinresponse as response
@@ -38,7 +39,7 @@ class Port(object):
         # Actor instance to which the port belongs (may change over time)
         self.owner = owner
         # Unique id to universally identify port (immutable)
-        self.id = calvinuuid.uuid("PORT")
+        self.id = str(uuid.uuid4())
         # The token queue, will be set when connected.
         self.queue = queue.common.QueueNone()
         self.properties = {}
@@ -102,7 +103,7 @@ class Port(object):
     def _set_state(self, state):
         """Set port state."""
         self.name = state.get('name')
-        self.id = state.get('id', calvinuuid.uuid("PORT"))
+        self.id = state.get('id', str(uuid.uuid4()))
         self.properties.update(state.get('properties', {}))
         if 'queue' in state:
             self.queue._set_state(state.get('queue'))

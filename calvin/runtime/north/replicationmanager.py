@@ -16,10 +16,10 @@
 
 import copy
 import time
+import uuid
 
 from calvin.common import calvinresponse
 from calvin.common.calvin_callback import CalvinCB
-from calvin.common.calvinuuid import uuid
 from calvin.common.calvinlogger import get_logger
 from calvin.common import dynops
 from calvin.common.requirement_matching import ReqMatch
@@ -83,7 +83,7 @@ class ReplicationData(object):
     """Replication state"""
     def __init__(self, actor_id=None, original_actor_id=None, requirements=None):
         super(ReplicationData, self).__init__()
-        self.id = uuid("REPLICATION")
+        self.id = str(uuid.uuid4())
         self.original_actor_id = original_actor_id
         self.instances = [] if actor_id is None else [actor_id]
         self.requirements = requirements
@@ -643,7 +643,7 @@ class ReplicationManager(object):
             return
         _log.analyze(self.node.id, "+", {'replication_id': replication_id, 'dst_node_id': dst_node_id})
         # TODO make name a property that combine name and counter in actor
-        new_id = uuid("ACTOR")
+        new_id = str(uuid.uuid4())
         # FIXME change this time stuff when changing replication_loop
         replication_data.check_instances = time.time()
         replication_data.add_replica(new_id)
@@ -665,7 +665,7 @@ class ReplicationManager(object):
             ports.remove(port['id'])
             _log.debug("REPLICA CONNECT got port %s %s" % (port['id'], value))
             if calvinresponse.isnotfailresponse(value) and 'peers' in value:
-                new_port_id = uuid("PORT")
+                new_port_id = str(uuid.uuid4())
                 connection_list.extend(
                     [(dst_node_id, new_port_id, self.node.id if p[0] == 'local' else p[0], p[1]) for p in value['peers']])
                 state['private'][dir + 'ports'][port['name']] = copy.deepcopy(port)

@@ -16,13 +16,13 @@
 
 import os
 import copy
+import uuid
 
 from calvin.common.calvin_callback import CalvinCB
 from calvin.common import dynops
 from calvin.common import calvinlogger
 from calvin.runtime.north.plugins.requirements import req_operations
 import calvin.common.calvinresponse as response
-from calvin.common import calvinuuid
 from calvin.common.security import Security
 from calvin.common.requirement_matching import ReqMatch
 
@@ -152,7 +152,7 @@ class AppManager(object):
         self.applications = {}
 
     def new(self, name):
-        application_id = calvinuuid.uuid("APP")
+        application_id = str(uuid.uuid4())
         self.applications[application_id] = Application(application_id, name, self._node.id, self._node.am)
         self._node.control.log_application_new(application_id, name)
         return application_id

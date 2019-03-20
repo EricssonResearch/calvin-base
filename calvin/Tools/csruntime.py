@@ -215,10 +215,11 @@ def runtime_certificate(rt_attributes):
     import copy
     import requests
     import sys
+    import uuid
+
     from .request_handler import RequestHandler
     from calvin.common.attribute_resolver import AttributeResolver
     from calvin.common import calvinconfig
-    from calvin.common import calvinuuid
     from calvin.common import runtime_credentials
     from calvin.common import certificate
     from calvin.common import certificate_authority
@@ -247,7 +248,7 @@ def runtime_certificate(rt_attributes):
             rt_attributes_cpy = copy.deepcopy(rt_attributes)
             attributes = AttributeResolver(rt_attributes_cpy)
             node_name = attributes.get_node_name_as_str()
-            nodeid = calvinuuid.uuid("")
+            nodeid = str(uuid.uuid4())
             runtime = runtime_credentials.RuntimeCredentials(node_name, domain_name,
                                                            security_dir=security_dir,
                                                            nodeid=nodeid,

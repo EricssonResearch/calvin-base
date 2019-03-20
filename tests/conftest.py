@@ -21,6 +21,7 @@ import subprocess
 import json
 import shutil
 import time
+import uuid
 
 import pytest
 import yaml
@@ -28,7 +29,6 @@ from unittest.mock import Mock
 import requests
 
 from calvinservices.csparser.cscompiler import compile_source
-from calvin.common import calvinuuid
 import tests.orchestration as orchestration
 
 
@@ -87,7 +87,7 @@ def dummy_node():
     """
     class _DummyNode:
         def __init__(self):
-            self.id = calvinuuid.uuid("NODE")
+            self.id = str(uuid.uuid4())
             self.control_uri = "http://localhost:5001"
             self.pm = Mock()
             self.storage = Mock()

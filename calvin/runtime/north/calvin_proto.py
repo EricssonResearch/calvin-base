@@ -14,8 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import uuid
 
-from calvin.common import calvinuuid
 from calvin.common.enum import enum
 from calvin.common.calvin_callback import CalvinCB, CalvinCBClass
 from calvin.common import calvinlogger
@@ -80,7 +80,7 @@ class CalvinTunnel(object):
         self.policy = policy
         self.rt_id = rt_id
         # id may change while status is PENDING, but is fixed in WORKING
-        self.id = id if id else calvinuuid.uuid("TUNNEL")
+        self.id = id if id else str(uuid.uuid4())
         # If id supplied then we must be the second end and hence working
         self.status = CalvinTunnel.STATUS.WORKING if id else CalvinTunnel.STATUS.PENDING
         # Add the tunnel to the dictionary

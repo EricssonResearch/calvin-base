@@ -15,12 +15,13 @@
 # limitations under the License.
 
 
+import uuid
+
 from calvin.runtime.north.plugins.storage.storage_base import StorageBase
 from calvin.runtime.south import asynchronous
 from calvin.common import calvinlogger
 from calvin.common import calvinconfig
 from calvin.common.calvin_callback import CalvinCB
-from calvin.common import calvinuuid
 from calvin.common import calvinresponse
 
 _conf = calvinconfig.get()
@@ -136,7 +137,7 @@ class ProxyRegistryClient(StorageBase):
     def send(self, cmd, msg, cb):
         if not self.tunnel:
             return
-        msg_id = calvinuuid.uuid("MSGID")
+        msg_id = str(uuid.uuid4())
         if cb:
             self.replies[msg_id] = cb
         msg['msg_uuid'] = msg_id

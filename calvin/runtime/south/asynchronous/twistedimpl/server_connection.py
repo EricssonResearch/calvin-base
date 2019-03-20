@@ -14,16 +14,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
+import uuid
+
 from twisted.internet.protocol import Protocol
 from twisted.internet.protocol import Factory
 from twisted.internet.protocol import DatagramProtocol
 from twisted.protocols.basic import LineReceiver
 from twisted.internet import error
-from calvin.common import certificate
-from calvin.common import runtime_credentials
 from twisted.internet import reactor, protocol, ssl, endpoints
 
-from calvin.common import calvinuuid
+from calvin.common import certificate
+from calvin.common import runtime_credentials
+
 from calvin.common.calvinlogger import get_logger
 _log = get_logger(__name__)
 
@@ -315,7 +318,7 @@ class HTTPServer(Factory):
         """
         if self.pending_connections:
             addr, conn = self.accept()
-            handle = calvinuuid.uuid("CONNID")
+            handle = str(uuid.uuid4())
             self.connection_map[handle] = conn
             _log.debug("New connection, handle: %s" % handle)
 
