@@ -238,10 +238,10 @@ class CalvinControlTunnel(object):
     def __init__(self, tunnel, host, external_host):
         self.tunnel = tunnel
         self.connections = {}
+        self.host = host
+        self.external_host = external_host
 
         # Start a socket server on same interface as calvincontrol
-        self.host = host
-
         for x in range(0, 10):
             try:
                 self.port = randint(5100, 5200)
@@ -251,10 +251,11 @@ class CalvinControlTunnel(object):
                 break
             except Exception as exc:
                 _log.exception(exc)
+        else:
+            raise Exception("Could not find free socket")
                 
-
         # Tell peer node that we a listening and on what uri
-        msg = {"cmd": "started", "controluri": "http://" + external_host + ":" + str(self.port)}
+        msg = {"cmd": "started", "controluri": "http://" + self.external_host + ":" + str(self.port)}
         self.tunnel.send(msg)
 
     def close(self):
@@ -308,7 +309,9 @@ class CalvinControlTunnelClient(object):
         self.loggers = {}
         self.uri = uri
         self.tunnel = None
-        self.node.network.join([uri], CalvinCB(self._start_link_cb))
+        
+    def start(self):    
+        self.node.network.join([self.uri], CalvinCB(self._start_link_cb))
 
     def close_log_tunnel(self, handle):
         """ Close log tunnel
@@ -346,9 +349,6 @@ class CalvinControlTunnelClient(object):
         except Exception as e:
             _log.info("Failed to parse request", exc_info=e)
             self.send_response(handle, None, status=calvinresponse.BAD_REQUEST)
-
-    def start(self):
-        pass
 
     def stop(self):
         pass

@@ -111,7 +111,7 @@ class Node(object):
         actorstore_uri = _conf.get('global', 'actorstore')
         self.am = actormanager.ActorManager(self, actorstore_uri)
         self.rm = replicationmanager.ReplicationManager(self)
-        self.control = None
+        
 
         # _scheduler = scheduler.DebugScheduler if _log.getEffectiveLevel() <= logging.DEBUG else scheduler.Scheduler
         # _scheduler = scheduler.NonPreemptiveScheduler
@@ -135,8 +135,30 @@ class Node(object):
         security_conf = _conf.get('security', 'security_conf')
         self.storage = storage.Storage(self, storage_type, server=storage_host, security_conf=security_conf)
 
+        proxy_control_uri = _conf.get(None, 'control_proxy')
+        _log.info("+++++++++++++++ proxy_control_uri: %s" % proxy_control_uri)
+        _log.info("+++++++++++++++ self.control_uri: %s" % self.control_uri)
+        if proxy_control_uri:
+            _log.info("+++++++++++++++ proxy_control_uri overrides control_uri")
+        #
+        # FIXME: The following section is sensitive to order due to circular references 
+        # 
+        if proxy_control_uri:
+            self.control = calvincontrol.CalvinControlTunnelClient(proxy_control_uri, self)
+        else:
+            self.control = calvincontrol.CalvinControl(node=self, uri=self.control_uri, external_uri=self.external_control_uri)
+
         self.network = CalvinNetwork(self)
         self.proto = CalvinProto(self, self.network)
+
+        if proxy_control_uri:
+            self.tunnel_server = None
+        else:
+            self.tunnel_server = calvincontrol.CalvinControlTunnelServer(self)
+        #
+        # FIXME: The above section is sensitive to order due to circular references 
+        #    
+
         self.pm = PortManager(self, self.proto)
         self.app_manager = appmanager.AppManager(self)
 
@@ -239,22 +261,7 @@ class Node(object):
         self.storage.add_node(self)
 
         # Start control API
-        proxy_control_uri = _conf.get(None, 'control_proxy')
-        if (self.control_uri is None and proxy_control_uri is None) or (self.control_uri and proxy_control_uri):
-            raise Exception("Must specify 'control_uri' OR 'proxy_control_uri'") 
-        msg = "Start %scontrol API on %s with uri: %s"
-        _log.debug(msg % ("proxy_" if proxy_control_uri else "", self.id, proxy_control_uri or self.control_uri))
-        if proxy_control_uri:
-            # Create CalvinControlTunnelClient object here
-            # self.control.start(node=self, uri=proxy_control_uri, tunnel=True)
-            self.control = calvincontrol.CalvinControlTunnelClient(proxy_control_uri)
-        else:
-            # Create ordinary CalvinControl object here
-            # self.control.start(node=self, uri=self.control_uri, external_uri=self.external_control_uri)
-            self.control = calvincontrol.CalvinControl(node=self, uri=self.control_uri, external_uri=self.external_control_uri)
-            self.control.start()
-            # Also start tunnel server as separate entity
-            self.tunnel_server = calvincontrol.CalvinControlTunnelServer(self)
+        self.control.start()
 
     def stop(self, callback=None):
         # TODO: Handle blocking in poorly implemented calvinsys/runtime south.
