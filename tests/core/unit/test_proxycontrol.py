@@ -16,7 +16,7 @@ def test_control_tunnel_server():
     node.network = CalvinNetwork(node)
     node.proto = CalvinProto(node, node.network)
     
-    ts = calvincontrol.CalvinControlTunnelServer(node)
+    ts = calvincontrol.CalvinControlTunnelServer(node, None)
     
     tunnel = Mock()
     tunnel.peer_node_id = "other_id"

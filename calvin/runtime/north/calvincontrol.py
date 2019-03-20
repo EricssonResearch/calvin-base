@@ -46,7 +46,7 @@ class CalvinControl(object):
     """ A HTTP REST API for calvin nodes
     """
 
-    def __init__(self, node, uri, external_uri=None):
+    def __init__(self, node, uri):
         self.node = node
         self.loggers = {}
         self.server = None
@@ -56,7 +56,6 @@ class CalvinControl(object):
         url = urlparse(uri)
         self.port = int(url.port)
         self.host = url.hostname
-        self.external_host = urlparse(external_uri).hostname if external_uri is not None else self.host
     
     def start(self):
         """ If not tunnel, start listening on uri and handle http requests.
@@ -176,14 +175,14 @@ class CalvinControlTunnelServer(object):
     """ A Calvin control tunnel server
     """
 
-    def __init__(self, node):
+    def __init__(self, node, external_uri):
         self.node = node
         self.tunnels = {}
         self.controltunnels = {}
         # Register for incoming control proxy requests
         self.node.proto.register_tunnel_handler("control", CalvinCB(self.tunnel_request_handles))
         self.host = node.control.host
-        self.external_host = node.control.external_host
+        self.external_host = urlparse(external_uri).hostname if external_uri is not None else self.host
 
     def stop(self):
         for _, control in self.controltunnels.items():
@@ -295,7 +294,7 @@ class CalvinControlTunnelClient(object):
     """ A Calvin control tunnel client
     """
     
-    def __init__(self, uri, node):
+    def __init__(self, node, uri):
         self.node = node
         self.routes = routes.install_handlers(self)
         self.loggers = {}

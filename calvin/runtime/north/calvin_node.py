@@ -144,9 +144,9 @@ class Node(object):
         # FIXME: The following section is sensitive to order due to circular references 
         # 
         if proxy_control_uri:
-            self.control = calvincontrol.CalvinControlTunnelClient(proxy_control_uri, self)
+            self.control = calvincontrol.CalvinControlTunnelClient(self, proxy_control_uri)
         else:
-            self.control = calvincontrol.CalvinControl(node=self, uri=self.control_uri, external_uri=self.external_control_uri)
+            self.control = calvincontrol.CalvinControl(node=self, uri=self.control_uri)
 
         self.network = CalvinNetwork(self)
         self.proto = CalvinProto(self, self.network)
@@ -154,7 +154,7 @@ class Node(object):
         if proxy_control_uri:
             self.tunnel_server = None
         else:
-            self.tunnel_server = calvincontrol.CalvinControlTunnelServer(self)
+            self.tunnel_server = calvincontrol.CalvinControlTunnelServer(self, self.external_control_uri)
         #
         # FIXME: The above section is sensitive to order due to circular references 
         #    
