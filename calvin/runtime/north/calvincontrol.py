@@ -47,17 +47,11 @@ class CalvinControl(object):
     """
 
     def __init__(self, node, uri, external_uri=None):
-        self.node = None
+        self.node = node
         self.loggers = {}
         self.server = None
-        self.tunnel = None
-        self.host = None
-        self.tunnel_server = None
-        self.tunnel_client = None
-        self.security = None
-        self.token_dict = None
+        self.security = Security(self.node)
         self.routes = routes.install_handlers(self)
-        self.node = node
         # schema, _ = uri.split(':', 1)
         url = urlparse(uri)
         self.port = int(url.port)
@@ -68,9 +62,7 @@ class CalvinControl(object):
         """ If not tunnel, start listening on uri and handle http requests.
             If tunnel, setup a tunnel to uri and handle requests.
         """
-        self.security = Security(self.node)
         _log.info("Control API listening on: %s:%s" % (self.host, self.port))
-
         self.server = asynchronous.HTTPServer(self.route_request, self.host, self.port, node_name=self.node.node_name)
         self.server.start()
 
