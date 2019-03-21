@@ -2,8 +2,15 @@ import json
 
 import pytest
 
-# FIXME: control_proxy: $rt1
 
+#
+# N.B. The system config requires that $refs definition appear before use
+#      Here we work around that to allow rt1 to use rt2 as registry proxy by 
+#      specifying rt2rt_port in rt2 and explicitly use that in the registry 
+#      definition in rt1
+#
+# FIXME: Add two pass parsing of configs in orchestration to remove limitation.
+#
 system_config = r"""
 - class: REGISTRY
   name: registry
@@ -11,8 +18,11 @@ system_config = r"""
   type: REST
 - class: RUNTIME
   name: rt1
-  registry: $registry
+  registry:
+    uri: calvinip://127.0.0.1:5000
+    type: proxy 
 - class: RUNTIME
+  rt2rt_port: 5000
   name: rt2
   registry: $registry
   control_proxy: $rt1

@@ -14,7 +14,7 @@ system_config = r"""
   registry: $registry
 - class: RUNTIME
   name: rt2
-  registry: $registry
+  registry: $rt1
   control_proxy: $rt1
 """
 
