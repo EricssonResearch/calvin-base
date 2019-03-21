@@ -189,22 +189,135 @@ def _random_ports(n):
 
 
 class SystemManager(object):
-    """Read a system config file (JSON, YAML), set up a system accordingly."""
+    """
+    Given a system_config, set up a system accordingly on the test machine (127.0.0.1).
+    
+    'system_config' is a data structure, typically defined in a YAML file, that 
+    contain entries describing nodes in the system, and their relation.
+    
+    'tmp_dir' is the working directory to use
+    
+    'start' is a boolean indicating wether or not to actully deploy the system (defaults to True) 
+    
+    'verbose' is a boolean indicating wether or not to print the csruntime commands issued (defaults to True)
+    
+    
+    system_config
+    =============
+    To refer to the URI of a certain node, it is possible (and recommended) to use the notion
+    $<node name>, e.g. $actorstore will equal http://127.0.0.1:4999 if the actor store service
+    is named 'actorstore' and is started with default properties.  
+    
+    Each node must have properties 'class', and 'name':
 
-    def __init__(self, system_config, tmp_dir, start=True):
+        - class is one of: REGISTRY, ACTORSTORE, RUNTIME (capitals required)
+        - name is any string as log as it doesn't start with '$'
+    
+    Besides the mandatory properties, the optional properties of each class are listed below:
+    
+    
+    REGISTRY
+    --------
+    port: Port number to start service on (defaults to random free port)
+    type: Currently only REST is available (defaults to REST)
+    
+    
+    ACTORSTORE
+    ----------
+    port: Port number to start service on (defaults to random free port)
+    type: Currently only REST is available (defaults to REST)
+    
+    
+    RUNTIME
+    -------
+    port: Port for control API (defaults to random free port)
+    control_proxy : rt2rt URI of a runtime node acting as control API proxy (defaults to null). N.B. Overrides 'port'  
+    rt2rt_port: Port for runtime-to-runtime communication (defaults to random free port)
+    actorstore: URI of actorstore to use, typically '$actorstore' (defaults to http://127.0.0.1:4999)
+    registry: URI of registry to use, often '$registry', 
+              but could also refer to a RUNTIME, e.g. '$rt1', in which case rt1 will act as
+              proxy for the registry. Additionally, a full spec can also be given as a dictionary:
+              {"uri": <uri>, "type": "REST"}.
+              Defaults to  {"uri": null, "type": "local"} from calvin.conf file
+    config: A dictionary of config properties to override (relative to the default config)
+    attributes: A dictionary of node attributes
+    
+    
+    Example
+    -------
+    
+    The following is an example of a system with an actor store, a registry, and two runtimes.
+    The first runtime has reconfigured the log.info calvinsys module to write to stdout, and the
+    second runtime has a set of attributes, and is using the first runtime as proxy for the registry.
+    
+    - class: REGISTRY
+      name: registry
+      port: 4998
+      type: REST
+    - class: ACTORSTORE
+      name: actorstore
+      port: 4999
+      type: REST
+    - class: RUNTIME
+      name: testNode1
+      actorstore: $actorstore
+      registry: $registry
+      config:
+        calvinsys:
+            log.info:
+              attributes:
+                level: info
+              module:
+                term.StandardOut
+    - class: RUNTIME
+      name: testNode2
+      actorstore: $actorstore
+      registry: $testNode1
+      attributes:
+        indexed_public:
+          address:
+            country: SE
+            locality: testCity
+            street: testStreet
+            streetNumber: 1
+          node_name:
+            organization: org.testexample    
+    """
+
+    def __init__(self, system_config, tmp_dir, start=True, verbose=True):
         super(SystemManager, self).__init__()
         # Prepare a range of port numbers, use maximum number
         # of potentially undefined ports:
         self.port_numbers = _random_ports(2 * len(system_config))
         self._system = []
         self.process_config(system_config, tmp_dir)
-        # print("System startup sequence:")
-        # print("------------------------")
-        # for s in self._system:
-        #     print(s)
-        # print("------------------------")
-        if not start:
-            return
+        if verbose:
+            self.print_commands()
+        if start:
+            self.start()
+
+    @property
+    def info(self):
+        """
+        Return a dict with (immutable) system properties. 
+        
+        Use 'name' property as key for lookup of node info.
+        
+        For each node it contains the properties declared in the corresponding class' 'info_exports' variable.
+        For ACTORSTORE and REGISTRY they are 'uri', and 'type'.
+        For RUNTIME they are 'uri', 'rt2rt', 'node_id', 'actorstore', and 'registry', where the value of 
+        'uri' can be None if it doesn't have a control API.
+        """
+        return { item.pop('name'): item for item in (s.info() for s in self._system) }
+        
+    def print_commands(self):
+        print("System startup sequence:")
+        print("------------------------")
+        for s in self._system:
+            print(s)
+        print("------------------------")
+            
+    def start(self):
         try:
             self.start_system()
             self.wait_for_system()
@@ -218,6 +331,7 @@ class SystemManager(object):
             s.start_process()
 
     def wait_for_system(self):
+        """Wait for all of the nodes to be up and running"""
         for s in self._system:
             s.wait_for_ack()
             if not s.ack_status:
@@ -228,29 +342,28 @@ class SystemManager(object):
             self._system.append(self.process_entity(entity, tmp_dir))
 
     def process_entity(self, entity, tmp_dir):
+        # Check if entity has property X defined by a $ref. If so, replace it with the expansion of $ref 
         self.expand(entity, 'registry')
         self.expand(entity, 'actorstore')
         self.expand(entity, 'control_proxy')
+        # Create in instance of the class representing this entity (RUNTIME, ACTORSTORE, or REGISTRY)
         return factory(entity, self.port_numbers, tmp_dir)
 
     def expand(self, entity, entry):
         value = entity.get(entry, "")
         if not isinstance(value, str) or not value.startswith('$'):
             return
-        info = self.info[value[1:]]
-        if 'rt2rt' in info:
-            # Runtime acting as proxy for registry/actorstore
+        # Expand the reference    
+        ref_name = value[1:]
+        info = self.info[ref_name]
+        # Only RUNTIME have rt2rt prop
+        ref_is_runtime = 'rt2rt' in info
+        if ref_is_runtime:
+            # Assume runtime is acting as proxy for registry/actorstore, use the rt2rt URI
             entity[entry] = {'uri': '{}'.format(info['rt2rt']), 'type': 'proxy'}
         else:
+            # Use normal URI
             entity[entry] = {'uri': '{}'.format(info['uri']), 'type': info['type']}
-
-    @property
-    def info(self):
-        """Return a dict with immutable properties from each process wrapper"""
-        return {
-            item.pop('name'): item
-            for item in (s.info() for s in self._system)
-        }
 
     def teardown(self):
         """Tear down the system."""
