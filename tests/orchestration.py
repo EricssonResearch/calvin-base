@@ -56,7 +56,11 @@ class Process(object):
         pass
 
     def wait_for_ack(self):
-        req = self.sysdef["uri"] + self.ack_path
+        req = self.sysdef["uri"]
+        if not req:
+            # We don't have a way of talking the system... (e.g. using control proxy which is )
+            return
+        req = req + self.ack_path
         for i in range(20):
             try:
                 r = requests.get(req)
@@ -104,7 +108,10 @@ class RuntimeProcess(Process):
         self._prepare_rt_config_file(tmp_dir)
         self.sysdef.setdefault('rt2rt_port', port_numbers.pop(0))
         self.sysdef["rt2rt"] = "calvinip://{host}:{rt2rt_port}".format(**self.sysdef)
+        if 'control_proxy' in self.sysdef:
+            self.sysdef['uri'] = None # self.sysdef['control_proxy']['uri']
         self.sysdef["node_id"] = ""
+        
 
     def _prepare_rt_config_file(self, tmp_dir):
         default_config_file = os.path.join(tmp_dir, 'default.conf')
@@ -134,14 +141,16 @@ class RuntimeProcess(Process):
 
     def cmd(self):
         # print("sysdef", self.sysdef)
-        cmd = "csruntime --host {host} -p {rt2rt_port} -c {port}".format(**self.sysdef)
+        cmd = 'csruntime --host {host} -p {rt2rt_port}'.format(**self.sysdef)
+        ctrl_fmt = ' --control_proxy {control_proxy[uri]}' if 'control_proxy' in self.sysdef else ' -c {port}'
+        ctrl = ctrl_fmt.format(**self.sysdef)
         store = ' --actorstore {actorstore[uri]}'.format(**self.sysdef) if 'actorstore' in self.sysdef else ''
         opt1 = ' --registry "{registry}"'.format(**self.sysdef) if 'registry' in self.sysdef else ''
         opt2 = ' --name "{name}"'.format(**self.sysdef)
         conf = ' --config-file "{}"'.format(self.runtime_config_file)
         attrs = self._attributes_option()
         debug = ' -l DEBUG'
-        return cmd + store + opt1 + opt2 + conf + attrs # + debug
+        return cmd + ctrl + store + opt1 + opt2 + conf + attrs # + debug
 
     def ack_ok_action(self, response):
         data = response.json()
@@ -221,6 +230,7 @@ class SystemManager(object):
     def process_entity(self, entity, tmp_dir):
         self.expand(entity, 'registry')
         self.expand(entity, 'actorstore')
+        self.expand(entity, 'control_proxy')
         return factory(entity, self.port_numbers, tmp_dir)
 
     def expand(self, entity, entry):

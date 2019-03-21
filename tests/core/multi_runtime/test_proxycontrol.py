@@ -16,16 +16,12 @@ system_config = r"""
 - class: RUNTIME
   actorstore: $actorstore
   name: rt1
-  rt2rt_port: 5000
-  port: 5001
   registry: $registry
 - class: RUNTIME
   actorstore: $actorstore
   name: rt2
   registry: $registry
-  config:
-    global:
-      control_proxy: calvinip://127.0.0.1:5000
+  control_proxy: $rt1
 """
 
 def test_id(system_setup, execute_cmd_check_output):

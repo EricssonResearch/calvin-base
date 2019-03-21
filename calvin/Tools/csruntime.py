@@ -68,6 +68,9 @@ Start runtime, compile calvinscript and deploy application.
     argparser.add_argument('-c', '--controlport', metavar='<port>', type=int, dest='controlport',
                            help='port# of control interface', default=5001)
 
+    argparser.add_argument('--control_proxy', metavar='<uri>', type=str, dest='control_proxy',
+                           help="URI of node acting as control API proxy, 'calvinip://host:port'", default=None)
+
     argparser.add_argument('-u', '--uri', dest='uris', action='append', default=[],
                            help="URI of calvin runtime 'calvinbt://id:port'")
 
@@ -174,6 +177,7 @@ def set_config_from_args(args):
         _conf.set('global', 'storage_type', args.config_registry['type'])
     if 'uri' in args.config_registry:
         _conf.set('global', 'storage_host', args.config_registry['uri'])
+    _conf.set('global', 'control_proxy', args.control_proxy)    
 
 
 def discover(timeout=2, retries=5):
