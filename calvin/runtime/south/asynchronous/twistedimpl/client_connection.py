@@ -204,10 +204,12 @@ class TCPClient(BaseClientProtocolFactory):
             return reactor.connectTCP(addr, port, self)
 
     def send(self, data):
+        if isinstance(data, str):
+            data = data.encode('utf-8')
         if self._protocol_type == "raw":
             self.protocol.send(data)
         elif self._protocol_type == "string":
-            self.protocol.sendString(data.encode('ascii'))
+            self.protocol.sendString(data)
         elif self._protocol_type == "delimiter":
             self.protocol.sendLine(data)
         else:
