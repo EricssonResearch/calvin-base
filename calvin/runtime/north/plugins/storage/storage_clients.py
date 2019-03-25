@@ -71,14 +71,13 @@ def registry(kind, node, host):
                 
 
 class RESTRegistryClient(StorageBase):
-    '''arg: host = "http://localhost:4998"'''
     from requests_futures.sessions import FuturesSession
     session = FuturesSession(max_workers=10)
     
     def __init__(self, node, host):
         # UNUSED: node
         super(RESTRegistryClient, self).__init__()
-        self.host = "http://localhost:4998"
+        self.host = host
         self.futures = []
 
     def barrier(self):

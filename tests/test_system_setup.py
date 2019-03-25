@@ -3,19 +3,30 @@ import os
 
 import pytest
 
-system_config_file = "SystemYAML.yaml"
+# system_config_file = "SystemYAML.yaml"
 
-# system_config = r"""
-# - class: REGISTRY
-#   name: registry
-#   port: 4998
-#   type: REST
-# """
+system_config = r"""
+- class: REGISTRY
+  name: registry
+  type: REST
+- class: ACTORSTORE
+  name: actorstore
+  type: REST
+- actorstore: $actorstore
+  class: RUNTIME
+  name: runtime1
+  registry: $registry
+- actorstore: $actorstore
+  class: RUNTIME
+  name: runtime2
+  registry: $registry
+- actorstore: $actorstore
+  class: RUNTIME
+  name: runtime3
+  registry: $runtime1
+"""
 
-def test_it(system_setup):
-    print(system_setup)
-        
-def test_another(system_setup):
-    print(len(system_setup))
+def test_setup(system_setup):
+    assert len(system_setup) == 5
     
     
