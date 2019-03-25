@@ -21,7 +21,7 @@ import sys
 import textwrap
 import argparse
 
-from calvin.csparser.visualize import visualize_script, visualize_deployment, visualize_component
+from calvinextras.toolsupport import ToolSupport
 
 def main():
     long_description = """
@@ -38,6 +38,8 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         description=textwrap.dedent(long_description)
     )
+    argparser.add_argument('--actorstore', type=str, default=None,
+                          help='URI of actorstore, defaults to using local store directly.')
     argparser.add_argument('--script', type=str, required=True,
                            help='script file to visualize.')
     group = argparser.add_mutually_exclusive_group()
@@ -45,18 +47,20 @@ def main():
                        help='expand all components into constituent parts.')
     group.add_argument('--component', type=str,
                        help='show internals of a component in script.')
+                       
 
     args = argparser.parse_args()
 
     with open(args.script, 'r') as f:
         source_text = f.read()
 
+    ts = ToolSupport(args.actorstore)
     if args.deployment:
-        dot, issuetracker = visualize_deployment(source_text)
+        dot, issuetracker = ts.visualize_deployment(source_text)
     elif args.component:
-        dot, issuetracker = visualize_component(source_text, args.component)
+        dot, issuetracker = ts.visualize_component(source_text, args.component)
     else:
-        dot, issuetracker = visualize_script(source_text)
+        dot, issuetracker = ts.visualize_script(source_text)
 
     issue_format = '{type!c}: {reason} {script}:{line}'
     for issue in issuetracker.formatted_issues(sort_key='line', custom_format=issue_format, script=args.script, line=0):

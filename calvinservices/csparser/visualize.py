@@ -25,23 +25,6 @@ from . import astnode as ast
 from .visitor import Visitor
 from .codegen import calvin_astgen, calvin_components, query, PortlistRewrite #, ResolvePortRefs
 from .parser import calvin_parse
-from calvin.actorstore.store import DocumentationStore
-
-_docstore = DocumentationStore()
-
-def _refname(name):
-   return name.replace(':', '_')
-
-def _lookup_definition(actor_type, root):
-    if '.' in actor_type:
-        doc = _docstore.metadata(actor_type)
-        if not doc['is_known']:
-            return ([], [], '')
-        return (doc['inputs'], doc['outputs'], doc['type'])
-    comps = query(root, kind=ast.Component, attributes={'name':actor_type}, maxdepth=2)
-    if not comps:
-        return ([], [], '')
-    return (comps[0].inports, comps[0].outports, 'component')
 
 class BaseRenderer(object):
     """docstring for BaseRenderer"""
@@ -86,11 +69,47 @@ class BaseRenderer(object):
 # FIXME: PortList with TransformedPort breaks graphviz
 class DotRenderer(BaseRenderer):
 
-    def __init__(self, show_args=False, debug=False):
+    def __init__(self, get_metadata, show_args=False, debug=False):
         super(DotRenderer, self).__init__()
+        self.get_metadata = get_metadata
         self.debug = debug
         self.show_args = show_args
         self._namespace_stack = []
+        
+    def _refname(self, name):
+       return name.replace(':', '_')
+
+    def _lookup_definition(self, actor_type, root):
+        if '.' in actor_type:
+            meta = self.get_metadata(actor_type)
+            # print(meta)
+            # {
+            #     'documentation': [
+            #         'Print data to standard out of runtime. Note that what constitutes standard out varies.'
+            #     ],
+            #     'ports': [
+            #         {'direction': 'in', 'help': 'data to write', 'name': 'token'}
+            #     ],
+            #     'requires': [
+            #         'io.stdout'
+            #     ],
+            #     'args': [],
+            #     'ns': 'io',
+            #     'name': 'Print',
+            #     'type': 'actor',
+            #     'is_known': True
+            # }
+            if not meta['is_known']:
+                return ([], [], '')
+            return (
+                [p['name'] for p in meta['ports'] if p['direction'] == 'in'], 
+                [p['name'] for p in meta['ports'] if p['direction'] == 'out'], 
+                meta['type']
+            )
+        comps = query(root, kind=ast.Component, attributes={'name':actor_type}, maxdepth=2)
+        if not comps:
+            return ([], [], '')
+        return (comps[0].inports, comps[0].outports, 'component')
 
     def push_namespace(self, ns):
         self._namespace_stack.append(ns)
@@ -132,7 +151,7 @@ class DotRenderer(BaseRenderer):
         root = node
         while root.parent:
             root = root.parent
-        _inports, _outports, _type = _lookup_definition(node.actor_type, root)
+        _inports, _outports, _type = self._lookup_definition(node.actor_type, root)
         inlen = len(_inports)
         outlen = len(_outports)
         portrows = max(inlen, outlen)
@@ -146,7 +165,7 @@ class DotRenderer(BaseRenderer):
 
         if order == 'preorder':
             lines = []
-            lines.append('{}{} [label=<'.format(self.namespace, _refname(node.ident)))
+            lines.append('{}{} [label=<'.format(self.namespace, self._refname(node.ident)))
             lines.append('<TABLE bgcolor="white" BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="1">')
             # Name
             lines.append('<TR><TD bgcolor="{1}" COLSPAN="3">{0}</TD></TR>'.format(node.ident, hdrcolor))
@@ -183,10 +202,10 @@ class DotRenderer(BaseRenderer):
             return '\n'.join(lines)
 
     def OutPort(self, node):
-        return "{}{}:{}_out:e".format(self.namespace, _refname(node.actor), node.port)
+        return "{}{}:{}_out:e".format(self.namespace, self._refname(node.actor), node.port)
 
     def InPort(self, node):
-        return "{}{}:{}_in:w".format(self.namespace, _refname(node.actor), node.port)
+        return "{}{}:{}_in:w".format(self.namespace, self._refname(node.actor), node.port)
 
     def InternalOutPort(self, node):
         return "{}{}_out:e".format(self.namespace, node.port)
@@ -290,30 +309,30 @@ class Visualize(Visitor):
            self.renderer.render(node, order='postorder' if n is node.children[-1] else 'inorder')
 
 
-def visualize_script(source_text, show_args=False):
+def visualize_script(get_metadata, source_text, show_args=False):
     """Process script and return graphviz (dot) source representing application."""
     # Here we need the unprocessed tree ...
     ir, issuetracker = calvin_parse(source_text)
     # ... but expand portlists to simplify rendering
     rw = PortlistRewrite(issuetracker)
     rw.visit(ir)
-    r = DotRenderer(show_args, debug=False)
+    r = DotRenderer(get_metadata, show_args, debug=False)
     v = Visualize(renderer = r)
     dot_source = v.process(ir)
     return dot_source, issuetracker
 
-def visualize_deployment(source_text, show_args=False):
+def visualize_deployment(get_metadata, source_text, show_args=False):
     ast_root, issuetracker = calvin_astgen(source_text, 'visualizer')
     # Here we need the processed tree
-    r = DotRenderer(show_args, debug=False)
+    r = DotRenderer(get_metadata, show_args, debug=False)
     v = Visualize(renderer = r)
     dot_source = v.process(ast_root)
     return dot_source, issuetracker
 
-def visualize_component(source_text, name, show_args=False):
+def visualize_component(get_metadata, source_text, name, show_args=False):
     # STUB
     ir_list, issuetracker = calvin_components(source_text, names=[name])
-    r = DotRenderer(show_args, debug=False)
+    r = DotRenderer(get_metadata, show_args, debug=False)
     v = Visualize(renderer = r)
     dot_source = v.process(ir_list[0])
     return dot_source, issuetracker
@@ -346,9 +365,9 @@ if __name__ == '__main__':
     print(dot_src)
 
 
-    dot_src, it =  visualize_deployment(source_text)
-    print(dot_src)
-
-    dot_src, it =  visualize_component(source_text, "FilterUnchanged")
-    print(dot_src)
+    # dot_src, it =  visualize_deployment(source_text)
+    # print(dot_src)
+    #
+    # dot_src, it =  visualize_component(source_text, "FilterUnchanged")
+    # print(dot_src)
 
