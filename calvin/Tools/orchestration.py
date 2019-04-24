@@ -36,8 +36,10 @@ class Process(object):
         self.ack_status = False
 
     def info(self):
-        return {k: self.sysdef[k] for k in self.info_exports if k in self.sysdef}
-
+        info = {k: self.sysdef[k] for k in self.info_exports if k in self.sysdef}
+        info['pid'] = self.proc_handle.pid if self.proc_handle else None
+        return info
+        
     def cmd(self):
         raise NotImplementedError("Subclass must override.")
 
