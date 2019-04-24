@@ -29,7 +29,7 @@ from unittest.mock import Mock
 import requests
 
 from calvinservices.csparser.cscompiler import compile_source
-import tests.orchestration as orchestration
+from calvin.Tools import orchestration
 
 
 ##################################
@@ -69,14 +69,9 @@ def tests_dir():
 def working_dir(tmpdir_factory, tests_dir):
     """
     Return string with POSIX path to temp dir (module scope)
-    The directory is pre-populated with a default.conf file.
     """
     wdir = tmpdir_factory.mktemp('work')
     wdir = str(wdir)
-    # prepare a config file here
-    src_path = os.path.join(tests_dir, "default.conf")
-    dst_path = os.path.join(wdir, "default.conf")
-    shutil.copyfile(src_path, dst_path)
     return wdir   
     
     

@@ -1,4 +1,3 @@
-
 import os
 import subprocess
 import shlex
@@ -9,6 +8,7 @@ import time
 
 import requests
 
+from calvin.common.calvinconfig import CalvinConfig
 
 def _start_process(cmd):
     if isinstance(cmd, str):
@@ -58,7 +58,9 @@ class Process(object):
     def wait_for_ack(self):
         req = self.sysdef["uri"]
         if not req:
-            # We don't have a way of talking the system... (e.g. using control proxy which is )
+            # We don't have a way of talking the system... (e.g. using control proxy)
+            # FIXME: Add "ping" on rt2rt port.
+            self.ack_status = True
             return
         req = req + self.ack_path
         for i in range(20):
@@ -195,7 +197,7 @@ class SystemManager(object):
     'system_config' is a data structure, typically defined in a YAML file, that 
     contain entries describing nodes in the system, and their relation.
     
-    'tmp_dir' is the working directory to use
+    'tmp_dir' is the working directory to use (optional).
     
     'start' is a boolean indicating wether or not to actully deploy the system (defaults to True) 
     
@@ -284,17 +286,27 @@ class SystemManager(object):
             organization: org.testexample    
     """
 
-    def __init__(self, system_config, tmp_dir, start=True, verbose=True):
+    def __init__(self, system_config, tmp_dir=None, start=True, verbose=True):
         super(SystemManager, self).__init__()
         # Prepare a range of port numbers, use maximum number
         # of potentially undefined ports:
         self.port_numbers = _random_ports(2 * len(system_config))
         self._system = []
-        self.process_config(system_config, tmp_dir)
+        self.workdir = self.prepare_workdir(tmp_dir)
+        self.process_config(system_config)
         if verbose:
             self.print_commands()
         if start:
             self.start()
+
+    def prepare_workdir(self, tmp_dir):
+        if tmp_dir == None:
+            tmp_dir = tempfile.mkdtemp()
+        default_config_path = os.path.join(tmp_dir, 'default.conf') 
+        cc = CalvinConfig()
+        cc.write_default_config(default_config_path)
+        return tmp_dir
+
 
     @property
     def info(self):
@@ -324,7 +336,7 @@ class SystemManager(object):
         except Exception as err:
             self.teardown()
             self._system = []
-            raise err
+            raise err              
 
     def start_system(self):
         for s in self._system:
@@ -335,19 +347,20 @@ class SystemManager(object):
         for s in self._system:
             s.wait_for_ack()
             if not s.ack_status:
-                print("TIMEOUT for ", s.info())
+                sys_info = s.info()
+                raise TimeoutError("TIMEOUT for {}".format(sys_info['name']))
 
-    def process_config(self, system_config, tmp_dir):
+    def process_config(self, system_config):
         for entity in system_config:
-            self._system.append(self.process_entity(entity, tmp_dir))
+            self._system.append(self.process_entity(entity))
 
-    def process_entity(self, entity, tmp_dir):
+    def process_entity(self, entity):
         # Check if entity has property X defined by a $ref. If so, replace it with the expansion of $ref 
         self.expand(entity, 'registry')
         self.expand(entity, 'actorstore')
         self.expand(entity, 'control_proxy')
         # Create in instance of the class representing this entity (RUNTIME, ACTORSTORE, or REGISTRY)
-        return factory(entity, self.port_numbers, tmp_dir)
+        return factory(entity, self.port_numbers, self.workdir)
 
     def expand(self, entity, entry):
         value = entity.get(entry, "")

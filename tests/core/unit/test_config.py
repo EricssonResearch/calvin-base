@@ -5,11 +5,14 @@ import pytest
 import yaml
 
 from calvin.common import calvinconfig
-from tests import orchestration
+from calvin.Tools import orchestration
 
+@pytest.mark.xfail()
 def test_default_config(working_dir):
-    # Verify that the default config file used in the tests is identical to 
-    # the builtin default config 
+    # FIXME: Re-install test when a decision has been made how config should work
+
+    # Verify that the default config file used in the tests is identical to
+    # the builtin default config
     default_config_file = os.path.join(working_dir, "default.conf")
     assert os.path.isfile(default_config_file)
     with open(default_config_file, 'r') as fp:
