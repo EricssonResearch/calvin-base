@@ -5,6 +5,7 @@ import shutil
 import socket
 import json
 import time
+import tempfile
 
 import requests
 
