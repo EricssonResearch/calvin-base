@@ -1,6 +1,7 @@
 import pytest
 
-from calvinservices.csparser.metadata_proxy import ActorMetadataProxy
+from calvinservices.csparser.parser import calvin_parse
+from calvin.common.metadata_proxy import ActorMetadataProxy
 
 script = """
 component Filter(param) in -> out {
@@ -42,8 +43,8 @@ def mdproxy(request, system_setup):
     actorstore_uri = system_setup['actorstore']['uri']
     config, script, expect_idx = request.param
     cfg = actorstore_uri if config == 'remote' else config
-    mdproxy = ActorMetadataProxy(config=cfg, source_text=script)
-    yield(mdproxy, expect_idx)
+    mdproxy = ActorMetadataProxy(config=cfg)
+    yield(mdproxy, script, expect_idx)
 
 testlist = [
     ('',          'module',     '/',     (False, False, False, False)), 
@@ -56,12 +57,12 @@ testlist = [
     
 @pytest.mark.parametrize('test', testlist, ids=lambda x: '-'.join(x[:2]))
 def test_metadata(mdproxy, test):
-    proxy, expect_idx = mdproxy
+    proxy, script, expect_idx = mdproxy
     query, type_, name, known = test
     # Access store directly, may return None
     md = proxy.store.get_metadata(query)
     assert md is None or isinstance(md, dict)
-    md = proxy.get_metadata(query)
+    md = proxy.get_metadata(query, auxiliary=script)
     # Access store via proxy, should return dict
     assert isinstance(md, dict)
     # print(md)
@@ -81,7 +82,7 @@ testlist2 = [
     
 @pytest.mark.parametrize('test', testlist2, ids=lambda x: x[0])
 def test_source(mdproxy, test):
-    proxy, expect_idx = mdproxy
+    proxy, _, expect_idx = mdproxy
     query, isNone = test
     src = proxy.get_source(query)
     assert (src is None) == isNone[expect_idx]
@@ -94,9 +95,24 @@ def test_known_actor(system_setup):
     assert md['requires'] == ['sys.schedule']
     
 def test_locally_defined_component():
-    proxy = ActorMetadataProxy(config=None, source_text=script)
+    proxy = ActorMetadataProxy(config=None)
     md = proxy.get_metadata('Filter')
-    print(md)
+    assert md['is_known'] == False
+    md = proxy.get_metadata('Filter', auxiliary=script)
+    assert md['is_known'] == True
     assert {'direction': 'out', 'name': 'out'} in md['ports']
     assert {'direction': 'in', 'name': 'in'} in md['ports']
     assert md['args'] == [{'mandatory': True, 'name': 'param'}]
+
+
+def test_locally_defined_component_ast():
+    proxy = ActorMetadataProxy(config=None)
+    ast, it = calvin_parse(script)
+    assert it.error_count == 0    
+    md = proxy.get_metadata('Filter', auxiliary=ast)
+    assert md['is_known'] == True
+    assert {'direction': 'out', 'name': 'out'} in md['ports']
+    assert {'direction': 'in', 'name': 'in'} in md['ports']
+    assert md['args'] == [{'mandatory': True, 'name': 'param'}]
+            
+            

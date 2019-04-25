@@ -58,16 +58,16 @@ class NoStore(object):
     
 class MetadataBuilder(object):
     """docstring for ConstructMetadata"""
-    def __init__(self, source_text=None):
+    def __init__(self, auxiliary):
         super(MetadataBuilder, self).__init__()
-        self._process_source(source_text)
-        
-    def _process_source(self, source_text):
-        self.ast = None
-        if not source_text:
-            return
-        ast, it = calvin_parse(source_text)
-        self.ast = ast if it.error_count == 0 else None
+        if isinstance(auxiliary, str):
+            ast, it = calvin_parse(auxiliary)
+            auxiliary = ast if it.error_count == 0 else None
+        if isinstance(auxiliary, (astnode.BaseNode, type(None))):   
+            self.ast = auxiliary # None or AST
+        else:
+            self.ast = None
+            
     
     def dummy_metadata(self, actor_type):
         actor_type = actor_type.strip()
@@ -112,11 +112,7 @@ class MetadataBuilder(object):
         if not self.ast:
             return self.dummy_metadata(actor_type)
         # Check local components:
-        
-        print("Check local components")
-        print(self.ast)
         comps = query(self.ast, kind=astnode.Component, attributes={'name':actor_type})
-        print(comps)
         if comps:
             comp = comps[0]
             md = {
@@ -145,18 +141,18 @@ class ActorMetadataProxy(object):
     If 'source_text' is not supplied, metadata will still be generated but it will
     only contain the assumed actor_type.  
     """
-    def __init__(self, config=None, source_text=None): 
+    def __init__(self, config=None): 
         super(ActorMetadataProxy, self).__init__()
-        self.mdbuilder = MetadataBuilder(source_text)
         self.store = NoStore()
         if config == 'local':
             self.store = LocalStore()
         elif isinstance(config, str) and config.startswith('http'):
             self.store = RemoteStore(config)
                
-    def get_metadata(self, actor_type):
+    def get_metadata(self, actor_type, auxiliary=None):
         md = self.store.get_metadata(actor_type)
         if md is None:
+            self.mdbuilder = MetadataBuilder(auxiliary)
             # Construct metadata as best as we can...
             md = self.mdbuilder.get_metadata(actor_type)
         return md
