@@ -21,6 +21,7 @@ import pytest
 from unittest.mock import Mock
 
 from calvin.actor.actor import Actor
+from calvin.common import metadata_proxy as mdproxy
 from calvin.runtime.north.actormanager import ActorManager
 from calvin.runtime.north.plugins.port.endpoint import LocalOutEndpoint, LocalInEndpoint
 from calvin.runtime.north.plugins.port import queue
@@ -45,7 +46,8 @@ class DummyPort:
 
 
 def create_actor(node, actorstore_uri):
-    actor_manager = ActorManager(node, actorstore_uri)
+    node.actorstore = mdproxy.ActorMetadataProxy(actorstore_uri)
+    actor_manager = ActorManager(node)
     actor_id = actor_manager.new('std.Identity', {"dump":False})
     actor = actor_manager.actors[actor_id]
     actor.inports['token'].set_queue(queue.fanout_fifo.FanoutFIFO({'queue_length': 4, 'direction': "in"}, {}))

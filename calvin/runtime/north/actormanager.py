@@ -16,9 +16,6 @@
 
 import random
 
-import requests
-
-from calvin.common import dynops
 from calvin.common.requirement_matching import ReqMatch
 from calvin.common.calvinlogger import get_logger
 from calvin.common.calvin_callback import CalvinCB
@@ -74,9 +71,8 @@ class ActorManager(object):
 
     """docstring for ActorManager"""
 
-    def __init__(self, node, actorstore_uri):
+    def __init__(self, node):
         super(ActorManager, self).__init__()
-        self.actorstore_uri = actorstore_uri
         self.actors = {}
         self.node = node
 
@@ -311,16 +307,11 @@ class ActorManager(object):
         self.actors[actor_id].disable()
 
     def new_actorstore_lookup(self, actor_type):
-        ns, name = actor_type.split('.') 
-        r = requests.get('{}/actors/{}/{}'.format(self.actorstore_uri, ns, name))
-        if r.status_code != 200:
-            raise("BAD STORE")
-        res = r.json()
-        metadata = res['properties']
-        src = res['src']
-        actor_def = class_factory(src, metadata, actor_type)
-        found = True
+        metadata = self.node.actorstore.get_metadata(actor_type)
+        src = self.node.actorstore.get_source(actor_type)
+        found = src is not None
         is_primitive = True
+        actor_def = class_factory(src, metadata, actor_type) if found else None
         signer = None
         return (found, is_primitive, actor_def, signer)
         

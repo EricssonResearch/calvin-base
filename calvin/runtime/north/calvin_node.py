@@ -41,9 +41,10 @@ from calvin.common.attribute_resolver import AttributeResolver
 from calvin.common.calvin_callback import CalvinCB
 from calvin.common.security import security_modules_check
 from calvin.common.runtime_credentials import RuntimeCredentials
-from calvin.common import certificate
 from calvin.common.calvinlogger import get_logger, set_file
+from calvin.common import certificate
 from calvin.common import calvinconfig
+from calvin.common import metadata_proxy as mdproxy
 from calvin.runtime.north.resource_monitor.cpu import CpuMonitor
 from calvin.runtime.north.resource_monitor.memory import MemMonitor
 from calvin.runtime.north.proxyhandler import ProxyHandler
@@ -108,7 +109,8 @@ class Node(object):
         self.authentication = authentication.Authentication(self)
         self.authorization = authorization.Authorization(self)
         actorstore_uri = _conf.get('global', 'actorstore')
-        self.am = actormanager.ActorManager(self, actorstore_uri)
+        self.actorstore = mdproxy.ActorMetadataProxy(actorstore_uri)
+        self.am = actormanager.ActorManager(self)
         self.rm = replicationmanager.ReplicationManager(self)
         
 

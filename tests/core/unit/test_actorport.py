@@ -18,6 +18,7 @@ import pytest
 from unittest.mock import Mock, call
 
 from calvin.actor.actorport import InPort, OutPort
+from calvin.common import metadata_proxy as mdproxy
 from calvin.runtime.north.actormanager import ActorManager
 from calvin.runtime.north.plugins.port.endpoint import LocalOutEndpoint, LocalInEndpoint
 from calvin.runtime.north.plugins.port import queue
@@ -26,11 +27,11 @@ from calvin.runtime.north.plugins.port.endpoint.common import Endpoint
 system_config_file = "actorstore.yaml"
 
 def create_actor(node, actorstore_uri):
-    actor_manager = ActorManager(node, actorstore_uri)
+    node.actorstore = mdproxy.ActorMetadataProxy(actorstore_uri)
+    actor_manager = ActorManager(node)
     actor_id = actor_manager.new('std.Identity', {"dump":False})
     actor = actor_manager.actors[actor_id]
     return actor
-
 
 @pytest.fixture
 def actor(system_setup, dummy_node):
