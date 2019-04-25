@@ -1,0 +1,166 @@
+import requests
+
+from calvinservices.actorstore import store
+from calvinservices.csparser.parser import calvin_parse
+from calvinservices.csparser.codegen import query
+from calvinservices.csparser import astnode
+
+#
+# Disconnect actor lookup from runtime configuration
+#
+
+class LocalStore(store.Store):
+        
+    def get_metadata(self, actor_type):
+        metadata = super().get_metadata(actor_type)
+        return metadata if isinstance(metadata, dict) else None
+    
+    def get_source(self, actor_type):
+        return self.get_src(actor_type)    
+
+
+class RemoteStore(object):
+    """docstring for ActorLookup"""
+    def __init__(self, actorstore_uri):
+        super(RemoteStore, self).__init__()
+        self.actorstore_uri = actorstore_uri
+        self.cache = {}
+
+    def _get_info(self, actor_type):
+        # actor_type is '', 'ns', or 'ns.name'
+        actor_type = actor_type.strip()    
+        parts = actor_type.split('.') + ['', '']
+        ns, name, *_ = parts
+        req = '{}/actors/{}/{}'.format(self.actorstore_uri, ns, name) 
+        r = requests.get(req.rstrip('/'))
+        return r.json() if r.status_code == 200 else {'properties': None, 'src': None}      
+    
+    def get_metadata(self, actor_type):
+        if actor_type in self.cache:
+            return self.cache[actor_type]
+        res = self._get_info(actor_type)
+        metadata = res['properties']
+        self.cache[actor_type] = metadata    
+        return metadata
+        
+    def get_source(self, actor_type):
+        res = self._get_info(actor_type)
+        return res['src']
+        
+class NoStore(object):
+    
+    def get_metadata(self, actor_type):
+        return None
+    
+    def get_source(self, actor_type):
+        return None
+    
+    
+class MetadataBuilder(object):
+    """docstring for ConstructMetadata"""
+    def __init__(self, source_text=None):
+        super(MetadataBuilder, self).__init__()
+        self._process_source(source_text)
+        
+    def _process_source(self, source_text):
+        self.ast = None
+        if not source_text:
+            return
+        ast, it = calvin_parse(source_text)
+        self.ast = ast if it.error_count == 0 else None
+    
+    def dummy_metadata(self, actor_type):
+        actor_type = actor_type.strip()
+        if '.' in actor_type:
+            # treat it as an actor:
+            ns, name = actor_type.split('.', maxsplit=1)
+            md = {
+                'type': 'actor',
+                'ns': ns,
+                'name': name,
+                'args': [],
+                'ports': [],
+                'requires': [],
+                'is_known': False,
+                'documentation': ['Unknown actor'],
+            }
+        elif actor_type and actor_type[0] in "ABCDEFGHIJKLMNOPQRSTUVXYZ":
+            # treat it as (local) component
+            md = {
+                'type': 'component',
+                'ns': '',
+                'name': actor_type,
+                'args': [],
+                'ports': [],
+                'requires': [],
+                'is_known': False,
+                'documentation': ['Unknown component'],
+            }
+        else:
+            # treat it as module
+            md = {
+                'type': 'module',
+                'name': actor_type if actor_type else '/',
+                'items': [],
+                'is_known': False,
+                'documentation': ['Unknown module'],
+            }
+        return md
+        
+              
+    def get_metadata(self, actor_type):
+        if not self.ast:
+            return self.dummy_metadata(actor_type)
+        # Check local components:
+        
+        print("Check local components")
+        print(self.ast)
+        comps = query(self.ast, kind=astnode.Component, attributes={'name':actor_type})
+        print(comps)
+        if comps:
+            comp = comps[0]
+            md = {
+                'is_known': True,
+                'name': comp.name,
+                'type': 'component',
+                'ports': [{'direction': 'out', 'name': name} for name in comp.outports] +
+                         [{'direction': 'in', 'name': name} for name in comp.inports],
+                'args': [{'mandatory': True, 'name':name} for name in comp.arg_names],
+                'definition': comp.children[0]
+            }
+            return md
+        # Look for an assignment to actor_type, and find ports and arguments
+        # For now, fallback to dummy metadata
+        return self.dummy_metadata(actor_type)        
+            
+        
+class ActorMetadataProxy(object):
+    """
+    Return ActorMetadataProxy object.
+    
+    If 'config' is a URI, use that to connect to remote actor store
+    If 'config' as 'local', instantiate a local Store object accessing files on disk.
+    If 'config' is None, construct metadata from 'source_text' (blind operation)
+    Metadata will also be constructed from 'source_text' if actor is not found.
+    If 'source_text' is not supplied, metadata will still be generated but it will
+    only contain the assumed actor_type.  
+    """
+    def __init__(self, config=None, source_text=None): 
+        super(ActorMetadataProxy, self).__init__()
+        self.mdbuilder = MetadataBuilder(source_text)
+        self.store = NoStore()
+        if config == 'local':
+            self.store = LocalStore()
+        elif isinstance(config, str) and config.startswith('http'):
+            self.store = RemoteStore(config)
+               
+    def get_metadata(self, actor_type):
+        md = self.store.get_metadata(actor_type)
+        if md is None:
+            # Construct metadata as best as we can...
+            md = self.mdbuilder.get_metadata(actor_type)
+        return md
+    
+    def get_source(self, actor_type):
+        return self.store.get_source(actor_type)
+

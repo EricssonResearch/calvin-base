@@ -253,7 +253,7 @@ class Store(object):
         
         
     def error_handler(self, path):
-        return (path, "Error message")
+        return (None, "Error: Can't resolve query '{}'".format(path))
 
     def get_info(self, query):
         """
