@@ -48,9 +48,9 @@ def test_help_raw_flow_init(docstore):
 
 def test_help_raw_unknown(docstore):
     actual = json.loads(docstore.help_raw(what='no_such_thing'))
-    assert actual == {}
-
+    assert actual['documentation'] == ['Unknown module']
+    
 def test_help_raw_qualified_unknown(docstore):
     actual = json.loads(docstore.help_raw(what='no.such.thing'))
-    assert actual == {}
+    assert actual['documentation'] == ['Unknown actor']
 

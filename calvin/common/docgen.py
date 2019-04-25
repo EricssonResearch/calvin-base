@@ -20,9 +20,9 @@ import inspect
 import json
 from collections import namedtuple
 
-import requests
 import pystache
 
+from calvin.common import metadata_proxy as mdproxy
 from calvin.common.calvinlogger import get_logger
 
 _log = get_logger(__name__)
@@ -351,27 +351,16 @@ class DocumentationStore(object):
     """docstring for DocumentationStore"""
     def __init__(self, actorstore_uri):
         super(DocumentationStore, self).__init__()
-        self.base_request = "{}/actors".format(actorstore_uri)
+        self.lookup = mdproxy.ActorMetadataProxy(config=actorstore_uri)
     
     def _retrieve_metadata(self, what):
-        ns, name = self._format_what(what)
-        if ns or name:
-            req_str = '{}/{}/{}'.format(self.base_request, ns, name)
-        else:
-            req_str = '{}/'.format(self.base_request)
-        r = requests.get(req_str)
-        if r.status_code != 200:
-            # raise("BAD STORE")
-            metadata = {}
-        else:    
-            res = r.json()
-            metadata = res['properties']
+        metadata = self.lookup.get_metadata(what or '')
         return metadata
         
-    def _format_what(self, what):
-        what = what or ''
-        parts = what.split('.') + ['', '']
-        return parts[0:2]
+    # def _format_what(self, what):
+    #     what = what or ''
+    #     parts = what.split('.') + ['', '']
+    #     return parts[0:2]
     
     def documentation(self):
         pass
