@@ -103,22 +103,4 @@ def handle_options(self, handle, match, data, hdr):
     Response status code: OK
     Response: Available communication options
     """
-
-    response = "HTTP/1.1 200 OK\n"
-
-    # Copy the content of Access-Control-Request-Headers to the response
-    if 'access-control-request-headers' in hdr:
-        response += "Access-Control-Allow-Headers: " + \
-                    hdr['access-control-request-headers'] + "\n"
-
-    response += "Content-Length: 0\n" \
-                "Access-Control-Allow-Origin: *\n" \
-                "Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS\n" \
-                "Content-Type: *\n" \
-                "\n\r\n"
-
-    if connection is None:
-        msg = {"cmd": "httpresp", "msgid": handle, "header": response, "data": None}
-        self.tunnel_client.send(msg)
-    else:
-        connection.send(response)
+    self.send_optionsheader(handle, hdr)

@@ -44,13 +44,11 @@ class Logger(object):
 
     def __init__(self, actors, events):
         self.handle = None
-        self.connection = None
         self.actors = actors
         self.events = events
 
-    def set_connection(self, handle):
+    def set_handle(self, handle):
         self.handle = handle
-        self.connection = connection
 
 #
 # Override a number of stub methods with real implementations
@@ -73,14 +71,8 @@ def log_actor_firing(self, actor_id, action_method, tokens_produced, tokens_cons
                 data['consumed'] = tokens_consumed
                 if LOG_ACTION_RESULT in logger.events:
                     data['action_result'] = production
-                if logger.connection is not None:
-                    if not logger.connection.connection_lost:
-                        logger.connection.send("data: %s\n\n" % json.dumps(data))
-                    else:
-                        disconnected.append(user_id)
-                elif self.tunnel_client is not None and logger.handle is not None:
-                    msg = {"cmd": "logevent", "msgid": logger.handle, "header": None, "data": "data: %s\n\n" % json.dumps(data)}
-                    self.tunnel_client.send(msg)
+                if not self.send_streamdata(logger.handle, json.dumps(data)):
+                    disconnected.append(user_id)
     for user_id in disconnected:
         del self.loggers[user_id]
 
@@ -100,14 +92,8 @@ def log_actor_new(self, actor_id, actor_name, actor_type, is_shadow):
                 data['actor_name'] = actor_name
                 data['actor_type'] = actor_type
                 data['is_shadow'] = is_shadow
-                if logger.connection is not None:
-                    if not logger.connection.connection_lost:
-                        logger.connection.send("data: %s\n\n" % json.dumps(data))
-                    else:
-                        disconnected.append(user_id)
-                elif self.tunnel_client is not None and logger.handle is not None:
-                    msg = {"cmd": "logevent", "msgid": logger.handle, "header": None, "data": "data: %s\n\n" % json.dumps(data)}
-                    self.tunnel_client.send(msg)
+                if not self.send_streamdata(logger.handle, json.dumps(data)):
+                    disconnected.append(user_id)
     for user_id in disconnected:
         del self.loggers[user_id]
 
@@ -124,14 +110,8 @@ def log_actor_destroy(self, actor_id):
                 data['node_id'] = self.node.id
                 data['type'] = 'actor_destroy'
                 data['actor_id'] = actor_id
-                if logger.connection is not None:
-                    if not logger.connection.connection_lost:
-                        logger.connection.send("data: %s\n\n" % json.dumps(data))
-                    else:
-                        disconnected.append(user_id)
-                elif self.tunnel_client is not None and logger.handle is not None:
-                    msg = {"cmd": "logevent", "msgid": logger.handle, "header": None, "data": "data: %s\n\n" % json.dumps(data)}
-                    self.tunnel_client.send(msg)
+                if not self.send_streamdata(logger.handle, json.dumps(data)):
+                    disconnected.append(user_id)
     for user_id in disconnected:
         del self.loggers[user_id]
 
@@ -149,14 +129,8 @@ def log_actor_migrate(self, actor_id, dest_node_id):
                 data['type'] = 'actor_migrate'
                 data['actor_id'] = actor_id
                 data['dest_node_id'] = dest_node_id
-                if logger.connection is not None:
-                    if not logger.connection.connection_lost:
-                        logger.connection.send("data: %s\n\n" % json.dumps(data))
-                    else:
-                        disconnected.append(user_id)
-                elif self.tunnel_client is not None and logger.handle is not None:
-                    msg = {"cmd": "logevent", "msgid": logger.handle, "header": None, "data": "data: %s\n\n" % json.dumps(data)}
-                    self.tunnel_client.send(msg)
+                if not self.send_streamdata(logger.handle, json.dumps(data)):
+                    disconnected.append(user_id)
     for user_id in disconnected:
         del self.loggers[user_id]
 
@@ -176,14 +150,8 @@ def log_actor_replicate(self, actor_id, replica_actor_id, replication_id, dest_n
                 data['dest_node_id'] = dest_node_id
                 data['replication_id'] = replication_id
                 data['replica_actor_id'] = replica_actor_id
-                if logger.connection is not None:
-                    if not logger.connection.connection_lost:
-                        logger.connection.send("data: %s\n\n" % json.dumps(data))
-                    else:
-                        disconnected.append(user_id)
-                elif self.tunnel_client is not None and logger.handle is not None:
-                    msg = {"cmd": "logevent", "msgid": logger.handle, "header": None, "data": "data: %s\n\n" % json.dumps(data)}
-                    self.tunnel_client.send(msg)
+                if not self.send_streamdata(logger.handle, json.dumps(data)):
+                    disconnected.append(user_id)
     for user_id in disconnected:
         del self.loggers[user_id]
 
@@ -202,14 +170,8 @@ def log_actor_dereplicate(self, actor_id, replica_actor_id, replication_id):
                 data['actor_id'] = actor_id
                 data['replication_id'] = replication_id
                 data['replica_actor_id'] = replica_actor_id
-                if logger.connection is not None:
-                    if not logger.connection.connection_lost:
-                        logger.connection.send("data: %s\n\n" % json.dumps(data))
-                    else:
-                        disconnected.append(user_id)
-                elif self.tunnel_client is not None and logger.handle is not None:
-                    msg = {"cmd": "logevent", "msgid": logger.handle, "header": None, "data": "data: %s\n\n" % json.dumps(data)}
-                    self.tunnel_client.send(msg)
+                if not self.send_streamdata(logger.handle, json.dumps(data)):
+                    disconnected.append(user_id)
     for user_id in disconnected:
         del self.loggers[user_id]
 
@@ -226,14 +188,8 @@ def log_application_new(self, application_id, application_name):
             data['type'] = 'application_new'
             data['application_id'] = application_id
             data['application_name'] = application_name
-            if logger.connection is not None:
-                if not logger.connection.connection_lost:
-                    logger.connection.send("data: %s\n\n" % json.dumps(data))
-                else:
-                    disconnected.append(user_id)
-            elif self.tunnel_client is not None and logger.handle is not None:
-                msg = {"cmd": "logevent", "msgid": logger.handle, "header": None, "data": "data: %s\n\n" % json.dumps(data)}
-                self.tunnel_client.send(msg)
+            if not self.send_streamdata(logger.handle, json.dumps(data)):
+                disconnected.append(user_id)
     for user_id in disconnected:
         del self.loggers[user_id]
 
@@ -249,14 +205,8 @@ def log_application_destroy(self, application_id):
             data['node_id'] = self.node.id
             data['type'] = 'application_destroy'
             data['application_id'] = application_id
-            if logger.connection is not None:
-                if not logger.connection.connection_lost:
-                    logger.connection.send("data: %s\n\n" % json.dumps(data))
-                else:
-                    disconnected.append(user_id)
-            elif self.tunnel_client is not None and logger.handle is not None:
-                msg = {"cmd": "logevent", "msgid": logger.handle, "header": None, "data": "data: %s\n\n" % json.dumps(data)}
-                self.tunnel_client.send(msg)
+            if not self.send_streamdata(logger.handle, json.dumps(data)):
+                disconnected.append(user_id)
     for user_id in disconnected:
         del self.loggers[user_id]
 
@@ -273,14 +223,8 @@ def log_link_connected(self, peer_id, uri):
             data['type'] = 'link_connected'
             data['peer_id'] = peer_id
             data['uri'] = uri
-            if logger.connection is not None:
-                if not logger.connection.connection_lost:
-                    logger.connection.send("data: %s\n\n" % json.dumps(data))
-                else:
-                    disconnected.append(user_id)
-            elif self.tunnel_client is not None and logger.handle is not None:
-                msg = {"cmd": "logevent", "msgid": logger.handle, "header": None, "data": "data: %s\n\n" % json.dumps(data)}
-                self.tunnel_client.send(msg)
+            if not self.send_streamdata(logger.handle, json.dumps(data)):
+                disconnected.append(user_id)
     for user_id in disconnected:
         del self.loggers[user_id]
 
@@ -296,14 +240,8 @@ def log_link_disconnected(self, peer_id):
             data['node_id'] = self.node.id
             data['type'] = 'link_disconnected'
             data['peer_id'] = peer_id
-            if logger.connection is not None:
-                if not logger.connection.connection_lost:
-                    logger.connection.send("data: %s\n\n" % json.dumps(data))
-                else:
-                    disconnected.append(user_id)
-            elif self.tunnel_client is not None and logger.handle is not None:
-                msg = {"cmd": "logevent", "msgid": logger.handle, "header": None, "data": "data: %s\n\n" % json.dumps(data)}
-                self.tunnel_client.send(msg)
+            if not self.send_streamdata(logger.handle, json.dumps(data)):
+                disconnected.append(user_id)
     for user_id in disconnected:
         del self.loggers[user_id]
 
@@ -319,14 +257,8 @@ def log_log_message(self, message):
             data['node_id'] = self.node.id
             data['type'] = 'log_message'
             data['msg'] = message
-            if logger.connection is not None:
-                if not logger.connection.connection_lost:
-                    logger.connection.send("data: %s\n\n" % json.dumps(data))
-                else:
-                    disconnected.append(user_id)
-            elif self.tunnel_client is not None and logger.handle is not None:
-                msg = {"cmd": "logevent", "msgid": logger.handle, "header": None, "data": "data: %s\n\n" % json.dumps(data)}
-                self.tunnel_client.send(msg)
+            if not self.send_streamdata(logger.handle, json.dumps(data)):
+                disconnected.append(user_id)
     for user_id in disconnected:
         del self.loggers[user_id]
 
@@ -449,7 +381,7 @@ def handle_get_log(self, handle, match, data, hdr):
     }
     """
     if match.group(1) in self.loggers:
-        self.loggers[match.group(1)].set_connection(handle)
+        self.loggers[match.group(1)].set_handle(handle)
         self.send_streamheader(handle)
     else:
         self.send_response(handle, None, calvinresponse.NOT_FOUND)

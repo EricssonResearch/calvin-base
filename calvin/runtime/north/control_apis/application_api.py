@@ -292,7 +292,6 @@ def handle_deploy(self, handle, match, data, hdr):
         print("Deployer failed")
         self.send_response(
             handle,
-            connection,
             json.dumps({'exception': str(e)}),
             status=calvinresponse.INTERNAL_ERROR
         )
@@ -353,4 +352,3 @@ def handle_post_application_migrate(self, handle, match, data, hdr):
 def handle_post_application_migrate_cb(self, handle, status, **kwargs):
     _log.analyze(self.node.id, "+ MIGRATED", {'status': status.status})
     self.send_response(handle, None, status=status.status)
-

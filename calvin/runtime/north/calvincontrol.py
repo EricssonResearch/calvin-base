@@ -42,9 +42,9 @@ _log = get_logger(__name__)
 
 class CalvinControlBase(object):
 
-    """ 
+    """
     Common functionality for CalvinControl and CalvinControlTunnelClient
-    Subclass and override: start, stop, send_response, send_streamheader
+    Subclass and override: start, stop, send_response, send_streamheader, send_optionsheader
     """
 
     def __init__(self, node, uri):
@@ -52,18 +52,24 @@ class CalvinControlBase(object):
         self.loggers = {}
         self.routes = routes.install_handlers(self)
         self.uri = uri
-    
+
     def start(self):
         raise NotImplementedError
 
     def stop(self):
         raise NotImplementedError
-    
+
     def send_response(self, handle, data, status=200, content_type=None):
         raise NotImplementedError
- 
+
     def send_streamheader(self, handle):
-        raise NotImplementedError    
+        raise NotImplementedError
+
+    def send_streamdata(self, handle, data):
+        raise NotImplementedError
+
+    def send_optionsheader(self, handle, hdr):
+        raise NotImplementedError
 
     def close_log_tunnel(self, handle):
         """ Close log tunnel
@@ -115,12 +121,26 @@ class CalvinControlBase(object):
             "\n" + ("" if data is None else content_type ) + \
             "Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS\n" + \
             "Access-Control-Allow-Origin: *\r\n" + "\n"
-        
-        return header, data    
-        
+
+        return header, data
+
     def prepare_streamheader(self):
         response = "HTTP/1.0 200 OK\n" + "Content-Type: text/event-stream\n" + \
             "Access-Control-Allow-Origin: *\r\n" + "\n"
+        return response
+
+    def prepare_optionsheader(self, hdr):
+        response = "HTTP/1.1 200 OK\n"
+        # Copy the content of Access-Control-Request-Headers to the response
+        if 'access-control-request-headers' in hdr:
+            response += "Access-Control-Allow-Headers: " + \
+                        hdr['access-control-request-headers'] + "\n"
+
+        response += "Content-Length: 0\n" \
+                    "Access-Control-Allow-Origin: *\n" \
+                    "Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS\n" \
+                    "Content-Type: *\n" \
+                    "\n\r\n"
         return response
 
     #
@@ -172,7 +192,7 @@ class CalvinControl(CalvinControlBase):
         url = urlparse(self.uri)
         self.host = url.hostname
         self.port = int(url.port)
-    
+
     def start(self):
         """ Start listening on uri and handle http requests."""
         _log.info("Control API listening on: %s:%s" % (self.host, self.port))
@@ -182,17 +202,28 @@ class CalvinControl(CalvinControlBase):
     def stop(self):
         """ Stop """
         self.server.stop()
-        
+
     def send_response(self, handle, data, status=200, content_type=None):
         """ Send response header text/html
         """
         header, data = self.prepare_response(data, status, content_type)
         self.server.send_response(handle, header, data)
-        
+
     def send_streamheader(self, handle):
         """ Send response header for text/event-stream
         """
         response = self.prepare_streamheader()
+        self.server.send_response(handle, response, None, close_connection=False)
+
+    def send_streamdata(self, handle, data):
+        """ Send stream data
+        """
+        return self.server.send_response(handle, "data: %s\n\n" % data, None, close_connection=False)
+
+    def send_optionsheader(self, handle, hdr):
+        """ Send response header for options
+        """
+        response = self.prepare_optionsheader(hdr)
         self.server.send_response(handle, response)
 
 
@@ -203,31 +234,43 @@ class CalvinControlTunnelClient(CalvinControlBase):
     def __init__(self, node, uri):
         super(CalvinControlTunnelClient, self).__init__(node, uri)
         self.tunnel = None
-        
-    def start(self):    
+
+    def start(self):
         self.node.network.join([self.uri], CalvinCB(self._start_link_cb))
 
     def stop(self):
         pass
-        
+
     def send_response(self, handle, data, status=200, content_type=None):
         """ Send response header text/html
         """
         header, data = self.prepare_response(data, status, content_type)
         msg = {"cmd": "httpresp", "msgid": handle, "header": header, "data": data}
         self.send(msg)
-            
+
     def send_streamheader(self, handle):
         """ Send response header for text/event-stream
         """
         response = self.prepare_streamheader()
         msg = {"cmd": "logresp", "msgid": handle, "header": response, "data": None}
         self.send(msg)
-        
+
+    def send_streamdata(self, handle, data):
+        """ Send stream data
+        """
+        self.send({"cmd": "logevent", "msgid": handle, "header": None, "data": "data: %s\n\n" % data})
+
+    def send_optionsheader(self, handle, hdr):
+        """ Send response header for options
+        """
+        response = self.prepare_optionsheader()
+        msg = {"cmd": "httpresp", "msgid": handle, "header": response, "data": None}
+        self.send(msg)
+
     # FIXME: Refactor
     # The code below should be CalvinControlTunnelClient class, compare CalvinControlTunnelServer below.
-    # If CalvinControlTunnelClient (above) is renamed (to what?) and self.tunnel is renamed self.server 
-    # and refer to the an instance of the new CalvinControlTunnelClient class, then the code would be a 
+    # If CalvinControlTunnelClient (above) is renamed (to what?) and self.tunnel is renamed self.server
+    # and refer to the an instance of the new CalvinControlTunnelClient class, then the code would be a
     # lot easier to read...
 
     def _start_link_cb(self, status, uri, peer_node_id):
@@ -357,7 +400,7 @@ class CalvinControlTunnel(object):
                 _log.exception(exc)
         else:
             raise Exception("Could not find free socket")
-                
+
         # Tell peer node that we a listening and on what uri
         msg = {"cmd": "started", "controluri": "http://" + self.external_host + ":" + str(self.port)}
         self.tunnel.send(msg)
@@ -379,25 +422,23 @@ class CalvinControlTunnel(object):
         """ Handle a tunnel response
         """
         msgid = payload.get("msgid")
-        
+
         if "cmd" in payload and "header" in payload and "data" in payload:
-            
+
             cmd = payload["cmd"]
             if cmd == "httpresp":
                 self.server.send_response(msgid, payload["header"], payload["data"], True)
                 return
-            
+
             if cmd == "logresp":
                 self.server.send_response(msgid, payload["header"], payload["data"], False)
                 return
-            
+
             if cmd == "logevent":
                 result = self.server.send_response(msgid, payload["header"], payload["data"], False)
                 if not result:
                     msg = {"cmd": "logclose"}
                     self.tunnel.send(msg)
                 return
-                
+
         _log.error("Malformed %s" % payload)
-
-
