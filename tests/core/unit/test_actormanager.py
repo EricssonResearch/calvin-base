@@ -24,12 +24,10 @@ from calvin.common import metadata_proxy as mdproxy
 from calvin.runtime.north.actormanager import ActorManager
 from calvin.runtime.north.plugins.port import queue
 
-system_config_file = "actorstore.yaml"
-
 @pytest.fixture()
-def actor_manager(system_setup, dummy_node):
+def actor_manager(dummy_node):
     """Return an ActorManager instance"""
-    dummy_node.actorstore = mdproxy.ActorMetadataProxy(system_setup['actorstore']['uri'])
+    dummy_node.actorstore = mdproxy.ActorMetadataProxy('local')
     dummy_node.am = ActorManager(dummy_node)
     dummy_node.pm.remove_ports_of_actor = Mock(return_value = [])
     return dummy_node.am
