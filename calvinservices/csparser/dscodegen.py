@@ -249,20 +249,14 @@ class DSCodeGen(object):
         self.deploy_info['valid'] = (issue_tracker.error_count == 0)
 
 
-def _calvin_cg(source_text, app_name):
-    global global_root
-    ast_root, issuetracker = calvin_parse(source_text)
-    global_root = ast_root
-    cg = DSCodeGen(ast_root, app_name)
-    return cg, issuetracker
-
 def calvin_dscodegen(source_text, app_name):
     """
     Generate deployment info from script, return deploy_info and issuetracker.
 
     Parameter app_name is required to provide a namespace for the application.
     """
-    cg, issuetracker = _calvin_cg(source_text, app_name)
+    ast_root, issuetracker = calvin_parse(source_text)
+    cg = DSCodeGen(ast_root, app_name)
     cg.generate_code(issuetracker)
     return cg.deploy_info, issuetracker
 
