@@ -1,8 +1,6 @@
-from calvin.common import metadata_proxy as mdproxy
 from tools.toolsupport import visualize
+from calvin.common import metadata_proxy as mdproxy
 from calvin.common.docgen import DocumentationStore         
-
-
 
 
 class ToolSupport(object):
@@ -14,15 +12,15 @@ class ToolSupport(object):
     # Scripting
     #
     def visualize_script(self, script):
-        dot, it = visualize.visualize_script(self.store.get_metadata, script)
+        dot, it = visualize.visualize_script(self.store, script)
         return dot, it
     
     def visualize_deployment(self, script):
-        dot, it = visualize.visualize_deployment(self.store.get_metadata, script)
+        dot, it = visualize.visualize_deployment(self.store, script)
         return dot, it
         
     def visualize_component(self, script, component_name):
-        dot, it = visualize.visualize_component(self.store.get_metadata, script, component_name)
+        dot, it = visualize.visualize_component(self.store, script, component_name)
         return dot, it
    
     def help_for_actor(self, actor):

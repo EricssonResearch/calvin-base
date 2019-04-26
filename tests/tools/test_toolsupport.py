@@ -28,7 +28,6 @@ def test_visualize():
     dot, it = ts.visualize_script(script)
     assert it.error_count == 0
     # dot, it = ts.visualize_deployment(script)
-    # assert dot == None
     # assert it.error_count == 0
     
     

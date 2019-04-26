@@ -23,11 +23,6 @@ from .parser import calvin_parse
 from .visitor import Visitor, query
 from calvin.actor.port_property_syntax import port_property_data
 
-from calvin.common import metadata_proxy as mdproxy
-# FIXME: External dependency to be removed
-from calvin.common.actor_signature import signature
-
-
 
 def _check_arguments(assignment, issue_tracker):
     """
@@ -573,8 +568,9 @@ class CheckPortProperties(Visitor):
 
 class AppInfo(Visitor):
     """docstring for AppInfo"""
-    def __init__(self, app_info, root, issue_tracker):
+    def __init__(self, lookup, app_info, root, issue_tracker):
         super(AppInfo, self).__init__()
+        self.lookup = lookup
         self.root = root
         self.app_info = app_info
         self.issue_tracker = issue_tracker
@@ -590,7 +586,7 @@ class AppInfo(Visitor):
         value = {}
         value['actor_type'] = node.actor_type
         value['args'] = _arguments(node, self.issue_tracker)
-        value['signature'] = signature(node.metadata)
+        value['signature'] = self.lookup.signature(node.metadata)
 
         self.app_info['actors'][node.ident] = value
 
@@ -793,9 +789,9 @@ class CodeGen(object):
     Generate code from a source file
     FIXME: Use a writer class to generate output in various formats
     """
-    def __init__(self, ast_root, script_name, actorstore_uri):
+    def __init__(self, ast_root, script_name, actorstore_proxy):
         super(CodeGen, self).__init__()
-        self.lookup = mdproxy.ActorMetadataProxy(actorstore_uri)
+        self.lookup = actorstore_proxy
         self.root = ast_root
         self.app_info = {
             'name':script_name,
@@ -876,7 +872,7 @@ class CodeGen(object):
         self.dump_tree('Checked properties')
 
     def generate_code_from_ast(self, issue_tracker):
-        gen_app_info = AppInfo(self.app_info, self.root, issue_tracker)
+        gen_app_info = AppInfo(self.lookup, self.app_info, self.root, issue_tracker)
         gen_app_info.process()
 
     def phase1(self, issue_tracker):
@@ -911,35 +907,35 @@ class CodeGen(object):
         self.app_info['valid'] = (issue_tracker.error_count == 0)
 
 
-def _calvin_cg(source_text, app_name, actorstore_uri):
+def _calvin_cg(source_text, app_name, mdproxy):
     ast_root, issuetracker = calvin_parse(source_text)
-    cg = CodeGen(ast_root, app_name, actorstore_uri)
+    cg = CodeGen(ast_root, app_name, mdproxy)
     return cg, issuetracker
 
 # FIXME: [PP] Change calvin_ to calvinscript_
-def calvin_codegen(source_text, app_name, actorstore_uri):
+def calvin_codegen(source_text, app_name, mdproxy):
     """
     Generate application code from script, return deployable and issuetracker.
 
     Parameter app_name is required to provide a namespace for the application.
     """
-    cg, issuetracker = _calvin_cg(source_text, app_name, actorstore_uri)
+    cg, issuetracker = _calvin_cg(source_text, app_name, mdproxy)
     cg.generate_code(issuetracker)
     return cg.app_info, issuetracker
 
-def calvin_astgen(source_text, app_name, actorstore_uri):
+def calvin_astgen(source_text, app_name, mdproxy):
     """
     Generate AST from script, return processed AST and issuetracker.
 
     Parameter app_name is required to provide a namespace for the application.
     """
-    cg, issuetracker = _calvin_cg(source_text, app_name, actorstore_uri)
+    cg, issuetracker = _calvin_cg(source_text, app_name, mdproxy)
     cg.phase1(issuetracker)
     cg.phase2(issuetracker)
     return cg.root, issuetracker
 
 
-def calvin_components(source_text, actorstore_uri, names=None):
+def calvin_components(source_text, mdproxy, names=None):
     """
     Generate AST from script, return requested components and issuetracker.
 
@@ -947,7 +943,7 @@ def calvin_components(source_text, actorstore_uri, names=None):
     Optional parameter names is a list of components to extract, if present (or None)
     return all components found in script.
     """
-    cg, issuetracker = _calvin_cg(source_text, '', actorstore_uri)
+    cg, issuetracker = _calvin_cg(source_text, '', mdproxy)
     cg.phase1(issuetracker)
 
     if issuetracker.error_count:

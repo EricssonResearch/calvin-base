@@ -1,3 +1,6 @@
+import json
+import hashlib
+
 import requests
 
 from calvinservices.actorstore import store
@@ -159,4 +162,14 @@ class ActorMetadataProxy(object):
     
     def get_source(self, actor_type):
         return self.store.get_source(actor_type)
+        
+    def signature(self, metadata):
+        signature = {
+            'actor_type': str("{ns}.{name}".format(**metadata)),
+            'inports': sorted([str(port['name']) for port in metadata['ports'] if port['direction'] == 'in']),
+            'outports': sorted([str(port['name']) for port in metadata['ports'] if port['direction'] == 'out'])
+        }
+        data = json.dumps(signature, separators=(',', ':'), sort_keys=True)
+        return hashlib.sha256(data.encode('utf-8')).hexdigest()
+        
 

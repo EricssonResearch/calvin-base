@@ -70,9 +70,9 @@ class BaseRenderer(object):
 # FIXME: PortList with TransformedPort breaks graphviz
 class DotRenderer(BaseRenderer):
 
-    def __init__(self, get_metadata, show_args=False, debug=False):
+    def __init__(self, actorstore_proxy, show_args=False, debug=False):
         super(DotRenderer, self).__init__()
-        self.get_metadata = get_metadata
+        self.actorstore_proxy = actorstore_proxy
         self.debug = debug
         self.show_args = show_args
         self._namespace_stack = []
@@ -82,7 +82,7 @@ class DotRenderer(BaseRenderer):
 
     def _lookup_definition(self, actor_type, root):
         if '.' in actor_type:
-            meta = self.get_metadata(actor_type)
+            meta = self.actorstore_proxy.get_metadata(actor_type)
             # print(meta)
             # {
             #     'documentation': [
@@ -310,30 +310,30 @@ class Visualize(Visitor):
            self.renderer.render(node, order='postorder' if n is node.children[-1] else 'inorder')
 
 
-def visualize_script(get_metadata, source_text, show_args=False):
+def visualize_script(actorstore_proxy, source_text, show_args=False):
     """Process script and return graphviz (dot) source representing application."""
     # Here we need the unprocessed tree ...
     ir, issuetracker = calvin_parse(source_text)
     # ... but expand portlists to simplify rendering
     rw = PortlistRewrite(issuetracker)
     rw.visit(ir)
-    r = DotRenderer(get_metadata, show_args, debug=False)
+    r = DotRenderer(actorstore_proxy, show_args, debug=False)
     v = Visualize(renderer = r)
     dot_source = v.process(ir)
     return dot_source, issuetracker
 
-def visualize_deployment(get_metadata, source_text, show_args=False):
-    ast_root, issuetracker = calvin_astgen(source_text, 'visualizer')
+def visualize_deployment(actorstore_proxy, source_text, show_args=False):
+    ast_root, issuetracker = calvin_astgen(source_text, 'visualizer', actorstore_proxy)
     # Here we need the processed tree
-    r = DotRenderer(get_metadata, show_args, debug=False)
+    r = DotRenderer(actorstore_proxy, show_args, debug=False)
     v = Visualize(renderer = r)
     dot_source = v.process(ast_root)
     return dot_source, issuetracker
 
-def visualize_component(get_metadata, source_text, name, show_args=False):
+def visualize_component(actorstore_proxy, source_text, name, show_args=False):
     # STUB
-    ir_list, issuetracker = calvin_components(source_text, names=[name])
-    r = DotRenderer(get_metadata, show_args, debug=False)
+    ir_list, issuetracker = calvin_components(source_text, actorstore_proxy, names=[name])
+    r = DotRenderer(actorstore_proxy, show_args, debug=False)
     v = Visualize(renderer = r)
     dot_source = v.process(ir_list[0])
     return dot_source, issuetracker

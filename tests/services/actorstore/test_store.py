@@ -23,8 +23,6 @@ import yaml
 import jsonschema
 from jsonschema.exceptions import ValidationError
 
-from calvin.common.actor_signature import signature
-
 
 # Helpers
 def actor_files():
@@ -90,8 +88,7 @@ def test_signature(store, actor_file):
     _, ns, name = basepath.rsplit('/', 2)
     actor_type = "{}.{}".format(ns, name)
     metadata = store.get_metadata(actor_type)
-    
-    new_sign = signature(metadata)
+    new_sign = store.signature(metadata)
     ref_sign = _create_signature(actor_type, metadata)
     
     assert new_sign == ref_sign

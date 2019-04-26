@@ -492,8 +492,9 @@ def test_actors(mock_calvinsys, mock_calvinlib, monkeypatch, store, actor_type):
     monkeypatch.setattr(calvin.runtime.north.calvinlib, '_calvinlib', mock_calvinlib)    
     
     # 1. Load class from store
-    info, src, metadata = store.get_info(actor_type)
-    assert info is Pathinfo.actor
+    metadata = store.get_metadata(actor_type)
+    src = store.get_source(actor_type)
+    assert metadata['type'] == 'actor'
     actor_class = class_factory(src, metadata, actor_type)
 
     # 2. Check for unit test information

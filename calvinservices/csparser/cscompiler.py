@@ -23,6 +23,7 @@ import argparse
 from .cspreprocess import Preprocessor
 from .dscodegen import calvin_dscodegen
 from .codegen import calvin_codegen
+from calvin.common import metadata_proxy as mdproxy
 from calvin.common import code_signer
 
 def appname_from_filename(filename):
@@ -37,8 +38,8 @@ def preprocess(filename, include_paths):
     sourceText, it = pp.process(filename)
     return (sourceText, it)
 
-def compile_source(source, appname, actorstore_uri):
-    app_info, issuetracker = calvin_codegen(source, appname, actorstore_uri)
+def compile_source(source, appname, actorstore_proxy):
+    app_info, issuetracker = calvin_codegen(source, appname, actorstore_proxy)
     deploy_info, issuetracker2 = calvin_dscodegen(source, appname)
     issuetracker.merge(issuetracker2)
     deployable = {
@@ -48,12 +49,12 @@ def compile_source(source, appname, actorstore_uri):
     }
     return (deployable, issuetracker)
 
-def compile_file(filepath, include_paths, actorstore_uri):
+def compile_file(filepath, include_paths, actorstore_proxy):
     source, issuetracker = preprocess(filepath, include_paths)
     if issuetracker.error_count > 0:
         return ({}, issuetracker)
     appname = appname_from_filename(filepath)
-    return compile_source(source, appname, actorstore_uri)
+    return compile_source(source, appname, actorstore_proxy)
 
 def sign_deployable(deployable, organization, common_name):
     signer = code_signer.CS(organization=organization, commonName=common_name)
@@ -97,7 +98,8 @@ def main():
 
     # Compile
     infile = '/dev/stdin' if args.file == '-' else args.file
-    deployable, issuetracker = compile_file(infile, args.include_paths, args.actorstore_uri)
+    actorstore_proxy = mdproxy.ActorMetadataProxy(args.actorstore_uri)
+    deployable, issuetracker = compile_file(infile, args.include_paths, actorstore_proxy)
 
     # Report errors and (optionally) warnings
     if issuetracker.error_count:

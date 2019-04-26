@@ -29,6 +29,7 @@ from unittest.mock import Mock
 import requests
 
 from calvinservices.csparser.cscompiler import compile_source
+from calvin.common import metadata_proxy as mdproxy 
 from tools.toolsupport import orchestration
 
 
@@ -133,7 +134,8 @@ def deploy_app(control_api):
     Usage: app_info = deploy_app(rt_uri, script, name)
     """
     def _deploy_app(rt_uri, script, name, actorstore_uri):
-        deployable, issuetracker = compile_source(script, name, actorstore_uri)
+        actorstore_proxy = mdproxy.ActorMetadataProxy(actorstore_uri)
+        deployable, issuetracker = compile_source(script, name, actorstore_proxy)
         assert issuetracker.errors() == []
         # Deploy to rt1
         status, app_info = control_api.deploy(rt_uri, deployable)
