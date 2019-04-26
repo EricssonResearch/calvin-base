@@ -44,7 +44,8 @@ class BaseRenderer(object):
 
     def render(self, node, order='preorder'):
         handler = getattr(self, node.__class__.__name__, self._default)
-        args, _, _, _ = inspect.getargspec(handler)
+        args, *_ = inspect.getfullargspec(handler)        
+        
         if len(args) == 3:
             self._add(handler(node, order))
         elif order == 'preorder':
