@@ -8,7 +8,7 @@ from calvin.runtime.north.calvin_network import CalvinNetwork
 from calvin.runtime.north.calvin_proto import CalvinProto
 from calvin.common.calvin_callback import CalvinCB
 from calvin.common import dynops
-from calvin.Tools import orchestration
+from tools.toolsupport import orchestration
 
 
 storage_configs = [

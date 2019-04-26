@@ -29,7 +29,7 @@ from unittest.mock import Mock
 import requests
 
 from calvinservices.csparser.cscompiler import compile_source
-from calvin.Tools import orchestration
+from tools.toolsupport import orchestration
 
 
 ##################################

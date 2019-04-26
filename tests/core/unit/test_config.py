@@ -5,7 +5,7 @@ import pytest
 import yaml
 
 from calvin.common import calvinconfig
-from calvin.Tools import orchestration
+from tools.toolsupport import orchestration
 
 @pytest.mark.xfail()
 def test_default_config(working_dir):
