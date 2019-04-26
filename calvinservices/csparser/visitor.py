@@ -88,6 +88,34 @@ def search_tree(root, query, maxdepth=-1):
     f = Finder()
     return f.search(root, query, maxdepth)
     
+def match_query(kind=None, attributes=None):
+    """
+    Return True if node type is <kind> and its attributes matches <attr_dict>
+    If <kind> or <attr_dict> evaluates to False it will match anything,
+    if both evaluates to False this method will always return True.
+    If an attribute value is a class, it will match of the property is an instance of that class
+    """
+    def inner_query(node):
+        if kind and type(node) is not kind:
+            return False
+        if not attributes:
+            # No or empty attr dict matches.
+            return True
+        for key, value in attributes.items():
+            attr_value = getattr(node, key, None)
+            # Commenting out unused complication
+            # if inspect.isclass(value):
+            #     raise Exception("Value is class!")
+            #     attr_value = type(attr_value)
+            if value != attr_value:
+                return False
+        return True
+    return inner_query
+
+def query(root, kind=None, attributes=None, maxdepth=-1):
+    query = match_query(kind=kind, attributes=attributes)
+    return search_tree(root, query, maxdepth)
+
     
 if __name__ == '__main__':
     a = Node()

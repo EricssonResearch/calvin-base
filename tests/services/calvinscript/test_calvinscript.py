@@ -670,7 +670,7 @@ def testTokenTransformInternalInportBad(system_setup):
     1 > f.in
     """
     result, errors, warnings = parse('inline', script, system_setup['actorstore']['uri'])
-    assert len(errors) == 4 
+    assert len(errors) == 3
 
 def testTokenTransformInternalOutport(system_setup):
     script = """
@@ -694,7 +694,7 @@ def testTokenTransformInternalOutportBad(system_setup):
     f.out > voidport
     """
     result, errors, warnings = parse('inline', script, system_setup['actorstore']['uri'])
-    assert len(errors) == 3 
+    assert len(errors) == 2 
 
 def testStringLiteral(system_setup):
     # N.B raw string (r"") required to have same behaviour as script file

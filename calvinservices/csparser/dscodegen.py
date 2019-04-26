@@ -19,9 +19,9 @@
 
 from . import astprint
 from . import astnode as ast
-from .visitor import Visitor
-from .parser import calvin_parse
-from .codegen import query, ReplaceConstants
+from .visitor import Visitor, query
+from calvinservices.csparser import codegen
+from calvinservices.csparser.parser import calvin_parse
 
 
 class ExpandRules(Visitor):
@@ -228,7 +228,7 @@ class DSCodeGen(object):
 
 
     def generate_code_from_ast(self, issue_tracker):
-        rc = ReplaceConstants(issue_tracker)
+        rc = codegen.ReplaceConstants(issue_tracker)
         rc.process(self.root)
         self.dump_tree('RESOLVED CONSTANTS')
 

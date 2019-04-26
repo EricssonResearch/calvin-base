@@ -19,81 +19,16 @@
 
 import numbers
 
-import requests
-
 from . import astnode as ast
 from . import astprint
 from .parser import calvin_parse
-from .visitor import Visitor, search_tree
+from .visitor import Visitor, query
 from calvin.actor.port_property_syntax import port_property_data
 
+from calvin.common import metadata_proxy as mdproxy
 # FIXME: External dependency to be removed
-from  calvin.common.actor_signature import signature
+from calvin.common.actor_signature import signature
 
-
-def _construct_metadata(node):
-    # FIXME: Actually construct metadata
-    #        Use new format
-    return {
-        'is_known': False,
-        'inputs': [],
-        'outputs': [],
-        'args':{
-            'mandatory':[],
-            'optional':{}
-        }
-    }
-
-
-
-class ActorLookup(object):
-    """docstring for ActorLookup"""
-    def __init__(self, actorstore_uri):
-        super(ActorLookup, self).__init__()
-        self.actorstore_uri = actorstore_uri
-        self.cache = {}
-
-    def _root(self, node):
-        root = node
-        while root.parent:
-            root = root.parent
-        return root
-
-    def _is_local_component(self, actor_type):
-        return '.' not in actor_type    
-    
-    def _lookup(self, node, issue_tracker):
-        if self._is_local_component(node.actor_type):
-            comps = query(self._root(node), kind=ast.Component, attributes={'name':node.actor_type})
-            if not comps:
-                reason = "Missing local component definition: '{}'".format(node.actor_type)
-                issue_tracker.add_error(reason, node)
-                return {'is_known': False}
-            comp = comps[0]
-            metadata = {
-                'is_known': True,
-                'name': comp.name,
-                'type': 'component',
-                'ports': [{'direction': 'out', 'name': name} for name in comp.outports] +
-                         [{'direction': 'in', 'name': name} for name in comp.inports],
-                'args': [{'mandatory': True, 'name':name} for name in comp.arg_names],
-                'definition': comp.children[0]
-            }
-        else:
-            if node.actor_type in self.cache:
-                return self.cache[node.actor_type]
-            ns, name = node.actor_type.split('.') 
-            r = requests.get('{}/actors/{}/{}'.format(self.actorstore_uri, ns, name))
-            if r.status_code != 200:
-                raise("BAD STORE")
-            res = r.json()
-            metadata = res['properties']
-            if not metadata['is_known']:
-                reason = "Not validating actor type: '{}'".format(node.actor_type)
-                issue_tracker.add_warning(reason, node)
-            self.cache[node.actor_type] = metadata    
-
-        return metadata
 
 
 def _check_arguments(assignment, issue_tracker):
@@ -336,6 +271,7 @@ class Expander(Visitor):
         self.issue_tracker = issue_tracker
 
     def process(self, root, verify=True):
+        self.root = root
         self.verify = verify
         self.visit(root)
         # Remove local componentes from AST
@@ -344,18 +280,13 @@ class Expander(Visitor):
 
     def visit_Assignment(self, node):
         if not node.metadata:
-            node.metadata = self.lookup._lookup(node, self.issue_tracker)
+            node.metadata = self.lookup.get_metadata(node.actor_type, auxiliary=self.root)
         if node.metadata['is_known'] and node.metadata['type'] == 'actor':
             # Nothing more to do
             return
         if not node.metadata['is_known']:
-            # Unknown actor => construct metadata from graph + args unless verify is True
-            if self.verify:
-                reason = "Unknown actor type: '{}'".format(node.actor_type)
-                self.issue_tracker.add_error(reason, node)
-            else:
-                # Warning issued previously
-                node.metadata = _construct_metadata(node)
+            reason = "Missing definition for: '{}'".format(node.actor_type)
+            self.issue_tracker.add_error(reason, node)
             return
         #
         # We end up here if node is in fact a component
@@ -735,6 +666,7 @@ class ConsistencyCheck(Visitor):
         self.component = None
 
     def process(self, root):
+        self.root = root
         self.visit(root)
 
     def visit_Component(self, node):
@@ -780,9 +712,11 @@ class ConsistencyCheck(Visitor):
         self._visit_children(port_props)
 
     def visit_Assignment(self, node):
-        node.metadata = self.lookup._lookup(node, self.issue_tracker)
+        node.metadata = self.lookup.get_metadata(node.actor_type, auxiliary=self.root)
         if not node.metadata['is_known']:
             # error issued in _lookup
+            reason = "Missing definition for: '{}'".format(node.actor_type)
+            self.issue_tracker.add_error(reason, node)
             return
 
         _check_arguments(node, self.issue_tracker)
@@ -864,7 +798,7 @@ class CodeGen(object):
     """
     def __init__(self, ast_root, script_name, actorstore_uri):
         super(CodeGen, self).__init__()
-        self.lookup = ActorLookup(actorstore_uri)
+        self.lookup = mdproxy.ActorMetadataProxy(actorstore_uri)
         self.root = ast_root
         # self.verify = verify
         self.app_info = {
@@ -980,33 +914,6 @@ class CodeGen(object):
         self.generate_code_from_ast(issue_tracker)
         self.app_info['valid'] = (issue_tracker.error_count == 0)
 
-def match_query(kind=None, attributes=None):
-    """
-    Return True if node type is <kind> and its attributes matches <attr_dict>
-    If <kind> or <attr_dict> evaluates to False it will match anything,
-    if both evaluates to False this method will always return True.
-    If an attribute value is a class, it will match of the property is an instance of that class
-    """
-    def inner_query(node):
-        if kind and type(node) is not kind:
-            return False
-        if not attributes:
-            # No or empty attr dict matches.
-            return True
-        for key, value in attributes.items():
-            attr_value = getattr(node, key, None)
-            # Commenting out unused complication
-            # if inspect.isclass(value):
-            #     raise Exception("Value is class!")
-            #     attr_value = type(attr_value)
-            if value != attr_value:
-                return False
-        return True
-    return inner_query
-
-def query(root, kind=None, attributes=None, maxdepth=-1):
-    query = match_query(kind=kind, attributes=attributes)
-    return search_tree(root, query, maxdepth)
 
 def _calvin_cg(source_text, app_name, actorstore_uri):
     ast_root, issuetracker = calvin_parse(source_text)

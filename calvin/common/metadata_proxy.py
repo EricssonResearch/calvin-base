@@ -2,7 +2,7 @@ import requests
 
 from calvinservices.actorstore import store
 from calvinservices.csparser.parser import calvin_parse
-from calvinservices.csparser.codegen import query
+from calvinservices.csparser.visitor import query
 from calvinservices.csparser import astnode
 
 #
