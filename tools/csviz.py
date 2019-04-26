@@ -21,7 +21,7 @@ import sys
 import textwrap
 import argparse
 
-from calvinextras.toolsupport import ToolSupport
+from tools.toolsupport import ToolSupport
 
 def main():
     long_description = """
