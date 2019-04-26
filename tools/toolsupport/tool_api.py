@@ -1,5 +1,5 @@
 from calvin.common import metadata_proxy as mdproxy
-from calvinservices.csparser import visualize
+from tools.toolsupport import visualize
 from calvin.common.docgen import DocumentationStore         
 
 

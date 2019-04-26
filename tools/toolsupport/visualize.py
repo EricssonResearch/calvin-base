@@ -21,10 +21,10 @@ import string
 import random
 import inspect
 
-from . import astnode as ast
-from .visitor import Visitor
-from .codegen import calvin_astgen, calvin_components, query, PortlistRewrite #, ResolvePortRefs
-from .parser import calvin_parse
+from calvinservices.csparser import astnode as ast
+from calvinservices.csparser.visitor import Visitor
+from calvinservices.csparser.codegen import calvin_astgen, calvin_components, query, PortlistRewrite #, ResolvePortRefs
+from calvinservices.csparser.parser import calvin_parse
 
 class BaseRenderer(object):
     """docstring for BaseRenderer"""
