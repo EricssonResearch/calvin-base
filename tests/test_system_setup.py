@@ -1,9 +1,4 @@
-
-import os
-
 import pytest
-
-# system_config_file = "SystemYAML.yaml"
 
 system_config = r"""
 - class: REGISTRY
