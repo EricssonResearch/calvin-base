@@ -1,7 +1,9 @@
-import pytest
 import unittest
 import types
 import inspect
+
+import pytest
+
 from calvinservices.csparser.parser import calvin_parse
 
 # FIXME: Rewrite

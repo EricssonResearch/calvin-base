@@ -42,9 +42,9 @@ def _read_file(file):
 def _filepath(testname, ext):
     return "{}{}.{}".format(absolute_filename('codegen/'), testname, ext)
 
-def codegen(testname, actorstore_uri):
+def codegen(testname):
     test_file = _filepath(testname, "calvin")
-    code, it = compile_file(test_file, None, actorstore_uri)
+    code, it = compile_file(test_file, None, 'local')
     code = json.loads(json.dumps(code)) # FIXME: Is there no other way of making this unicode???
     
     ref_file = _filepath(testname, "ref")
@@ -102,12 +102,10 @@ def ordered(obj):
 
 test_list = [os.path.basename(x)[:-7] for x in glob.glob("{}/*.calvin".format(absolute_filename('codegen')))]
 
-system_config_file = "actorstore.yaml"
 
 @pytest.mark.parametrize("test", test_list)
-def testCalvinScriptCodegen(system_setup, test):
-    actorstore_uri = system_setup['actorstore']['uri']
-    code, it, ref = codegen(test, actorstore_uri)
+def testCalvinScriptCodegen(test):
+    code, it, ref = codegen(test)
     assert it.error_count == 0
     try:
         compare(ordered(code), ordered(ref))

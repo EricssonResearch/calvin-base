@@ -88,10 +88,8 @@ tests = [
     )
 ]
 
-system_config_file = "actorstore.yaml"
-
 @pytest.mark.parametrize('test', tests)
-def test_script(system_setup, test):
+def test_script(test):
     name, script = test
     requirements, issuetracker = calvin_dscodegen(script, name)
     assert issuetracker.error_count == 0
