@@ -16,7 +16,7 @@
 
 import pytest
 
-from calvinservices.csparser.dscodegen import calvin_dscodegen
+from tools import toolsupport
 
 
 tests = [
@@ -91,6 +91,7 @@ tests = [
 @pytest.mark.parametrize('test', tests)
 def test_script(test):
     name, script = test
-    requirements, issuetracker = calvin_dscodegen(script, name)
+    ts = toolsupport.ToolSupport('local')
+    requirements, issuetracker = ts.calvin_dscodegen(script, name)
     assert issuetracker.error_count == 0
 

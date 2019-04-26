@@ -17,12 +17,11 @@
 
 import pytest
 
-from calvin.common import metadata_proxy as mdproxy 
-from calvinservices.csparser.codegen import calvin_codegen
+from tools import toolsupport
 
 def parse(test, source_text):
-    actorstore_proxy = mdproxy.ActorMetadataProxy('local')
-    deployable, issuetracker = calvin_codegen(source_text, test, actorstore_proxy)
+    ts = toolsupport.ToolSupport('local')
+    deployable, issuetracker = ts.calvin_codegen(source_text, test)
     errors = issuetracker.errors(sort_key='reason')
     warnings = issuetracker.warnings(sort_key='reason')
 

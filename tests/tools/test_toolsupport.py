@@ -6,6 +6,7 @@ def test_sanity():
     ts = toolsupport.ToolSupport()
     assert ts
 
+@pytest.mark.xfail
 def test_visualize():
     script = """
     component Filter(param) in -> out {

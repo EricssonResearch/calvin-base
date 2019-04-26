@@ -20,10 +20,8 @@ import os
 import sys
 import json
 import argparse
-from .cspreprocess import Preprocessor
-from .dscodegen import calvin_dscodegen
-from .codegen import calvin_codegen
-from calvin.common import metadata_proxy as mdproxy
+from tools.cspreprocess import Preprocessor
+from tools import toolsupport
 from calvin.common import code_signer
 
 def appname_from_filename(filename):
@@ -38,9 +36,10 @@ def preprocess(filename, include_paths):
     sourceText, it = pp.process(filename)
     return (sourceText, it)
 
-def compile_source(source, appname, actorstore_proxy):
-    app_info, issuetracker = calvin_codegen(source, appname, actorstore_proxy)
-    deploy_info, issuetracker2 = calvin_dscodegen(source, appname)
+def compile_source(source, appname, actorstore_uri):
+    ts = toolsupport.ToolSupport(actorstore_uri)
+    app_info, issuetracker = ts.calvin_codegen(source, appname)
+    deploy_info, issuetracker2 = ts.calvin_dscodegen(source, appname)
     issuetracker.merge(issuetracker2)
     deployable = {
         'app_info': app_info,
@@ -49,12 +48,12 @@ def compile_source(source, appname, actorstore_proxy):
     }
     return (deployable, issuetracker)
 
-def compile_file(filepath, include_paths, actorstore_proxy):
+def compile_file(filepath, include_paths, actorstore_uri):
     source, issuetracker = preprocess(filepath, include_paths)
     if issuetracker.error_count > 0:
         return ({}, issuetracker)
     appname = appname_from_filename(filepath)
-    return compile_source(source, appname, actorstore_proxy)
+    return compile_source(source, appname, actorstore_uri)
 
 def sign_deployable(deployable, organization, common_name):
     signer = code_signer.CS(organization=organization, commonName=common_name)
@@ -98,8 +97,7 @@ def main():
 
     # Compile
     infile = '/dev/stdin' if args.file == '-' else args.file
-    actorstore_proxy = mdproxy.ActorMetadataProxy(args.actorstore_uri)
-    deployable, issuetracker = compile_file(infile, args.include_paths, actorstore_proxy)
+    deployable, issuetracker = compile_file(infile, args.include_paths, args.actorstore_uri)
 
     # Report errors and (optionally) warnings
     if issuetracker.error_count:

@@ -21,7 +21,6 @@ from . import astprint
 from . import astnode as ast
 from .visitor import Visitor, query
 from calvinservices.csparser import codegen
-from calvinservices.csparser.parser import calvin_parse
 
 
 class ExpandRules(Visitor):
@@ -248,45 +247,4 @@ class DSCodeGen(object):
         self.deploy_info = {'requirements':requirements}
         self.deploy_info['valid'] = (issue_tracker.error_count == 0)
 
-
-def calvin_dscodegen(source_text, app_name):
-    """
-    Generate deployment info from script, return deploy_info and issuetracker.
-
-    Parameter app_name is required to provide a namespace for the application.
-    """
-    ast_root, issuetracker = calvin_parse(source_text)
-    cg = DSCodeGen(ast_root, app_name)
-    cg.generate_code(issuetracker)
-    return cg.deploy_info, issuetracker
-
-if __name__ == '__main__':
-    from inspect import cleandoc
-    import json
-
-    script = 'inline'
-    source_text = \
-    """
-    snk : io.Print()
-    1 > snk.token
-
-    rule r1 : a() & b() & c() & d() & e()
-    rule r2 : a() | b() | c() | d() | e()
-    rule r3 : a() | b() & c() & d()
-    rule r4 : a() & b() | c() & d()
-    rule r5 : a() & b() | c() & d() | e() | f()
-
-    apply snk : r2
-
-    """
-    source_text = cleandoc(source_text)
-    print(source_text)
-    print()
-    ai, it = calvin_dscodegen(source_text, script)
-    if it.issue_count == 0:
-        print("No issues")
-    for i in it.formatted_issues(custom_format="{type!c}: {reason} {filename}:{line}:{col}", filename=script):
-        print(i)
-    print("-------------")
-    print(json.dumps(ai, indent=4))
 

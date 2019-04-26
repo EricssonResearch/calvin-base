@@ -22,8 +22,7 @@ import collections
 
 import pytest
 
-from calvin.common import metadata_proxy as mdproxy 
-from calvinservices.csparser.cscompiler import compile_file
+from tools.cscompiler import compile_file
 
 
 def absolute_filename(filename):
@@ -44,9 +43,8 @@ def _filepath(testname, ext):
     return "{}{}.{}".format(absolute_filename('codegen/'), testname, ext)
 
 def codegen(testname):
-    actorstore_proxy = mdproxy.ActorMetadataProxy('local')
     test_file = _filepath(testname, "calvin")
-    code, it = compile_file(test_file, None, actorstore_proxy)
+    code, it = compile_file(test_file, None, 'local')
     code = json.loads(json.dumps(code)) # FIXME: Is there no other way of making this unicode???
     
     ref_file = _filepath(testname, "ref")
