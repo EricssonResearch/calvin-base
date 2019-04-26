@@ -38,7 +38,7 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         description=textwrap.dedent(long_description)
     )
-    argparser.add_argument('--actorstore', type=str, default=None,
+    argparser.add_argument('--actorstore', type=str, default='local',
                           help='URI of actorstore, defaults to using local store directly.')
     argparser.add_argument('--script', type=str, required=True,
                            help='script file to visualize.')
