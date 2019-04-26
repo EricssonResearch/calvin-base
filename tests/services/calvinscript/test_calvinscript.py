@@ -20,7 +20,7 @@ import pytest
 from calvinservices.csparser.codegen import calvin_codegen
 
 def parse(test, source_text):
-    deployable, issuetracker = calvin_codegen(source_text, test, 'local', verify=True)
+    deployable, issuetracker = calvin_codegen(source_text, test, 'local')
     errors = issuetracker.errors(sort_key='reason')
     warnings = issuetracker.warnings(sort_key='reason')
 

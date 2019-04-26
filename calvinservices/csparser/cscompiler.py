@@ -38,7 +38,7 @@ def preprocess(filename, include_paths):
     return (sourceText, it)
 
 def compile_source(source, appname, actorstore_uri):
-    app_info, issuetracker = calvin_codegen(source, appname, actorstore_uri, verify=True)
+    app_info, issuetracker = calvin_codegen(source, appname, actorstore_uri)
     deploy_info, issuetracker2 = calvin_dscodegen(source, appname)
     issuetracker.merge(issuetracker2)
     deployable = {

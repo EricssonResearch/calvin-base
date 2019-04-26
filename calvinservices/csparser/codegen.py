@@ -15,8 +15,6 @@
 # limitations under the License.
 
 
-
-
 import numbers
 
 from . import astnode as ast
@@ -270,9 +268,8 @@ class Expander(Visitor):
         self.lookup = lookup 
         self.issue_tracker = issue_tracker
 
-    def process(self, root, verify=True):
+    def process(self, root):
         self.root = root
-        self.verify = verify
         self.visit(root)
         # Remove local componentes from AST
         for comp in query(root, kind=ast.Component, maxdepth=1):
@@ -800,7 +797,6 @@ class CodeGen(object):
         super(CodeGen, self).__init__()
         self.lookup = mdproxy.ActorMetadataProxy(actorstore_uri)
         self.root = ast_root
-        # self.verify = verify
         self.app_info = {
             'name':script_name,
             'actors': {},
@@ -859,9 +855,9 @@ class CodeGen(object):
         cpp.visit(self.root)
         self.dump_tree('Collected port properties')
 
-    def expand_components(self, issue_tracker, verify):
+    def expand_components(self, issue_tracker):
         expander = Expander(self.lookup, issue_tracker)
-        expander.process(self.root, verify)
+        expander.process(self.root)
         self.dump_tree('EXPANDED')
 
     def flatten(self, issue_tracker):
@@ -897,9 +893,9 @@ class CodeGen(object):
         # Check graph consistency (e.g. missing connections etc.)
         self.consistency_check(issue_tracker)
 
-    def phase2(self, issue_tracker, verify):
+    def phase2(self, issue_tracker):
         # Replace Component objects with a clone of the component graph
-        self.expand_components(issue_tracker, verify)
+        self.expand_components(issue_tracker)
         # Move port properties from actors and PortProperty statements into ports
         self.collect_port_properties(issue_tracker)
         # Replace hierachy with namespace for all objects
@@ -908,9 +904,9 @@ class CodeGen(object):
         self.coalesce_properties(issue_tracker)
         self.check_properties(issue_tracker)
 
-    def generate_code(self, issue_tracker, verify):
+    def generate_code(self, issue_tracker):
         self.phase1(issue_tracker)
-        self.phase2(issue_tracker, verify)
+        self.phase2(issue_tracker)
         self.generate_code_from_ast(issue_tracker)
         self.app_info['valid'] = (issue_tracker.error_count == 0)
 
@@ -921,27 +917,25 @@ def _calvin_cg(source_text, app_name, actorstore_uri):
     return cg, issuetracker
 
 # FIXME: [PP] Change calvin_ to calvinscript_
-def calvin_codegen(source_text, app_name, actorstore_uri, verify=True):
+def calvin_codegen(source_text, app_name, actorstore_uri):
     """
     Generate application code from script, return deployable and issuetracker.
 
     Parameter app_name is required to provide a namespace for the application.
-    Optional parameter verify is deprecated, defaults to True.
     """
     cg, issuetracker = _calvin_cg(source_text, app_name, actorstore_uri)
-    cg.generate_code(issuetracker, verify)
+    cg.generate_code(issuetracker)
     return cg.app_info, issuetracker
 
-def calvin_astgen(source_text, app_name, actorstore_uri, verify=True):
+def calvin_astgen(source_text, app_name, actorstore_uri):
     """
     Generate AST from script, return processed AST and issuetracker.
 
     Parameter app_name is required to provide a namespace for the application.
-    Optional parameter verify is deprecated, defaults to True.
     """
     cg, issuetracker = _calvin_cg(source_text, app_name, actorstore_uri)
     cg.phase1(issuetracker)
-    cg.phase2(issuetracker, verify)
+    cg.phase2(issuetracker)
     return cg.root, issuetracker
 
 
