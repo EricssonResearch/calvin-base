@@ -1,6 +1,8 @@
+import json
+
 from calvin.common import metadata_proxy as mdproxy
-from calvin.common.docgen import DocumentationStore         
 from calvinservices.csparser import parser, codegen, dscodegen, visitor, astnode
+from . import docgen
 from . import visualize2 as visualize
 
 
@@ -125,17 +127,18 @@ class ToolSupport(object):
    
     #
     # Help
-    #
-    def help_for_actor(self, actor):
-        pass
-        # store = DocumentationStore(args.actorstore_uri)
-        # if args.format == 'raw':
-        #     print(store.help_raw(args.what))
-        # else:
-        #     compact = bool(args.format == 'compact')
-        #     print(store.help(args.what, compact=compact, formatting=args.prettyprinter))
-
+    #    
+    def help_raw(self, what):
+        return json.dumps(self.store.get_metadata(what or ''))
     
+    def help(self, what, formatting='plain', compact=False, links=False):
+        md = self.store.get_metadata(what or '')
+        df = docgen.DocFormatter(outputformat=formatting, compact=compact, links=links)
+        return df.format(md)
+    
+    def documentation(self):
+        pass
+
     def completion(self, script):
         pass
 

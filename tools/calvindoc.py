@@ -19,7 +19,7 @@
 import json
 import sys
 import argparse
-from calvin.common.docgen import DocumentationStore         
+from tools import toolsupport         
 
 def main():
 
@@ -44,16 +44,16 @@ def main():
                            help='When "--format detailed" is in use, this options allows a choice between plain text and markdown')
 
     args = argparser.parse_args()
-    store = DocumentationStore(args.actorstore_uri)
+    ts = toolsupport.ToolSupport(args.actorstore_uri)
 
     if args.all:
-        print(store.documentation())
+        print(ts.documentation())
     else:
         if args.format == 'raw':
-            print(store.help_raw(args.what))
+            print(ts.help_raw(args.what))
         else:
             compact = bool(args.format == 'compact')
-            print(store.help(args.what, compact=compact, formatting=args.prettyprinter))
+            print(ts.help(args.what, compact=compact, formatting=args.prettyprinter))
 
 if __name__ == '__main__':
     main()

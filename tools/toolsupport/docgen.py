@@ -22,7 +22,6 @@ from collections import namedtuple
 
 import pystache
 
-from calvin.common import metadata_proxy as mdproxy
 from calvin.common.calvinlogger import get_logger
 
 _log = get_logger(__name__)
@@ -346,46 +345,3 @@ class DocFormatter(object):
         else:    
             return a.detailed()
 
-
-class DocumentationStore(object):
-    """docstring for DocumentationStore"""
-    def __init__(self, actorstore_uri):
-        super(DocumentationStore, self).__init__()
-        self.lookup = mdproxy.ActorMetadataProxy(config=actorstore_uri)
-    
-    def _retrieve_metadata(self, what):
-        metadata = self.lookup.get_metadata(what or '')
-        return metadata
-        
-    # def _format_what(self, what):
-    #     what = what or ''
-    #     parts = what.split('.') + ['', '']
-    #     return parts[0:2]
-    
-    def documentation(self):
-        pass
-    
-    def help_raw(self, what):
-        return json.dumps(self._retrieve_metadata(what))
-        
-    def help(self, what, compact, formatting):
-        metadata = self._retrieve_metadata(what)
-        df = DocFormatter(outputformat=formatting, compact=compact)
-        return df.format(metadata)
-
-        
-if __name__ == '__main__':
-
-    def test_all_formatters(d):
-        print("\n%s\n=======================" % (d.__class__.__name__,))
-        for formatter in [d.compact, d.detailed, d.markdown, d.markdown_links]:
-            print("%s:\n-----------------------" % (formatter.__name__,))
-            print(formatter())
-
-    s = DocumentationStore()
-    
-    metadata = s._retrieve_metadata('io.Print')
-    print(metadata)
-    df = DocFormatter(compact=False, outputformat='md', links=True)
-    print(df.format(metadata))
-        

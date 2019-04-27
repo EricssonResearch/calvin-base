@@ -40,6 +40,19 @@ def test_compile():
     assert it.error_count == 0
     it = ts.syntax_check(script)
     assert it.error_count == 0
+    
+def test_help():
+    mdjson = ts.help_raw('std.Identity')
+    assert mdjson.startswith('{')
+    helptext = ts.help('std.Identity', formatting='plain')
+    assert helptext.startswith('=======')
+    helptext = ts.help('std.Identity', formatting='plain', compact=True)
+    assert helptext.startswith('std.Identity')
+    helptext = ts.help('std.Identity', formatting='md')
+    assert helptext.startswith('## Actor: std')
+    helptext = ts.help('std.Identity', formatting='md', compact=True)
+    assert helptext.startswith('## Actor: std')
+    
 
 
     

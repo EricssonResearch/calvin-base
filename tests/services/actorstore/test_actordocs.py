@@ -2,15 +2,13 @@ import json
 
 import pytest
 
-from calvin.common.docgen import DocumentationStore
-
-system_config_file = "actorstore.yaml"
+from tools import toolsupport
 
 @pytest.fixture(scope='module')
-def docstore(system_setup):
+def docstore():
     """Local DocumentationStore instance"""
-    ds = DocumentationStore(system_setup['actorstore']['uri'])
-    return ds
+    ts = toolsupport.ToolSupport('local')
+    return ts
 
 def test_sanity(docstore):
     assert docstore
