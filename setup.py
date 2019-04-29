@@ -88,6 +88,7 @@ setup(name='er-calvin',
               'csviz=tools.csviz:main',
               'csactorstore=calvinservices.actorstore.store_app:main',
               'csregistry=calvinservices.registry.registry_app:main',
+              'cssetup=tools.cssetup:main',
           ]
       }
 )

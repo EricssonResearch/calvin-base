@@ -80,23 +80,26 @@ def system_setup(setup_file, verbose):
     try:
         info = _system_setup(system_setup, verbose)
     except Exception as err:
-       print(err)
-       return
+       print(err, file=sys.stderr)
+       return 1
     status = read_status()
     exclude = [x['name'] for x in status]
     name = unique_name(exclude)
     ts = datetime.now().isoformat(sep=' ', timespec='milliseconds')
     status.append({'name':name, 'ts':ts, 'config':setup_file, 'info':info})
     write_status(status)
+    return 0
     
 def system_list(verbose):
     status = read_status()
-    if not status:
+    if status:
+        print("{:<16}{:<26}{}\n{}".format('Name', 'Started', 'Config file', '-'*53))    
+        for s in status:
+            print("{name:<16}{ts}   {config}".format(**s))
+    else:
         print("No running systems")
-        return
-    print("{:<16}{:<26}{}\n{}".format('Name', 'Started', 'Config file', '-'*53))    
-    for s in status:
-        print("{name:<16}{ts}   {config}".format(**s))        
+    return 0
+              
 
 def _system_teardown(info, verbose):
     # Actual teardown
@@ -105,8 +108,11 @@ def _system_teardown(info, verbose):
         if not pid:
             continue
         if verbose:
-            print("Terminating {}".format(name))    
-        os.kill(pid, 9)
+            print("Terminating {}".format(name))
+        try:        
+            os.kill(pid, 9)
+        except ProcessLookupError:
+            print("Process {} ({}) does not exist".format(pid, name), file=sys.stderr)
 
 def system_teardown(name, verbose):
     status = read_status()
@@ -117,16 +123,20 @@ def system_teardown(name, verbose):
             write_status(status)
             break
     else:
-        print("No system named {}".format(name))
-            
+        print("No system named {}".format(name), file=sys.stderr)
+    return 0
 
-if __name__ == '__main__':
+def main():            
     args = parse_arguments()
 
     if args.setup:
-        system_setup(args.setup, args.verbose)        
+        status = system_setup(args.setup, args.verbose)        
     elif args.teardown:
-        system_teardown(args.teardown, args.verbose)       
+        status = system_teardown(args.teardown, args.verbose)       
     else:
-        system_list(args.verbose)
+        status = system_list(args.verbose)
+    return status
+
+if __name__ == '__main__':
+    sys.exit(main())
         
