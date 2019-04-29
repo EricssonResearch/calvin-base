@@ -56,3 +56,26 @@ def test_simple(system_setup, control_api):
         for key, value in indexed_db.items() 
             if not key.startswith("('supernode',") 
                 and not key.startswith("('node/attribute', 'node_name'")])
+
+
+@pytest.fixture                
+def registry_setup(system_setup):
+    yield(system_setup)
+    
+
+def test_reg_access(registry_setup, control_api):
+    server_uri = registry_setup['server']['uri']
+    client_uri = registry_setup['client']['uri']
+    reg_uri = registry_setup['registry']['uri']
+    # Query registry directly
+    body = {"indexes":["node/attribute", "node_name", "", "", "", "", "client"]}
+    res = requests.post(reg_uri + "/get_index/", json=body)
+    reg_res = res.json()
+    # Query registry indirectly via server    
+    status, response = control_api.index(server_uri, path="node/attribute/node_name/////client", root_level=2)
+    assert status == 200
+    assert response['result'] == reg_res
+    
+    
+      
+      

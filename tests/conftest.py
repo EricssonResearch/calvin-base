@@ -262,6 +262,11 @@ def control_api():
         def migrate_application(self, host_uri, app_id, reqs):
             response = requests.post(host_uri + APPLICATION_MIGRATE.format(app_id), json=reqs)
             return response.status_code, None
+            
+        def index(self, host_uri, path, root_level):
+            response = requests.get(host_uri + INDEX_PATH_RPL.format(path, root_level))
+            return response.status_code, response.json()
+                
                     
     return ControlAPI()
         

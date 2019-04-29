@@ -30,6 +30,7 @@ _log = get_logger(__name__)
 
 # USED BY: GUI, CSWEB, CSCONTROL
 # FIXME: Can't be access controlled, as it is needed to find authorization server
+#        PP 2019-04-29: Resolve by providing separate query path for authorization server
 # @authentication_decorator
 @handler(method="GET", path="/index/{path}", optional=[r"\?root_prefix_level=(\d+)"])
 def handle_get_index(self, handle, match, data, hdr):
