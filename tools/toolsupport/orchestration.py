@@ -26,12 +26,9 @@ class Process(object):
     # Define the path to use in wait_for_ack
     ack_path = ""
 
-    def __init__(self, sysdef, port_numbers, tmp_dir):
+    def __init__(self, sysdef, tmp_dir):
         super(Process, self).__init__()
         self.sysdef = sysdef
-        self.sysdef.setdefault('host', '127.0.0.1')
-        self.sysdef.setdefault('port', port_numbers.pop(0))
-        self.sysdef["uri"] = "http://{host}:{port}".format(**self.sysdef)
         self.proc_handle = None
         self.ack_status = False
 
@@ -108,15 +105,10 @@ class RuntimeProcess(Process):
     info_exports = ["name", "uri", "rt2rt", "node_id", "actorstore", "registry"]
     ack_path = "/id"
 
-    def __init__(self, sysdef, port_numbers, tmp_dir):
-        super(RuntimeProcess, self).__init__(sysdef, port_numbers, tmp_dir)
+    def __init__(self, sysdef, tmp_dir):
+        super(RuntimeProcess, self).__init__(sysdef, tmp_dir)
         self._prepare_rt_config_file(tmp_dir)
-        self.sysdef.setdefault('rt2rt_port', port_numbers.pop(0))
-        self.sysdef["rt2rt"] = "calvinip://{host}:{rt2rt_port}".format(**self.sysdef)
-        if 'control_proxy' in self.sysdef:
-            self.sysdef['uri'] = None # self.sysdef['control_proxy']['uri']
         self.sysdef["node_id"] = ""
-        
 
     def _prepare_rt_config_file(self, tmp_dir):
         default_config_file = os.path.join(tmp_dir, 'default.conf')
@@ -169,9 +161,9 @@ factories = {
 }
 
 
-def factory(entity, port_numbers, tmp_dir):
+def factory(entity, tmp_dir):
     class_ = factories[entity['class']]
-    return class_(entity, port_numbers, tmp_dir)
+    return class_(entity, tmp_dir)
 
 
 def _random_ports(n):
@@ -297,6 +289,7 @@ class SystemManager(object):
         self._system = []
         self.workdir = self.prepare_workdir(tmp_dir)
         self.process_config(system_config)
+        
         if verbose:
             self.print_commands()
         if start:
@@ -353,34 +346,90 @@ class SystemManager(object):
                 sys_info = s.info()
                 raise TimeoutError("TIMEOUT for {}".format(sys_info['name']))
 
+    def find_registry_access(self):
+        # Determine global registry access method, either a REGISTRY,
+        # or a first RUNTIME with a control API (uri != None)
+        # 
+        registry_uri = None
+        for name, entry in self.tmpinfo.items():
+            if entry['class'] == 'REGISTRY':
+                registry_uri = entry['uri']
+                break
+            if registry_uri is None and entry['class'] == 'RUNTIME':
+                registry_uri = entry['uri']
+        return registry_uri
+    
     def process_config(self, system_config):
+        self.tmpinfo = {}
+        
         for entity in system_config:
-            self._system.append(self.process_entity(entity))
+            self.preprocess(entity)
+            self.tmpinfo[entity['name']] = entity
+        
+        for entity in system_config:
+            if entity['class'] == 'RUNTIME':
+                self.process_runtime(entity)
+                
+        registry_uri = self.find_registry_access()
+        if registry_uri is None:
+            raise Exception("No accessible registry found")
+    
+        #print(json.dumps(system_config, indent=4, sort_keys=True))   
+                
+        for entity in system_config:
+            self._system.append(factory(entity, self.workdir))  
 
-    def process_entity(self, entity):
-        # Check if entity has property X defined by a $ref. If so, replace it with the expansion of $ref 
-        self.expand(entity, 'registry')
-        self.expand(entity, 'actorstore')
-        self.expand(entity, 'control_proxy')
-        # Create in instance of the class representing this entity (RUNTIME, ACTORSTORE, or REGISTRY)
-        return factory(entity, self.port_numbers, self.workdir)
-
-    def expand(self, entity, entry):
-        value = entity.get(entry, "")
-        if not isinstance(value, str) or not value.startswith('$'):
-            return
-        # Expand the reference    
-        ref_name = value[1:]
-        info = self.info[ref_name]
-        # Only RUNTIME have rt2rt prop
-        ref_is_runtime = 'rt2rt' in info
-        if ref_is_runtime:
-            # Assume runtime is acting as proxy for registry/actorstore, use the rt2rt URI
-            entity[entry] = {'uri': '{}'.format(info['rt2rt']), 'type': 'proxy'}
+    
+    def preprocess(self, entity):
+        preprocessor = {
+            'REGISTRY': self.preprocess_registry,
+            'ACTORSTORE': self.preprocess_actorstore,
+            'RUNTIME': self.preprocess_runtime,
+        }.get(entity['class'], self.preprocess_error)
+        preprocessor(entity)
+    
+    
+    def _make_uri(self, entity):
+        entity.setdefault('host', '127.0.0.1')
+        entity.setdefault('port', self.port_numbers.pop())
+        entity['uri'] = "http://{host}:{port}".format(**entity)
+    
+    def preprocess_registry(self, entity):
+        entity.setdefault('type', 'REST')
+        self._make_uri(entity)
+        
+    def preprocess_actorstore(self, entity):
+        entity.setdefault('type', 'REST')
+        self._make_uri(entity)
+        
+    def preprocess_runtime(self, entity):
+        entity.setdefault('host', '127.0.0.1')
+        entity.setdefault('rt2rt_port', self.port_numbers.pop())
+        entity['rt2rt'] = "calvinip://{host}:{rt2rt_port}".format(**entity)
+        if 'control_proxy' in entity:
+            entity['port'] = None
+            entity['uri'] = None # FIXME: This will exist at runtime, after tunnel setup
         else:
-            # Use normal URI
-            entity[entry] = {'uri': '{}'.format(info['uri']), 'type': info['type']}
-
+            entity.setdefault('port', self.port_numbers.pop())
+            entity['uri'] = "http://{host}:{port}".format(**entity)
+            
+    def preprocess_error(self, entity):
+        raise KeyError("Class '{class}' for '{name}' is unknown".format(**entity))
+                
+    def process_runtime(self, entity):
+        for entry in ['actorstore', 'registry', 'control_proxy']:
+            ref = entity.get(entry, "")
+            if isinstance(ref, str) and ref.startswith('$'):
+                entity[entry] = self.expand_ref(entity, ref[1:])
+    
+    def expand_ref(self, entity, ref_name):
+        target = self.tmpinfo[ref_name]
+        if target['class'] == 'RUNTIME':    
+            expansion = {'uri': target['rt2rt'], 'type': 'proxy', 'name': ref_name}
+        else:
+            expansion = {'uri': target['uri'], 'type': target['type'], 'name': ref_name}
+        return expansion
+                
     def teardown(self):
         """Tear down the system."""
         for item in reversed(self._system):
