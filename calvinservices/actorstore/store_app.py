@@ -18,6 +18,7 @@
 
 
 import argparse
+import logging
 
 from flask import Flask, jsonify, abort
 
@@ -26,6 +27,15 @@ from . import store
 app = Flask(__name__)
 
 actorstore = store.Store()
+
+log = logging.getLogger('werkzeug')
+log.setLevel(logging.ERROR)
+
+
+@app.route('/ping', methods=['GET'])
+def ping():
+    return "OK"
+
 
 @app.route('/actors/', methods=['GET'])
 @app.route('/actors/<path:actor_type>', methods=['GET'])

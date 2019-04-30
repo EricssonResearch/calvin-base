@@ -23,8 +23,6 @@ class Process(object):
 
     # Define the (immutable) properties exposed by the process
     info_exports = []
-    # Define the path to use in wait_for_ack
-    ack_path = ""
 
     def __init__(self, sysdef, tmp_dir):
         super(Process, self).__init__()
@@ -52,37 +50,35 @@ class Process(object):
         self.proc_handle.communicate()
         self.proc_handle.wait()
 
+    def ack_request(self):
+        return self.sysdef["uri"] + "/ping"
+    
     def ack_ok_action(self, response):
-        pass
+        return True
 
     def wait_for_ack(self):
-        req = self.sysdef["uri"]
-        if not req:
-            # We don't have a way of talking the system... (e.g. using control proxy)
-            # FIXME: Add "ping" on rt2rt port.
-            self.ack_status = True
-            return
-        req = req + self.ack_path
-        for i in range(20):
+        req = self.ack_request()
+        for i in range(40):
+            time.sleep(0.25)
             try:
                 r = requests.get(req)
             except requests.exceptions.ConnectionError:
-                time.sleep(0.25)
                 continue
             if r.status_code == 200:
-                self.ack_ok_action(r)
-                self.ack_status = True
-                return
-        self.ack_status = False
+                self.ack_status = self.ack_ok_action(r)
+            if self.ack_status:
+                # We got affirmation that process is up and running
+                break
 
-
+    def update_uri(self):
+        pass
+                
 
 class ActorstoreProcess(Process):
     """docstring for ActorstorProcess"""
 
     info_exports = ["name", "uri", "type"]
-    ack_path = "/actors/"
-
+        
     def cmd(self):
         return "csactorstore --host {host} --port {port}".format(**self.sysdef)
 
@@ -91,7 +87,6 @@ class RegistryProcess(Process):
     """docstring for RegistryProcess"""
 
     info_exports = ["name", "uri", "type"]
-    ack_path = "/dumpstorage"
 
     def cmd(self):
         return "csregistry --host {host} --port {port}".format(**self.sysdef)
@@ -103,7 +98,6 @@ class RuntimeProcess(Process):
     # FIXME: Pass actor store config as arguments
 
     info_exports = ["name", "uri", "rt2rt", "node_id", "actorstore", "registry"]
-    ack_path = "/id"
 
     def __init__(self, sysdef, tmp_dir):
         super(RuntimeProcess, self).__init__(sysdef, tmp_dir)
@@ -117,7 +111,6 @@ class RuntimeProcess(Process):
         if 'config' not in self.sysdef:
             shutil.copyfile(default_config_file, runtime_config_file)
             return
-        print(self.sysdef)
         # load config, patch, and write
         with open(default_config_file, 'r') as fp:
             conf = json.load(fp)
@@ -137,7 +130,6 @@ class RuntimeProcess(Process):
         return ' --attr "{}"'.format(attrs)
 
     def cmd(self):
-        # print("sysdef", self.sysdef)
         cmd = 'csruntime --host {host} -p {rt2rt_port}'.format(**self.sysdef)
         ctrl_fmt = ' --control_proxy {control_proxy[uri]}' if 'control_proxy' in self.sysdef else ' -c {port}'
         ctrl = ctrl_fmt.format(**self.sysdef)
@@ -149,9 +141,27 @@ class RuntimeProcess(Process):
         debug = ' -l DEBUG'
         return cmd + ctrl + store + opt1 + opt2 + conf + attrs # + debug
 
+    def ack_request(self):
+        return "{global_registry_uri}/index/node/attribute/node_name/////{name}".format(**self.sysdef) 
+        
     def ack_ok_action(self, response):
         data = response.json()
-        self.sysdef["node_id"] = data['id']
+        if not data:
+            return False
+        self.sysdef["node_id"] = data[0]
+        return True
+    
+    def update_uri(self):
+        if self.sysdef['uri'] or not self.sysdef['node_id']:
+            return
+        req = "{global_registry_uri}/node/{node_id}".format(**self.sysdef)
+        try:
+            r = requests.get(req)
+            if r.status_code == 200:
+                data = r.json()
+                self.sysdef['uri'] = data['control_uris'][0]
+        except Exception as error:
+            pass
 
 
 factories = {
@@ -289,11 +299,11 @@ class SystemManager(object):
         self._system = []
         self.workdir = self.prepare_workdir(tmp_dir)
         self.process_config(system_config)
-        
         if verbose:
             self.print_commands()
         if start:
             self.start()
+        print(json.dumps(self.info, indent=4))   
 
     def prepare_workdir(self, tmp_dir):
         if tmp_dir == None:
@@ -345,19 +355,21 @@ class SystemManager(object):
             if not s.ack_status:
                 sys_info = s.info()
                 raise TimeoutError("TIMEOUT for {}".format(sys_info['name']))
+            else:
+               s.update_uri()           
 
     def find_registry_access(self):
         # Determine global registry access method, either a REGISTRY,
         # or a first RUNTIME with a control API (uri != None)
         # 
-        registry_uri = None
+        registry = None
         for name, entry in self.tmpinfo.items():
             if entry['class'] == 'REGISTRY':
-                registry_uri = entry['uri']
+                registry = entry
                 break
-            if registry_uri is None and entry['class'] == 'RUNTIME':
-                registry_uri = entry['uri']
-        return registry_uri
+            if registry is None and entry['class'] == 'RUNTIME':
+                registry = entry['uri']
+        return registry
     
     def process_config(self, system_config):
         self.tmpinfo = {}
@@ -370,13 +382,23 @@ class SystemManager(object):
             if entity['class'] == 'RUNTIME':
                 self.process_runtime(entity)
                 
-        registry_uri = self.find_registry_access()
-        if registry_uri is None:
+        registry = self.find_registry_access()
+        if registry is None:
             raise Exception("No accessible registry found")
-    
-        #print(json.dumps(system_config, indent=4, sort_keys=True))   
-                
+            
         for entity in system_config:
+            if entity['class'] == 'RUNTIME':
+                entity['global_registry_uri'] = registry['uri']
+            
+                
+        # Reorder systems
+        start_order = [x for x in system_config if x['class'] == 'ACTORSTORE']
+        start_order.append(registry)
+        start_order += [x for x in system_config if x not in start_order]
+        
+        # print(json.dumps(start_order, indent=4, sort_keys=True))   
+
+        for entity in start_order:
             self._system.append(factory(entity, self.workdir))  
 
     

@@ -19,6 +19,7 @@ system_config = r"""
   class: RUNTIME
   name: runtime3
   registry: $runtime1
+  control_proxy: $runtime2
 """
 
 def test_setup(system_setup):

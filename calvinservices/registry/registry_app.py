@@ -17,6 +17,7 @@
 
 
 import argparse
+import logging
 
 from flask import Flask, jsonify, request, abort
 
@@ -26,6 +27,9 @@ from calvin.runtime.north.plugins.storage.storage_clients import LocalRegistry
 app = Flask(__name__)
 
 reg = LocalRegistry(None)
+
+log = logging.getLogger('werkzeug')
+log.setLevel(logging.ERROR)
 
 # API for these methods
 # - set(self, key, value) - PUT
@@ -39,6 +43,11 @@ reg = LocalRegistry(None)
 # - get_index
 # - dump - GET
 
+@app.route('/ping', methods=['GET'])
+def ping():
+    return "OK"
+
+
 @app.route('/dumpstorage', methods=['GET'])
 def dumpstorage():
     data = reg.dump()
@@ -46,6 +55,17 @@ def dumpstorage():
 #
 # Plain key/value => /storage/
 #
+
+# FIXME: This is for compatibility across APIs (proxied vs. direct)
+@app.route('/node/<path:key>', methods=['GET'])
+def node(key):
+    try:
+        value = reg.get("node-" + key)
+        return jsonify(value)
+    except:
+        abort(404)
+
+
 @app.route('/storage/<path:key>', methods=['GET', 'POST', 'DELETE'])
 def storage(key):
     if request.method == 'DELETE':
@@ -120,6 +140,8 @@ def remove_index():
         abort(400)
     return ''
 
+
+# FIXME: Unify this API
 @app.route('/get_index/', methods=['POST'])
 def get_index():
     data = request.get_json()
@@ -132,6 +154,16 @@ def get_index():
         print("Exception", e)
         abort(400)
     value = list(reg.get_index(data['indexes']))
+    return jsonify(value)
+
+
+# FIXME: This is for compatibility across APIs (proxied vs. direct)
+@app.route('/index/<path:key>', methods=['GET'])
+def index(key):
+    parts = key.split('/')
+    indexes = ['/'.join(parts[:2])] + parts[2:]
+    value = list(reg.get_index(indexes))
+    value = list(value)
     return jsonify(value)
 
 # #
