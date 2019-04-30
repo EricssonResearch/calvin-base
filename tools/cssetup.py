@@ -37,6 +37,7 @@ def parse_arguments():
     group.add_argument('-s', '--setup', type=str, metavar='<filename>', help='System description file')
     group.add_argument('-l', '--list', action='store_true', help='List running systems\' names')
     group.add_argument('-t', '--teardown', type=str, metavar='<name>', help='Tear down named system')
+    group.add_argument('-i', '--info', type=str, metavar='<name>', help='Show info for named system')
 
     args = argparser.parse_args()
     return args
@@ -88,6 +89,7 @@ def system_setup(setup_file, verbose):
     ts = datetime.now().isoformat(sep=' ', timespec='milliseconds')
     status.append({'name':name, 'ts':ts, 'config':setup_file, 'info':info})
     write_status(status)
+    print("Started system: {}".format(name))
     return 0
     
 def system_list(verbose):
@@ -121,10 +123,19 @@ def system_teardown(name, verbose):
             _system_teardown(entry['info'], verbose)
             status.remove(entry)
             write_status(status)
-            break
-    else:
-        print("No system named {}".format(name), file=sys.stderr)
-    return 0
+            return 0
+    print("No system named {}".format(name), file=sys.stderr)
+    return 1
+    
+def system_info(name):
+    status = read_status()
+    for entry in status:
+        if entry['name'] == name:
+            print(json.dumps(entry['info'], indent=4))
+            return 0
+    print("No system named {}".format(name), file=sys.stderr)
+    return 1
+
 
 def main():            
     args = parse_arguments()
@@ -132,7 +143,9 @@ def main():
     if args.setup:
         status = system_setup(args.setup, args.verbose)        
     elif args.teardown:
-        status = system_teardown(args.teardown, args.verbose)       
+        status = system_teardown(args.teardown, args.verbose)
+    elif args.info:
+        status = system_info(args.info)     
     else:
         status = system_list(args.verbose)
     return status
