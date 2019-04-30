@@ -112,8 +112,8 @@ def test_send_response():
         assert name == callseq[index]
     assert handle not in control.server.connection_map
     control.stop()
-    
-    
+
+
 def test_send_streamheader():
     control = CalvinControl(node=Mock(), uri="http://localhost:5101")
     control.start()
@@ -126,13 +126,11 @@ def test_send_streamheader():
     control.server.connection_map = {handle:connection}
     control.send_streamheader(handle)
     connection.send.assert_called()
-    callseq = ['send', 'close']
+    callseq = ['send']
+    print(connection.method_calls)
     assert len(connection.method_calls) == len(callseq)
     for index, call_ in enumerate(connection.method_calls):
         name, args, kwargs = call_
         # print(name, args, kwargs)
         assert name == callseq[index]
-    assert handle not in control.server.connection_map
     control.stop()
-    
-
