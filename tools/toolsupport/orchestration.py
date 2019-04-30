@@ -303,7 +303,6 @@ class SystemManager(object):
             self.print_commands()
         if start:
             self.start()
-        print(json.dumps(self.info, indent=4))   
 
     def prepare_workdir(self, tmp_dir):
         if tmp_dir == None:
