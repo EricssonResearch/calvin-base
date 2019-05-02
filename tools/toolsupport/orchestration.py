@@ -8,6 +8,7 @@ import time
 import tempfile
 
 import requests
+import yaml
 
 from calvin.common.calvinconfig import CalvinConfig
 
@@ -56,19 +57,22 @@ class Process(object):
     def ack_ok_action(self, response):
         return True
 
-    def wait_for_ack(self):
+    def wait_for_ack(self, timeout=60, sleeptime=0.5):
         req = self.ack_request()
-        for i in range(40):
-            time.sleep(0.25)
+        for i in range(int(timeout/sleeptime)):
             try:
                 r = requests.get(req)
             except requests.exceptions.ConnectionError:
+                time.sleep(sleeptime)
                 continue
+                
             if r.status_code == 200:
                 self.ack_status = self.ack_ok_action(r)
             if self.ack_status:
                 # We got affirmation that process is up and running
                 break
+            else:
+                time.sleep(sleeptime)
 
     def update_uri(self):
         pass
@@ -142,17 +146,36 @@ class RuntimeProcess(Process):
         return cmd + ctrl + store + opt1 + opt2 + conf + attrs # + debug
 
     def ack_request(self):
-        return "{global_registry_uri}/index/node/attribute/node_name/////{name}".format(**self.sysdef) 
-        
+        # To get the node_id from the RT we need to take care: 
+        #        1) attr = self.sysdef.get("attributes")
+        #        2a) If present and string: Load from file
+        #        2b) If present and dict: Do nothing
+        #        2c) If not present: set to empty dict
+        #        3) Fill in the ///// spaces with the values for the keys in order (default to ''): 
+        #           organization, organizationalUnit, purpose, group
+        #           from the indexed_public/node_name entry of attributes
+        attrs = self.sysdef.get('attributes', {})
+        if isinstance(attrs, str):
+            attrs = yaml.load(attrs, Loader=yaml.SafeLoader)
+        indexed_public = attrs.get('indexed_public', {})
+        node_name = indexed_public.get('node_name', {})
+        query_parts = [node_name.get(key, '') for key in ['organization', 'organizationalUnit', 'purpose', 'group']]
+        query = "/".join(query_parts)
+        request = "{global_registry_uri}/index/node/attribute/node_name/{query}/{name}".format(query=query, **self.sysdef)
+        return request
+         
     def ack_ok_action(self, response):
         data = response.json()
         if not data:
             return False
+        # FIXME: Some API wraps data in {'result': data}, workaround for now
+        if isinstance(data, dict):
+            data = data['result']
         self.sysdef["node_id"] = data[0]
         return True
     
     def update_uri(self):
-        if self.sysdef['uri'] or not self.sysdef['node_id']:
+        if self.sysdef['uri'] or not self.sysdef['node_id'] or not self.sysdef['global_registry_uri']:
             return
         req = "{global_registry_uri}/node/{node_id}".format(**self.sysdef)
         try:
@@ -367,7 +390,7 @@ class SystemManager(object):
                 registry = entry
                 break
             if registry is None and entry['class'] == 'RUNTIME':
-                registry = entry['uri']
+                registry = entry
         return registry
     
     def process_config(self, system_config):
@@ -382,17 +405,18 @@ class SystemManager(object):
                 self.process_runtime(entity)
                 
         registry = self.find_registry_access()
-        if registry is None:
-            raise Exception("No accessible registry found")
-            
-        for entity in system_config:
-            if entity['class'] == 'RUNTIME':
-                entity['global_registry_uri'] = registry['uri']
+        # if registry is None:
+        #     print("No accessible registry found")            
+        if registry:
+            for entity in system_config:
+                if entity['class'] == 'RUNTIME':
+                    entity['global_registry_uri'] = registry['uri']
             
                 
         # Reorder systems
         start_order = [x for x in system_config if x['class'] == 'ACTORSTORE']
-        start_order.append(registry)
+        if registry: 
+            start_order.append(registry)
         start_order += [x for x in system_config if x not in start_order]
         
         # print(json.dumps(start_order, indent=4, sort_keys=True))   
