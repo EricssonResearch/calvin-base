@@ -28,7 +28,6 @@ system_config = r"""
   control_proxy: $rt1
 """
 
-@pytest.mark.skip(reason="Enable when problem with proxy runtimes is fixed")
 def test_id(system_setup, execute_cmd_check_output):
     # Check sanity
     rt1_uri = system_setup['rt1']['uri']

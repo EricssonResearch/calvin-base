@@ -65,6 +65,7 @@ def handle_get_nodes(self, handle, match, data, hdr):
     Response status code: OK
     Response: List of node-ids
     """
+    # FIXME: This is not a safe way to get peer node_id's, since it is not using the registry
     self.send_response(handle, json.dumps(self.node.network.list_links()))
 
 

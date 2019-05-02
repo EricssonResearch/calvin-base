@@ -496,6 +496,7 @@ class CalvinNetwork(object):
                     self._callback_link(peer_id, cb)
 
     def _link_request_finished(self, status=None, peer_node_id=None, uri=None, peer_id=None):
+        # FIXME: peer_node_id only used in log statement below
         """
             Will be called when join works or fails also on connection fails.
             Can be called multiple times one for each uri, but will stop on one success.
