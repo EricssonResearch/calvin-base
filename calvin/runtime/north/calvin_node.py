@@ -112,7 +112,7 @@ class Node(object):
         self.actorstore = mdproxy.ActorMetadataProxy(actorstore_uri)
         self.am = actormanager.ActorManager(self)
         self.rm = replicationmanager.ReplicationManager(self)
-        
+
 
         # _scheduler = scheduler.DebugScheduler if _log.getEffectiveLevel() <= logging.DEBUG else scheduler.Scheduler
         # _scheduler = scheduler.NonPreemptiveScheduler
@@ -130,7 +130,7 @@ class Node(object):
         # TODO: be able to specify the interfaces
         # @TODO: Store capabilities
         # storage.Storage(node, storage_type, server=None, security_conf=None, override_storage=None)
-        
+
         storage_type = _conf.get('global', 'storage_type')
         storage_host = _conf.get('global', 'storage_host')
         security_conf = _conf.get('security', 'security_conf')
@@ -142,23 +142,19 @@ class Node(object):
         if proxy_control_uri:
             _log.info("+++++++++++++++ proxy_control_uri overrides control_uri")
         #
-        # FIXME: The following section is sensitive to order due to circular references 
-        # 
+        # FIXME: The following section is sensitive to order due to circular references
+        #
         if proxy_control_uri:
-            self.control = calvincontrol.CalvinControlTunnelClient(self, proxy_control_uri)
+            self.control = calvincontrol.factory(self, True, proxy_control_uri)
         else:
-            self.control = calvincontrol.CalvinControl(node=self, uri=self.control_uri)
+            self.control = calvincontrol.factory(self, False, self.control_uri, self.external_control_uri)
 
         self.network = CalvinNetwork(self)
         self.proto = CalvinProto(self, self.network)
 
-        if proxy_control_uri:
-            self.tunnel_server = None
-        else:
-            self.tunnel_server = calvincontrol.CalvinControlTunnelServer(self, self.external_control_uri)
         #
-        # FIXME: The above section is sensitive to order due to circular references 
-        #    
+        # FIXME: The above section is sensitive to order due to circular references
+        #
 
         self.pm = PortManager(self, self.proto)
         self.app_manager = appmanager.AppManager(self)
