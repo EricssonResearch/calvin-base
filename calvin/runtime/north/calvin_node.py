@@ -268,8 +268,6 @@ class Node(object):
             _log.debug(args)
             self.sched.stop()
             _log.analyze(self.id, "+ SCHED STOPPED", {'args': args})
-            if self.tunnel_server:
-                self.tunnel_server.stop()
             self.control.stop()
             _log.analyze(self.id, "+ CONTROL STOPPED", {'args': args})
 
