@@ -20,7 +20,7 @@
 """
 
 # FIXME: Here we actually need to be able to switch between twisted and asyncio,
-#        at least while testing until the asyncio version is feature complete. 
+#        at least while testing until the asyncio version is feature complete.
 
 from calvin.common import calvinconfig
 
@@ -58,6 +58,9 @@ if async_impl == 'twisted':
 
     # Used in calvinsys.ui.uicalvinsys.py
     from .twistedimpl.sse_event_source import EventSource
+
+    # Used in calvinsys.io.inotifier
+    from .twistedimpl.inotify import INotify
 else:
     raise AssertionError("Unknown asynchronous implementation: '{}'".format(async_impl))
 

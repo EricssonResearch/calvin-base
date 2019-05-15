@@ -186,6 +186,10 @@ class CalvinConfig(object):
                     "module": "io.filehandler.StdIn",
                     "attributes": {}
                 },
+                "io.inotify": {
+                    "module": "io.inotifier.INotifier",
+                    "attributes": {}
+                },
                 "network.socketclient": {
                     "module": "network.SocketClient",
                     "attributes": {}
@@ -281,7 +285,7 @@ class CalvinConfig(object):
             _log.error("Error reading option {}.{}: {}".format(_section, _option, e))
             return None
 
-    # Used when arguments to csruntime override defaults 
+    # Used when arguments to csruntime override defaults
     def set(self, section, option, value):
         """Set value of option in named section"""
         _section = self.config[section.lower()]
