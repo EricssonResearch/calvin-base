@@ -17,6 +17,8 @@
 from calvin.runtime.south.calvinsys import base_calvinsys_object
 from calvin.common.calvinlogger import get_logger
 import paho.mqtt.subscribe
+from copy import deepcopy
+import json
 
 
 _log = get_logger(__name__)
@@ -133,7 +135,7 @@ class Subscribe(base_calvinsys_object.BaseCalvinsysObject):
                 "type": "string"
             },
             "payload": {
-                "type": ["number", "integer", "string", "null", "boolean"]
+                "type": ["number", "integer", "string", "null", "boolean", "array", "object"]
             },
         },
     }
@@ -144,7 +146,15 @@ class Subscribe(base_calvinsys_object.BaseCalvinsysObject):
     }
 
     write_schema = {
-        "description": "Does nothing"
+        "description": "Setup topics",
+        "type": "object",
+        "properties": {
+            "topics": {
+                "description": "Topics",
+                "type": "array"
+            }
+        },
+        "required": ["topics"]
     }
 
     def init(self, topics, hostname, port=1883, qos=0, client_id='', will=None, auth=None, tls=None, transport='tcp', payload_only=False, **kwargs):
@@ -153,13 +163,15 @@ class Subscribe(base_calvinsys_object.BaseCalvinsysObject):
                 _log.warning("Connection to MQTT broker {}:{} failed".format(hostname, port))
             else :
                 _log.info("Connected to MQTT broker {}:{}".format(hostname, port))
-                client.subscribe(self.topics)
+                if self.topics:
+                    client.subscribe(self.topics)
 
         def on_disconnect(client, userdata, rc):
             _log.warning("MQTT broker {}:{} disconnected".format(hostname, port))
 
         def on_message(client, userdata, message):
-            self.data.append({"topic": message.topic, "payload": message.payload})
+            payload = json.loads(message.payload.decode('utf-8'))
+            self.data.append({"topic": message.topic, "payload": payload})
             self.scheduler_wakeup()
 
         def on_subscribe(client, userdata, message_id, granted_qos):
@@ -212,7 +224,19 @@ class Subscribe(base_calvinsys_object.BaseCalvinsysObject):
         return True
 
     def write(self, data=None):
-        pass
+        # add topics
+        for topic in data["topics"]:
+            if topic not in self.topics:
+                _log.info("Subscribing to '%s'" % topic)
+                self.topics.append(topic)
+                self.client.subscribe(topic)
+        # remove topics
+        topics = deepcopy(self.topics)
+        for topic in topics:
+            if topic not in data["topics"]:
+                _log.info("Removed subscription from '%s'" % topic)
+                self.topics.remove(topic)
+                self.client.unsubscribe(topic)
 
     def can_read(self):
         return bool(self.data)
@@ -221,7 +245,7 @@ class Subscribe(base_calvinsys_object.BaseCalvinsysObject):
         data = self.data.pop(0)
         if self.payload_only:
             return data.get("payload")
-        else :
+        else:
             return data
 
     def close(self):
