@@ -17,7 +17,6 @@
 from calvin.runtime.south.calvinsys import base_calvinsys_object
 from calvin.common.calvinlogger import get_logger
 import paho.mqtt.subscribe
-from copy import deepcopy
 import json
 
 
@@ -119,7 +118,6 @@ class Subscribe(base_calvinsys_object.BaseCalvinsysObject):
                 "type": "boolean"
             }
         },
-        "required": ["hostname", "topics"],
     }
 
     can_read_schema = {
@@ -146,37 +144,99 @@ class Subscribe(base_calvinsys_object.BaseCalvinsysObject):
     }
 
     write_schema = {
-        "description": "Setup topics",
+        "description": "Setup",
         "type": "object",
         "properties": {
+            "hostname": {
+                "description": "hostname of broker",
+                "type": "string"
+            },
+            "port": {
+                "description": "port to use, defaults to 1883",
+                "type": "integer"
+            },
+            "qos": {
+                "description": "MQTT qos, default 0",
+                "type": "number"
+            },
+            "client_id": {
+                "description": "MQTT client id to use; will be generated if not given",
+                "type": "string"
+            },
+            "will": {
+                "description": "message to send on connection lost",
+                "type": "object",
+                "properties": {
+                    "topic": {
+                        "type": "string",
+                    },
+                    "payload": {
+                        "type": "string"
+                    },
+                    "qos": {
+                        "type": "string"
+                    },
+                    "retain": {
+                        "type": "string"
+                    }
+                },
+                "required": ["topic"]
+            },
+            "auth": {
+                "type": "object",
+                "properties": {
+                    "username": {
+                        "type": "string"
+                    },
+                    "password": {
+                        "type": "string"
+                    }
+                },
+               "required": ["username"]
+            },
+            "tls": {
+                "description": "TLS configuration for client",
+                "type": "object",
+                "properties": {
+                    "ca_certs": {
+                        "type": "string",
+                    },
+                    "certfile": {
+                        "type": "string"
+                    },
+                    "keyfile": {
+                        "type": "string"
+                    },
+                    "tls_version": {
+                        "type": "string"
+                    },
+                    "ciphers": {
+                        "type": "string"
+                    }
+                },
+                "required": ["ca_certs"]
+            },
+            "transport": {
+                "description": "transport to use",
+                "enum": ["tcp", "websocket"]
+
+            },
             "topics": {
-                "description": "Topics",
-                "type": "array"
+                "description": "topics to subscribe to",
+                "type": "array",
+                "items": {
+                    "type": "string",
+                    "minItems": 1
+                }
+            },
+            "payload_only": {
+                "description": "only retrieve payload (not entire message)",
+                "type": "boolean"
             }
-        },
-        "required": ["topics"]
+        }
     }
 
-    def init(self, topics, hostname, port=1883, qos=0, client_id='', will=None, auth=None, tls=None, transport='tcp', payload_only=False, **kwargs):
-        def on_connect(client, userdata, flags, rc):
-            if rc != 0:
-                _log.warning("Connection to MQTT broker {}:{} failed".format(hostname, port))
-            else :
-                _log.info("Connected to MQTT broker {}:{}".format(hostname, port))
-                if self.topics:
-                    client.subscribe(self.topics)
-
-        def on_disconnect(client, userdata, rc):
-            _log.warning("MQTT broker {}:{} disconnected".format(hostname, port))
-
-        def on_message(client, userdata, message):
-            payload = json.loads(message.payload.decode('utf-8'))
-            self.data.append({"topic": message.topic, "payload": payload})
-            self.scheduler_wakeup()
-
-        def on_subscribe(client, userdata, message_id, granted_qos):
-            _log.info("MQTT subscription {}:{} started".format(hostname, port))
-
+    def init(self, topics=None, hostname=None, port=1883, qos=0, client_id='', will=None, auth=None, tls=None, transport='tcp', payload_only=False, **kwargs):
         # Config
         self.settings = {
             "msg_count": 1,
@@ -190,10 +250,45 @@ class Subscribe(base_calvinsys_object.BaseCalvinsysObject):
             "transport": transport
         }
 
-        _log.info("TLS: {}".format(tls))
+        self.connected = False
         self.payload_only = payload_only
-        self.topics = [(topic.encode("ascii"), qos) for topic in topics]
+        self.topics = topics if topics else []
         self.data = []
+        self.client = None
+
+        if hostname and self.topics:
+            self.setup()
+
+    def setup(self):
+        def on_connect(client, userdata, flags, rc):
+            if rc != 0:
+                _log.warning("Connection to MQTT broker {}:{} failed".format(hostname, port))
+            else :
+                _log.info("Connected to MQTT broker {}:{}".format(hostname, port))
+                self.connected = True
+                if self.topics:
+                    topics = [(topic, self.settings["qos"]) for topic in self.topics]
+                    client.subscribe(topics)
+
+        def on_disconnect(client, userdata, rc):
+            _log.warning("MQTT broker {}:{} disconnected".format(hostname, port))
+            self.connected = False
+
+        def on_message(client, userdata, message):
+            payload = json.loads(message.payload.decode('utf-8'))
+            self.data.append({"topic": message.topic, "payload": payload})
+            self.scheduler_wakeup()
+
+        def on_subscribe(client, userdata, message_id, granted_qos):
+            _log.info("MQTT subscription {}:{} started".format(hostname, port))
+
+        hostname = self.settings["hostname"]
+        port = self.settings["port"]
+        client_id = self.settings["client_id"]
+        transport = self.settings["transport"]
+        will = self.settings["will"]
+        auth = self.settings["auth"]
+        tls = self.settings["tls"]
 
         self.client = paho.mqtt.client.Client(client_id=client_id, transport=transport)
         self.client.on_connect = on_connect
@@ -224,19 +319,40 @@ class Subscribe(base_calvinsys_object.BaseCalvinsysObject):
         return True
 
     def write(self, data=None):
-        # add topics
-        for topic in data["topics"]:
-            if topic not in self.topics:
-                _log.info("Subscribing to '%s'" % topic)
-                self.topics.append(topic)
-                self.client.subscribe(topic)
-        # remove topics
-        topics = deepcopy(self.topics)
-        for topic in topics:
-            if topic not in data["topics"]:
-                _log.info("Removed subscription from '%s'" % topic)
-                self.topics.remove(topic)
-                self.client.unsubscribe(topic)
+        if "hostname" in data:
+            self.settings["hostname"] = data["hostname"]
+        if "port" in data:
+            self.settings["port"] = data["port"]
+        if "client_id" in data:
+            self.settings["client_id"] = data["client_id"]
+        if "qos" in data:
+            self.settings["qos"] = data["qos"]
+        if "will" in data:
+            self.settings["will"] = data["will"]
+        if "auth" in data:
+            self.settings["auth"] = data["auth"]
+        if "tls" in data:
+            self.settings["tls"] = data["tls"]
+        if "transport" in data:
+            self.settings["tranport"] = data["transport"]
+        if "payload_only" in data:
+            self.settings["payload_only"] = data["payload_only"]
+
+        if "topics" in data:
+            for topic in data["topics"]:
+                if topic not in self.topics:
+                    self.topics.append(topic)
+                    if self.connected:
+                        self.client.subscribe((topic, self.settings["qos"]))
+
+            for topic in self.topics:
+                if topic not in data["topics"] and self.connected:
+                    self.client.unsubscribe(topic)
+
+            self.topics = data["topics"]
+
+        if not self.client and self.topics and self.settings["hostname"]:
+            self.setup()
 
     def can_read(self):
         return bool(self.data)
