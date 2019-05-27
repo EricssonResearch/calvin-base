@@ -44,7 +44,7 @@ class Pathinfo(object):
     root = 4
 
 class Store(object):
-    
+
     actor_properties_schema = {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "$ref": "#/definitions/ActorProperties",
@@ -63,7 +63,7 @@ class Store(object):
                     },
                     "requires": {
                         "type": "array",
-                        "items": { "type": "string" }                        
+                        "items": { "type": "string" }
                     }
                 },
                 "required": ["documentation", "ports"],
@@ -96,27 +96,28 @@ class Store(object):
         "type": "array",
         "items": { "type": "string" },
     }
-    
+
     """docstring for Store"""
-    
-    def __init__(self, basepath=None):
+
+    def __init__(self, actorpaths=[]):
         super(Store, self).__init__()
-        basepath = basepath or os.path.dirname(os.path.realpath(__file__))
-        self.basepath = os.path.join(basepath, 'systemactors')
-    
-    def normalize(self, query):
+        self.actorpaths = actorpaths
+        self.actorpaths.append(os.path.join(os.path.dirname(os.path.realpath(__file__)),
+            'systemactors'))
+
+    def normalize(self, actorpath, query):
         if not query:
-            return (self.basepath, Pathinfo.root)
+            return (actorpath, Pathinfo.root)
         path = query.replace('.', '/')
         if os.path.isabs(path):
             return (path, Pathinfo.invalid)
-        path = os.path.join(self.basepath, path)
+        path = os.path.join(actorpath, path)
         return self.pathinfo(path)
-        
+
     def pathinfo(self, path):
         if os.path.isdir(path):
             tmp_path = os.path.join(path, '__init__.py')
-            if os.path.isfile(tmp_path): 
+            if os.path.isfile(tmp_path):
                 return (path, Pathinfo.directory)
         # Check for .py and .comp in that order
         tmp_path = path + '.py'
@@ -125,26 +126,26 @@ class Store(object):
         tmp_path = path + '.comp'
         if os.path.isfile(tmp_path):
             return (tmp_path, Pathinfo.component)
-        return (path, Pathinfo.invalid)    
-    
+        return (path, Pathinfo.invalid)
+
     def read_file(self, path):
         with open(path) as f:
             src = f.read()
         return src
-    
+
     def locate_codeobject(self, codeobject, actor_class):
         for x in codeobject.co_consts:
             if type(x) is type(codeobject) and x.co_name == actor_class:
                 return x
         return None
-    
+
     def get_docs(self, codeobject):
         index = 0 if len(codeobject.co_consts) == 2 else 1
         return codeobject.co_consts[index]
-    
+
     def get_startofcode(self, codeobject):
-        return codeobject.co_firstlineno - 1        
-                
+        return codeobject.co_firstlineno - 1
+
     def parse_actor_docs(self, docs):
         props = yaml.load(docs, Loader=yaml.SafeLoader)
         jsonschema.validate(props, self.actor_properties_schema)
@@ -159,7 +160,7 @@ class Store(object):
         argspec = inspect.getargs(co)
         args = [{'mandatory':True, 'name':name} for name in argspec.args[1:]]
         return args
-        
+
     def get_actor(self, path):
         basepath, filename = os.path.split(path)
         _, ns = os.path.split(basepath)
@@ -175,7 +176,7 @@ class Store(object):
         lines = src.split("\n")
         while lines[i].startswith("from") or lines[i].startswith("import") or lines[i].strip() == "":
             i += 1
-        src = "\n".join(lines[i:])    
+        src = "\n".join(lines[i:])
         aco = self.locate_codeobject(co, actor_class)
         docs = self.get_docs(aco)
         props = self.parse_actor_docs(docs)
@@ -190,11 +191,11 @@ class Store(object):
         props['type'] = 'actor'
         # required
         props.setdefault('requires', [])
-        # is_known 
+        # is_known
         props['is_known'] = True
-        
+
         return (src, props)
-        
+
     def get_component(self, path):
         raise Exception("FIXME")
         src = self.read_file(path)
@@ -203,10 +204,10 @@ class Store(object):
     def _extract_module_docs(self, path):
         src = self.read_file(path)
         co = compile(src, '<string>', 'exec')
-        docstr = self.get_docs(co) 
+        docstr = self.get_docs(co)
         return self.parse_module_docs(docstr)
-               
-            
+
+
     def get_directory(self, path):
         tmp_path = os.path.join(path, '__init__.py')
         docs = self._extract_module_docs(tmp_path)
@@ -219,7 +220,7 @@ class Store(object):
         for a in actor_names:
             props = self.get_metadata("{}.{}".format(ns, a))
             actors.append({'name':props['name'], 'documentation':props['documentation']})
-            
+
         props = {
             'type': 'module',
             'name': ns,
@@ -227,7 +228,7 @@ class Store(object):
             'items': actors,
         }
         return (None, props)
-        
+
     def get_root(self, path):
         tmp_path = os.path.join(path, '__init__.py')
         docs = self._extract_module_docs(tmp_path)
@@ -242,7 +243,7 @@ class Store(object):
         for m in module_names:
             props = self.get_metadata(m)
             modules.append({'name':props['name'], 'documentation':props['documentation']})
-            
+
         props = {
             'type': 'module',
             'name': '/',
@@ -250,8 +251,8 @@ class Store(object):
             'items': modules,
         }
         return (None, props)
-        
-        
+
+
     def error_handler(self, path):
         return (None, "Error: Can't resolve query '{}'".format(path))
 
@@ -264,26 +265,30 @@ class Store(object):
             src is the actor implementation
             properties is metadata
         """
-        path, typeinfo = self.normalize(query)
-        handler = {
-            Pathinfo.root : self.get_root,
-            Pathinfo.directory : self.get_directory,
-            Pathinfo.actor : self.get_actor,
-            Pathinfo.component : self.get_component,
-        }.get(typeinfo, self.error_handler)
-        src, properties = handler(path)
-        return (typeinfo, src, properties)
-        
+        for actorpath in self.actorpaths:
+            path, typeinfo = self.normalize(actorpath, query)
+            if typeinfo == Pathinfo.invalid:
+                continue
+            handler = {
+                Pathinfo.root : self.get_root,
+                Pathinfo.directory : self.get_directory,
+                Pathinfo.actor : self.get_actor,
+                Pathinfo.component : self.get_component,
+            }.get(typeinfo, self.error_handler)
+            src, properties = handler(path)
+            return (typeinfo, src, properties)
+        return (Pathinfo.invalid, None, None)
+
     def get_metadata(self, query):
         _, _, metadata = self.get_info(query)
         return metadata
-        
+
     def get_src(self, query):
         _, src, _ = self.get_info(query)
         return src
-           
-        
-    # metadata_example 
+
+
+    # metadata_example
     #     'flow.Init' => {
     #     'type': 'actor',
     #     'ns': 'flow',
@@ -315,15 +320,15 @@ class Store(object):
     #     ],
     #     'requires': ['sys.schedule'],
     #     'is_known': True,
-    #     'documentation': ['', '',] 
+    #     'documentation': ['', '',]
     # }
-    
-    # metadata_example 
+
+    # metadata_example
     #     'flow' => {
     #     'type': 'module',
     #     'name': 'flow',
     #     'items': [
-    #         {    
+    #         {
     #             'name':'Foo',
     #             'documentation': ["actor doc", ""]
     #         },
@@ -332,10 +337,10 @@ class Store(object):
     #             'documentation': ["actor doc", ""]
     #         },
     #     ]
-    #     'documentation': ['', '',] 
+    #     'documentation': ['', '',]
     # }
-    
-    # metadata_example 
+
+    # metadata_example
     #     '' => {
     #     'type': 'module',
     #     'name': '/',
@@ -349,19 +354,14 @@ class Store(object):
     #             'documentation': ["module doc", ""]
     #         },
     #     ]
-    #     'documentation': ['', '',] 
+    #     'documentation': ['', '',]
     # }
-    
-    
-            
-         
+
+
+
+
 if __name__ == '__main__':
-    s = Store()    
+    s = Store()
     print(json.dumps((s.get_metadata('std.CountTimer')), indent=4))
     print(json.dumps((s.get_metadata('std')), indent=4))
     print(json.dumps((s.get_metadata('')), indent=4))
-    
-    
-    
-    
-    

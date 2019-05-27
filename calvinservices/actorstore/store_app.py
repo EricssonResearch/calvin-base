@@ -26,11 +26,10 @@ from . import store
 
 app = Flask(__name__)
 
-actorstore = store.Store()
-
 log = logging.getLogger('werkzeug')
 log.setLevel(logging.ERROR)
 
+actorstore = None
 
 @app.route('/ping', methods=['GET'])
 def ping():
@@ -51,16 +50,19 @@ def get_tasks(actor_type=''):
 
 
 def main():
+    global actorstore
     parser = argparse.ArgumentParser()
     parser.add_argument('--host', dest='host', default="localhost", type=str, help='host address')
     parser.add_argument('--port', dest='port', default=4999, type=int, help='host port')
     parser.add_argument('--debug', action='store_true', default=False, help='run in debug mode')
-    
+    parser.add_argument('--actorpaths', default=[], nargs='+', help='list of actor paths')
+
     args = parser.parse_args()
-    
+
+    actorstore = store.Store(args.actorpaths)
+
     app.run(host=args.host, port=args.port, debug=args.debug)
-    
+
 
 if __name__ == '__main__':
     main()
-    
