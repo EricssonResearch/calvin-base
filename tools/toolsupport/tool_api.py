@@ -3,6 +3,7 @@ import json
 from calvin.common import metadata_proxy as mdproxy
 from calvinservices.csparser import parser, codegen, dscodegen, visitor, astnode
 from . import docgen
+from . import capsdoc
 from . import visualize2 as visualize
 
 
@@ -145,17 +146,17 @@ class ToolSupport(object):
     #
     # Actor development
     #
-    def help_for_calvinsys(self, calvinsys):
-        pass
-        # store = DocumentationStore(args.actorstore_uri)
-        # if args.format == 'raw':
-        #     print(store.help_raw(args.what))
-        # else:
-        #     compact = bool(args.format == 'compact')
-        #     print(store.help(args.what, compact=compact, formatting=args.prettyprinter))
+    def help_for_calvin_internals(self, what, target, formatting='plain'):
+        doc = {
+            'sys': capsdoc.CalvinSysCapsDoc,
+            'sysimpl': capsdoc.CalvinSysDriverDoc,
+            'lib': capsdoc.CalvinLibCapsDoc,
+            'libimpl': capsdoc.CalvinLibImplDoc,
+        }.get(target)
+        md = doc().get_metadata(what or '')
+        df = docgen.DocFormatter(outputformat=formatting)
+        return df.format(md)
     
-    def help_for_calvinlib(self, calvinlib):
-        pass
         
     def test_actor():
         pass    
@@ -184,5 +185,3 @@ class ToolSupport(object):
     def app_terminate(self, system, name):
         pass
     
-    
-        

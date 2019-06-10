@@ -31,9 +31,28 @@ class DocObject(object):
 
     use_links = False
 
-    COMPACT_FMT = "{{{qualified_name}}} : {{{short_desc}}}"
-    DETAILED_FMT_MD = "{{{e_qualified_name}}} : {{{e_short_desc}}}"
-    DETAILED_FMT_PLAIN = COMPACT_FMT
+    COMPACT_FMT = """
+    {{{label}}}: {{{qualified_name}}}
+    {{{short_desc}}}
+
+    """
+
+    DETAILED_FMT_PLAIN = """
+    ============================================================
+    {{{label}}}: {{{qualified_name}}}
+    ============================================================
+    {{{docs}}}
+
+    """
+
+    DETAILED_FMT_MD = """
+    ## {{{label}}}: {{{e_qualified_name}}}
+
+    {{{e_docs}}}
+
+    ***
+    """
+
 
     def __init__(self, metadata):
         super(DocObject, self).__init__()
@@ -67,7 +86,7 @@ class DocObject(object):
     @property
     def label(self):
         return self.metadata['type'].capitalize()
-    
+
     @property
     def has_actors(self):
         return False
@@ -79,11 +98,11 @@ class DocObject(object):
     @property
     def ns(self):
         self.metadata.get('ns', 'NO_NAMESPACE')
-        
+
     @property
     def name(self):
         self.metadata['name']
-        
+
     @property
     def qualified_name(self):
         if 'ns' in self.metadata:
@@ -101,7 +120,7 @@ class DocObject(object):
     @property
     def docs(self):
         return "\n".join(self.metadata['documentation'])
-        
+
     @property
     def slug(self):
         return self.qualified_name.replace('.', '_')
@@ -197,11 +216,11 @@ class ModuleDoc(DocObject):
     @property
     def items_compact(self):
         return ", ".join([a['name'] for a in self.metadata['items']])
-        
+
     @property
     def items(self):
         return [DocObject(a) for a in self.metadata['items']]
-    
+
 
 
 class ActorDoc(DocObject):
@@ -226,14 +245,14 @@ class ActorDoc(DocObject):
     Inports:
     {{/has_inports}}
     {{#inports}}
-      {{{name}}} {{#props}}({{{props}}}){{/props}} : {{{docs}}} 
+      {{{name}}} {{#props}}({{{props}}}){{/props}} : {{{docs}}}
     {{/inports}}
     {{#has_outports}}
 
     Outports:
     {{/has_outports}}
     {{#outports}}
-      {{{name}}} {{#props}}({{{props}}}){{/props}} : {{{docs}}} 
+      {{{name}}} {{#props}}({{{props}}}){{/props}} : {{{docs}}}
     {{/outports}}
     {{#has_requirements}}
 
@@ -278,7 +297,7 @@ class ActorDoc(DocObject):
     def __init__(self, metadata):
         super(ActorDoc, self).__init__(metadata)
         self.metadata = metadata
-    
+
     @property
     def has_inports(self):
         return any((p['direction'] == 'in' for p  in self.metadata['ports']))
@@ -294,7 +313,7 @@ class ActorDoc(DocObject):
     @property
     def fargs(self):
         return ", ".join([a['name'] for a in self.metadata['args']])
-    
+
     @property
     def inports_compact(self):
         return ", ".join(p['name'] for p  in self.metadata['ports'] if p['direction'] == 'in' )
@@ -302,7 +321,7 @@ class ActorDoc(DocObject):
     @property
     def outports_compact(self):
         return ", ".join(p['name'] for p  in self.metadata['ports'] if p['direction'] == 'out' )
-    
+
     @property
     def inports(self):
         return [self.PortDoc(p['name'], p['help'], p.get('properties', {}).get('routing')) for p  in self.metadata['ports'] if p['direction'] == 'in' ]
@@ -310,7 +329,7 @@ class ActorDoc(DocObject):
     @property
     def outports(self):
         return [self.PortDoc(p['name'], p['help'], p.get('properties', {}).get('routing')) for p  in self.metadata['ports'] if p['direction'] == 'out' ]
-        
+
     @property
     def requires_compact(self):
         return ", ".join(self.metadata['requires'])
@@ -318,6 +337,102 @@ class ActorDoc(DocObject):
 
 class ComponentDoc(ActorDoc):
     pass
+
+class DriverDoc(DocObject):
+
+    def __init__(self, metadata):
+        super(DriverDoc, self).__init__(metadata)
+        # print('metadata', json.dumps(metadata))
+        api_docs = SysAPIDoc(self.metadata['mapping'])
+        metadata['documentation'] = api_docs.detailed().split('\n')
+        self.metadata = metadata
+
+
+class SysAPIDoc(DocObject):
+    pass
+
+    DETAILED_FMT_PLAIN = """
+    Required attributes: {{required_attributes}}
+
+    Implemented by {{qualified_name}}
+
+    {{docs}}
+
+    can_read  : {{can_read_docs}}
+    read      : {{read_docs}}
+    can_write : {{can_write_docs}}
+    write     : {{can_write_docs}}
+
+    """
+
+    @property
+    def required_attributes(self):
+        supplied = set(self.metadata['attributes'])
+        wanted = set(self.metadata['api']['init']['args'].keys())
+        return '\n'.join(wanted-supplied)
+
+    @property
+    def docs(self):
+        return '\n'.join(self.metadata['api'].get('documentation', []))
+
+    @property
+    def can_read_docs(self):
+        try:
+            return '\n'.join(self.metadata['api']['can_read'].get('documentation', []))
+        except:
+            return 'Not implemented'
+
+    @property
+    def read_docs(self):
+        try:
+            return '\n'.join(self.metadata['api']['read'].get('documentation', []))
+        except:
+            return 'Not implemented'
+
+    @property
+    def can_write_docs(self):
+        try:
+            return '\n'.join(self.metadata['api']['can_write'].get('documentation', []))
+        except:
+            return 'Not implemented'
+
+    @property
+    def write_docs(self):
+        try:
+            return '\n'.join(self.metadata['api']['write'].get('documentation', []))
+        except:
+            return 'Not implemented'
+
+class LibAPIDoc(DocObject):
+    pass
+
+    DETAILED_FMT_PLAIN = """
+    Required attributes: {{required_attributes}}
+
+    Implemented by {{qualified_name}}
+
+    {{docs}}
+
+    {{#methods}}
+    **{{{e_name}}}** : {{{e_docs}}}
+
+    {{/methods}}
+
+    """
+
+    MethodDoc = namedtuple('MethodDoc', ['name', 'docs'])
+
+    @property
+    def required_attributes(self):
+        return '\n'.join(self.metadata['mapping'].get('attributes', {}).keys())
+
+    @property
+    def docs(self):
+        return '\n'.join(self.metadata['mapping']['api'].get('documentation', []))
+
+    @property
+    def methods(self):
+        return [self.MethodDoc(m['name'], m['documentation']) for m in self.metadata['mapping']['api']]
 
 
 class DocFormatter(object):
@@ -327,12 +442,16 @@ class DocFormatter(object):
         self.outputformat = outputformat
         self.compact = compact
         self.links = links
-        
+
     def format(self, metadata):
         class_ = {
             'actor': ActorDoc,
             'component': ComponentDoc,
             'module': ModuleDoc,
+            'method': DocObject,
+            'capability': DriverDoc,
+            'driver': SysAPIDoc,
+            'libapi': LibAPIDoc,
         }.get(metadata['type'], ErrorDoc)
         a = class_(metadata)
         if self.outputformat == 'md':
@@ -342,6 +461,6 @@ class DocFormatter(object):
                 return a.markdown()
         if self.compact:
             return a.compact()
-        else:    
+        else:
             return a.detailed()
 
