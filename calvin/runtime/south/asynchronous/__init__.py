@@ -70,6 +70,8 @@ elif async_impl == 'asyncio':
     
     from .asyncioimpl.threads import defer_to_thread
     
+    from .asyncioimpl.sse_event_source import EventSource
+        
 else:
     raise AssertionError("Unknown asynchronous implementation: '{}'".format(async_impl))
 
