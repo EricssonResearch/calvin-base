@@ -10,43 +10,38 @@ class DelayedCall(object):
         self.callback = functools.partial(dc_callback, *args, **kwargs)
         self.callback.__name__ = dc_callback.__name__
         self.delayedCall = None # asyncio.TimerHandle
-        loop = asyncio.get_event_loop()
-        self.dispatch(loop)
+        self.dispatch()
         
-    def dispatch(self, loop):
+    def dispatch(self):
+        loop = asyncio.get_event_loop()
         self.delayedCall = loop.call_later(self.delay, self.callback)
                 
-
-    # def reset(self, new_delay = None):
-    #     if new_delay is not None:
-    #         self.delay = new_delay
-    #     try:
-    #         loop = asyncio.get_running_loop()
-    #         self.delayedCall = loop.call_later(self.delay, self.callback)
-    #     except RuntimeError:
-    #         # Not yet started, queue the requested call
-    #         PENDING_START.append(self)
+    def reset(self, new_delay = None):
+        self.cancel()
+        if new_delay is not None:
+            self.delay = new_delay
+        self.dispatch()
  
-                
-
     def active(self):
         return self.delayedCall and not self.delayedCall.cancelled()
-    #
+
     def cancel(self):
         if self.delayedCall:
             self.delayedCall.cancel()
-    #
+
+    # Unused
     # def nextcall(self):
+    #     # Return time left until this will be called
     #     if self.delayedCall.active():
-    #         return self.delayedCall.getTime()
-    #     else :
+    #         loop = asyncio.get_event_loop()
+    #         return self.delayedCall.when() - loop.time()
+    #     else:
     #         return None
 
 def run_ioloop():
     loop = asyncio.get_event_loop()
     loop.set_debug(True)
     loop.run_forever()
-
 
 def stop_ioloop():
     try:
