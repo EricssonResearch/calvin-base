@@ -34,7 +34,7 @@ if async_impl == 'twisted':
     # north.scheduler
     from .twistedimpl.asynchronous import run_ioloop
     from .twistedimpl.asynchronous import stop_ioloop
-    # In various actors
+    # Used in calvinsys
     from .twistedimpl.asynchronous import call_from_thread
     from .twistedimpl.asynchronous import call_in_thread
 
@@ -49,7 +49,7 @@ if async_impl == 'twisted':
     # calvinsys.io.filehandler
     from .twistedimpl.filedescriptor import GenericFileDescriptor
 
-    # Very much used
+    # Very much used by calvinsys
     from .twistedimpl.threads import defer_to_thread
 
     # Used in calvinsys.network.SocketClient.py
@@ -61,6 +61,15 @@ if async_impl == 'twisted':
 
     # Used in calvinsys.io.inotifier
     from .twistedimpl.inotify import INotify
+
+elif async_impl == 'asyncio':
+
+    from .asyncioimpl.asynchronous import DelayedCall
+    from .asyncioimpl.asynchronous import run_ioloop
+    from .asyncioimpl.asynchronous import stop_ioloop
+    
+    from .asyncioimpl.threads import defer_to_thread
+    
 else:
     raise AssertionError("Unknown asynchronous implementation: '{}'".format(async_impl))
 
