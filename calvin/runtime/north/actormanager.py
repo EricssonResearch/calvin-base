@@ -21,7 +21,6 @@ from calvin.common.calvinlogger import get_logger
 from calvin.common.calvin_callback import CalvinCB
 import calvin.common.calvinresponse as response
 from calvin.common.security import Security, security_enabled
-from calvin.actor.actor import ShadowActor
 from calvin.runtime.north.plugins.port import DISCONNECT
 from calvin.runtime.north.calvinsys import get_calvinsys
 from calvin.runtime.north.calvinlib import get_calvinlib
@@ -81,7 +80,7 @@ class ActorManager(object):
         raise Exception("Actor '{}' not found".format(actor_id))
 
     def new(self, actor_type, args, state=None, prev_connections=None, connection_list=None, callback=None,
-            signature=None, actor_def=None, security=None, access_decision=None, shadow_actor=False,
+            signature=None, actor_def=None, security=None, access_decision=None,
             port_properties=None):
         """
         Instantiate an actor of type 'actor_type'. Parameters are passed in 'args',
@@ -101,9 +100,9 @@ class ActorManager(object):
 
         try:
             if state:
-                a = self._new_from_state(actor_type, state, actor_def, security, access_decision, shadow_actor)
+                a = self._new_from_state(actor_type, state, actor_def, security, access_decision)
             else:
-                a = self._new(actor_type, args, actor_def, security, access_decision, shadow_actor, port_properties)
+                a = self._new(actor_type, args, actor_def, security, access_decision, port_properties)
         except Exception as e:
             _log.exception("Actor creation failed")
             raise(e)
@@ -121,7 +120,7 @@ class ActorManager(object):
             # Convert prev_connections to connection_list format
             connection_list = self._prev_connections_to_connection_list(prev_connections)
 
-        self.node.control.log_actor_new(a.id, a.name, actor_type, isinstance(a, ShadowActor))
+        self.node.control.log_actor_new(a.id, a.name, actor_type)
 
         if connection_list:
             # Migrated actor
@@ -134,18 +133,12 @@ class ActorManager(object):
             else:
                 return a.id
 
-    def _new_actor(self, actor_type, class_=None, actor_id=None, security=None, access_decision=None, shadow_actor=False):
+    def _new_actor(self, actor_type, class_=None, actor_id=None, security=None, access_decision=None):
         """Return a 'bare' actor of actor_type, raises an exception on failure."""
-        if security_enabled() and not access_decision:
-            _log.debug("Security policy check for actor failed, access_decision={}".format(access_decision))
-            shadow_actor = True
-        if shadow_actor:
-            class_ = ShadowActor
+        # if security_enabled() and not access_decision:
+        #     _log.debug("Security policy check for actor failed, access_decision={}".format(access_decision))
         if class_ is None:
-            try:
-                class_, signer = self.lookup_and_verify(actor_type, security)
-            except Exception:
-                class_ = ShadowActor
+            class_, signer = self.lookup_and_verify(actor_type, security)
         try:
             # Create a 'bare' instance of the actor
             a = class_(actor_type, actor_id=actor_id, security=security)
@@ -157,12 +150,12 @@ class ActorManager(object):
             a.set_authorization_checks(access_decision[1])
         return a
 
-    def _new(self, actor_type, args, actor_def=None, security=None, access_decision=None, shadow_actor=False,
+    def _new(self, actor_type, args, actor_def=None, security=None, access_decision=None,
              port_properties=None):
         """Return an initialized actor in PENDING state, raises an exception on failure."""
         try:
             a = self._new_actor(actor_type, actor_def, security=security,
-                                access_decision=access_decision, shadow_actor=shadow_actor)
+                                access_decision=access_decision)
             # Now that required APIs are attached we can call init() which may use the APIs
             human_readable_name = args.pop('name', '')
             a.name = human_readable_name
@@ -201,28 +194,17 @@ class ActorManager(object):
                                                             callback=callback,
                                                             actor_def=actor_def,
                                                             security=security))
-        except Exception:
-            # Still want to create shadow actor.
-            self.new(actor_type, None, state, prev_connections=prev_connections,
-                    connection_list=connection_list, callback=callback, shadow_actor=True)
+        except Exception as err:
+            _log.error(err)
 
     def _new_from_state(self, actor_type, state, actor_def, security,
-                             access_decision=None, shadow_actor=False):
+                             access_decision=None):
         """Return a restored actor in PENDING state, raises an exception on failure."""
         try:
             a = self._new_actor(actor_type, actor_def, actor_id=state['private']['_id'], security=security,
-                                access_decision=access_decision, shadow_actor=shadow_actor)
-            if '_shadow_args' in state['managed']:
-                # We were a shadow, do a full init
-                args = state['managed'].pop('_shadow_args')
-                a.init(**args)
-                # If still shadow don't call did_replicate even when replication
-                did_replicate = (not isinstance(a, ShadowActor)) and 'replication' in state
-                # If still shadow don't call did_migrate also skip if replication
-                did_migrate = isinstance(a, ShadowActor) and not did_replicate
-            else:
-                did_migrate = True
-                did_replicate = False
+                                access_decision=access_decision)
+            did_migrate = True
+            did_replicate = False
             # Always do a set_state for the port's state
             a.deserialize(state)
             self.node.pm.add_ports_of_actor(a)

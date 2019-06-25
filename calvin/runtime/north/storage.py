@@ -22,10 +22,7 @@ from calvin.actor.port_property_syntax import list_port_property_capabilities
 from calvin.runtime.south import asynchronous
 from calvin.common import calvinlogger
 from calvin.common.calvin_callback import CalvinCB
-# from calvin.actor import actorport
-from calvin.actor.actor import ShadowActor
 from calvin.common import calvinconfig
-# from calvin.common.security import Security, security_enabled
 from calvin.common import dynops
 from calvin.common import calvinresponse
 from calvin.runtime.north.calvinsys import get_calvinsys
@@ -761,7 +758,6 @@ class Storage(PrivateStorage):
             outports.append(port)
             self.add_port(p, node_id, actor.id)
         data["outports"] = outports
-        data["is_shadow"] = isinstance(actor, ShadowActor)
         if actor._replication_id.id is not None:
             data["replication_id"] = actor._replication_id.id
             data["replication_master_id"] = actor._replication_id.original_actor_id

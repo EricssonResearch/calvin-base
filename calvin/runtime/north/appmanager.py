@@ -654,15 +654,9 @@ class Deployer(object):
           - 'info' is information about the actor
         """
         actor_type = info['actor_type']
-        try:
-            actor_def, signer = self.node.am.lookup_and_verify(actor_type, self.sec)
-            info['signer'] = signer
-            info['requires'] = actor_def.requires if hasattr(actor_def, "requires") else []
-        except Exception:
-            # Not found locally, must be made shadow actor
-            info = self.app_info['actors'][actor_name]
-            info['shadow_actor'] = True
-            actor_def = None
+        actor_def, signer = self.node.am.lookup_and_verify(actor_type, self.sec)
+        info['signer'] = signer
+        info['requires'] = actor_def.requires if hasattr(actor_def, "requires") else []
         self._verified_actors[actor_name] = (info, actor_def)
         if cb:
             cb()
@@ -674,20 +668,12 @@ class Deployer(object):
           - 'info' is information about the actor
           - 'actor_def' is the actor definition returned from the actor store
         """
-        try:
-            if not 'shadow_actor' in info:
-                self.node.am.check_requirements_and_sec_policy(info['requires'],
-                                                               security=self.sec,
-                                                               signer=info['signer'],
-                                                               callback=CalvinCB(self.instantiate,
-                                                                                 actor_name, info,
-                                                                                 actor_def, cb=cb))
-                return
-            self.instantiate(actor_name, info, cb=cb)
-        except Exception:
-            # Still want to create shadow actor.
-            info['shadow_actor'] = True
-            self.instantiate(actor_name, info, cb=cb)
+        self.node.am.check_requirements_and_sec_policy(info['requires'],
+                                                       security=self.sec,
+                                                       signer=info['signer'],
+                                                       callback=CalvinCB(self.instantiate,
+                                                                         actor_name, info,
+                                                                         actor_def, cb=cb))
 
     def _requirement_type(self, req):
         try:
@@ -714,7 +700,7 @@ class Deployer(object):
             # TODO add requirements should be part of actor_manager new
             actor_id = self.node.am.new(actor_type=info['actor_type'], args=info['args'], signature=info['signature'],
                                         actor_def=actor_def, security=self.sec, access_decision=access_decision,
-                                        shadow_actor='shadow_actor' in info, port_properties=port_properties)
+                                        port_properties=port_properties)
             if not actor_id:
                 raise Exception("Could not instantiate actor %s" % actor_name)
             deploy_req = self.get_req(actor_name)
@@ -747,31 +733,8 @@ class Deployer(object):
 
     def store_complete_requirements(self, actor_id):
         actor = self.node.am.actors[actor_id]
-        if actor.is_shadow():
-            # Find requires
-            def _desc_cb(signature, description):
-                _log.debug("REQUIRES BACK %s" % description)
-                requires = None
-                for actor_desc in description:
-                    # We get list of possible descriptions back matching the signature
-                    # In reality it is only one
-                    if 'requires' in actor_desc:
-                        requires = actor_desc['requires']
-                if requires is not None:
-                    actor.requires = requires
-                    self.node.storage.add_actor_requirements(actor)
-                self._requires_counter += 1
-                if self._requires_counter >= len(self.app_info['actors']):
-                    self._wait_for_all_connections_and_requires()
-            try:
-                raise Exception("FIXME: GlobalStore.global_signature_lookup")
-                # GlobalStore(node=self.node).global_signature_lookup(actor._signature, cb=_desc_cb)
-            except:
-                _log.exception("actor instanciate GlobalStore exception")
-                self._requires_counter += 1
-        else:
-            self._requires_counter += 1
-            self.node.storage.add_actor_requirements(actor)
+        self._requires_counter += 1
+        self.node.storage.add_actor_requirements(actor)
 
     def connectid(self, connection, cb):
         src_actor, src_port, dst_actor, dst_port = connection

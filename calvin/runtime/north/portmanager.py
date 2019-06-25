@@ -19,7 +19,6 @@ from calvin.runtime.north.plugins.port.connection import ConnectionFactory, PURP
 from calvin.actor.actorport import PortMeta
 import calvin.common.calvinresponse as response
 from calvin.common import calvinlogger
-from calvin.actor.actor import ShadowActor
 from calvin.common.enum import enum
 from calvin.runtime.north.plugins.port import DISCONNECT
 
@@ -353,20 +352,6 @@ class PortManager(object):
         if port_name and actor_id and port_dir in ['in', 'out']:
             for port in self.ports.values():
                 if port.name == port_name and port.owner and port.owner.id == actor_id and port.direction == port_dir:
-                    return port
-            # For new shadow actors we create the port
-            _log.analyze(self.node.id, "+ SHADOW PORT?", {'actor_id': actor_id, 'port_name': port_name,
-                                                            'port_dir': port_dir, 'port_id': port_id})
-            actor = self.node.am.actors.get(actor_id, None)
-            _log.debug("SHADOW ACTOR: %s, %s, %s" %
-                        (("SHADOW" if isinstance(actor, ShadowActor) else "NOT SHADOW"), type(actor), actor))
-            if isinstance(actor, ShadowActor):
-                port = actor.create_shadow_port(port_name, port_dir, port_id)
-                _log.analyze(self.node.id, "+ CREATED SHADOW PORT",
-                                {'actor_id': actor_id, 'port_name': port_name,
-                                'port_dir': port_dir, 'port_id': port.id if port else None})
-                if port:
-                    self.ports[port.id] = port
                     return port
         elif port_name and actor_id and port_dir == 'unknown':
             for port in self.ports.values():

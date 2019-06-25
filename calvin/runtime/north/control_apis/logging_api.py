@@ -77,7 +77,7 @@ def log_actor_firing(self, actor_id, action_method, tokens_produced, tokens_cons
         del self.loggers[user_id]
 
 @register
-def log_actor_new(self, actor_id, actor_name, actor_type, is_shadow):
+def log_actor_new(self, actor_id, actor_name, actor_type):
     """ Trace actor new
     """
     disconnected = []
@@ -91,7 +91,6 @@ def log_actor_new(self, actor_id, actor_name, actor_type, is_shadow):
                 data['actor_id'] = actor_id
                 data['actor_name'] = actor_name
                 data['actor_type'] = actor_type
-                data['is_shadow'] = is_shadow
                 if not self.send_streamdata(logger.handle, json.dumps(data)):
                     disconnected.append(user_id)
     for user_id in disconnected:
@@ -369,7 +368,6 @@ def handle_get_log(self, handle, match, data, hdr):
         'type': <event_type>, # event types: actor_fire, actor_new, actor_destroy, actor_migrate, application_new, application_destroy
         'actor_id',           # included in: actor_fire, actor_new, actor_destroy, actor_migrate
         'actor_name',         # included in: actor_new
-        'actor_is_shadow'     # included in: actor_new
         'action_method',      # included in: actor_fire
         'consumed',           # included in: actor_fire
         'produced'            # included in: actor_fire

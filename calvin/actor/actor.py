@@ -634,7 +634,7 @@ class Actor(object):
             port: self.outports[port]._state() for port in self.outports}
         state['_component_members'] = list(self._component_members)
         # Place requires in state, in the event we become a ShadowActor
-        state['_requires'] = self.requires if hasattr(self, 'requires') else []
+        # state['_requires'] = self.requires if hasattr(self, 'requires') else []
 
         # FIXME: The objects in _private_state_keys are well known, they are private after all,
         #        and we shouldn't need this generic handler.
@@ -829,86 +829,3 @@ class Actor(object):
             #        Need to make the actor runnable again before transition to DENIED.
             #self.fsm.transition_to(Actor.STATUS.DENIED)
 
-    def is_shadow(self):
-        return False
-
-
-class ShadowActor(Actor):
-    """A shadow actor try to behave as another actor but don't have any implementation"""
-    def __init__(self, actor_type, name='', allow_invalid_transitions=True, disable_transition_checks=False,
-                 disable_state_checks=False, actor_id=None, security=None):
-        self.inport_properties = {}
-        self.outport_properties = {}
-        self.calvinsys_state = {}
-        self.requires = None
-        self._replication_state_data = None
-        super(ShadowActor, self).__init__(actor_type, name, allow_invalid_transitions=allow_invalid_transitions,
-                                            disable_transition_checks=disable_transition_checks,
-                                            disable_state_checks=disable_state_checks, actor_id=actor_id,
-                                            security=security)
-
-    @manage(['_shadow_args'])
-    def init(self, **args):
-        self._shadow_args = args
-
-    def is_shadow(self):
-        return True
-
-    def create_shadow_port(self, port_name, port_dir, port_id=None):
-        # TODO check if we should create port against meta info
-        if port_dir == "in":
-            self.inport_properties[port_name] = {}
-            port = actorport.InPort(port_name, self)
-            self.inports[port_name] = port
-        else:
-            self.outport_properties[port_name] = {}
-            port = actorport.OutPort(port_name, self)
-            self.outports[port_name] = port
-        return port
-
-    def enabled(self):
-        return False
-
-    def did_connect(self, port):
-        # Do nothing
-        return
-
-    def did_disconnect(self, port):
-        # Do nothing
-        return
-
-    def requirements_get(self):
-        # Get standard actor requirements first
-        reqs = super(ShadowActor, self).requirements_get()
-        if self._signature and hasattr(self, '_shadow_args') and self.requires is None:
-            # Fresh ShadowActor, needs to find placement based on signature
-            # Since actor requires is not known locally
-            reqs += [{'op': 'shadow_actor_reqs_match',
-                     'kwargs': {'signature': self._signature,
-                                'shadow_params': list(self._shadow_args.keys())},
-                     'type': '+'}]
-        return reqs
-
-    def _set_private_state(self, state):
-        """Pop _calvinsys state, set requires and call super class"""
-        self.calvinsys_state = state.pop("_calvinsys")
-        # Done only in ShadowActor since requires is normally part of the real Actor sub-class
-        self.requires = state['_requires']
-        super(ShadowActor, self)._set_private_state(state)
-
-    def _private_state(self):
-        """Call super class and add stored calvinsys state"""
-        state = super(ShadowActor, self)._private_state()
-        state["_calvinsys"] = self.calvinsys_state
-        return state
-
-    def _set_replication_state(self, state):
-        """ Save the replication state, besides ports since they are already handled on the shadow instance """
-        super(ShadowActor, self)._set_replication_state(state)
-        # Need copy since remove the ports, which is needed for connect
-        self._replication_state_data = copy.copy(state)
-        if state is None:
-            return
-
-    def _replication_state(self):
-        return self._replication_state_data

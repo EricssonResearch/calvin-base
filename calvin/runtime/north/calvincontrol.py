@@ -156,7 +156,7 @@ class CalvinControlBase(object):
     def log_actor_firing(self, actor_id, action_method, tokens_produced, tokens_consumed, production):
         pass
 
-    def log_actor_new(self, actor_id, actor_name, actor_type, is_shadow):
+    def log_actor_new(self, actor_id, actor_name, actor_type):
         pass
 
     def log_actor_destroy(self, actor_id):

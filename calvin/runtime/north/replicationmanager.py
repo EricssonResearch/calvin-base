@@ -269,10 +269,7 @@ class ReplicationManager(object):
         # Only original that needs to measure pressure
         state['private']['_replication_id']['_measure_pressure'] = False
         if actor_args is not None:
-            # We got actor_args hence we should create an initial state that looks like a shadow actor
-            # Replace managed actor attributes with the shadow args, i.e. init args
-            state['managed'] = {'_shadow_args': actor_args}
-            state['private']['_has_started'] = False
+            _log.warning("actor_args is not None")
 
         replication_data.actor_state = state
         # UNUSED until leader election settled and deployed actors connected

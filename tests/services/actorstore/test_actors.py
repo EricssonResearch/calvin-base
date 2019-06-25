@@ -507,7 +507,6 @@ def test_actors(mock_calvinsys, mock_calvinlib, monkeypatch, store, actor_type):
     
     # 3. Instatiate actor
     actor = actor_class('aut', disable_state_checks=True)
-    assert not actor.is_shadow()
     actor.init(**kwargs)
     actor.setup_complete()
     
