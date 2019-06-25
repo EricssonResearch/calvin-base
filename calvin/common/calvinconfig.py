@@ -186,10 +186,6 @@ class CalvinConfig(object):
                     "module": "io.filehandler.StdIn",
                     "attributes": {}
                 },
-                "io.inotify": {
-                    "module": "io.inotifier.INotifier",
-                    "attributes": {}
-                },
                 "network.socketclient": {
                     "module": "network.SocketClient",
                     "attributes": {}
