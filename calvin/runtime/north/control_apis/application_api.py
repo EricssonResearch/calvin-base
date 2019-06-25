@@ -29,7 +29,6 @@ from calvin.runtime.north.plugins.port import DISCONNECT
 from calvin.common.security import security_enabled
 from .routes import register, handler
 from .authentication import authentication_decorator
-from calvin.common.replication_defs import PRE_CHECK, REPLICATION_STATUS
 
 _log = get_logger(__name__)
 
@@ -54,7 +53,7 @@ def handle_del_application(self, handle, match, data, hdr):
     DELETE /application/{application-id}
     Stop application (only applications launched from this node)
     Response status code: OK, NOT_FOUND, INTERNAL_ERROR
-    Response: [<actor_id>, ...] when error list of actors (replicas) in application not destroyed
+    Response: [<actor_id>, ...] when error list of actors in application not destroyed
     """
     try:
         self.node.app_manager.destroy(match.group(1), cb=CalvinCB(self.handle_del_application_cb,
@@ -195,43 +194,6 @@ def actor_migrate_cb(self, handle, status, *args, **kwargs):
     """
     self.send_response(handle, None, status=status.status)
 
-# USED BY: CSWEB
-@handler(method="POST", path="/actor/{replication_id}/replicate")
-@authentication_decorator
-def handle_actor_replicate(self, handle, match, data, hdr):
-    """
-    POST /actor/{replication-id}/replicate
-    Will replicate an actor having manual_scaling requirement applied
-    Currently must be sent to the runtime having the elected replication manager for the replication id
-    Response status code: OK or NOT_FOUND
-    """
-    data = {} if data is None else data
-    try:
-        _log.debug("MANUAL REPLICATION ORDERED")
-        replication_id = match.group(1)
-        node_id = data.get('peer_node_id', None)
-        replicate = not data.get('dereplicate', False)
-        op = PRE_CHECK.SCALE_OUT if replicate else PRE_CHECK.SCALE_IN
-        if (self.node.rm.managed_replications[replication_id].operation != PRE_CHECK.NO_OPERATION or
-            self.node.rm.managed_replications[replication_id].status != REPLICATION_STATUS.READY):
-            # Can't order another operation while processing previous
-            self.send_response(handle, None, calvinresponse.SERVICE_UNAVAILABLE)
-            _log.debug("MANUAL REPLICATION NOT APPLIED %s" % PRE_CHECK.reverse_mapping[op])
-            return
-        # This must be done on the node that is elected leader for the replication_id
-        # Return NOT_FOUND otherwise
-        self.node.rm.managed_replications[replication_id].operation = op
-        self.node.rm.managed_replications[replication_id].selected_node_id = node_id
-        self.node.sched.replication_direct(replication_id=replication_id)
-        _log.debug("MANUAL REPLICATION APPLIED %s" % PRE_CHECK.reverse_mapping[op])
-        self.send_response(handle, None, calvinresponse.OK)
-    except:
-        _log.exception("Failed manual replication")
-        self.send_response(handle, None, calvinresponse.NOT_FOUND)
-
-@register
-def handle_actor_replicate_cb(self, handle, status):
-    self.send_response(handle, json.dumps(status.data), status=status.status)
 
 # USED BY: GUI, CSWEB
 @handler(method="GET", path="/actor/{actor_id}/port/{port_id}/state")
@@ -304,7 +266,6 @@ def handle_deploy_cb(self, handle, status, deployer, **kwargs):
         self.send_response(handle,
                            json.dumps({'application_id': deployer.app_id,
                                        'actor_map': deployer.actor_map,
-                                       'replication_map': deployer.replication_map,
                                        'placement': kwargs.get('placement', None),
                                        'requirements_fulfilled': status.status == calvinresponse.OK}
                                       ) if deployer.app_id else None,

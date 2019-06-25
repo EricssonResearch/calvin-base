@@ -25,7 +25,6 @@ import uuid
 from calvin.runtime.north.calvinsys import get_calvinsys
 from calvin.runtime.north.calvinlib import get_calvinlib
 from calvin.runtime.north import actormanager
-from calvin.runtime.north import replicationmanager
 from calvin.runtime.north import appmanager
 from calvin.runtime.north import scheduler
 from calvin.runtime.north import storage
@@ -111,8 +110,6 @@ class Node(object):
         actorstore_uri = _conf.get('global', 'actorstore')
         self.actorstore = mdproxy.ActorMetadataProxy(actorstore_uri)
         self.am = actormanager.ActorManager(self)
-        self.rm = replicationmanager.ReplicationManager(self)
-
 
         # _scheduler = scheduler.DebugScheduler if _log.getEffectiveLevel() <= logging.DEBUG else scheduler.Scheduler
         # _scheduler = scheduler.NonPreemptiveScheduler
@@ -364,12 +361,8 @@ class Node(object):
         # Migrate the actors according to their requirements
         # (even actors without explicit requirements will migrate based on e.g. requires and port property needs)
         for actor in actors:
-            if actor._replication_id.terminate_with_node(actor.id):
-                _log.info("TERMINATE REPLICA")
-                self.rm.terminate(actor.id, callback=CalvinCB(migrated, actor_id=actor.id))
-            else:
-                _log.info("TERMINATE MIGRATE ACTOR")
-                self.am.update_requirements(actor.id, [], extend=True, move=True,
+            _log.info("TERMINATE MIGRATE ACTOR")
+            self.am.update_requirements(actor.id, [], extend=True, move=True,
                             authorization_check=False, callback=CalvinCB(migrated, actor_id=actor.id))
 
     def _storage_started_cb(self, *args, **kwargs):

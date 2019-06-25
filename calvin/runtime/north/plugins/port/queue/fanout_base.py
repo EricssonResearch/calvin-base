@@ -65,9 +65,6 @@ class FanoutBase(object):
         self.write_pos = state['write_pos']
         self.read_pos = state['read_pos']
         self.tentative_read_pos = state['tentative_read_pos']
-        if len(self.readers) > self.nbr_peers:
-            # If the peer has been replicated just set it to nbr connected
-            self.nbr_peers = len(self.readers)
         
     @property
     def queue_type(self):

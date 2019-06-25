@@ -67,10 +67,6 @@ class TestCollectUnorderedFIFO(unittest.TestCase):
     def testAddReader_Illegal(self):
         pass
             
-    def testAddReader_Replication(self):
-        # Test replication etc
-        pass
-
     def testRemoveReader_Normal(self):
         self.inport.remove_reader(None)
         

@@ -66,10 +66,6 @@ class TestFanoutOrderedFIFO(unittest.TestCase):
             self.outport.add_reader(None, {})
             self.assertTrue('Not a string: None' in context.exception)
             
-    def testAddReader_Replication(self):
-        # Test replication etc
-        pass
-
     def testRemoveReader_Normal(self):
         self.outport.add_reader("reader", {})
         self.outport.remove_reader("reader")

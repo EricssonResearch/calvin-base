@@ -134,47 +134,6 @@ def log_actor_migrate(self, actor_id, dest_node_id):
         del self.loggers[user_id]
 
 @register
-def log_actor_replicate(self, actor_id, replica_actor_id, replication_id, dest_node_id):
-    """ Trace actor replication
-    """
-    disconnected = []
-    for user_id, logger in self.loggers.items():
-        if not logger.events or LOG_ACTOR_REPLICATE in logger.events:
-            if not logger.actors or actor_id in logger.actors:
-                data = {}
-                data['timestamp'] = time.time()
-                data['node_id'] = self.node.id
-                data['type'] = 'actor_replicate'
-                data['actor_id'] = actor_id
-                data['dest_node_id'] = dest_node_id
-                data['replication_id'] = replication_id
-                data['replica_actor_id'] = replica_actor_id
-                if not self.send_streamdata(logger.handle, json.dumps(data)):
-                    disconnected.append(user_id)
-    for user_id in disconnected:
-        del self.loggers[user_id]
-
-@register
-def log_actor_dereplicate(self, actor_id, replica_actor_id, replication_id):
-    """ Trace actor dereplication
-    """
-    disconnected = []
-    for user_id, logger in self.loggers.items():
-        if not logger.events or LOG_ACTOR_DEREPLICATE in logger.events:
-            if not logger.actors or actor_id in logger.actors:
-                data = {}
-                data['timestamp'] = time.time()
-                data['node_id'] = self.node.id
-                data['type'] = 'actor_dereplicate'
-                data['actor_id'] = actor_id
-                data['replication_id'] = replication_id
-                data['replica_actor_id'] = replica_actor_id
-                if not self.send_streamdata(logger.handle, json.dumps(data)):
-                    disconnected.append(user_id)
-    for user_id in disconnected:
-        del self.loggers[user_id]
-
-@register
 def log_application_new(self, application_id, application_name):
     """ Trace application new
     """
@@ -308,10 +267,6 @@ def handle_post_log(self, handle, match, data, hdr):
                     events.append(LOG_ACTOR_DESTROY)
                 elif event == 'actor_migrate':
                     events.append(LOG_ACTOR_MIGRATE)
-                elif event == 'actor_replicate':
-                    events.append(LOG_ACTOR_REPLICATE)
-                elif event == 'actor_dereplicate':
-                    events.append(LOG_ACTOR_DEREPLICATE)
                 elif event == 'application_new':
                     events.append(LOG_APPLICATION_NEW)
                 elif event == 'application_destroy':

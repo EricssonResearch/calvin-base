@@ -34,6 +34,9 @@ def test_id(system_setup, execute_cmd_check_output):
 
     # Get info on rt2 from registry
     res = execute_cmd_check_output(("cscontrol", rt1_uri, "nodes", "info", rt2_id))
+    print('-----')
+    print(res)
+    print('-----')
     info = json.loads(res)
     rt2_uris = info["control_uris"]
     assert len(rt2_uris) == 1

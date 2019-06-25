@@ -205,89 +205,35 @@ class AppManager(object):
         except:
             pass
         application.clear_node_info()
-        application.actor_replicas = []
-        application.replication_ids = []
-        application._replicas_actor_final = {}
-        application._replicas_node_final = {}
         for actor_id in application.actors:
             if actor_id in self._node.am.list_actors():
                 application.update_node_info(self._node.id, actor_id)
-                replication_id = self._node.am.actors[actor_id]._replication_id.id
-                _log.analyze(self._node.id, "+ LOCAL ACTOR", {'actor_id': actor_id, 'replication_id': replication_id})
-                if replication_id is not None:
-                    # Destroy the replication manager
-                    self._node.rm.destroy_replication_leader(replication_id)
-                    # Destroy the replicas
-                    application.replication_ids.append(replication_id)
-                    self._node.storage.get_replica(
-                        replication_id,
-                        cb=CalvinCB(func=self._replicas_cb, replication_id=replication_id,
-                                    master_id=self._node.am.actors[actor_id]._replication_id.original_actor_id,
-                                    application=application))
             else:
                 _log.analyze(self._node.id, "+ REMOTE ACTOR", {'actor_id': actor_id})
                 self.storage.get_actor(actor_id, CalvinCB(func=self._destroy_actor_cb, application=application))
 
-        if application.complete_node_info() and not application.replication_ids:
-            # All actors were local and no replicas
+        if application.complete_node_info():
+            # All actors were local
             _log.analyze(self._node.id, "+ DONE", {'actors': application.actors})
             self._destroy_final(application)
 
-    def _destroy_actor_cb(self, key, value, application, retries=0, check_replica=True):
+    def _destroy_actor_cb(self, key, value, application, retries=0):
         """ Get actor callback """
-        _log.analyze(self._node.id, "+", {'actor_id': key, 'value': value, 'retries': retries,
-                                        'check_replica': check_replica})
+        _log.analyze(self._node.id, "+", {'actor_id': key, 'value': value, 'retries': retries})
         if response.isnotfailresponse(value) and 'node_id' in value:
             application.update_node_info(value['node_id'], key)
-            try:
-                # When this is the callback for finding a replica we need to remove it as well
-                application.actor_replicas.remove(key)
-            except:
-                pass
-            if 'replication_id' in value and value['replication_id'] is not None and not check_replica:
-                application._replicas_node_final.setdefault(value['replication_id'], set()).add(value['node_id'])
-            if 'replication_id' in value and value['replication_id'] is not None and check_replica:
-                # Destroy the replication manager
-                self._node.rm.destroy_replication_leader(value['replication_id'])
-                # Destroy the replicas
-                application.replication_ids.append(value['replication_id'])
-                self.storage.get_replica(value['replication_id'],
-                    cb=CalvinCB(func=self._replicas_cb, replication_id=value['replication_id'], master_id=key,
-                                application=application))
         else:
             if retries<10:
                 # FIXME add backoff time
                 _log.analyze(self._node.id, "+ RETRY", {'actor_id': key, 'value': value, 'retries': retries})
-                self.storage.get_actor(key, CalvinCB(func=self._destroy_actor_cb, application=application, retries=(retries+1), check_replica=check_replica))
+                self.storage.get_actor(key, CalvinCB(func=self._destroy_actor_cb, application=application, retries=(retries+1)))
             else:
                 # FIXME report failure
                 _log.analyze(self._node.id, "+ GIVE UP", {'actor_id': key, 'value': value, 'retries': retries})
                 application.update_node_info(None, key)
 
-        if application.complete_node_info() and not application.replication_ids and not application.actor_replicas:
+        if application.complete_node_info():
             _log.debug("_destroy_actor_cb final")
-            self._destroy_final(application)
-
-    def _replicas_cb(self, value, replication_id, master_id, application):
-        _log.analyze(self._node.id, "+", {'value': value, 'replication_id': replication_id, 'replication_ids': application.replication_ids})
-        application.replication_ids.remove(replication_id)
-        application.actor_replicas.extend(value)
-        application._replicas_actor_final.setdefault(replication_id, []).extend(value)
-        for actor_id in value:
-            if actor_id == master_id:
-                application.actor_replicas.remove(actor_id)
-                continue
-            application.actors[actor_id] = "noname"
-            if actor_id in self._node.am.list_actors():
-                _log.debug("_replicas_cb actor %s LOCAL" % actor_id)
-                application.actor_replicas.remove(actor_id)
-                application.update_node_info(self._node.id, actor_id)
-            else:
-                _log.debug("_replicas_cb actor %s REMOTE" % actor_id)
-                self.storage.get_actor(actor_id,
-                    CalvinCB(func=self._destroy_actor_cb, application=application, check_replica=False))
-        if application.complete_node_info() and not application.replication_ids:
-            _log.debug("_replicas_cb final")
             self._destroy_final(application)
 
     def _destroy_final(self, application):
@@ -334,12 +280,6 @@ class AppManager(object):
         if any([s is None for s in application._destroy_node_ids.values()]):
             return
         # Done
-        for replication_id, replica_ids in application._replicas_actor_final.items():
-            for replica_id in replica_ids:
-                self._node.storage.remove_replica(replication_id, replica_id)
-        for replication_id, replica_node_ids in application._replicas_node_final.items():
-            for replica_node_id in replica_node_ids:
-                self._node.storage.remove_replica_node_force(replication_id, replica_node_id)
         if all(application._destroy_node_ids.values()):
             application.destroy_cb(status=response.CalvinResponse(True))
         else:
@@ -595,7 +535,6 @@ class Deployer(object):
         self.sec = security
         # self.actorstore = ActorStore(security=self.sec)
         self.actor_map = {}
-        self.replication_map = {}
         self.actor_connections = {}
         self.node = node
         self.cb = cb
@@ -705,17 +644,8 @@ class Deployer(object):
                 raise Exception("Could not instantiate actor %s" % actor_name)
             deploy_req = self.get_req(actor_name)
             if deploy_req:
-                # Seperate replication and placement requirements
-                actor_reqs = [r for r in deploy_req if self._requirement_type(r) != "replication"]
-                replication_reqs = [r for r in deploy_req if self._requirement_type(r) == "replication"]
-                if replication_reqs:
-                    # Replication requirements (should only be one)
-                    replication_result = self.node.rm.supervise_actor(actor_id, replication_reqs[0], actor_args=info['args'])
-                    if replication_result:
-                        self.replication_map[actor_name] = replication_result.data['replication_id']
-                    else:
-                        _log.error("ERROR {} when applying scaling requirements {} on actor {}".format(
-                                    replication_result, replication_reqs, actor_name))
+                # Placement requirements
+                actor_reqs = [r for r in deploy_req if self._requirement_type(r)]
                 # Placement requirements
                 self.node.am.actors[actor_id].requirements_add(actor_reqs, extend=False)
                 # Update requirements in registry
@@ -814,7 +744,6 @@ class Deployer(object):
         if self._connection_count == 0:
             _log.debug("_wait_for_all_connections final")
             # Replication manager needs to fetch port info if supervise ShadowActor
-            self.node.rm.deployed_actors_connected(list(self.actor_map.values()))
             self._wait_for_all_connections_and_requires()
 
     def _wait_for_all_connections_and_requires(self):

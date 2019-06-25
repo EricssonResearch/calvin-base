@@ -182,7 +182,6 @@ def control_api():
     ACTOR_PATH = '/actor/{}'
     ACTORS = '/actors'
     ACTOR_MIGRATE = '/actor/{}/migrate'
-    ACTOR_REPLICATE = '/actor/{}/replicate'
     APPLICATION_PATH = '/application/{}'
     APPLICATION_MIGRATE = '/application/{}/migrate'
     ACTOR_PORT = '/actor/{}/port/{}'

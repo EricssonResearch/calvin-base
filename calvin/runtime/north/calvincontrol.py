@@ -165,12 +165,6 @@ class CalvinControlBase(object):
     def log_actor_migrate(self, actor_id, dest_node_id):
         pass
 
-    def log_actor_replicate(self, actor_id, replica_actor_id, replication_id, dest_node_id):
-        pass
-
-    def log_actor_dereplicate(self, actor_id, replica_actor_id, replication_id):
-        pass
-
     def log_application_new(self, application_id, application_name):
         pass
 

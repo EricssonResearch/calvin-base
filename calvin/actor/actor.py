@@ -25,8 +25,6 @@ from calvin.actor import actorport
 from calvin.common.calvinlogger import get_logger
 from calvin.common.enum import enum
 from calvin.runtime.north.calvin_token import Token, ExceptionToken
-# from calvin.runtime.north import calvincontrol
-from calvin.runtime.north.replicationmanager import ReplicationId
 import calvin.common.calvinresponse as response
 from calvin.runtime.south import asynchronous
 from calvin.runtime.north.plugins.authorization_checks import check_authorization_plugin_list
@@ -261,7 +259,7 @@ class Actor(object):
 
     # These are the instance variables that will always be serialized, see serialize()/deserialize() below
     _private_state_keys = ('_id', '_name', '_has_started', '_deployment_requirements',
-                           '_signature', '_migration_info', "_port_property_capabilities", "_replication_id")
+                           '_signature', '_migration_info', "_port_property_capabilities")
 
     # Internal state (status)
     class FSM(object):
@@ -352,7 +350,6 @@ class Actor(object):
         self.sec = security
         self._subject_attributes = self.sec.get_subject_attributes() if self.sec is not None else None
         self.authorization_checks = None
-        self._replication_id = ReplicationId()
         self._exhaust_cb = None
         self._pressure_event = 0  # Time of last pressure event time (not in state only local)
 
@@ -404,10 +401,6 @@ class Actor(object):
         if hasattr(self, "will_end") and callable(self.will_end):
             self.will_end()
         get_calvinsys().close_all(self)
-
-    def did_replicate(self, index):
-        """Override in actor subclass if actions need to be taken after replication."""
-        pass
 
     def __str__(self):
         ip = ""
@@ -478,9 +471,9 @@ class Actor(object):
         self._exhaust_cb = callback
 
     def get_pressure(self):
-        _log.debug("get_pressure %s" % self._replication_id.measure_pressure())
-        if not self._replication_id.measure_pressure():
-            return None
+        # _log.debug("get_pressure %s" % self._replication_id.measure_pressure())
+        # if not self._replication_id.measure_pressure():
+        #     return None
         t = time.time()
         pressure = {}
         for port in self.inports.values():
@@ -673,13 +666,6 @@ class Actor(object):
                 else:
                     self.__dict__[key] = state.get(key, None)
 
-    def _replication_state(self):
-        return None
-
-    def _set_replication_state(self, state):
-        """Deserialize and apply state related to a replicating actor """
-        pass
-
     def _security_state(self):
         """
         Serialize security state.
@@ -715,9 +701,6 @@ class Actor(object):
         """Returns the serialized state of an actor."""
         state = {}
         state['private'] = self._private_state()
-        rstate = self._replication_state()
-        if rstate is not None:
-            state['replication'] = rstate
         state['managed'] = self._managed_state()
         state['security']= self._security_state()
         state['custom'] = self.state()
@@ -726,7 +709,6 @@ class Actor(object):
     def deserialize(self, state):
         """Restore an actor's state from the serialized state."""
         self._set_private_state(state['private'])
-        self._set_replication_state(state.get('replication', None))
         self._set_security_state(state['security'])
         self._set_managed_state(state['managed'])
         self.set_state(state['custom'])
@@ -780,7 +762,7 @@ class Actor(object):
             capability_require = []
 
         return (self._deployment_requirements + capability_require +
-                capability_port + self._replication_id._placement_req)
+                capability_port)
 
     def _derive_port_property_capabilities(self):
         port_property_capabilities = set([])

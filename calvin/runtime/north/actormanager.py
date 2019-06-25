@@ -204,17 +204,11 @@ class ActorManager(object):
             a = self._new_actor(actor_type, actor_def, actor_id=state['private']['_id'], security=security,
                                 access_decision=access_decision)
             did_migrate = True
-            did_replicate = False
             # Always do a set_state for the port's state
             a.deserialize(state)
             self.node.pm.add_ports_of_actor(a)
             if did_migrate:
                 a.did_migrate()
-            if did_replicate:
-                try:
-                    a.did_replicate(state['private']['_replication_id']['index'])
-                except:
-                    _log.exception("did_replicate failed for actor %s" % a.name)
             a.setup_complete()
         except Exception as e:
             _log.exception("Catched new from state %s %s" % (a, dir(a)))

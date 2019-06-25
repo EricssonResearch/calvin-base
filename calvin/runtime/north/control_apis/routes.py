@@ -42,7 +42,6 @@ path_regex = {
     "application_id": app_uuid_re,
     "actor_id": actor_uuid_re,
     "port_id": port_uuid_re,
-    "replication_id": repl_uuid_re,
     "trace_id": trace_uuid_re,
     "node_id": node_uuid_re,
     "policy_id": policy_uuid_re,

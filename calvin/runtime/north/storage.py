@@ -758,10 +758,6 @@ class Storage(PrivateStorage):
             outports.append(port)
             self.add_port(p, node_id, actor.id)
         data["outports"] = outports
-        if actor._replication_id.id is not None:
-            data["replication_id"] = actor._replication_id.id
-            data["replication_master_id"] = actor._replication_id.original_actor_id
-            data["replication_index"] = actor._replication_id.index
         self.set(prefix="actor-", key=actor.id, value=data, cb=cb)
 
     def get_actor(self, actor_id, cb=None):
@@ -777,14 +773,6 @@ class Storage(PrivateStorage):
         _log.debug("Delete actor id %s" % (actor_id))
         self.delete(prefix="actor-", key=actor_id, cb=cb)
         self.delete_actor_requirements(actor_id)
-        try:
-            replication_id = self.node.am.actors[actor_id]._replication_id.id
-            if replication_id is None or self.node.am.actors[actor_id]._replication_id.original_actor_id == actor_id:
-                return
-            self.remove_replica(replication_id, actor_id)
-            self.remove_replica_node(replication_id, actor_id)
-        except:
-            pass
 
     def add_actor_requirements(self, actor, cb=None):
         self.set(prefix="actorreq-", key=actor.id, value=actor.requirements_get(), cb=cb)
@@ -822,88 +810,4 @@ class Storage(PrivateStorage):
         """
         self.delete(prefix="port-", key=port_id, cb=cb)
 
-    def add_replica(self, replication_id, actor_id, node_id=None, cb=None):
-        _log.analyze(self.node.id, "+", {'replication_id':replication_id, 'actor_id':actor_id})
-        self.add_index(['replicas', 'actors', replication_id], actor_id, root_prefix_level=3, cb=cb)
-        self.add_index(['replicas', 'nodes', replication_id],
-                        self.node.id if node_id is None else node_id, root_prefix_level=3, cb=cb)
-
-    def remove_replica(self, replication_id, actor_id, cb=None):
-        _log.analyze(self.node.id, "+", {'replication_id':replication_id, 'actor_id':actor_id})
-        self.remove_index(['replicas', 'actors', replication_id], actor_id, root_prefix_level=3, cb=cb)
-
-    def remove_replica_node(self, replication_id, actor_id, cb=None):
-        # Only remove the node if we are last
-        if replication_id is None:
-            return
-        replica_ids = self.node.rm.list_replication_actors(replication_id)
-        _log.debug("remove_replica_node %s %s" % (actor_id, replica_ids))
-        try:
-            replica_ids.remove(actor_id)
-            replica_ids.remove(self.node.am.actors[actor_id]._replication_id.original_actor_id)
-        except:
-            pass
-        if not replica_ids:
-            _log.debug("remove_replica_node remove %s %s" % (self.node.id, actor_id))
-            self.remove_index(['replicas', 'nodes', replication_id], self.node.id, root_prefix_level=3, cb=cb)
-
-    def remove_replica_node_force(self, replication_id, node_id, cb=None):
-        if replication_id is None:
-            return
-        _log.debug("remove_replica_node_force remove %s" % node_id)
-        self.remove_index(['replicas', 'nodes', replication_id], node_id, root_prefix_level=3, cb=cb)
-
-    def get_replica(self, replication_id, cb=None):
-        self.get_index(['replicas', 'actors', replication_id], root_prefix_level=3, cb=cb)
-
-    def get_replica_nodes(self, replication_id, cb=None):
-        self.get_index(['replicas', 'nodes', replication_id], root_prefix_level=3, cb=cb)
-
-    def set_replication_data(self, replication_data, cb=None):
-        """ Save the replication data state any replica instances are stored seperate continously """
-        state = replication_data.state()
-        state.pop('instances', None)
-        self.set(prefix="replicationdata-", key=replication_data.id, value=state, cb=cb)
-
-    def delete_replication_data(self, replication_id, cb=None):
-        """ Delete the replication id """
-        self.delete(prefix="replicationdata-", key=replication_id, cb=cb)
-
-    def get_replication_data(self, replication_id, cb=None):
-        """ Get replication data """
-        self.get(prefix="replicationdata-", key=replication_id, cb=cb)
-
-    def get_full_replication_data(self, replication_id, cb=None):
-        """ Get replication data as well as the replica instances """
-        state = {}
-        def _rd_cb(key, value):
-            if calvinresponse.isnotfailresponse(value):
-                try:
-                    state.update(value)
-                except:
-                    state['id'] = calvinresponse.CalvinResponse(False)
-            else:
-                state['id'] = value
-            if 'instances' in state:
-                # Got both main data and instances
-                if calvinresponse.isnotfailresponse(value):
-                    state['instances'].append(state['original_actor_id'])
-                    cb(key=replication_id, value=state)
-                else:
-                    cb(key=replication_id, value=value)
-
-        def _rd_instances_cb(value):
-            state['instances'] = value
-            if 'id' in state:
-                # Got both main data and instances
-                if calvinresponse.isnotfailresponse(state['id']):
-                    state['instances'].append(state['original_actor_id'])
-                    cb(key=replication_id, value=state)
-                else:
-                    cb(key=replication_id, value=state['id'])
-
-        self.get(prefix="replicationdata-", key=replication_id, cb=None if cb is None else _rd_cb)
-        self.get_replica(replication_id, cb=None if cb is None else _rd_instances_cb)
-
-    ### Storage proxy server ###
 
