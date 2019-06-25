@@ -342,7 +342,7 @@ class PrivateStorage(object):
             org_cb(org_key, value)
 
     def delete(self, prefix, key, cb):
-        """ Delete registry key: prefix+key
+        r""" Delete registry key: prefix+key
             It is assumed that the prefix and key are strings,
             the sum has to be an immutable object.
             This is equivalent to set(..., value=None, ...).
@@ -371,7 +371,7 @@ class PrivateStorage(object):
         self.trigger_flush()
 
     def add_index(self, index, value, root_prefix_level=None, cb=None):
-        """
+        r"""
         Add single value (e.g. a node id) or list to a set stored in registry
         later retrivable for each level of the index.
         index: The multilevel key:
@@ -411,7 +411,7 @@ class PrivateStorage(object):
         self.trigger_flush()
 
     def remove_index(self, index, value, root_prefix_level=None, cb=None):
-        """
+        r"""
         Remove single value (e.g. a node id) or list from a set stored in registry
         index: The multilevel key:
                a string with slash as delimiter for finer level of index,
@@ -438,7 +438,7 @@ class PrivateStorage(object):
                 cb=CalvinCB(self.remove_index_cb, org_cb=cb, index_items=indexes, org_value=value))
 
     def delete_index(self, index, root_prefix_level=None, cb=None):
-        """
+        r"""
         Delete index entry in registry - this have the semantics of
         remove_index(index, get_index(index)) - NOT IMPLEMENTED since never used
         index: The multilevel key:
@@ -470,7 +470,7 @@ class PrivateStorage(object):
             org_cb(value=list(value))
 
     def get_index(self, index, root_prefix_level=None, cb=None):
-        """
+        r"""
         Get multiple values from the registry stored at the index level or
         below it in hierarchy.
         index: The multilevel key:
@@ -504,7 +504,7 @@ class PrivateStorage(object):
         it.final()
 
     def get_index_iter(self, index, include_key=False, root_prefix_level=None):
-        """
+        r"""
         Get multiple values from the registry stored at the index level or
         below it in hierarchy.
         index: The multilevel key:
