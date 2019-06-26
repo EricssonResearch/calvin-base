@@ -24,7 +24,6 @@ from calvin.common.calvinlogger import get_logger
 from calvin.common.enum import enum
 from calvin.runtime.north.calvin_token import Token, ExceptionToken
 import calvin.common.calvinresponse as response
-from calvin.runtime.north.plugins.authorization_checks import check_authorization_plugin_list
 from calvin.common.calvin_callback import CalvinCB
 from calvin.actor.port_property_syntax import get_port_property_capabilities, get_port_property_runtime
 from calvin.runtime.north.calvinsys import get_calvinsys
@@ -248,12 +247,9 @@ class Actor(object):
     # Class variable controls action priority order
     action_priority = tuple()
 
-    # These are the security variables that will always be serialized, see serialize()/deserialize() below
-    _security_state_keys = ('_subject_attributes')
-
     # These are the instance variables that will always be serialized, see serialize()/deserialize() below
     _private_state_keys = ('_id', '_name', '_has_started', '_deployment_requirements',
-                           '_signature', '_migration_info', "_port_property_capabilities")
+                           '_signature', "_port_property_capabilities")
 
     # Internal state (status)
     class FSM(object):
@@ -292,16 +288,15 @@ class Actor(object):
         def __str__(self):
             return self.printable(self._state)
 
-    STATUS = enum('LOADED', 'READY', 'PENDING', 'ENABLED', 'DENIED', 'MIGRATABLE')
+    STATUS = enum('LOADED', 'READY', 'PENDING', 'ENABLED')
 
     VALID_TRANSITIONS = {
         STATUS.LOADED    : [STATUS.READY],
-        STATUS.READY     : [STATUS.PENDING, STATUS.ENABLED, STATUS.DENIED],
+        STATUS.READY     : [STATUS.PENDING, STATUS.ENABLED],
         STATUS.PENDING   : [STATUS.READY, STATUS.PENDING, STATUS.ENABLED],
-        STATUS.ENABLED   : [STATUS.READY, STATUS.PENDING, STATUS.DENIED],
-        STATUS.DENIED    : [STATUS.ENABLED, STATUS.MIGRATABLE, STATUS.PENDING],
-        STATUS.MIGRATABLE: [STATUS.READY, STATUS.DENIED]
+        STATUS.ENABLED   : [STATUS.READY, STATUS.PENDING],
     }
+
 
     test_kwargs = {}
 
@@ -317,11 +312,8 @@ class Actor(object):
     def name(self, value):
         self._name = value
 
-    @property
-    def migration_info(self):
-        return self._migration_info
-
     # What are the arguments, really?
+    # FIXME: Drop security argument
     def __init__(self, actor_type, name='', allow_invalid_transitions=True, disable_transition_checks=False,
                  disable_state_checks=False, actor_id=None, security=None):
         """Should _not_ be overridden in subclasses."""
@@ -336,14 +328,8 @@ class Actor(object):
         self._component_members = set([self._id])  # We are only part of component if this is extended
         self._managed = set()
         self._has_started = False
-        # self.control = calvincontrol.get_calvincontrol()
-        self._migration_info = None
         self._migrating_to = None  # During migration while on the previous node set to the next node id
         self._migration_connected = True  # False while setup the migrated actor, to prevent further migrations
-        self._last_time_warning = 0.0
-        self.sec = security
-        self._subject_attributes = self.sec.get_subject_attributes() if self.sec is not None else None
-        self.authorization_checks = None
 
         self.inports = {p: actorport.InPort(p, self, pp) for p, pp in iter(self.inport_properties.items())}
         self.outports = {p: actorport.OutPort(p, self, pp) for p, pp in iter(self.outport_properties.items())}
@@ -356,9 +342,6 @@ class Actor(object):
                              allow_invalid_transitions=allow_invalid_transitions,
                              disable_transition_checks=disable_transition_checks,
                              disable_state_checks=disable_state_checks)
-
-    def set_authorization_checks(self, authorization_checks):
-        self.authorization_checks = authorization_checks
 
     @verify_status([STATUS.LOADED])
     def setup_complete(self):
@@ -433,14 +416,10 @@ class Actor(object):
         _log.debug("actor.did_connect ENABLED %s %s " % (self._name, self._id))
 
 
-    @verify_status([STATUS.ENABLED, STATUS.PENDING, STATUS.DENIED, STATUS.MIGRATABLE])
+    @verify_status([STATUS.ENABLED, STATUS.PENDING])
     def did_disconnect(self, port):
         """Called when a port is disconnected, checks actor is fully disconnected."""
-        # If the actor is MIGRATABLE, return since it will be migrated soon.
-        _log.debug("Actor %s did_disconnect %s" % (self._id, Actor.STATUS.reverse_mapping[self.fsm.state()]))
-        if self.fsm.state() == Actor.STATUS.MIGRATABLE:
-            return
-        # If we happen to be in ENABLED/DENIED, go to PENDING
+        # If we happen to be in ENABLED, go to PENDING
         if self.fsm.state() != Actor.STATUS.PENDING:
             self.fsm.transition_to(Actor.STATUS.PENDING)
 
@@ -459,28 +438,6 @@ class Actor(object):
         # If we made it here, all ports are disconnected
         self.fsm.transition_to(Actor.STATUS.READY)
 
-    #
-    # FIXME: The following methods (_authorized, _warn_slow_actor) were
-    #        extracted from fire() to make the logic easier to follow
-    # FIXME: Responsibility of scheduler, not actor class
-    #
-    def _authorized(self):
-        authorized = self.check_authorization_decision()
-        if not authorized:
-            _log.info("Access denied for actor %s(%s)" % ( self._type, self._id))
-            # The authorization decision is not valid anymore.
-            # Change actor status to DENIED.
-            self.fsm.transition_to(Actor.STATUS.DENIED)
-            # Try to migrate actor.
-            self.sec.authorization_runtime_search(self._id, self._signature, callback=CalvinCB(self.set_migration_info))
-        return authorized
-
-    def _warn_slow_actor(self, time_spent, start_time):
-        time_since_warning = start_time - self._last_time_warning
-        if time_since_warning < 120.0:
-            return
-        self._last_time_warning = start_time
-        _log.warning("%s (%s) actor blocked for %f sec" % (self._name, self._type, time_spent))
 
     @verify_status([STATUS.ENABLED])
     def fire(self):
@@ -505,33 +462,9 @@ class Actor(object):
             _log.debug("Actor %s %s not enabled" % (self._name, self._id))
         return r
 
-    def denied(self):
-        return self.fsm.state() == Actor.STATUS.DENIED
-
-    def migratable(self):
-        return self.fsm.state() == Actor.STATUS.MIGRATABLE
-
-    @verify_status([STATUS.DENIED])
-    def enable_or_migrate(self):
-        """Enable actor if access is permitted. Try to migrate if access still denied."""
-        if self.check_authorization_decision():
-            self.fsm.transition_to(Actor.STATUS.ENABLED)
-        else:
-            # Try to migrate actor.
-            self.sec.authorization_runtime_search(self._id, self._signature, callback=CalvinCB(self.set_migration_info))
-
-    # DEPRECATED: Only here for backwards compatibility
-    @verify_status([STATUS.ENABLED])
-    def enable(self):
-        self.fsm.transition_to(Actor.STATUS.ENABLED)
-
-    @verify_status([STATUS.READY, STATUS.PENDING, STATUS.LOADED])
-    # DEPRECATED: Only here for backwards compatibility
-    def disable(self):
-        self.fsm.transition_to(Actor.STATUS.PENDING)
 
     # TODO verify status should only allow reading connections when and after being fully connected (enabled)
-    @verify_status([STATUS.ENABLED, STATUS.READY, STATUS.PENDING, STATUS.MIGRATABLE])
+    @verify_status([STATUS.ENABLED, STATUS.READY, STATUS.PENDING])
     def connections(self, node_id):
         c = {'actor_id': self._id, 'actor_name': self._name}
         inports = {}
@@ -604,20 +537,6 @@ class Actor(object):
                 else:
                     self.__dict__[key] = state.get(key, None)
 
-    def _security_state(self):
-        """
-        Serialize security state.
-        Security state can only contain objects that can be JSON-serialized.
-        """
-        return {'_subject_attributes':self._subject_attributes}
-
-    def _set_security_state(self, state):
-        """
-        Deserialize and apply security state.
-        Security state can only contain objects that can be JSON-serialized.
-        """
-        pass
-
     def _managed_state(self):
         """
         Serialize managed state.
@@ -640,14 +559,12 @@ class Actor(object):
         state = {}
         state['private'] = self._private_state()
         state['managed'] = self._managed_state()
-        state['security']= self._security_state()
         state['custom'] = self.state()
         return state
 
     def deserialize(self, state):
         """Restore an actor's state from the serialized state."""
         self._set_private_state(state['private'])
-        self._set_security_state(state['security'])
         self._set_managed_state(state['managed'])
         self.set_state(state['custom'])
 
@@ -656,9 +573,6 @@ class Actor(object):
         _log.error("ExceptionToken encountered\n  name: %s\n  type: %s\n  action: %s\n  args: %s\n" %
                    (self._name, self._type, action.__name__, args))
         raise Exception("ExceptionToken NOT HANDLED")
-
-    def events(self):
-        return []
 
     def component_add(self, actor_ids):
         if not isinstance(actor_ids, (set, list, tuple)):
@@ -714,38 +628,4 @@ class Actor(object):
     def signature_set(self, signature):
         if self._signature is None:
             self._signature = signature
-
-    def check_authorization_decision(self):
-        """Check if authorization decision is still valid"""
-        if self.authorization_checks:
-            if any(isinstance(elem, list) for elem in self.authorization_checks):
-                # If list of lists, True must be found in each list.
-                for plugin_list in self.authorization_checks:
-                    if not check_authorization_plugin_list(plugin_list):
-                        return False
-                return True
-            else:
-                return check_authorization_plugin_list(self.authorization_checks)
-        return True
-
-    @verify_status([STATUS.DENIED])
-    def set_migration_info(self, reply):
-        if reply and reply.status == 200 and reply.data["node_id"]:
-            self._migration_info = reply.data
-            self.fsm.transition_to(Actor.STATUS.MIGRATABLE)
-            _log.info("Migrate actor %s to node %s" % (self._name, self._migration_info["node_id"]))
-            # Inform the scheduler that the actor is ready to migrate.
-            get_calvinsys().scheduler_maintenance_wakeup()
-        else:
-            _log.info("No possible migration destination found for actor %s" % self._name)
-            # Try to enable/migrate actor again after a delay.
-            get_calvinsys().scheduler_maintenance_wakeup(delay=True)
-
-    @verify_status([STATUS.MIGRATABLE, STATUS.READY])
-    def remove_migration_info(self, status):
-        if status.status != 200:
-            self._migration_info = None
-            # FIXME: destroy() in actormanager.py was called before trying to migrate.
-            #        Need to make the actor runnable again before transition to DENIED.
-            #self.fsm.transition_to(Actor.STATUS.DENIED)
 

@@ -172,28 +172,20 @@ class ActorManager(object):
         """Instantiate an actor of type 'actor_type' and apply the 'state' to the actor."""
         try:
             _log.analyze(self.node.id, "+", state)
-            subject_attributes = state['security'].pop('_subject_attributes', None)
-            migration_info = state['private'].pop('_migration_info', None)
-            try:
-                state['security'].remove('_subject_attributes')
-                state['private'].remove('_migration_info')
-            except:
-                pass
-            if security_enabled():
-                security = Security(self.node)
-                security.set_subject_attributes(subject_attributes)
-            else:
-                security = None
-            actor_def, signer = self.lookup_and_verify(actor_type, security)
+            actor_def, signer = self.lookup_and_verify(actor_type, security=None)
             requirements = actor_def.requires if hasattr(actor_def, "requires") else []
-            self.check_requirements_and_sec_policy(requirements, security, state['private']['_id'],
-                                                   signer, migration_info,
-                                                   CalvinCB(self.new, actor_type, None,
+            self.check_requirements_and_sec_policy(requirements=requirements,
+                                                   security=None,
+                                                   actor_id=state['private']['_id'],
+                                                   signer=signer,
+                                                   decision_from_migration=None,
+                                                   callback=CalvinCB(self.new, actor_type, None,
                                                             state, prev_connections=prev_connections,
                                                             connection_list=connection_list,
                                                             callback=callback,
                                                             actor_def=actor_def,
-                                                            security=security))
+                                                            security=None)
+                                                   )
         except Exception as err:
             _log.error(err)
 
@@ -251,21 +243,6 @@ class ActorManager(object):
         self.destroy(actor_id)
         if callback:
             callback(status=status)
-
-    # DEPRECATED: Enabling of an actor is dependent on whether it's connected or not
-    def enable(self, actor_id):
-        if actor_id not in self.actors:
-            self._actor_not_found(actor_id)
-
-        self.actors[actor_id].enable()
-
-    # DEPRECATED: Disabling of an actor is dependent on whether it's connected or not
-    def disable(self, actor_id):
-        if actor_id not in self.actors:
-            _log.info("!!!FAILED to disable %s", actor_id)
-            self._actor_not_found(actor_id)
-
-        self.actors[actor_id].disable()
 
     def new_actorstore_lookup(self, actor_type):
         metadata = self.node.actorstore.get_metadata(actor_type)
@@ -530,17 +507,10 @@ class ActorManager(object):
     def report(self, actor_id, kwargs):
         if actor_id not in self.actors:
             self._actor_not_found(actor_id)
-
         return self.actors[actor_id].report(**(kwargs if kwargs and isinstance(kwargs, dict) else {}))
 
     def enabled_actors(self):
         return [actor for actor in self.actors.values() if actor.enabled()]
-
-    def denied_actors(self):
-        return [actor for actor in self.actors.values() if actor.denied()]
-
-    def migratable_actors(self):
-        return [actor for actor in self.actors.values() if actor.migratable()]
 
     def list_actors(self):
         return list(self.actors.keys())

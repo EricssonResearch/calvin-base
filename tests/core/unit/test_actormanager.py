@@ -83,20 +83,6 @@ def test_destroy_actor(delete_actor, actor_manager):
     assert actor_manager.node.storage.delete_actor.call_args[0][0] == actor_id
     actor_manager.node.control.log_actor_destroy.assert_called_with(actor_id)
 
-def test_enable_actor(actor_manager):
-    actor, actor_id = _new_actor(actor_manager, 'std.Constantify', {'constant': 42})
-
-    actor.enable = Mock()
-    actor_manager.enable(actor_id)
-    assert actor.enable.called
-
-def test_disable_actor(actor_manager):
-    actor, actor_id = _new_actor(actor_manager, 'std.Constantify', {'constant': 42})
-
-    actor.disable = Mock()
-    actor_manager.disable(actor_id)
-    assert actor.disable.called
-
 def test_migrate_to_same_node_does_nothing(actor_manager):
     callback_mock = Mock()
     actor, actor_id = _new_actor(actor_manager, 'std.Constantify', {'constant': 42})
@@ -177,7 +163,7 @@ def test_connections_returns_actor_connections_for_current_node(actor_manager):
     assert actor_manager.connections(actor_id) == expected
 
 def test_missing_actor(actor_manager):
-    test_functions = [("report", ({},)), ("destroy", ()), ("enable", ()), ("disable", ()),
+    test_functions = [("report", ({},)), ("destroy", ()),
                       ("connect", ([], None)), ("connections", ()), ("dump", ()),
                       ("get_port_state", (None, ))]
     for func, args in test_functions:
@@ -192,12 +178,6 @@ def test_actor_type(actor_manager):
 
 def test_actor_type_of_missing_actor(actor_manager):
     assert actor_manager.actor_type("123") == 'BAD ACTOR'
-
-def test_enabled_actors(actor_manager):
-    actor, actor_id = _new_actor(actor_manager, 'std.Constantify', {'constant': 42, 'name': 'actor'})
-    enabled_actor, enabled_actor_id = _new_actor(actor_manager, 'std.Constantify', {'constant': 42, 'name': 'actor'})
-    enabled_actor.enable()
-    assert actor_manager.enabled_actors() == [enabled_actor]
 
 def test_list_actors(actor_manager):
     actor_1, actor_1_id = _new_actor(actor_manager, 'std.Constantify', {'constant': 42, 'name': 'actor'})

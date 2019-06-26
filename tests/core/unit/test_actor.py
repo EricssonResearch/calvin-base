@@ -103,12 +103,6 @@ def test_did_disconnect(actor, inport_ret_val, outport_ret_val, expected):
         assert not (actor.fsm.transition_to.called and Actor.STATUS.READY in actor.fsm.transition_to.call_args[0])
 
 
-def test_enabled(actor):
-    actor.enable()
-    assert actor.enabled()
-    actor.disable()
-    assert not actor.enabled()
-
 
 def test_connections(actor, dummy_node):
     inport = actor.inports['token']
@@ -136,7 +130,6 @@ def test_state(actor):
     correct_state = {
         'custom': {},
         'managed': {'dump': False, 'last': None},
-        'security': {'_subject_attributes': None},
         'private': {
         '_component_members': [actor.id],
         '_has_started': False,
@@ -144,7 +137,6 @@ def test_state(actor):
         '_signature': None,
         '_id': actor.id,
         '_port_property_capabilities': None,
-        '_migration_info': None,
         'inports': {'token': {'properties': {'direction': 'in',
                                              'routing': 'default',
                                              'nbr_peers': 1},

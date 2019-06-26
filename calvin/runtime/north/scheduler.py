@@ -117,15 +117,7 @@ class BaseScheduler(object):
     # Maintenance loop
     #
     def _maintenance_loop(self):
-        # Migrate denied actors
-        for actor in self.actor_mgr.migratable_actors():
-            self.actor_mgr.migrate(actor.id, actor.migration_info["node_id"],
-                                   callback=CalvinCB(actor.remove_migration_info))
-        # Enable denied actors again if access is permitted. Will try to migrate if access still denied.
-        for actor in self.actor_mgr.denied_actors():
-            actor.enable_or_migrate()
-        # TODO: try to migrate shadow actors as well.
-        # Since we may have moved stuff around, schedule strategy
+        _log.debug("Empty maintenance loop action…")
         self.insert_task(self.strategy, 0)
         # Schedule next maintenance
         self.insert_task(self._maintenance_loop, self._maintenance_delay)
@@ -218,12 +210,6 @@ class BaseScheduler(object):
         Try to fire actions on actor on this runtime.
         Returns boolean that is True if actor fired
         """
-        #
-        # First make sure we are allowed to run
-        #
-        if not actor._authorized():
-            return False
-
         start_time = time.time()
         actor_did_fire = False
         #
@@ -252,12 +238,6 @@ class BaseScheduler(object):
         Returns boolean that is True if actor fired
         """
         #
-        # First make sure we are allowed to run
-        #
-        if not actor._authorized():
-            return False
-
-        #
         # Repeatedly go over the action priority list
         #
         done = False
@@ -278,15 +258,7 @@ class BaseScheduler(object):
         Try to fire action on actor on this runtime.
         Returns boolean that is True if actor fired
         """
-        #
-        # First make sure we are allowed to run
-        #
-        if not actor._authorized():
-            return False
-
-        did_fire = actor.fire()
-
-        return did_fire
+        return actor.fire()
 
 
 ######################################################################
