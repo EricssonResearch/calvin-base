@@ -24,9 +24,6 @@ from twisted.protocols.basic import LineReceiver
 from twisted.internet import error
 from twisted.internet import reactor, protocol, ssl, endpoints
 
-from calvin.common import certificate
-from calvin.common import runtime_credentials
-
 from calvin.common.calvinlogger import get_logger
 _log = get_logger(__name__)
 
@@ -35,28 +32,10 @@ _conf = calvinconfig.get()
 
 
 def reactor_listen(node_name, factory, host, port):
-    listener = None
-
-    control_interface_security = _conf.get("security", "control_interface_security")
-    if control_interface_security == "tls":
-        _log.debug("ServerProtocolFactory with TLS enabled chosen")
-        try:
-            # TODO: figure out how to set more than one root cert in twisted truststore
-            runtime_cred = runtime_credentials.RuntimeCredentials(node_name)
-            server_credentials_data = runtime_cred.get_credentials()
-            server_credentials = ssl.PrivateCertificate.loadPEM(server_credentials_data)
-        except Exception as err:
-            _log.error("Failed to fetch server credentials, err={}".format(err))
-            raise
-        try:
-            listener = reactor.listenSSL(port, factory, server_credentials.options(), interface=host)
-        except Exception as err:
-            _log.error("Server failed listenSSL, err={}".format(err))
-    else:
-        listener = reactor.listenTCP(port, factory, interface=host)
-        # WORKAROUND This is here due to an obscure error in twisted trying to write to a listening port
-        # on some architectures/OSes. The default is to raise a RuntimeError.
-        listener.doWrite = lambda: None
+    listener = reactor.listenTCP(port, factory, interface=host)
+    # WORKAROUND This is here due to an obscure error in twisted trying to write to a listening port
+    # on some architectures/OSes. The default is to raise a RuntimeError.
+    listener.doWrite = lambda: None
 
     return listener
 

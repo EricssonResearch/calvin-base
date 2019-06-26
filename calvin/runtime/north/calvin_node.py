@@ -29,19 +29,13 @@ from calvin.runtime.north import appmanager
 from calvin.runtime.north import scheduler
 from calvin.runtime.north import storage
 from calvin.runtime.north import calvincontrol
-from calvin.runtime.north.certificate_authority import certificate_authority
-from calvin.runtime.north.authentication import authentication
-from calvin.runtime.north.authorization import authorization
 from calvin.runtime.north.calvin_network import CalvinNetwork
 from calvin.runtime.north.calvin_proto import CalvinProto
 from calvin.runtime.north.portmanager import PortManager
 from calvin.runtime.south import asynchronous
 from calvin.common.attribute_resolver import AttributeResolver
 from calvin.common.calvin_callback import CalvinCB
-from calvin.common.security import security_modules_check
-from calvin.common.runtime_credentials import RuntimeCredentials
 from calvin.common.calvinlogger import get_logger, set_file
-from calvin.common import certificate
 from calvin.common import calvinconfig
 from calvin.common import metadata_proxy as mdproxy
 from calvin.runtime.north.resource_monitor.cpu import CpuMonitor
@@ -96,17 +90,7 @@ class Node(object):
             self.attributes = AttributeResolver(None)
         self.node_name = self.attributes.get_node_name_as_str()
         # Obtain node id, when using security also handle runtime certificate
-        try:
-            security_dir = _conf.get("security", "security_dir")
-            self.runtime_credentials = RuntimeCredentials(self.node_name, node=self, security_dir=security_dir)
-            self.id = self.runtime_credentials.get_node_id()
-        except Exception as err:
-            _log.debug("No runtime credentials, err={}".format(err))
-            self.runtime_credentials = None
-            self.id = str(uuid.uuid4())
-        self.certificate_authority = certificate_authority.CertificateAuthority(self)
-        self.authentication = authentication.Authentication(self)
-        self.authorization = authorization.Authorization(self)
+        self.id = str(uuid.uuid4())
         actorstore_uri = _conf.get('global', 'actorstore')
         self.actorstore = mdproxy.ActorMetadataProxy(actorstore_uri)
         self.am = actormanager.ActorManager(self)
@@ -130,8 +114,7 @@ class Node(object):
 
         storage_type = _conf.get('global', 'storage_type')
         storage_host = _conf.get('global', 'storage_host')
-        security_conf = _conf.get('security', 'security_conf')
-        self.storage = storage.Storage(self, storage_type, server=storage_host, security_conf=security_conf)
+        self.storage = storage.Storage(self, storage_type, server=storage_host)
 
         proxy_control_uri = _conf.get(None, 'control_proxy')
         _log.info("+++++++++++++++ proxy_control_uri: %s" % proxy_control_uri)
@@ -191,51 +174,10 @@ class Node(object):
                         peer_port_id=peer_port_id,
                         callback=CalvinCB(self.logging_callback, preamble="connect cb")  if cb is None else cb)
 
-    def peersetup(self, peers, cb=None):
-        """ Sets up a RT to RT communication channel, only needed if the peer can't be found in storage.
-            peers: a list of peer uris, e.g. ["calvinip://127.0.0.1:5001"]
-        """
-        _log.debug("peersetup(%s)" % (peers))
-        peers_copy = peers[:]
-        peer_node_ids = {}
-        if not cb:
-            callback = CalvinCB(self.logging_callback, preamble="peersetup cb")
-        else:
-            callback = CalvinCB(self.peersetup_collect_cb, peers=peers_copy, peer_node_ids=peer_node_ids, org_cb=cb)
-
-        self.network.join(peers, callback=callback)
-
-    def peersetup_collect_cb(self, status, uri, peer_node_id, peer_node_ids, peers, org_cb):
-        if uri in peers:
-            peers.remove(uri)
-            peer_node_ids[uri] = (peer_node_id, status)
-        if not peers:
-            # Get highest status, i.e. any error
-            comb_status = max([s for _, s in peer_node_ids.values()])
-            org_cb(peer_node_ids=peer_node_ids, status=comb_status)
 
     def logging_callback(self, preamble=None, *args, **kwargs):
         _log.debug("\n%s# NODE: %s \n# %s %s %s \n%s" %
                    ('#' * 40, self.id, preamble if preamble else "*", args, kwargs, '#' * 40))
-
-    def new(self, actor_type, args, deploy_args=None, state=None, prev_connections=None, connection_list=None, security=None, access_decision=None):
-        # TODO requirements should be input to am.new
-        # TODO: make it possible to use security/credentials here.
-        actor_def, signer = self.am.lookup_and_verify(actor_type)
-        actor_id = self.am.new(actor_type, args, state, prev_connections, connection_list,
-                               signature=deploy_args['signature'] if deploy_args and 'signature' in deploy_args else None,
-                               actor_def=actor_def,
-                               security=security,
-                               access_decision=access_decision)
-        if deploy_args:
-            app_id = deploy_args['app_id']
-            if 'app_name' not in deploy_args:
-                app_name = app_id
-            else:
-                app_name = deploy_args['app_name']
-            self.app_manager.add(app_id, actor_id,
-                                 deploy_info = deploy_args['deploy_info'] if 'deploy_info' in deploy_args else None)
-        return actor_id
 
     #
     # Event loop
@@ -362,13 +304,11 @@ class Node(object):
         # (even actors without explicit requirements will migrate based on e.g. requires and port property needs)
         for actor in actors:
             _log.info("TERMINATE MIGRATE ACTOR")
-            self.am.update_requirements(actor.id, [], extend=True, move=True,
-                            authorization_check=False, callback=CalvinCB(migrated, actor_id=actor.id))
+            self.am.update_requirements(actor.id, [], extend=True, move=True, callback=CalvinCB(migrated, actor_id=actor.id))
 
     def _storage_started_cb(self, *args, **kwargs):
-        self.authentication.find_authentication_server()
-        self.authorization.register_node()
-
+        pass
+        
 def setup_logging(filename):
 
     #from twisted.python import log
@@ -440,8 +380,6 @@ def create_tracing_node(uri, control_uri, attributes=None, logfile=None):
 
 
 def start_node(uri, control_uri, trace_exec=False, attributes=None):
-    if not security_modules_check():
-        raise Exception("Security module missing")
     _create_node = create_tracing_node if trace_exec else create_node
     p = Process(target=_create_node, args=(uri, control_uri, attributes))
     p.daemon = True

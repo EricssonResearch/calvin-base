@@ -16,8 +16,6 @@
 
 from calvin.common.calvin_callback import CalvinCB, CalvinCBClass
 from calvin.common import calvinlogger
-from calvin.common import certificate
-from calvin.common import runtime_credentials
 from calvin.runtime.south.transports.lib.twisted import base_transport
 
 from twisted.protocols.basic import Int32StringReceiver
@@ -52,33 +50,16 @@ class TwistedCalvinServer(base_transport.CalvinServerBase):
     def start(self):
         callbacks = {'connected': [CalvinCB(self._connected)]}
         tcp_f = TCPServerFactory(callbacks)
-        runtime_to_runtime_security = _conf.get("security","runtime_to_runtime_security")
         trusted_ca_certs = []
-        if runtime_to_runtime_security=="tls":
-            _log.debug("TwistedCalvinServer with TLS chosen")
-            try:
-                self._runtime_credentials = runtime_credentials.RuntimeCredentials(self._node_name)
-                ca_cert_list_str =certificate.get_truststore_as_list_of_strings(certificate.TRUSTSTORE_TRANSPORT)
-                for ca_cert in ca_cert_list_str:
-                    trusted_ca_certs.append(ssl.Certificate.loadPEM(ca_cert))
-                server_credentials_data = self._runtime_credentials.get_credentials()
-                server_credentials = ssl.PrivateCertificate.loadPEM(server_credentials_data)
-            except Exception as err:
-                _log.exception("Server failed to load credentials, err={}".format(err))
-            try:
-                self._tcp_server = reactor.listenSSL(self._port, tcp_f, server_credentials.options(*trusted_ca_certs), interface=self._iface)
-            except Exception as err:
-                _log.exception("Server failed listenSSL, err={}".format(err))
-        else:
-            _log.debug("TwistedCalvinServer without TLS chosen")
-            try:
-                self._tcp_server = reactor.listenTCP(self._port, tcp_f, interface=self._iface)
-            except error.CannotListenError:
-                _log.exception("Could not listen on port %s:%s", self._iface, self._port)
-                raise
-            except Exception as exc:
-                _log.exception("Failed when trying listening on port %s:%s", self._iface, self._port)
-                raise
+        _log.debug("TwistedCalvinServer without TLS chosen")
+        try:
+            self._tcp_server = reactor.listenTCP(self._port, tcp_f, interface=self._iface)
+        except error.CannotListenError:
+            _log.exception("Could not listen on port %s:%s", self._iface, self._port)
+            raise
+        except Exception as exc:
+            _log.exception("Failed when trying listening on port %s:%s", self._iface, self._port)
+            raise
         self._port = self._tcp_server.getHost().port
         self._callback_execute('server_started', self._port)
         return self._port
@@ -159,15 +140,6 @@ class TwistedCalvinTransport(base_transport.CalvinTransportBase):
 
         self._callbacks = callbacks
 
-        #If TLS is chosen, ensure that a node_name and a server_node_name are set
-        runtime_to_runtime_security = _conf.get("security","runtime_to_runtime_security")
-        if (runtime_to_runtime_security=="tls"):
-            if self._node_name==None or self._server_node_name==None:
-                _log.error("For TLS, both node_name and server_node_name must be given as input"
-                                "\n\tself._node_name={}"
-                                "\n\tself._server_node_name={}".format(self._node_name, self._server_node_name))
-                raise Exception("For TLS, both node_name and server_node_name must be given as input")
-
     def is_connected(self):
         return self._proto is not None
 
@@ -193,46 +165,7 @@ class TwistedCalvinTransport(base_transport.CalvinTransportBase):
                      'set_proto': [CalvinCB(self._set_proto)]}
 
         self._factory = TCPClientFactory(callbacks) # addr="%s:%s" % (self._host_ip, self._host_port))
-        runtime_to_runtime_security = _conf.get("security","runtime_to_runtime_security")
-        if runtime_to_runtime_security=="tls":
-            _log.debug("TwistedCalvinTransport with TLS chosen")
-            trusted_ca_certs = []
-            try:
-                self._runtime_credentials = runtime_credentials.RuntimeCredentials(self._node_name)
-                ca_cert_list_str = certificate.get_truststore_as_list_of_strings(certificate.TRUSTSTORE_TRANSPORT)
-                for ca_cert in ca_cert_list_str:
-                    trusted_ca_certs.append(crypto.load_certificate(crypto.FILETYPE_PEM, ca_cert))
-                ca_certs = OpenSSLCertificateAuthorities(trusted_ca_certs)
-                client_credentials_data =self._runtime_credentials.get_credentials()
-                client_credentials = ssl.PrivateCertificate.loadPEM(client_credentials_data)
-            except Exception as err:
-                _log.error("TwistedCalvinTransport: Failed to load client credentials, err={}".format(err))
-                raise
-            try:
-                options = ssl.optionsForClientTLS(self._server_node_name,
-                                                   trustRoot=ca_certs,
-                                                   clientCertificate=client_credentials)
-            except Exception as err:
-                _log.error("TwistedCalvinTransport: Failed to create optionsForClientTLS "
-                                "\n\terr={}"
-                                "\n\tself._server_node_name={}".format(err,
-                                                                      self._server_node_name))
-                raise
-            try:
-                endpoint = endpoints.SSL4ClientEndpoint(reactor,
-                                                        self._host_ip,
-                                                        int(self._host_port),
-                                                        options)
-            except:
-                _log.error("TwistedCalvinTransport: Client failed connectSSL")
-                raise
-            try:
-                endpoint.connect(self._factory)
-            except Exception as e:
-                _log.error("TwistedCalvinTransport: Failed endpoint.connect, e={}".format(e))
-                raise
-        else:
-            reactor.connectTCP(self._host_ip, int(self._host_port), self._factory)
+        reactor.connectTCP(self._host_ip, int(self._host_port), self._factory)
 
     def _set_proto(self, proto):
         _log.debug("%s, %s, %s" % (self, '_set_proto', proto))

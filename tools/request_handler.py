@@ -59,11 +59,11 @@ INDEX_PATH_RPL = '/index/{}?root_prefix_level={}'
 INDEX_PATH = '/index/{}'
 STORAGE_PATH = '/storage/{}'
 
-CSR_REQUEST = '/certificate_authority/certificate_signing_request'
-ENROLLMENT_PASSWORD = '/certificate_authority/certificate_enrollment_password/{}'
-AUTHENTICATION = '/authentication'
-AUTHENTICATION_USERS_DB = '/authentication/users_db'
-AUTHENTICATION_GROUPS_DB = '/authentication/groups_db'
+# CSR_REQUEST = '/certificate_authority/certificate_signing_request'
+# ENROLLMENT_PASSWORD = '/certificate_authority/certificate_enrollment_password/{}'
+# AUTHENTICATION = '/authentication'
+# AUTHENTICATION_USERS_DB = '/authentication/users_db'
+# AUTHENTICATION_GROUPS_DB = '/authentication/groups_db'
 
 PROXY_PEER_ABOLISH = '/proxy/{}/migrate'
 
@@ -75,13 +75,13 @@ class RequestBase(object):
         self.verify = verify
         self.credentials = None
 
-    def set_credentials(self, credentials):
-        if ('user' in credentials) and ('password' in credentials):
-            self.credentials=(credentials['user'], credentials['password'])
-        else:
-            #TODO remove printing of the credentials in the log
-            _log.error("Incorrectly formated credentials supplied, credentials={}".format(credentials))
-            self.credentials=None
+    # def set_credentials(self, credentials):
+    #     if ('user' in credentials) and ('password' in credentials):
+    #         self.credentials=(credentials['user'], credentials['password'])
+    #     else:
+    #         #TODO remove printing of the credentials in the log
+    #         _log.error("Incorrectly formated credentials supplied, credentials={}".format(credentials))
+    #         self.credentials=None
 
     def check_response(self, response, success=list(range(200, 207)), key=None):
         if isinstance(response, Response):
@@ -287,21 +287,21 @@ class RequestHandler(RequestBase):
             r = self._get(rt, timeout, use_async, INDEX_PATH_RPL.format(index, root_prefix_level))
         return self.check_response(r)
 
-    # csruntime
-    def sign_csr_request(self, rt, csr, timeout=DEFAULT_TIMEOUT, use_async=False):
-        data = {'csr': csr}
-        r = self._post(rt, timeout, use_async, CSR_REQUEST, data=data['csr'])
-        return self.check_response(r)
-
-    # csmanage
-    def get_enrollment_password(self, rt, node_name, timeout=DEFAULT_TIMEOUT, use_async=False):
-        r = self._get(rt, timeout, use_async, ENROLLMENT_PASSWORD.format(node_name))
-        result = self.check_response(r)
-        if 'enrollment_password' in result:
-            return result['enrollment_password']
-        else:
-            _log.error("Failed to fetch enrollment password")
-            return None
+    # # csruntime
+    # def sign_csr_request(self, rt, csr, timeout=DEFAULT_TIMEOUT, use_async=False):
+    #     data = {'csr': csr}
+    #     r = self._post(rt, timeout, use_async, CSR_REQUEST, data=data['csr'])
+    #     return self.check_response(r)
+    #
+    # # csmanage
+    # def get_enrollment_password(self, rt, node_name, timeout=DEFAULT_TIMEOUT, use_async=False):
+    #     r = self._get(rt, timeout, use_async, ENROLLMENT_PASSWORD.format(node_name))
+    #     result = self.check_response(r)
+    #     if 'enrollment_password' in result:
+    #         return result['enrollment_password']
+    #     else:
+    #         _log.error("Failed to fetch enrollment password")
+    #         return None
 
     # DEPRECATED: In tests only
     def abolish_proxy_peer(self, rt, peer_id, timeout=DEFAULT_TIMEOUT, use_async=False):

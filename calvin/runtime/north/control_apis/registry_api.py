@@ -22,7 +22,6 @@ from calvin.common import calvinresponse
 from calvin.common.calvin_callback import CalvinCB
 from calvin.common.calvinlogger import get_logger
 from .routes import register, handler
-from .authentication import authentication_decorator
 from calvin.common.attribute_resolver import format_index_string
 
 _log = get_logger(__name__)
@@ -31,7 +30,7 @@ _log = get_logger(__name__)
 # USED BY: GUI, CSWEB, CSCONTROL
 # FIXME: Can't be access controlled, as it is needed to find authorization server
 #        PP 2019-04-29: Resolve by providing separate query path for authorization server
-# @authentication_decorator
+# 
 @handler(method="GET", path="/index/{path}", optional=[r"\?root_prefix_level=(\d+)"])
 def handle_get_index(self, handle, match, data, hdr):
     """
@@ -56,7 +55,7 @@ def get_index_cb(self, handle, value, *args, **kwargs):
 
 # DEPRECATED: Move to debug API
 @handler(method="GET", path="/dumpstorage")
-@authentication_decorator
+
 def handle_dump_storage(self, handle, match, data, hdr):
     """
     GET /dumpstorage
@@ -77,7 +76,7 @@ def storage_cb(self, key, value, handle):
 
 # USED BY: GUI, CSWEB, CSCONTROL, NODECONTROL
 @handler(method="GET", path="/node/{node_id}")
-@authentication_decorator
+
 def handle_get_node(self, handle, match, data, hdr):
     """
     GET /node/{node-id}
@@ -95,7 +94,7 @@ def handle_get_node(self, handle, match, data, hdr):
 
 # USED BY: CSWEB, CSCONTROL
 @handler(method="GET", path="/application/{application_id}")
-@authentication_decorator
+
 def handle_get_application(self, handle, match, data, hdr):
     """
     GET /application/{application-id}
@@ -115,7 +114,7 @@ def handle_get_application(self, handle, match, data, hdr):
 
 # USED BY: GUI, CSWEB, CSCONTROL
 @handler(method="GET", path="/actor/{actor_id}")
-@authentication_decorator
+
 def handle_get_actor(self, handle, match, data, hdr):
     """
     GET /actor/{actor-id}
@@ -135,7 +134,7 @@ def handle_get_actor(self, handle, match, data, hdr):
         func=self.storage_cb, handle=handle))
 
 # USED BY: CSWEB
-# @authentication_decorator # Disabled in original code
+#  # Disabled in original code
 @handler(method="GET", path="/actor/{actor_id}/port/{port_id}")
 def handle_get_port(self, handle, match, data, hdr):
     """
@@ -149,7 +148,7 @@ def handle_get_port(self, handle, match, data, hdr):
 
 # FIXME: This doesn't belong here? Move to runtime_api
 @handler(method="POST", path="/node/resource/", optional=["mem_avail", "cpu_avail", "memAvail", "cpuAvail"])
-@authentication_decorator
+
 def handle_resource_avail(self, handle, match, data, hdr):
     """
     POST /node/resource/{mem_avail|cpu_avail}

@@ -24,8 +24,6 @@ import calvin.common.calvinresponse as response
 
 _log = calvinlogger.get_logger(__name__)
 _conf = calvinconfig.get()
-_sec_conf = _conf.get("security", "security_conf")
-
 
 def send_message(peer_id, link, msg, callback=None, status=None, **kwargs):
     # Re send kwargs ?!
@@ -194,10 +192,7 @@ class CalvinProto(CalvinCBClass):
             'TUNNEL_DESTROY': [CalvinCB(self.tunnel_destroy_handler)],
             'TUNNEL_DATA': [CalvinCB(self.tunnel_data_handler)],
             'REPLY': [CalvinCB(self.reply_handler)],
-            'AUTHENTICATION_DECISION': [CalvinCB(self.authentication_decision_handler)],
-            'AUTHORIZATION_REGISTER': [CalvinCB(self.authorization_register_handler)],
-            'AUTHORIZATION_DECISION': [CalvinCB(self.authorization_decision_handler)],
-            'AUTHORIZATION_SEARCH': [CalvinCB(self.authorization_search_handler)]})
+        })
 
         self.rt_id = node.id
         self.node = node
@@ -238,10 +233,6 @@ class CalvinProto(CalvinCBClass):
             'PORT_CONNECT': response.NOT_FOUND,
             'PORT_REMOTE_CONNECT': response.NOT_FOUND,
             'TUNNEL_NEW': response.INTERNAL_ERROR,
-            'AUTHENTICATION_DECISION': response.INTERNAL_ERROR,
-            'AUTHORIZATION_REGISTER': response.NOT_FOUND,
-            'AUTHORIZATION_DECISION': response.NOT_FOUND,
-            'AUTHORIZATION_SEARCH': response.INTERNAL_ERROR
         }
         if payload['cmd'] not in resp:
             return False
@@ -571,240 +562,6 @@ class CalvinProto(CalvinCBClass):
                 callback=CalvinCB(self.node.network.link_request, payload['from_rt_uuid'],
                     callback=CalvinCB(send_message, msg={'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid']})))
 
-    #### AUTHENTICATION ####
-
-    def authentication_decision(self, auth_server_uuid, callback, jwt):
-        """
-        Return a response to an authentication request.
-
-        auth_server_uuid: node uuid for the runtime that acts as authentication server
-        callback: called when finished with the authentication decision
-        jwt: signed JSON Web Token (JWT) containing the authentication request
-        """
-        _log.debug("authentication_decision:\n\tauth_server_uuid={}\n\tcallback={}\n\tjwt={}".format(auth_server_uuid, callback, jwt))
-        self.node.network.link_request(auth_server_uuid,
-                                       CalvinCB(send_message,
-            msg = {'cmd': 'AUTHENTICATION_DECISION', 'jwt': jwt, 'cert_name': self.node.runtime_credentials.cert_name},
-                                                callback=callback))
-
-    def authentication_decision_handler(self, payload):
-        """
-        Return a response to the authentication request in the payload.
-
-        Signed JSON Web Tokens (JWT) with timestamps and information about
-        sender and receiver are used for both the request and response.
-        A Policy Decision Point (PDP) is used to determine if access is permitted.
-        """
-        _log.debug("authentication_decision_handler:\n\tpayload={}".format(payload))
-        if ('authentication' in _sec_conf) and 'accept_external_requests' in _sec_conf['authentication'] and _sec_conf['authentication']["accept_external_requests"]:
-            try:
-                self.node.authentication.decode_request(payload,
-                                                        CalvinCB(self._authentication_decision_handler_jwt_decoded_cb,
-                                                                payload=payload)
-                                                        )
-                return
-            except Exception as err:
-                _log.error("authentication_decision_handler: Failed to decode authentication request, err={}")
-                reply = response.CalvinResponse(response.INTERNAL_ERROR)
-                # Send reply
-                msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'], 'value': reply.encode()}
-
-            self.network.link_request(payload['from_rt_uuid'], callback=CalvinCB(send_message, msg=msg))
-
-    def _authentication_decision_handler_jwt_decoded_cb(self, decoded, payload):
-        """The JWT is now decoded, let's try to authenticate the content"""
-        _log.debug("authentication_decision_handler_jwt_decoded_cb:\n\tdecoded={}\n\tpayload={}".format(decoded, payload))
-        self.node.authentication.adp.authenticate(decoded["request"],
-                            callback=CalvinCB(self._authentication_decision_handler, payload, decoded,
-                                             ))
-
-    def _authentication_decision_handler(self, payload, request, auth_response):
-        """Decision has been made, return the response"""
-        _log.debug("_authentication_decision_handler:\n\tpayload={}\n\trequest={}\n\tauth_response={}".format(payload, request, auth_response))
-        try:
-            jwt_response = self.node.authentication.encode_response(request, auth_response)
-            data_response = {"jwt": jwt_response, "cert_name": self.node.runtime_credentials.cert_name}
-            reply = response.CalvinResponse(response.OK, data_response)
-        except Exception:
-            reply = response.CalvinResponse(response.INTERNAL_ERROR)
-        # Send reply
-        msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'], 'value': reply.encode()}
-        self.network.link_request(payload['from_rt_uuid'], callback=CalvinCB(send_message, msg=msg))
-
-    #### AUTHORIZATION ####
-
-    def authorization_register(self, authz_server_uuid, callback, jwt):
-        """
-        Register node attributes for authorization.
-
-        authz_server_uuid: node uuid for the runtime that acts as authorization server
-        callback: called when finished with the registration
-        jwt: signed JSON Web Token (JWT) containing the node attributes
-        """
-        _log.debug("authorization_register:\n\tauthz_server_uuid={}\n\tcallback={}\n\tjwt={}".format(authz_server_uuid, callback, jwt))
-        self.node.network.link_request(authz_server_uuid,
-                                       CalvinCB(send_message,
-                                                msg = {'cmd': 'AUTHORIZATION_REGISTER', 'jwt': jwt, 'cert_name': self.node.runtime_credentials.cert_name},
-                                                callback=callback))
-
-    def authorization_register_handler(self, payload):
-        """
-        Register node attributes in payload for authorization.
-
-        Signed JSON Web Token (JWT) is used to send the attributes.
-        """
-        _log.debug("authorization_register_handler:\n\tpayload={}".format(payload))
-        if not _sec_conf['authorization']['accept_external_requests']:
-            reply = response.CalvinResponse(response.NOT_FOUND)
-            # Send reply
-            msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'], 'value': reply.encode()}
-        else:
-            try:
-                self.node.authorization.decode_request(payload,
-                                                      CalvinCB(self._authorization_register_handler_cb,
-                                                              payload=payload))
-                return
-            except Exception as exc:
-                _log.exception("authorization_register_handler, exc={}".format(exc))
-                reply = response.CalvinResponse(response.INTERNAL_ERROR)
-                # Send reply
-                msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'], 'value': reply.encode()}
-
-        self.network.link_request(payload['from_rt_uuid'], callback=CalvinCB(send_message, msg=msg))
-
-    def _authorization_register_handler_cb(self, decoded, payload):
-        """JWT is now decoded, register node"""
-        _log.debug("_authorization_register_handler_cb:\ndecoded={}\npayload={}".format(decoded, payload))
-        self.node.authorization.pdp.register_node(decoded["iss"], decoded["attributes"])
-        reply = response.CalvinResponse(response.OK)
-        # Send reply
-        msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'], 'value': reply.encode()}
-        self.network.link_request(payload['from_rt_uuid'], callback=CalvinCB(send_message, msg=msg))
-
-    def authorization_decision(self, authz_server_uuid, callback, jwt):
-        """
-        Return a response to an authorization request.
-
-        authz_server_uuid: node uuid for the runtime that acts as authorization server
-        callback: called when finished with the authorization decision
-        jwt: signed JSON Web Token (JWT) containing the authorization request
-        """
-        _log.debug("authorization_decision:\n\tauthz_server_uuid={}\n\tcallback={}\n\tjwt={}".format(authz_server_uuid, callback, jwt))
-        self.node.network.link_request(authz_server_uuid,
-                                       CalvinCB(send_message,
-            msg = {'cmd': 'AUTHORIZATION_DECISION', 'jwt': jwt, 'cert_name': self.node.runtime_credentials.cert_name},
-                                                callback=callback))
-
-    def authorization_decision_handler(self, payload):
-        """
-        Return a response to the authorization request in the payload.
-
-        Signed JSON Web Tokens (JWT) with timestamps and information about
-        sender and receiver are used for both the request and response.
-        A Policy Decision Point (PDP) is used to determine if access is permitted.
-        """
-        _log.debug("authorization_decision_handler:\n\tPayload={}".format(payload))
-        if not _sec_conf['authorization']['accept_external_requests']:
-            reply = response.CalvinResponse(response.NOT_FOUND)
-            # Send reply
-            msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'], 'value': reply.encode()}
-        else:
-            try:
-                self.node.authorization.decode_request(payload,
-                                                      CalvinCB(self._authorization_decision_handler_jwt_decoded_cb,
-                                                               payload=payload))
-                return
-            except Exception as exc:
-                _log.exception("authorization_decision_handler failed, exc={}".format(exc))
-                reply = response.CalvinResponse(response.INTERNAL_ERROR)
-                # Send reply
-                msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'], 'value': reply.encode()}
-        self.network.link_request(payload['from_rt_uuid'], callback=CalvinCB(send_message, msg=msg))
-
-    def _authorization_decision_handler_jwt_decoded_cb(self, decoded, payload):
-        """JWT is now decoded, continute with authorization decision"""
-        _log.debug("_authorization_decision_handler_jwt_decoded_cb:\n\tDecoded={}\n\tPayload={}".format(decoded, payload))
-        self.node.authorization.pdp.authorize(decoded["request"],
-                            callback=CalvinCB(self._authorization_decision_handler, payload, decoded))
-
-    def _authorization_decision_handler(self, payload, request, authz_response):
-        """Authorization decision has been made, now send response"""
-        _log.debug("_authorization_decision_handler:\n\tPayload={}\n\tRequest={}\n\tAuthz_response={}".format(payload, request, authz_response))
-        try:
-            jwt_response = self.node.authorization.encode_response(request, authz_response)
-            data_response = {"jwt": jwt_response, "cert_name": self.node.runtime_credentials.cert_name}
-            reply = response.CalvinResponse(response.OK, data_response)
-        except Exception as exc:
-            _log.exception("_authorization_decision_handler, exc={}".format(exc))
-            reply = response.CalvinResponse(response.INTERNAL_ERROR)
-        # Send reply
-        msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'], 'value': reply.encode()}
-        self.network.link_request(payload['from_rt_uuid'], callback=CalvinCB(send_message, msg=msg))
-
-    def authorization_search(self, authz_server_uuid, callback, jwt):
-        """
-        Search for runtime where the decision for the authorization request is 'permit'.
-
-        authz_server_uuid: node uuid for the runtime that acts as authorization server
-        callback: called when finished with the search
-        jwt: signed JSON Web Token (JWT) containing the authorization request
-        """
-        _log.debug("authorization_search:\n\tauthz_server_uuid={}\n\tcallback={}\n\tjwt={}".format(authz_server_uuid, callback, jwt))
-        self.node.network.link_request(authz_server_uuid,
-                                       CalvinCB(send_message,
-            msg = {'cmd': 'AUTHORIZATION_SEARCH', 'jwt': jwt, 'cert_name': self.node.runtime_credentials.cert_name},
-                                                callback=callback))
-
-    def authorization_search_handler(self, payload):
-        """
-        Return a response to the authorization search request in the payload.
-
-        Signed JSON Web Tokens (JWT) with timestamps and information about
-        sender and receiver are used for both the request and response.
-        A Policy Decision Point (PDP) is used for the authorization search.
-        """
-        _log.debug("authorization_search_handler:\n\tpayload={}".format(payload))
-        try:
-            decoded = self.node.authorization.decode_request(payload,
-                                                             CalvinCB(self._authorization_search_handler_jwt_decoded_cb,
-                                                                    payload=payload))
-        except Exception as err:
-            _log.info("Failed to decode request, err={}".format(err))
-            reply = response.CalvinResponse(response.INTERNAL_ERROR)
-            # Send reply
-            msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'], 'value': reply.encode()}
-            self.network.link_request(payload['from_rt_uuid'], callback=CalvinCB(send_message, msg=msg))
-
-    def _authorization_search_handler_jwt_decoded_cb(self, decoded, payload):
-        """JWT is now decoded, contintue search for runtime where actor is allowed to execute"""
-        _log.debug("_authorization_search_handler_jwt_decoded:\n\tdecoded={}\n\tpayload={}".format(decoded, payload))
-        try:
-            self.node.authorization.pdp.runtime_search(decoded["request"], decoded["whitelist"],
-                                         CalvinCB(self._authorization_search_handler, payload, decoded))
-        except Exception as err:
-            _log.info("Failed to decode authorization search request, err={}".format(err))
-            reply = response.CalvinResponse(response.INTERNAL_ERROR)
-            # Send reply
-            msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'], 'value': reply.encode()}
-            self.network.link_request(payload['from_rt_uuid'], callback=CalvinCB(send_message, msg=msg))
-
-    def _authorization_search_handler(self, payload, request, search_result):
-        """Search for a candidate finished, now send response"""
-        _log.debug("_authorization_search_handler:\n\tpayload={}\n\trequest={}\n\tsearch_result={}".format(payload, request, search_result))
-        try:
-            if search_result is None:
-                runtime_id = None
-                data_response = {"node_id": runtime_id}
-            else:
-                runtime_id = search_result[0]
-                jwt_response = self.node.authorization.encode_response(request, search_result[1], runtime_id)
-                data_response = {"node_id": runtime_id, "jwt": jwt_response, "cert_name": self.node.runtime_credentials.cert_name}
-            reply = response.CalvinResponse(response.OK, data_response)
-        except Exception:
-            reply = response.CalvinResponse(response.INTERNAL_ERROR)
-        # Send reply
-        msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'], 'value': reply.encode()}
-        self.network.link_request(payload['from_rt_uuid'], callback=CalvinCB(send_message, msg=msg))
 
 
 if __name__ == '__main__':

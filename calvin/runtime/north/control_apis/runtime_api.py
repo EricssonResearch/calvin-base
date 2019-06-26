@@ -21,7 +21,6 @@ from calvin.common.calvinlogger import get_logger
 from calvin.common.calvin_callback import CalvinCB
 from calvin.runtime.south import asynchronous
 from .routes import handler, register
-from .authentication import authentication_decorator
 from calvin.runtime.north.calvinsys import get_calvinsys
 from calvin.runtime.north.calvinlib import get_calvinlib
 
@@ -31,7 +30,7 @@ _log = get_logger(__name__)
 
 # USED BY: CSWEB, CSCONTROL
 # Can't be access controlled, as it is needed to find authorization server
-# @authentication_decorator
+# 
 @handler(method="GET", path="/id")
 def handle_get_node_id(self, handle, match, data, hdr):
     """
@@ -57,7 +56,7 @@ def handle_get_node_capabilities(self, handle, match, data, hdr):
 
 # USED BY: CSWEB, CSCONTROL
 @handler(method="GET", path="/nodes")
-@authentication_decorator
+
 def handle_get_nodes(self, handle, match, data, hdr):
     """
     GET /nodes
@@ -71,7 +70,7 @@ def handle_get_nodes(self, handle, match, data, hdr):
 
 # USED BY: CSWEB, CSCONTROL
 @handler(method="DELETE", path="/node", optional=["/now", "/migrate", "/clean"])
-@authentication_decorator
+
 def handle_quit(self, handle, match, data, hdr):
     """
     DELETE /node{/now|/migrate|/clean}
@@ -96,7 +95,7 @@ def handle_quit(self, handle, match, data, hdr):
 
 # DEPRECATED: What is this supposed to do?
 @handler(method="OPTIONS", path=r"/{path}")
-@authentication_decorator
+
 def handle_options(self, handle, match, data, hdr):
     """
     OPTIONS /url

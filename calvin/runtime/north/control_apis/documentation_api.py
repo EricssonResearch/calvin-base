@@ -19,10 +19,9 @@
 import json
 
 from .routes import docs, handler
-from .authentication import authentication_decorator
 
 @handler(method="GET", path="/")
-@authentication_decorator
+
 def handle_get_base_doc(self, handle, match, data, hdr):
     """
     GET /

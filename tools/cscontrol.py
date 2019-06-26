@@ -21,8 +21,8 @@ import os
 import argparse
 import json
 from calvin.common.calvinlogger import get_logger
-from calvin.common.security import Security
-from calvin.common import certificate
+# from calvin.common.security import Security
+# from calvin.common import certificate
 
 _log = get_logger(__name__)
 _request_handler = None
@@ -69,23 +69,11 @@ def requirements_file(path):
 
 
 def handle_security_arguments(args):
-    if args.security_dir:
-        security_dir = args.security_dir
-    else:
-        security_dir = None
-    if "https" in args.node:
-        truststore_dir = certificate.get_truststore_path(type=certificate.TRUSTSTORE_TRANSPORT, security_dir=security_dir)
-    else:
-        truststore_dir = None
+    security_dir = None
+    truststore_dir = None
     # Argument to verify is either a path to CA bundle OR True/False, where True is the default
     verify = truststore_dir or True
     req_handler = get_request_handler(verify=verify)
-    if args.credentials:
-        try:
-            credentials_ = json.loads(args.credentials)
-            req_handler.set_credentials(credentials_)
-        except Exception as e:
-            print("Credentials not JSON:\n", e)
     return req_handler
 
 
@@ -172,13 +160,13 @@ def parse_args():
     argparser = argparse.ArgumentParser(description=long_desc)
     argparser.add_argument('node', metavar="<control uri>",
                            help="control uri of node")
-    argparser.add_argument('--credentials', metavar='<credentials>', type=str,
-                           help='Supply credentials to run program under '
-                                'e.g. \'{"user":"ex_user", "password":"passwd"}\'',
-                           dest='credentials', default=None)
-    argparser.add_argument('--security_dir', metavar='<security_dir>', type=str,
-                           help='Path to the runtimes credentials dir if not using the default location',
-                           dest='security_dir', default=None)
+    # argparser.add_argument('--credentials', metavar='<credentials>', type=str,
+    #                        help='Supply credentials to run program under '
+    #                             'e.g. \'{"user":"ex_user", "password":"passwd"}\'',
+    #                        dest='credentials', default=None)
+    # argparser.add_argument('--security_dir', metavar='<security_dir>', type=str,
+    #                        help='Path to the runtimes credentials dir if not using the default location',
+    #                        dest='security_dir', default=None)
     cmdparsers = argparser.add_subparsers()
 
     # parser for id cmd

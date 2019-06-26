@@ -315,7 +315,7 @@ class Actor(object):
     # What are the arguments, really?
     # FIXME: Drop security argument
     def __init__(self, actor_type, name='', allow_invalid_transitions=True, disable_transition_checks=False,
-                 disable_state_checks=False, actor_id=None, security=None):
+                 disable_state_checks=False, actor_id=None):
         """Should _not_ be overridden in subclasses."""
         super(Actor, self).__init__()
         self._type = actor_type

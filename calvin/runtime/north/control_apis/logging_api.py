@@ -21,7 +21,6 @@ import uuid
 
 from calvin.common import calvinresponse
 from .routes import register, handler
-from .authentication import authentication_decorator
 
 LOG_ACTOR_FIRING = 0
 LOG_ACTION_RESULT = 1
@@ -222,7 +221,7 @@ def log_log_message(self, message):
 
 
 @handler(method="POST", path="/log")
-@authentication_decorator
+
 def handle_post_log(self, handle, match, data, hdr):
     """
     POST /log
@@ -292,7 +291,7 @@ def handle_post_log(self, handle, match, data, hdr):
 
 
 @handler(method="DELETE", path="/log/{trace_id}")
-@authentication_decorator
+
 def handle_delete_log(self, handle, match, data, hdr):
     """
     DELETE /log/{user-id}
@@ -308,7 +307,7 @@ def handle_delete_log(self, handle, match, data, hdr):
     self.send_response(handle, None, status=status)
 
 @handler(method="GET", path="/log/{trace_id}")
-@authentication_decorator
+
 def handle_get_log(self, handle, match, data, hdr):
     """
     GET /log/{user-id}

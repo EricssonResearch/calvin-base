@@ -24,12 +24,10 @@ from calvin.common.calvin_callback import CalvinCB
 from calvin.runtime.south import asynchronous
 from calvin.common import calvinresponse
 from calvin.common import calvinconfig
-from calvin.common.security import Security
 #
 # Dynamically build selected set of APIs
 #
 from .control_apis import routes
-from .control_apis import security_api
 from .control_apis import runtime_api
 from .control_apis import application_api
 from .control_apis import documentation_api
@@ -186,7 +184,6 @@ class CalvinControl(CalvinControlBase):
     def __init__(self, node, uri, external_control_uri=None):
         super(CalvinControl, self).__init__(node, uri)
         self.server = None
-        self.security = Security(self.node)
         url = urlparse(self.uri)
         self.host = url.hostname
         self.port = int(url.port)

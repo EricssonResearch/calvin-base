@@ -284,29 +284,10 @@ class CalvinServer(base_transport.BaseServer):
                     return self._str
             self._peers[uri]._transport._proto.connectionLost(ErrorMessage("Connection was closed cleanly."))
 
-        from calvin.common import calvinconfig
-        _conf = calvinconfig.get()
-        runtime_to_runtime_security = _conf.get("security","runtime_to_runtime_security")
-        if runtime_to_runtime_security=="tls":
-            _log.debug("TLS enabled, get FQDN of runtime")
-            try:
-                junk, ipv6 = uri.split("//")
-                ipv6_addr_list = ipv6.split(":")[:-1]
-                ipv6_addr = ":".join(ipv6_addr_list)
-                hostname, aliaslist, ipaddrlist = socket.gethostbyaddr(ipv6_addr)
-                fqdn = socket.getfqdn(hostname)
-            except Exception as err:
-                _log.error("Could not resolve ip address to hostname"
-                                "\n\terr={}"
-                                "\n\turi={}".format(err, uri))
-                raise
-        else:
-            fqdn=None
-
         tp = CalvinTransport(self._rt_id, uri, self._callbacks,
                              self._client_transport, proto=protocol,
                              node_name=self._node_name,
-                             server_node_name=fqdn,
+                             server_node_name=None,
                              client_validator=self._client_validator)
 
         self._callback_execute('peer_connected', tp, tp.get_uri())

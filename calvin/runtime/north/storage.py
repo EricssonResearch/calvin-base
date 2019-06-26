@@ -58,14 +58,13 @@ class PrivateStorage(object):
     All functions in this class should be async and never block.
     """
 
-    def __init__(self, node, storage_type, server=None, security_conf=None):
+    def __init__(self, node, storage_type, server=None):
         self.node = node
         self.localstorage = LocalRegistry()
         self.storage = NullRegistryClient() 
 
         self.storage_type = storage_type
         self.storage_host = server
-        self.security_conf = security_conf
 
         self.storage_proxy_server = None
 
@@ -551,56 +550,6 @@ class Storage(PrivateStorage):
         # Fill the index
         self._add_node_index(node)
         # Store all actors on this node in storage
-        # GlobalStore(node=node, security=Security(node) if security_enabled() else None, verify=False).export()
-        # If node is an authentication server, store information about it in storage
-        _sec_conf = self.security_conf
-        if _sec_conf and 'authentication' in _sec_conf:
-            if ('accept_external_requests' in _sec_conf['authentication'] and
-                    _sec_conf['authentication']['accept_external_requests'] ):
-                _log.debug("Node is an authentication server accepting external requests, list it in storage")
-                #Add node to list of authentication servers accepting external clients
-                self.add_index(['external_authentication_server'], node.id,
-                               root_prefix_level=1, cb=cb)
-                #Add node to list of authentication servers
-                self.add_index(['authentication_server'], node.id,
-                               root_prefix_level=1, cb=cb)
-            elif ('procedure' in _sec_conf['authentication'] and
-                        _sec_conf['authentication']['procedure']=='local' ):
-                _log.debug("Node is a local authentication server NOT accepting external requests, there is no reason to store that information in storage")
-            else:
-                _log.debug("Node is NOT an authentication server")
-        # If node is an authorization server, store information about it in storage
-        if _sec_conf and 'authorization' in _sec_conf:
-            if ('accept_external_requests' in _sec_conf['authorization'] and
-                    _sec_conf['authorization']['accept_external_requests'] ):
-                _log.debug("Node is an authorization server accepting external requests, list it in storage")
-                #Add node to list of authorization servers accepting external clients
-                self.add_index(['external_authorization_server'], node.id,
-                               root_prefix_level=1, cb=cb)
-                #Add node to list of authorization servers
-                self.add_index(['authorization_server'], node.id,
-                               root_prefix_level=1, cb=cb)
-            elif ('procedure' in _sec_conf['authorization'] and
-                        _sec_conf['authorization']['procedure']=='local' ):
-                _log.debug("Node is a local authorization server NOT accepting external requests, list it in storage")
-                #Add node to list of authorization servers
-                self.add_index(['authorization_server'], node.id, root_prefix_level=1, cb=cb)
-            else:
-                _log.debug("Node is NOT an authorization server")
-        #Store runtime certificate in storage
-        certstring = self._get_runtime_certificate(node)
-        if certstring:
-            self.node.storage.add_index(['certificate',node.id], certstring, root_prefix_level=2, cb=cb)
-
-    def _get_runtime_certificate(self, node):
-        from calvin.common.runtime_credentials import RuntimeCredentials
-        try:
-            rt_cred = RuntimeCredentials(node.node_name)
-            certpath, cert, certstr = rt_cred.get_own_cert()
-            return certstr
-        except Exception as err:
-            _log.debug("No runtime credentials, err={}".format(err))
-            return None
 
     def _add_super_node(self, node):
         """ The term super node is to list runtimes that are more capable/central than others.
@@ -672,18 +621,7 @@ class Storage(PrivateStorage):
         self._remove_super_node(node)
         if node.attributes.get_indexed_public():
             self._delete_node_index(node, cb=cb)
-        _sec_conf = self.security_conf
-        if _sec_conf and ('authorization' in _sec_conf):
-            if ('accept_external_requests' in _sec_conf['authorization'] and
-                    _sec_conf['authorization']['accept_external_requests'] ):
-                #Remove node from list of authorization servers accepting external clients
-                self.remove_index(['external_authorization_server', 'nodes'], self.node.id, root_prefix_level=2, cb=cb)
-                #Remove node from list of authorization servers
-                self.add_index(['authorization_server'], self.node.id, root_prefix_level=1, cb=cb)
-            elif ('procedure' in _sec_conf['authorization'] and
-                        _sec_conf['authorization']['procedure']=='local' ):
-                #Remove node from list of authorization servers
-                self.remove_index(['authorization_server'], self.node.id, root_prefix_level=1, cb=cb)
+
 
     def _delete_node_index(self, node, cb=None):
         indexes = node.attributes.get_indexed_public()

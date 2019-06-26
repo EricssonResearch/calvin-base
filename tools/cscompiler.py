@@ -22,7 +22,6 @@ import json
 import argparse
 from tools.cspreprocess import Preprocessor
 from tools import toolsupport
-from calvin.common import code_signer
 
 def appname_from_filename(filename):
     appname = os.path.splitext(os.path.basename(filename))[0]
@@ -55,9 +54,9 @@ def compile_file(filepath, include_paths, actorstore_uri):
     appname = appname_from_filename(filepath)
     return compile_source(source, appname, actorstore_uri)
 
-def sign_deployable(deployable, organization, common_name):
-    signer = code_signer.CS(organization=organization, commonName=common_name)
-    deployable['app_info_signature'] = signer.sign_deployable(deployable['app_info'])
+# def sign_deployable(deployable, organization, common_name):
+#     signer = code_signer.CS(organization=organization, commonName=common_name)
+#     deployable['app_info_signature'] = signer.sign_deployable(deployable['app_info'])
 
 
 def main():
@@ -76,8 +75,8 @@ def main():
                            help='use compact JSON format instead of readable (default)')
     argparser.add_argument('--sorted', dest='sorted', action='store_true', default=False,
                            help='sort resulting JSON output by keys')
-    argparser.add_argument('--signed', dest='signed', action='store_true', default=False,
-                           help='sign deployable')
+    # argparser.add_argument('--signed', dest='signed', action='store_true', default=False,
+    #                        help='sign deployable')
     argparser.add_argument('--issue-fmt', dest='fmt', type=str,
                            default='{type!c}: {reason} {script} {line}:{col}',
                            help='custom format for issue reporting.')
@@ -111,9 +110,9 @@ def main():
         # Don't produce output if there were errors
         return exit_code
 
-    # If compilation has no errors, generate output 
-    if args.signed:
-        sign_deployable(deployable, organization="com.ericsson", common_name="com.ericssonCS")
+    # # If compilation has no errors, generate output
+    # if args.signed:
+    #     sign_deployable(deployable, organization="com.ericsson", common_name="com.ericssonCS")
 
     string_rep = json.dumps(deployable, indent=args.indent, sort_keys=args.sorted)
     

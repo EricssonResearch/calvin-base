@@ -26,16 +26,14 @@ from calvin.common.issuetracker import IssueTracker
 # from calvin.csparser.dscodegen import calvin_dscodegen
 from calvin.runtime.north.appmanager import Deployer
 from calvin.runtime.north.plugins.port import DISCONNECT
-from calvin.common.security import security_enabled
 from .routes import register, handler
-from .authentication import authentication_decorator
 
 _log = get_logger(__name__)
 
 
 # USED BY: GUI, CSWEB, CSCONTROL
 @handler(method="GET", path="/applications")
-@authentication_decorator
+
 def handle_get_applications(self, handle, match, data, hdr):
     """
     GET /applications
@@ -47,7 +45,7 @@ def handle_get_applications(self, handle, match, data, hdr):
 
 # USED BY: GUI, CSWEB, CSCONTROL
 @handler(method="DELETE", path="/application/{application_id}")
-@authentication_decorator
+
 def handle_del_application(self, handle, match, data, hdr):
     """
     DELETE /application/{application-id}
@@ -72,7 +70,7 @@ def handle_del_application_cb(self, handle, status=None):
 
 # USED BY: GUI, CSCONTROL
 @handler(method="GET", path="/actors")
-@authentication_decorator
+
 def handle_get_actors(self, handle, match, data, hdr):
     """
     GET /actors
@@ -98,7 +96,7 @@ def _actor_report(self, handle, match, data, hdr):
 
 # DEPRECATED: Perhaps used in Kappa?
 @handler(method="GET", path="/actor/{actor_id}/report")
-@authentication_decorator
+
 def handle_get_actor_report(self, handle, match, data, hdr):
     """
     GET /actor/{actor-id}/report
@@ -110,7 +108,7 @@ def handle_get_actor_report(self, handle, match, data, hdr):
 
 # DEPRECATED: Perhaps used in Kappa?
 @handler(method="POST", path="/actor/{actor_id}/report")
-@authentication_decorator
+
 def handle_post_actor_report(self, handle, match, data, hdr):
     """
     POST /actor/{actor-id}/report
@@ -137,7 +135,7 @@ def handle_actor_migrate_lookup_peer_cb(self, key, value, handle, actor_id, peer
 
 # USED BY: GUI, CSWEB, CSCONTROL
 @handler(method="POST", path="/actor/{actor_id}/migrate")
-@authentication_decorator
+
 def handle_actor_migrate(self, handle, match, data, hdr):
     """
     POST /actor/{actor-id}/migrate
@@ -197,7 +195,7 @@ def actor_migrate_cb(self, handle, status, *args, **kwargs):
 
 # USED BY: GUI, CSWEB
 @handler(method="GET", path="/actor/{actor_id}/port/{port_id}/state")
-@authentication_decorator
+
 def handle_get_port_state(self, handle, match, data, hdr):
     """
     GET /actor/{actor-id}/port/{port-id}/state
@@ -215,7 +213,7 @@ def handle_get_port_state(self, handle, match, data, hdr):
 # FIXME: Check integrity according to policy
 # USED BY: GUI, CSWEB, CSCONTROL
 @handler(method="POST", path="/deploy")
-@authentication_decorator
+
 def handle_deploy(self, handle, match, data, hdr):
     """
     POST /deploy
@@ -244,7 +242,6 @@ def handle_deploy(self, handle, match, data, hdr):
         d = Deployer(
                 deployable=data,
                 node=self.node,
-                security=self.security,
                 verify=True,
                 cb=CalvinCB(self.handle_deploy_cb, handle)
             )
@@ -276,7 +273,7 @@ def handle_deploy_cb(self, handle, status, deployer, **kwargs):
 
 # USED BY: GUI, CSWEB, CSCONTROL
 @handler(method="POST", path="/application/{application_id}/migrate")
-@authentication_decorator
+
 def handle_post_application_migrate(self, handle, match, data, hdr):
     """
     POST /application/{application-id}/migrate

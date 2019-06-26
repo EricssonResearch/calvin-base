@@ -176,32 +176,7 @@ class TCPClient(BaseClientProtocolFactory):
     def connect(self, addr, port):
         self._addr = addr
         self._port = port
-        control_interface_security = _conf.get("security","control_interface_security")
-
-        if control_interface_security=="tls":
-            try:
-                ca_cert_list_str, ca_cert_list_x509, truststore = certificate.get_truststore(certificate.TRUSTSTORE_TRANSPORT)
-                twisted_trusted_ca_cert = ssl.Certificate.loadPEM(ca_cert_list_str[0])
-                self.options = ssl.optionsForClientTLS(self._server_node_name, twisted_trusted_ca_cert)
-            except Exception as err:
-                _log.error("Failed to fetch client credentials, err={}".format(err))
-                raise
- 
-            try:
-                endpoint = endpoints.SSL4ClientEndpoint(reactor,
-                                                        self._host_ip,
-                                                        int(self._host_port),
-                                                        self.options)
-            except:
-                _log.error("Client failed connectSSL")
-                raise
-            try:
-                endpoint.connect(self._factory)
-            except Exception as e:
-                _log.error("Failed endpoint.connect, e={}".format(e))
-                raise
-        else:
-            return reactor.connectTCP(addr, port, self)
+        return reactor.connectTCP(addr, port, self)
 
     def send(self, data):
         if isinstance(data, str):

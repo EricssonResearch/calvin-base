@@ -20,7 +20,6 @@ from calvin.common.requirement_matching import ReqMatch
 from calvin.common.calvinlogger import get_logger
 from calvin.common.calvin_callback import CalvinCB
 import calvin.common.calvinresponse as response
-from calvin.common.security import Security, security_enabled
 from calvin.runtime.north.plugins.port import DISCONNECT
 from calvin.runtime.north.calvinsys import get_calvinsys
 from calvin.runtime.north.calvinlib import get_calvinlib
@@ -80,8 +79,7 @@ class ActorManager(object):
         raise Exception("Actor '{}' not found".format(actor_id))
 
     def new(self, actor_type, args, state=None, prev_connections=None, connection_list=None, callback=None,
-            signature=None, actor_def=None, security=None, access_decision=None,
-            port_properties=None):
+            signature=None, actor_def=None, port_properties=None):
         """
         Instantiate an actor of type 'actor_type'. Parameters are passed in 'args',
         'name' is an optional parameter in 'args', specifying a human readable name.
@@ -100,9 +98,9 @@ class ActorManager(object):
 
         try:
             if state:
-                a = self._new_from_state(actor_type, state, actor_def, security, access_decision)
+                a = self._new_from_state(actor_type, state, actor_def)
             else:
-                a = self._new(actor_type, args, actor_def, security, access_decision, port_properties)
+                a = self._new(actor_type, args, actor_def, port_properties)
         except Exception as e:
             _log.exception("Actor creation failed")
             raise(e)
@@ -133,29 +131,22 @@ class ActorManager(object):
             else:
                 return a.id
 
-    def _new_actor(self, actor_type, class_=None, actor_id=None, security=None, access_decision=None):
+    def _new_actor(self, actor_type, class_=None, actor_id=None):
         """Return a 'bare' actor of actor_type, raises an exception on failure."""
-        # if security_enabled() and not access_decision:
-        #     _log.debug("Security policy check for actor failed, access_decision={}".format(access_decision))
         if class_ is None:
-            class_, signer = self.lookup_and_verify(actor_type, security)
+            class_ = self.lookup_and_verify(actor_type)
         try:
             # Create a 'bare' instance of the actor
-            a = class_(actor_type, actor_id=actor_id, security=security)
+            a = class_(actor_type, actor_id=actor_id)
         except Exception as e:
             _log.error("The actor %s(%s) can't be instantiated." % (actor_type, class_.__init__))
             raise(e)
-        if isinstance(access_decision, tuple):
-            # Authorization checks needed if access_decision is a tuple.
-            a.set_authorization_checks(access_decision[1])
         return a
 
-    def _new(self, actor_type, args, actor_def=None, security=None, access_decision=None,
-             port_properties=None):
+    def _new(self, actor_type, args, actor_def=None, port_properties=None):
         """Return an initialized actor in PENDING state, raises an exception on failure."""
         try:
-            a = self._new_actor(actor_type, actor_def, security=security,
-                                access_decision=access_decision)
+            a = self._new_actor(actor_type, actor_def)
             # Now that required APIs are attached we can call init() which may use the APIs
             human_readable_name = args.pop('name', '')
             a.name = human_readable_name
@@ -172,29 +163,22 @@ class ActorManager(object):
         """Instantiate an actor of type 'actor_type' and apply the 'state' to the actor."""
         try:
             _log.analyze(self.node.id, "+", state)
-            actor_def, signer = self.lookup_and_verify(actor_type, security=None)
+            actor_def = self.lookup_and_verify(actor_type)
             requirements = actor_def.requires if hasattr(actor_def, "requires") else []
-            self.check_requirements_and_sec_policy(requirements=requirements,
-                                                   security=None,
-                                                   actor_id=state['private']['_id'],
-                                                   signer=signer,
-                                                   decision_from_migration=None,
+            self.check_requirements(requirements=requirements,
                                                    callback=CalvinCB(self.new, actor_type, None,
                                                             state, prev_connections=prev_connections,
                                                             connection_list=connection_list,
                                                             callback=callback,
-                                                            actor_def=actor_def,
-                                                            security=None)
+                                                            actor_def=actor_def)
                                                    )
         except Exception as err:
             _log.error(err)
 
-    def _new_from_state(self, actor_type, state, actor_def, security,
-                             access_decision=None):
+    def _new_from_state(self, actor_type, state, actor_def):
         """Return a restored actor in PENDING state, raises an exception on failure."""
         try:
-            a = self._new_actor(actor_type, actor_def, actor_id=state['private']['_id'], security=security,
-                                access_decision=access_decision)
+            a = self._new_actor(actor_type, actor_def, actor_id=state['private']['_id'])
             did_migrate = True
             # Always do a set_state for the port's state
             a.deserialize(state)
@@ -250,33 +234,22 @@ class ActorManager(object):
         found = src is not None
         is_primitive = True
         actor_def = class_factory(src, metadata, actor_type) if found else None
-        signer = None
-        return (found, is_primitive, actor_def, signer)
+        return (found, is_primitive, actor_def)
         
-    def lookup_and_verify(self, actor_type, security=None):
+    def lookup_and_verify(self, actor_type):
         """Lookup and verify actor in actor store."""
-        found, is_primitive, actor_def, signer = self.new_actorstore_lookup(actor_type)
+        found, is_primitive, actor_def = self.new_actorstore_lookup(actor_type)
         if not found or not is_primitive:
             raise Exception("Not known actor type: %s" % actor_type)
-        return (actor_def, signer)
+        return actor_def
 
-    def check_requirements_and_sec_policy(self, requirements, security=None, actor_id=None,
-                                          signer=None, decision_from_migration=None, callback=None):
+    def check_requirements(self, requirements, callback):
         for req in requirements:
             if not get_calvinsys().has_capability(req) and not get_calvinlib().has_capability(req):
                 raise Exception("Actor requires %s" % req)
-        if security_enabled():
-            # Check if access is permitted for the actor by the security policy.
-            # Will continue directly with callback if authorization is not enabled.
-            security.check_security_policy(callback, actor_id=actor_id, requires=['runtime'] + requirements,
-                                            element_type="actor",
-                                            element_value=signer,
-                                            decision_from_migration=decision_from_migration)
-        else:
-            callback()
+        callback()
 
-    def update_requirements(self, actor_id, requirements, extend=False, move=False,
-                            authorization_check=False, callback=None):
+    def update_requirements(self, actor_id, requirements, extend=False, move=False, callback=None):
         """ Update requirements and trigger a potential migration """
         if actor_id not in self.actors:
             # Can only migrate actors from our node
