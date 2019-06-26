@@ -487,7 +487,7 @@ class CalvinProto(CalvinCBClass):
             tunnel = self.tunnels[payload['from_rt_uuid']][payload['tunnel_id']]
         except:
             raise Exception("ERROR_UNKNOWN_TUNNEL")
-            _log.analyze(self.rt_id, "+ ERROR_UNKNOWN_TUNNEL", payload, peer_node_id=payload['from_rt_uuid'])
+            # _log.analyze(self.rt_id, "+ ERROR_UNKNOWN_TUNNEL", payload, peer_node_id=payload['from_rt_uuid'])
         # We have the tunnel so close it
         tunnel.close(local_only=True)
         ok = False

@@ -527,7 +527,7 @@ class Deployer(object):
     produce a running calvin application.
     """
 
-    def __init__(self, deployable, node, verify=True, cb=None):
+    def __init__(self, deployable, node, cb=None):
         super(Deployer, self).__init__()
         self.app_info = deployable["app_info"]
         self.deploy_info = deployable["deploy_info"]
@@ -612,14 +612,13 @@ class Deployer(object):
         except:
             return "unknown"
 
-    def instantiate(self, actor_name, info, actor_def=None, access_decision=None, cb=None):
+    def instantiate(self, actor_name, info, actor_def=None, cb=None):
         """
         Instantiate an actor.
           - 'actor_name' is <namespace>:<identifier>, e.g. app:src, or app:component:src
           - 'info' is information about the actor
              info['args'] is a dictionary of key-value arguments for this instance
              info['signature'] is the GlobalStore actor-signature to lookup the actor
-          - 'access_decision' is a boolean indicating if access is permitted
         """
         #TODO component ns needs to be stored in registry /component/<app-id>/ns[0]/ns[1]/.../actor_name: actor_id
         try:

@@ -242,7 +242,6 @@ def handle_deploy(self, handle, match, data, hdr):
         d = Deployer(
                 deployable=data,
                 node=self.node,
-                verify=True,
                 cb=CalvinCB(self.handle_deploy_cb, handle)
             )
         print(self.node.id, "Deployer instantiated")

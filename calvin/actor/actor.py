@@ -24,7 +24,6 @@ from calvin.common.calvinlogger import get_logger
 from calvin.common.enum import enum
 from calvin.runtime.north.calvin_token import Token, ExceptionToken
 import calvin.common.calvinresponse as response
-from calvin.common.calvin_callback import CalvinCB
 from calvin.actor.port_property_syntax import get_port_property_capabilities, get_port_property_runtime
 from calvin.runtime.north.calvinsys import get_calvinsys
 from calvin.runtime.north.calvinlib import get_calvinlib

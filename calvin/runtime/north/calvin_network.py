@@ -279,7 +279,7 @@ class CalvinNetwork(object):
     def _server_stopped(self, *args):
         _log.debug("Server stopped %s", args)
 
-    def start_listeners(self, uris=None, stop_callback=None):
+    def start_listeners(self, uris=None):
         """ Start the transport listening on the uris
             uris: optional list of uri strings. When not provided all schemas will be started.
                   a '<schema>:default' uri can be used to indicate that the transport should
@@ -292,7 +292,8 @@ class CalvinNetwork(object):
             schema, addr = uri.split(':', 1)
             self.transports[schema].listen(uri)
 
-    def stop_listeners(self, uris=None, start_callback=None):
+    # FIXME: Unused?
+    def stop_listeners(self, uris=None):
         """ Start the transport listening on the uris
             uris: optional list of uri strings. When not provided all schemas will be started.
                   a '<schema>:default' uri can be used to indicate that the transport should

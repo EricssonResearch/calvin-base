@@ -16,7 +16,6 @@
 
 
 import json
-from random import randint
 from urllib.parse import urlparse
 
 from calvin.common.calvinlogger import get_logger
