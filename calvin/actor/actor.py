@@ -15,8 +15,6 @@
 # limitations under the License.
 
 import functools
-import time
-import copy
 import uuid
 
 import wrapt
@@ -26,7 +24,6 @@ from calvin.common.calvinlogger import get_logger
 from calvin.common.enum import enum
 from calvin.runtime.north.calvin_token import Token, ExceptionToken
 import calvin.common.calvinresponse as response
-from calvin.runtime.south import asynchronous
 from calvin.runtime.north.plugins.authorization_checks import check_authorization_plugin_list
 from calvin.common.calvin_callback import CalvinCB
 from calvin.actor.port_property_syntax import get_port_property_capabilities, get_port_property_runtime
