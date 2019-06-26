@@ -127,33 +127,7 @@ class FanoutBase(object):
     
     def get_peers(self):
         return self.readers
-    
-    def set_exhausted_tokens(self, tokens):
-        _log.debug("exhausted_tokens %s %s" % (self._type, tokens))
-        if tokens and list(tokens.values())[0]:
-            _log.error("Got exhaust tokens on scheduler_fifo port %s" % str(tokens))
-        return self.nbr_peers
-    
-    def is_exhausting(self, peer_id=None):
-        return False
-
-    def exhaust(self, peer_id, terminate):
-        _log.debug("exhaust %s %s %s" % (self._type, peer_id, DISCONNECT.reverse_mapping[terminate]))
-        if peer_id not in self.readers:
-            # FIXME handle writer
-            return []
-        if terminate == DISCONNECT.EXHAUST_PEER_SEND or terminate == DISCONNECT.EXHAUST_OUTPORT:
-            # Retrive remaining tokens to be returned
-            tokens = []
-            for read_pos in range(self.read_pos[peer_id], self.write_pos[peer_id]):
-                tokens.append([read_pos, self.fifo[peer_id][read_pos % self.N]])
-            # Remove the queue to peer, so no more writing
-            self.remove_reader(peer_id)
-            return tokens
-        else:
-            self.remove_reader(peer_id)
-        return []
-        
+            
     def tokens_available(self, length, metadata):
         if metadata not in self.readers:
             raise Exception("No reader %s in %s" % (metadata, self.readers))

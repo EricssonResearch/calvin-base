@@ -197,31 +197,10 @@ class InPort(Port):
             e.detached(terminate=terminate)
         if terminate >= DISCONNECT.TERMINATE:
             self.properties['nbr_peers'] -= len(endpoints)
-        exhausting = self.queue.is_exhausting()
-        if len(self.endpoints) == 0 and not exhausting:
+        if len(self.endpoints) == 0:
             self.owner.did_disconnect(self)
         _log.debug("actorinport.disconnected %s removed: %s current: %s" % (self.id, peer_ids, [e.get_peer()[1] for e in self.endpoints]))
         return endpoints
-
-    def any_outstanding_exhaustion_tokens(self):
-        try:
-            return self.queue.any_outstanding_exhaustion_tokens()
-        except AttributeError:
-            # When not implemented by queue assume it's not needed
-            return False
-
-    def exhausted_tokens(self, tokens):
-        _log.debug("actorinport.exhausted_tokens %s %s" % (self.owner._id, self.id))
-        self.queue.set_exhausted_tokens(tokens)
-        exhausting = self.queue.is_exhausting()
-        if len(self.endpoints) == 0 and not exhausting:
-            self.owner.did_disconnect(self)
-            _log.debug("actorinport.exhausted_tokens did_disconnect")
-
-    def finished_exhaustion(self):
-        if len(self.endpoints) == 0 and not self.queue.is_exhausting():
-            self.owner.did_disconnect(self)
-            _log.debug("actorinport.finished_exhaustion did_disconnect %s" % self.id)
 
     def peek_token(self, metadata=None):
         """Used by actor (owner) to peek a token from the port. Following peeks will get next token. Reset with peek_cancel."""
@@ -237,23 +216,23 @@ class InPort(Port):
 
     def peek_commit(self, metadata=None):
         """Used by actor (owner) to commit port peeking to front token."""
+        # FIXME: Why is queue.commit(metadata) returning a value?
         if metadata is None:
             metadata = self.id
-        # The return has information on if the queue exhausted the remaining tokens
         return self.queue.commit(metadata)
 
     def read(self, metadata=None):
         """
         Used by actor (owner) to read a token from the port.
-        Returns tuple (token, exhaust) where exhaust is port (exhausted) or None (not exhausted)
+        Returns token
         """
         # FIXME: We no longer need the peek/commit/cancel functionality.
         #        Queues should be changed accordingly, and this method should use queue.read()
         if metadata is None:
             metadata = self.id
         token = self.peek_token(metadata)
-        exhausted = self.peek_commit(metadata)
-        return (token, exhausted)
+        self.peek_commit(metadata)
+        return token
 
     def tokens_available(self, length, metadata=None):
         """Used by actor (owner) to check number of tokens on the port."""
@@ -344,10 +323,6 @@ class OutPort(Port):
             self.owner.did_disconnect(self)
         _log.debug("actoroutport.disconnected remove: %s current: %s" % (peer_ids, [e.get_peer()[1] for e in self.endpoints]))
         return endpoints
-
-    def exhausted_tokens(self, tokens):
-        _log.debug("actoroutport.exhausted_tokens %s %s" % (self.owner._id, self.id))
-        self.queue.set_exhausted_tokens(tokens)
 
     def write_token(self, data):
         """docstring for write_token"""

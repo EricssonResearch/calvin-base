@@ -38,9 +38,6 @@ class LocalInEndpoint(Endpoint):
         self.peer_port = peer_port
         self.peer_id = peer_port.id
         self.scheduler = scheduler
-        self.pressure_count = 0
-        self.pressure = [(None, 0)] * PRESSURE_LENGTH  # list with (sequence nbr, time)
-        self.pressure_last = 0
 
     def is_connected(self):
         return True
@@ -52,12 +49,6 @@ class LocalInEndpoint(Endpoint):
     def detached(self, terminate=DISCONNECT.TEMPORARY):
         if terminate == DISCONNECT.TERMINATE:
             self.port.queue.remove_writer(self.peer_port.id)
-        elif terminate == DISCONNECT.EXHAUST:
-            tokens = self.port.queue.exhaust(peer_id=self.peer_port.id, terminate=DISCONNECT.EXHAUST_INPORT)
-            self.remaining_tokens = {self.port.id: tokens}
-        elif terminate == DISCONNECT.EXHAUST_PEER:
-            tokens = self.port.queue.exhaust(peer_id=self.peer_port.id, terminate=DISCONNECT.EXHAUST_PEER_RECV)
-            self.remaining_tokens = {self.port.id: tokens}
 
     def get_peer(self):
         return ('local', self.peer_id)
@@ -88,12 +79,6 @@ class LocalOutEndpoint(Endpoint):
         elif terminate == DISCONNECT.TERMINATE:
             self.port.queue.cancel(self.peer_port.id)
             self.port.queue.remove_reader(self.peer_port.id)
-        elif terminate == DISCONNECT.EXHAUST:
-            tokens = self.port.queue.exhaust(peer_id=self.peer_port.id, terminate=DISCONNECT.EXHAUST_OUTPORT)
-            self.remaining_tokens = {self.port.id: tokens}
-        elif terminate == DISCONNECT.EXHAUST_PEER:
-            tokens = self.port.queue.exhaust(peer_id=self.peer_port.id, terminate=DISCONNECT.EXHAUST_PEER_SEND)
-            self.remaining_tokens = {self.port.id: tokens}
 
     def get_peer(self):
         return ('local', self.peer_id)
@@ -120,16 +105,6 @@ class LocalOutEndpoint(Endpoint):
                 break
             except QueueFull:
                 # Could not write, rollback read
-                _log.debug("LOCAL QUEUE FULL %d %s" % (self.peer_endpoint.pressure_count, self.peer_id))
                 self.port.queue.com_cancel(self.peer_id, nbr)
-                if (self.peer_endpoint and
-                        self.peer_endpoint.pressure[(self.peer_endpoint.pressure_count - 1) % PRESSURE_LENGTH][0] != nbr):
-                    self.peer_endpoint.pressure[self.peer_endpoint.pressure_count % PRESSURE_LENGTH] = (nbr, time.time())
-                    self.peer_endpoint.pressure_count += 1
-                    # Inform scheduler about potential pressure event
-                    if self.scheduler:
-                        self.scheduler.trigger_pressure_event(self.peer_port.owner.id)
                 break
-        if self.peer_endpoint and nbr is not None:
-            self.peer_endpoint.pressure_last = nbr
         return sent

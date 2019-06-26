@@ -239,10 +239,8 @@ class TunnelConnection(BaseConnection):
         except:
             _log.exception("Did not have remaining_tokens")
             remaining_tokens = {}
-        self.port.exhausted_tokens(remaining_tokens)
         if terminate:
-            self.node.storage.add_port(self.port, self.node.id, self.port.owner.id,
-                                        exhausting_peers=list(remaining_tokens.keys()))
+            self.node.storage.add_port(self.port, self.node.id, self.port.owner.id)
         if not getattr(self, 'sent_callback', False) and not self._parallel_connections:
             # Last peer connection we should send OK
             if self.callback:
@@ -263,10 +261,8 @@ class TunnelConnection(BaseConnection):
         # Disconnect and destroy endpoints
         remaining_tokens = self._destroy_endpoints(terminate=terminate)
         self._deserialize_remaining_tokens(peer_remaining_tokens)
-        self.port.exhausted_tokens(peer_remaining_tokens)
         if terminate:
-            self.node.storage.add_port(self.port, self.node.id, self.port.owner.id,
-                                        exhausting_peers=list(peer_remaining_tokens.keys()))
+            self.node.storage.add_port(self.port, self.node.id, self.port.owner.id)
         self._serialize_remaining_tokens(remaining_tokens)
         return response.CalvinResponse(True, {'remaining_tokens': remaining_tokens})
 

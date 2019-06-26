@@ -48,7 +48,6 @@ class BaseScheduler(object):
         self._scheduled = None
         # FIXME: later
         self._maintenance_delay = _conf.get(None, "maintenance_delay") or 300
-        self._pressure_event_actor_ids = set([])
 
     # System entry point
     def run(self):
@@ -98,12 +97,6 @@ class BaseScheduler(object):
     def unregister_endpoint(self, endpoint):
         pass
 
-    def trigger_pressure_event(self, actor_id=None):
-        """ Schedule an pressure event for actor_id """
-        _log.debug("trigger_pressure_event %s" % actor_id)
-        self._pressure_event_actor_ids.add(actor_id)
-        self.insert_task(self._check_pressure, 0)
-
     ######################################################################
     # Stuff that needs to be implemented in a subclass
     ######################################################################
@@ -120,12 +113,6 @@ class BaseScheduler(object):
     # Semi-private stuff, should be cleaned up later
     ######################################################################
 
-    def _check_pressure(self):
-        _log.debug("_check_pressure %s" % self._pressure_event_actor_ids)
-        # self.node.rm.check_pressure(self._pressure_event_actor_ids)
-        self._pressure_event_actor_ids = set([])
-        if not [True for t in self._tasks if t[1] == self._check_pressure]:
-            self.insert_task(self._check_pressure, 30)
     #
     # Maintenance loop
     #
@@ -244,7 +231,7 @@ class BaseScheduler(object):
         #
         done = False
         while not done:
-            did_fire, output_ok, exhausted = actor.fire()
+            did_fire = actor.fire()
             actor_did_fire |= did_fire
             if did_fire:
                 #
@@ -255,10 +242,6 @@ class BaseScheduler(object):
             else:
                 #
                 # We reached the end of the list without ANY firing during this round
-                # => handle exhaustion and return
-                #
-                # FIXME: Move exhaust handling to scheduler
-                actor._handle_exhaustion(exhausted, output_ok)
                 done = True
 
         return actor_did_fire
@@ -280,15 +263,11 @@ class BaseScheduler(object):
         done = False
         actor_did_fire = False
         while not done:
-            did_fire, output_ok, exhausted = actor.fire()
+            did_fire = actor.fire()
             actor_did_fire |= did_fire
             if not did_fire:
                 #
                 # We reached the end of the list without ANY firing during this round
-                # => handle exhaustion and return
-                #
-                # FIXME: Move exhaust handling to scheduler
-                actor._handle_exhaustion(exhausted, output_ok)
                 done = True
 
         return actor_did_fire
@@ -305,12 +284,7 @@ class BaseScheduler(object):
         if not actor._authorized():
             return False
 
-        did_fire, output_ok, exhausted = actor.fire()
-        if not did_fire:
-            # => handle exhaustion and return
-            #
-            # FIXME: Move exhaust handling to scheduler
-            actor._handle_exhaustion(exhausted, output_ok)
+        did_fire = actor.fire()
 
         return did_fire
 

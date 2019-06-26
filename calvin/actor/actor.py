@@ -81,7 +81,7 @@ def condition(action_input=[], action_output=[]):
     """
     Decorator condition specifies the required input data and output space.
     Both parameters are lists of port names
-    Return value is a tuple (did_fire, output_available, exhaust_list)
+    Return value is a tuple (did_fire, output_available)
     """
 
     tokens_produced = len(action_output)
@@ -101,21 +101,18 @@ def condition(action_input=[], action_output=[]):
             output_ok = all(self.outports[portname].tokens_available(1) for portname in action_output)
 
             if not input_ok or not output_ok:
-                return (False, output_ok, ())
+                return False
             #
             # Build the arguments for the action from the input port(s)
             #
-            exhausted_ports = set()
             exception = False
             args = []
             for portname in action_input:
                 port = self.inports[portname]
-                token, exhaust = port.read()
+                token = port.read()
                 is_exception_token = isinstance(token, ExceptionToken)
                 exception = exception or is_exception_token
-                args.append(token if is_exception_token else token.value )
-                if exhaust:
-                   exhausted_ports.add(port)
+                args.append(token if is_exception_token else token.value)
             #
             # Check for exceptional conditions
             #
@@ -145,7 +142,7 @@ def condition(action_input=[], action_output=[]):
                 port = self.outports[portname]
                 port.write_token(retval if isinstance(retval, Token) else Token(retval))
 
-            return (True, True, exhausted_ports)
+            return True
 
         return condition_wrapper
     return wrap
@@ -164,7 +161,7 @@ def stateguard(action_guard):
         @functools.wraps(action_method)
         def guard_wrapper(self, *args):
             if not action_guard(self):
-                return (False, True, ())
+                return False
             return action_method(self, *args)
 
         return guard_wrapper
@@ -350,8 +347,6 @@ class Actor(object):
         self.sec = security
         self._subject_attributes = self.sec.get_subject_attributes() if self.sec is not None else None
         self.authorization_checks = None
-        self._exhaust_cb = None
-        self._pressure_event = 0  # Time of last pressure event time (not in state only local)
 
         self.inports = {p: actorport.InPort(p, self, pp) for p, pp in iter(self.inport_properties.items())}
         self.outports = {p: actorport.OutPort(p, self, pp) for p, pp in iter(self.outport_properties.items())}
@@ -467,44 +462,8 @@ class Actor(object):
         # If we made it here, all ports are disconnected
         self.fsm.transition_to(Actor.STATUS.READY)
 
-    def exhaust(self, callback):
-        self._exhaust_cb = callback
-
-    def get_pressure(self):
-        # _log.debug("get_pressure %s" % self._replication_id.measure_pressure())
-        # if not self._replication_id.measure_pressure():
-        #     return None
-        t = time.time()
-        pressure = {}
-        for port in self.inports.values():
-            for e in port.endpoints:
-                PRESSURE_LENGTH = len(e.pressure)
-                pressure[port.id + "," + e.peer_id] = {'last': e.pressure_last, 'count': e.pressure_count,
-                    'pressure': [e.pressure[i % PRESSURE_LENGTH] for i in range(
-                                        max(0, e.pressure_count - PRESSURE_LENGTH), e.pressure_count)]}
-        pressure_event = False
-        for p in pressure.values():
-            if len(p['pressure']) < 2:
-                continue
-            if ((p['pressure'][-1][1] - p['pressure'][-2][1]) < 10 and
-                 p['pressure'][-1][1] > self._pressure_event):
-                # Less than 10 sec between queue full and not reported, maybe scale out
-                self._pressure_event = max(p['pressure'][-1][1], self._pressure_event)
-                pressure_event = True
-                break
-            if (p['pressure'][-1][1] < (t - 30) and
-                p['last'] > p['pressure'][-1][0] + 3 and
-                p['pressure'][-1][1] > self._pressure_event):
-                # More than 30 sec since queue full, received at least 3 tokens and not reported, maybe scale in
-                self._pressure_event = max(p['pressure'][-1][1], self._pressure_event)
-                pressure_event = True
-                break
-        pressure['time'] = t
-        _log.debug("get_pressure pressure_event:%s, pressure: %s" % (pressure_event, pressure))
-        return pressure if pressure_event else None
-
     #
-    # FIXME: The following methods (_authorized, _warn_slow_actor, _handle_exhaustion) were
+    # FIXME: The following methods (_authorized, _warn_slow_actor) were
     #        extracted from fire() to make the logic easier to follow
     # FIXME: Responsibility of scheduler, not actor class
     #
@@ -526,43 +485,25 @@ class Actor(object):
         self._last_time_warning = start_time
         _log.warning("%s (%s) actor blocked for %f sec" % (self._name, self._type, time_spent))
 
-    def _handle_exhaustion(self, exhausted_ports, output_ok):
-        _log.debug("actor_fire %s test exhaust %s, %s, %s" % (self._id, self._exhaust_cb is not None, exhausted_ports, output_ok))
-        for port in exhausted_ports:
-            # Might result in actor changing to PENDING
-            try:
-                port.finished_exhaustion()
-            except:
-                _log.exception("FINSIHED EXHAUSTION FAILED")
-        if (output_ok and self._exhaust_cb is not None and
-            not any([p.any_outstanding_exhaustion_tokens() for p in self.inports.values()])):
-            _log.debug("actor %s exhausted" % self._id)
-            # We are in exhaustion, got all exhaustion tokens from peer ports
-            # but stopped firing while outport token slots available, i.e. exhausted inports or deadlock
-            # FIXME handle exhaustion deadlock
-            # Initiate disconnect of outports and destroy the actor
-            asynchronous.DelayedCall(0, self._exhaust_cb, status=response.CalvinResponse(True))
-            self._exhaust_cb = None
-
     @verify_status([STATUS.ENABLED])
     def fire(self):
         """
         Fire an actor.
-        Returns tuple (did_fire, output_ok, exhausted)
+        Returns tuple did_fire
         """
         #
         # Go over the action priority list once
         #
         for action_method in self.__class__.action_priority:
-            did_fire, output_ok, exhausted = action_method(self)
+            did_fire = action_method(self)
             # Action firing should fire the first action that can fire
             if did_fire:
                 break
-        return did_fire, output_ok, exhausted
+        return did_fire
 
     def enabled(self):
         # We want to run even if not fully connected during exhaustion
-        r = self.fsm.state() == Actor.STATUS.ENABLED or self._exhaust_cb is not None
+        r = self.fsm.state() == Actor.STATUS.ENABLED
         if not r:
             _log.debug("Actor %s %s not enabled" % (self._name, self._id))
         return r

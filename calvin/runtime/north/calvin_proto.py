@@ -193,7 +193,6 @@ class CalvinProto(CalvinCBClass):
             'TUNNEL_NEW': [CalvinCB(self.tunnel_new_handler)],
             'TUNNEL_DESTROY': [CalvinCB(self.tunnel_destroy_handler)],
             'TUNNEL_DATA': [CalvinCB(self.tunnel_data_handler)],
-            'QUEUE_PRESSURE': [CalvinCB(self.queue_pressure_handler)],
             'REPLY': [CalvinCB(self.reply_handler)],
             'AUTHENTICATION_DECISION': [CalvinCB(self.authentication_decision_handler)],
             'AUTHORIZATION_REGISTER': [CalvinCB(self.authorization_register_handler)],
@@ -571,20 +570,6 @@ class CalvinProto(CalvinCBClass):
         self.node.pm.connect(port_id=payload['port_id'], peer_port_id=payload['peer_port_id'],
                 callback=CalvinCB(self.node.network.link_request, payload['from_rt_uuid'],
                     callback=CalvinCB(send_message, msg={'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid']})))
-
-    def queue_pressure(self, actor_id, replication_id, node_id, pressure, callback=None):
-        self.node.network.link_request(node_id, CalvinCB(send_message,
-             msg={'cmd': 'QUEUE_PRESSURE', 'actor_id': actor_id, 'replication_id':replication_id,
-                  'pressure': pressure},
-             callback=callback))
-
-    def queue_pressure_handler(self, payload):
-        """ Handle request for remote port connection """
-        reply = self.node.rm.update_pressure(actor_id=payload['actor_id'], replication_id=payload['replication_id'],
-                pressure=payload['pressure'])
-        # Send reply
-        msg = {'cmd': 'REPLY', 'msg_uuid': payload['msg_uuid'], 'value': reply.encode()}
-        self.network.link_request(payload['from_rt_uuid'], callback=CalvinCB(send_message, msg=msg))
 
     #### AUTHENTICATION ####
 

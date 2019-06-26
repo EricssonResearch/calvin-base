@@ -102,15 +102,11 @@ class LocalConnection(BaseConnection):
             ep.destroy()
         _log.analyze(self.node.id, "+ DISCONNECTED", {'port_id': self.port.id})
 
-        self.port.exhausted_tokens(peer_remaining_tokens)
-        self.peer_port_meta.port.exhausted_tokens(remaining_tokens)
 
         # Update storage, the ports are disconnected even if an inport during exhaustion still delivers tokens
         if terminate:
-            self.node.storage.add_port(self.port, self.node.id, self.port.owner.id,
-                                        exhausting_peers=list(peer_remaining_tokens.keys()))
-            self.node.storage.add_port(self.peer_port_meta.port, self.node.id, self.peer_port_meta.port.owner.id,
-                                        exhausting_peers=list(remaining_tokens.keys()))
+            self.node.storage.add_port(self.port, self.node.id, self.port.owner.id)
+            self.node.storage.add_port(self.peer_port_meta.port, self.node.id, self.peer_port_meta.port.owner.id)
 
         try:
             # Remove this peer from the list of peer connections

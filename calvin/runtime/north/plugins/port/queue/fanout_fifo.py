@@ -46,7 +46,6 @@ class FanoutFIFO(object):
         self.reader_offset = {}
         self._type = "fanout_fifo"
         self.writer = None  # Not part of state, assumed not needed in migrated information
-        self.exhausted_tokens = {}
         self.termination = {}
 
     def __str__(self):
@@ -113,75 +112,6 @@ class FanoutFIFO(object):
         self.readers.discard(reader)
         self.nbr_peers -= 1
 
-    def is_exhausting(self, peer_id=None):
-        if peer_id is None:
-            return bool(self.termination)
-        else:
-            return peer_id in self.termination
-
-    def exhaust(self, peer_id, terminate):
-        self.termination[peer_id] = (terminate, False)
-        _log.debug("exhaust %s %s %s" % (self._type, peer_id, DISCONNECT.reverse_mapping[terminate]))
-        if peer_id not in self.readers:
-            return []
-        if terminate in [DISCONNECT.EXHAUST_PEER_SEND, DISCONNECT.EXHAUST_OUTPORT]:
-            # Retrive remaining tokens to be returned
-            tokens = []
-            for read_pos in range(self.read_pos[peer_id], self.write_pos):
-                tokens.append([read_pos, self.fifo[read_pos % self.N]])
-            # Remove the peer, so no more waiting for this peer to read
-            self.remove_reader(peer_id)
-            _log.debug("Send exhaust tokens %s" % tokens)
-            del self.termination[peer_id]
-            return tokens
-        return []
-
-    def any_outstanding_exhaustion_tokens(self):
-        # Between having asked actor to exhaust and receiving exhaustion tokens we don't want to assume that
-        # the exhaustion is done.
-        return any([not t[1] for t in self.termination.values()])
-
-    def set_exhausted_tokens(self, tokens):
-        _log.debug("set_exhausted_tokens %s %s %s" % (self._type, tokens, {k:DISCONNECT.reverse_mapping[v[0]] for k, v in list(self.termination.items())}))
-        self.exhausted_tokens.update(tokens)
-        for peer_id in tokens:
-            try:
-                # We can get set_exhaust_token even after done with the termination, since it is a confirmation
-                # from peer port it has handled the exhaustion also
-                self.termination[peer_id] = (self.termination[peer_id][0], True)
-            except:
-                pass
-        remove = []
-        for peer_id, exhausted_tokens in list(self.exhausted_tokens.items()):
-            if self._transfer_exhaust_tokens(peer_id, exhausted_tokens):
-                remove.append(peer_id)
-        for peer_id in remove:
-            del self.exhausted_tokens[peer_id]
-        # If fully consumed remove peer_ids in tokens
-        for peer_id in tokens:
-            if (self.termination.get(peer_id, (-1,))[0] in [DISCONNECT.EXHAUST_PEER_RECV, DISCONNECT.EXHAUST_INPORT] and
-                min(list(self.read_pos.values()) or [0]) == self.write_pos):
-                del self.termination[peer_id]
-                # Acting as inport then only one reader, remove it if still around
-                try:
-                    reader = next(iter(self.readers))
-                    self.remove_reader(reader)
-                except:
-                    _log.exception("Tried to remove reader on fanout fifo")
-        return self.nbr_peers
-
-    def _transfer_exhaust_tokens(self, peer_id, exhausted_tokens):
-        # exhausted tokens are in sequence order, but could contain tokens already in queue
-        for pos, token in exhausted_tokens[:]:
-            if not self.slots_available(1, peer_id):
-                break
-            r = self.com_write(token, peer_id, pos)
-            _log.debug("exhausted_tokens on %s: (%d, %s) %s" % (
-                peer_id, pos, str(token), COMMIT_RESPONSE.reverse_mapping[r]))
-            # This is a token that now is in the queue, was in the queue or is invalid, for all cases remove it
-            exhausted_tokens.pop(0)
-        return not bool(exhausted_tokens)
-
     def get_peers(self):
         if self.direction == "out":
             return self.readers
@@ -226,12 +156,6 @@ class FanoutFIFO(object):
         _log.debug("COMMIT EXHAUSTING???")
         self.read_pos[metadata] = self.tentative_read_pos[metadata]
         remove = []
-        for peer_id, exhausted_tokens in list(self.exhausted_tokens.items()):
-            if self._transfer_exhaust_tokens(peer_id, self.exhausted_tokens[peer_id]):
-                # Emptied
-                remove.append(peer_id)
-        for peer_id in remove:
-            del self.exhausted_tokens[peer_id]
         # If fully consumed remove queue
         terminated = False
         if self.termination:

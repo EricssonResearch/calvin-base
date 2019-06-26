@@ -783,7 +783,7 @@ class Storage(PrivateStorage):
     def delete_actor_requirements(self, actor_id, cb=None):
         self.delete(prefix="actorreq-", key=actor_id, cb=cb)
 
-    def add_port(self, port, node_id, actor_id=None, exhausting_peers=None, cb=None):
+    def add_port(self, port, node_id, actor_id=None, cb=None):
         """
         Add port to storage
         """
@@ -793,9 +793,7 @@ class Storage(PrivateStorage):
         data = {"name": port.name, "connected": port.is_connected(),
                 "node_id": node_id, "actor_id": actor_id, "properties": port.properties}
         if port.is_connected():
-            if exhausting_peers is None:
-                exhausting_peers = []
-            data["peers"] = [peer for peer in port.get_peers() if peer[1] not in exhausting_peers]
+            data["peers"] = port.get_peers()
         self.set(prefix="port-", key=port.id, value=data, cb=cb)
 
     def get_port(self, port_id, cb=None):
