@@ -7,6 +7,9 @@ from calvin.runtime.north.calvin_proto import TunnelHandler
 _log = calvinlogger.get_logger(__name__)
 
 class StorageProxyTunnelHandler(TunnelHandler):
+    """docstring for StorageProxyTunnelHandler"""
+    def __init__(self, proto, proxy_cmds):
+        super(StorageProxyTunnelHandler, self).__init__(proto, 'storage', proxy_cmds)            
 
     # FIXME: Clean up this mess
     
@@ -53,7 +56,7 @@ class StorageProxyServer(object):
             'GET_INDEX': self.storage.get_index,
             'REPLY': self._proxy_reply,
         }
-        self.tunnel_handler = StorageProxyTunnelHandler(node.proto, 'storage', proxy_cmds)
+        self.tunnel_handler = StorageProxyTunnelHandler(node.proto, proxy_cmds)
     
     def _proxy_reply(self, cb, *args, **kwargs):
         # Should not get any replies to the server but log it just in case
