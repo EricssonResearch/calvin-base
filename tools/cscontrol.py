@@ -20,35 +20,12 @@
 import os
 import argparse
 import json
+
 from calvin.common.calvinlogger import get_logger
-# from calvin.common.security import Security
-# from calvin.common import certificate
+from calvin.common.attribute_resolver import format_index_string
+from .toolsupport.control_client import ControlAPI, ConnectionError
 
 _log = get_logger(__name__)
-_request_handler = None
-
-
-def get_request_handler(verify=None):
-    from .request_handler import RequestHandler
-    return _request_handler if _request_handler else RequestHandler(verify=verify)
-
-
-def control_id(args):
-    req_handler= handle_security_arguments(args)
-    return req_handler.get_node_id(args.node)
-
-
-def get_node_info(control_uri, node_id):
-    req_handler= handle_security_arguments(args)
-    try:
-        return req_handler.get_node(control_uri, node_id)
-    except:
-        raise Exception("No node with id {} found".format(node_id))
-
-
-def get_node_control_uri(control_uri, node_id):
-    nodeinfo = get_node_info(control_uri, node_id)
-    return nodeinfo.get("control_uri")
 
 
 def requirements_file(path):
@@ -68,25 +45,22 @@ def requirements_file(path):
     return reqs
 
 
-def handle_security_arguments(args):
-    security_dir = None
-    truststore_dir = None
-    # Argument to verify is either a path to CA bundle OR True/False, where True is the default
-    verify = truststore_dir or True
-    req_handler = get_request_handler(verify=verify)
-    return req_handler
+# Core
+def control_id(args):
+    req_handler = ControlAPI()
+    status, response = req_handler.get_node_id(args.node)
+    return status, response['id']
 
-
+# Core
 def control_deploy(args):
-    req_handler = handle_security_arguments(args)
+    req_handler = ControlAPI()
     with open(args.app, 'r') as fd:
         deployable = json.load(fd)
-    response = req_handler.deploy(args.node, deployable)
-    return response
+    return req_handler.deploy(args.node, deployable)
 
-
+# Core
 def control_actors(args):
-    req_handler= handle_security_arguments(args)
+    req_handler = ControlAPI()
     if args.cmd == 'list':
         return req_handler.get_actors(args.node)
     if args.cmd == 'info':
@@ -98,9 +72,9 @@ def control_actors(args):
             raise Exception("No actor or peer given")
         return req_handler.migrate(args.node, args.id, args.peer_node)
 
-
+# Core
 def control_applications(args):
-    req_handler= handle_security_arguments(args)
+    req_handler = ControlAPI()
     if args.cmd == 'info':
         if not args.id:
             raise Exception("No application id given")
@@ -117,10 +91,9 @@ def control_applications(args):
         deploy_info = requirements_file(args.reqs) if args.reqs else None
         return req_handler.migrate_app_use_req(rt=args.node, application_id=args.id, deploy_info=deploy_info)
 
-
+# Core
 def control_nodes(args):
-    from requests.exceptions import ConnectionError
-    req_handler= handle_security_arguments(args)
+    req_handler = ControlAPI()
     if args.cmd == 'info':
         if not args.id:
             raise Exception("No node id given")
@@ -132,13 +105,12 @@ def control_nodes(args):
             return req_handler.quit(args.node)
         except ConnectionError:
             # If the connection goes down before response that is OK
-            return None
+            return 200, None
 
 
+# Core
 def control_storage(args):
-    from calvin.common.attribute_resolver import format_index_string
-    import json
-    req_handler= handle_security_arguments(args)
+    req_handler = ControlAPI()
     if args.cmd == 'get_index':
         try:
             index = json.loads(args.index)
@@ -229,8 +201,11 @@ def parse_args():
 def main():
     args = parse_args()
     try:
-        r =  args.func(args)
-        print("OK" if r is None else json.dumps(r, indent=2))
+        status, retval =  args.func(args)
+        if status < 200 or status > 206:
+            print("Error status: {} with response:\n{}".format(status, response))
+        else:
+            print("OK" if retval is None else json.dumps(retval, indent=2))
     except Exception as e:
         print("Error {}".format(e))
 if __name__ == '__main__':

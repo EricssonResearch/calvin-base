@@ -48,7 +48,7 @@ def test_cscontrol_compile_deploy_delete_cycle(system_setup, execute_cmd_check_o
     status = json.loads(out)
     app_id = status["application_id"]
     assert len(app_id) == 36
-    assert '""' == execute_cmd_check_output("cscontrol {} applications delete {}".format(uri, app_id))
+    assert 'OK' == execute_cmd_check_output("cscontrol {} applications delete {}".format(uri, app_id))
     file = py.path.local(os.path.join(working_dir, "stdout.txt"))
     assert file.size() > 100
 
