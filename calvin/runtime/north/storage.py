@@ -302,6 +302,7 @@ class PrivateStorage(object):
             _log.analyze(self.node.id, "+", {'value': 'FailedElement', 'key': org_key})
             it.append((key, dynops.FailedElement) if include_key else dynops.FailedElement)
 
+    # FIXME: UNUSED
     def get_iter(self, prefix, key, it, include_key=False):
         """ Get single value for registry key: prefix+key,
             first look in locally set but not yet distributed registry.
@@ -499,6 +500,7 @@ class PrivateStorage(object):
             it.extend([(org_key, v) for v in value] if include_key else value)
         it.final()
 
+    # FIXME: include_key and root_prefix_level are UNUSED
     def get_index_iter(self, index, include_key=False, root_prefix_level=None):
         r"""
         Get multiple values from the registry stored at the index level or
@@ -653,6 +655,8 @@ class Storage(PrivateStorage):
         """
         Add application to storage
         """
+        # FIXME: Add method to application class: data_for_registry()?
+        
         _log.debug("Add application %s id %s" % (application.name, application.id))
 
         self.set(prefix="application-", key=application.id,
@@ -681,6 +685,7 @@ class Storage(PrivateStorage):
         """
         Add actor and its ports to storage
         """
+        # FIXME: Add method to actor class: data_for_registry()?
         # TODO need to store app-id
         _log.debug("Add actor %s id %s" % (actor, node_id))
         data = {"name": actor.name, "type": actor._type, "node_id": node_id}

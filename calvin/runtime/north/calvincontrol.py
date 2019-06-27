@@ -97,19 +97,17 @@ class CalvinControlBase(object):
             # TODO: Answer permantely moved (301) instead with header Location: <another-calvin-runtime>???
             self.send_response(handle, None, status=calvinresponse.INTERNAL_ERROR)
             return
+        handler, match = self._handler_for_route(command)
+        if not handler:
+            _log.error("No route found for: %s\n%s" % (command, data))
+            self.send_response(handle, None, status=404)
+            return
         try:
-            handler, match = self._handler_for_route(command)
-            if handler:
-                credentials = None
-                if data:
-                    data = json.loads(data)
-                _log.debug("Calvin control handles:%s\n%s\n---------------" % (command, data))
-                handler(handle, match, data, headers)
-            else:
-                _log.error("No route found for: %s\n%s" % (command, data))
-                self.send_response(handle, None, status=404)
-        except Exception as e:
-            _log.info("Failed to parse request", exc_info=e)
+            data = json.loads(data or 'null')
+            _log.debug("Calvin control handles:%s\n%s\n---------------" % (command, data))
+            handler(handle, match, data, headers)
+        except Exception as err:
+            _log.error("Failed to parse request", err)
             self.send_response(handle, None, status=calvinresponse.BAD_REQUEST)
 
     def prepare_response(self, data, status, content_type):
