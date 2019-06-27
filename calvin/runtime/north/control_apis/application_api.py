@@ -247,7 +247,7 @@ def handle_deploy(self, handle, match, data, hdr):
         print(self.node.id, "Deployer instantiated")
         d.deploy()
     except Exception as e:
-        print("Deployer failed")
+        _log.exception(f"Deployer failed: {e}")
         self.send_response(
             handle,
             json.dumps({'exception': str(e)}),
