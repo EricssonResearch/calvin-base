@@ -168,6 +168,45 @@ class CalvinTunnel(object):
             #FIXME use the tunnel_destroy cmd directly instead
             raise NotImplementedError()
 
+class TunnelHandler(object):
+
+    def __init__(self, proto, name, cmd_map):
+        self.name = name
+        self._proxy_cmds = cmd_map
+        self.tunnels = {}
+        proto.register_tunnel_handler(self.name, CalvinCB(self.tunnel_request_handler))
+        
+    def __str__(self):
+        return "{} registered as '{}', implementing: {}".format(self.__class__.__name__, self.name, ", ".join(list(self._proxy_cmds.keys())))    
+            
+    def tunnel_request_handler(self, tunnel):
+        """ Incoming tunnel request for proxy server"""
+        self.tunnels[tunnel.peer_node_id] = tunnel  # FIXME: In tunnel up?            
+        tunnel.register_tunnel_down(CalvinCB(self.tunnel_down, tunnel))
+        tunnel.register_tunnel_up(CalvinCB(self.tunnel_up, tunnel))
+        tunnel.register_recv(CalvinCB(self.tunnel_recv_handler, tunnel))
+        return True
+
+    def tunnel_down(self, tunnel):
+        """ Callback that the tunnel is not accepted or is going down """
+        self.tunnels.pop(tunnel.peer_node_id, None)
+        return True
+
+    def tunnel_up(self, tunnel):
+        """ Callback that the tunnel is working """
+        return True
+
+    def tunnel_recv_handler(self, tunnel, payload):
+        """ Gets called when a proxy client request """
+        try:
+            self._proxy_cmds[payload['cmd']](tunnel=tunnel, payload=payload)
+        except Excption as err:
+            _log.error("Unknown request:\n{}\in {}".format(payload, self))
+
+    def send_reply(self, tunnel, msgid, value):
+        data = {'cmd': 'REPLY', 'msg_uuid': msgid, 'value': value}
+        tunnel.send(data)
+    
 
 class CalvinProto(CalvinCBClass):
     """ CalvinProto class is the interface between runtimes for all runtime

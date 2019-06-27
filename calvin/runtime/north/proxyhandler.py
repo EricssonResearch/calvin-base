@@ -16,12 +16,14 @@
 
 import time
 import json
+
 from calvin.common.calvinlogger import get_logger
 from calvin.common.calvin_callback import CalvinCB
 import calvin.common.calvinresponse as response
 from calvin.common.attribute_resolver import AttributeResolver
 from calvin.actor.port_property_syntax import list_port_property_capabilities
 from calvin.common.requirement_matching import ReqMatch
+from calvin.runtime.north.calvin_proto import TunnelHandler
 from calvin.common import calvinconfig
 
 _log = get_logger(__name__)
@@ -77,49 +79,24 @@ class ProxyHandler(object):
 
     def __init__(self, node):
         self.node = node
-        self.tunnels = {}
         self.peers = {}
-        self._proxy_cmds = {'CONFIG': self.handle_config,
-                            'REQ_MATCH': self.handle_req_match,
-                            'WILL_SLEEP': self.handle_will_sleep,
-                            'WAKEUP': self.handle_wakeup,
-                            'GET_ACTOR_MODULE': self.handle_get_actor_module,
-                            'DESTROY_REPLY' : self.handle_destroy_reply}
-        self.node.proto.register_tunnel_handler('proxy', CalvinCB(self.tunnel_request_handler))
-
-    def tunnel_request_handler(self, tunnel):
-        """ Incoming tunnel request for proxy server"""
-        self.tunnels[tunnel.peer_node_id] = tunnel
-        tunnel.register_tunnel_down(CalvinCB(self.tunnel_down, tunnel))
-        tunnel.register_tunnel_up(CalvinCB(self.tunnel_up, tunnel))
-        tunnel.register_recv(CalvinCB(self.tunnel_recv_handler, tunnel))
-        return True
-
-    def tunnel_down(self, tunnel):
-        """ Callback that the tunnel is not accepted or is going down """
-        del self.tunnels[tunnel.peer_node_id]
-        return True
-
-    def tunnel_up(self, tunnel):
-        """ Callback that the tunnel is working """
-        return True
-
-    def tunnel_recv_handler(self, tunnel, payload):
-        """ Gets called when a proxy client request """
-        if 'cmd' in payload and payload['cmd'] in self._proxy_cmds:
-            self._proxy_cmds[payload['cmd']](tunnel=tunnel, payload=payload)
-        else:
-            _log.error("Unknown proxy request %s" % payload['cmd'] if 'cmd' in payload else "")
-
-    def _proxy_send_reply(self, tunnel, msgid, value):
-        data = {'cmd': 'REPLY', 'msg_uuid': msgid, 'value': value}
-        tunnel.send(data)
+        proxy_cmds = {
+            'CONFIG': self.handle_config,
+            'REQ_MATCH': self.handle_req_match,
+            'WILL_SLEEP': self.handle_will_sleep,
+            'WAKEUP': self.handle_wakeup,
+            'GET_ACTOR_MODULE': self.handle_get_actor_module,
+            'DESTROY_REPLY' : self.handle_destroy_reply
+        }
+        self.tunnel_handler = TunnelHandler(self.node.proto, 'proxy', proxy_cmds)
+        
 
     def handle_config_cb(self, key, value, tunnel, msgid):
         if not value:
-            self._proxy_send_reply(tunnel, msgid, response.CalvinResponse(response.INTERNAL_ERROR, {'peer_node_id': key}).encode())
-            return
-        self._proxy_send_reply(tunnel, msgid, response.CalvinResponse(response.OK, {'time': time.time()}).encode())
+            resp = response.CalvinResponse(response.INTERNAL_ERROR, {'peer_node_id': key}).encode()
+        else:
+            resp = response.CalvinResponse(response.OK, {'time': time.time()}).encode()
+        self.tunnel_handler.send_reply(tunnel, msgid, resp)
 
     def handle_config(self, tunnel, payload):
         """
@@ -148,7 +125,7 @@ class ProxyHandler(object):
         if link is None:
             _log.error("Proxy link does not exist")
         else:
-            self._proxy_send_reply(tunnel, payload['msg_uuid'], response.CalvinResponse(response.OK).encode())
+            self.tunnel_handler.send_reply(tunnel, payload['msg_uuid'], response.CalvinResponse(response.OK).encode())
             link.set_peer_insleep()
 
     def handle_wakeup(self, tunnel, payload):
@@ -156,18 +133,16 @@ class ProxyHandler(object):
         Handle peer wakeup
         """
         _log.info("Constrained runtime '%s' awake" % tunnel.peer_node_id)
-        self._proxy_send_reply(tunnel, payload['msg_uuid'], response.CalvinResponse(response.OK, {'time': time.time()}).encode())
+        self.tunnel_handler.send_reply(tunnel, payload['msg_uuid'], response.CalvinResponse(response.OK, {'time': time.time()}).encode())
 
     def handle_req_match_cb(self, status, possible_placements, actor_id, max_placements, tunnel, msgid):
         if not possible_placements:
-            self._proxy_send_reply(tunnel,
-                msgid,
-                response.CalvinResponse(response.NOT_FOUND, {'actor_id': actor_id}).encode())
-            return
-        pp = list(possible_placements)
-        self._proxy_send_reply(tunnel,
-            msgid,
-            response.CalvinResponse(response.OK, {'actor_id': actor_id, 'possible_placements': pp[:max_placements]}).encode())
+            resp = response.CalvinResponse(response.NOT_FOUND, {'actor_id': actor_id})
+            # self.tunnel_handler.send_reply(tunnel, msgid, )
+        else:
+            pp = list(possible_placements)
+            resp = response.CalvinResponse(response.OK, {'actor_id': actor_id, 'possible_placements': pp[:max_placements]})
+        self.tunnel_handler.send_reply(tunnel, msgid, resp.encode())
 
     def handle_req_match(self, tunnel, payload):
         actor_id = payload['actor_id']
@@ -189,9 +164,8 @@ class ProxyHandler(object):
             if payload['compiler'] == 'mpy-cross':
                 try:
                     path = path + '/mpy-cross/' + actor_type.replace('.', '/') + '.mpy'
-                    f = open(path, 'r')
-                    data = f.read()
-                    f.close()
+                    with open(path, 'r') as f:
+                        data = f.read()
                     ok = True
                 except IOError as e:
                     _log.error("Failed to open '%s'" % path)
@@ -199,13 +173,10 @@ class ProxyHandler(object):
                 _log.error("Unknown compiler '%s'" % payload['compiler'])
 
         if ok:
-            self._proxy_send_reply(tunnel,
-                payload['msg_uuid'],
-                response.CalvinResponse(response.OK, {'actor_type': actor_type, 'module': data}).encode())
+            resp = response.CalvinResponse(response.OK, {'actor_type': actor_type, 'module': data})
         else:
-            self._proxy_send_reply(tunnel,
-                payload['msg_uuid'],
-                response.CalvinResponse(response.INTERNAL_ERROR, {'actor_type': actor_type, 'module': None}).encode())
+            resp = response.CalvinResponse(response.INTERNAL_ERROR, {'actor_type': actor_type, 'module': None})
+        self.tunnel_handler.send_reply(tunnel, payload['msg_uuid'], resp.encode())
 
     def get_capabilities(self, peer_id):
         if peer_id in self.peers:
@@ -222,7 +193,7 @@ class ProxyHandler(object):
 
     def destroy(self, peer_id, method):
         try:
-            tunnel = self.tunnels[peer_id]
+            tunnel = self.tunnel_handler.tunnels[peer_id]
             tunnel.send({"cmd": "DESTROY", "method": method})
         except Exception as e:
             _log.error("Failed to destroy %s %s" % (peer_id, e))
