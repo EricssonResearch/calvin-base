@@ -184,7 +184,7 @@ class TunnelHandler(object):
         self.tunnels[tunnel.peer_node_id] = tunnel  # FIXME: In tunnel up?            
         tunnel.register_tunnel_down(CalvinCB(self.tunnel_down, tunnel))
         tunnel.register_tunnel_up(CalvinCB(self.tunnel_up, tunnel))
-        tunnel.register_recv(CalvinCB(self.tunnel_recv_handler, tunnel))
+        tunnel.register_recv(CalvinCB(self._tunnel_recv_handler, tunnel))
         return True
 
     def tunnel_down(self, tunnel):
@@ -196,12 +196,19 @@ class TunnelHandler(object):
         """ Callback that the tunnel is working """
         return True
 
-    def tunnel_recv_handler(self, tunnel, payload):
+    def _tunnel_recv_handler(self, tunnel, payload):
         """ Gets called when a proxy client request """
         try:
-            self._proxy_cmds[payload['cmd']](tunnel=tunnel, payload=payload)
-        except Excption as err:
-            _log.error("Unknown request:\n{}\in {}".format(payload, self))
+            self.tunnel_recv_handler(tunnel, payload)
+        except Exception as err:
+            _log.error("Unknown request:\n{}\in {}\nerror: {}".format(payload, self, err))
+
+    def tunnel_recv_handler(self, tunnel, payload):
+        """
+        Gets called when a payload arrives. 
+        Subclasses should raise exception on error.
+        """
+        self._proxy_cmds[payload['cmd']](tunnel=tunnel, payload=payload)
 
     def send_reply(self, tunnel, msgid, value):
         data = {'cmd': 'REPLY', 'msg_uuid': msgid, 'value': value}

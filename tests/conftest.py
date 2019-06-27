@@ -86,6 +86,7 @@ def dummy_node():
             self.id = str(uuid.uuid4())
             self.control_uri = "http://localhost:5001"
             self.pm = Mock()
+            self.proto = Mock()
             self.storage = Mock()
             self.control = Mock()
             self.attributes = Mock()
