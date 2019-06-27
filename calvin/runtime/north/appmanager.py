@@ -589,7 +589,7 @@ class Deployer(object):
           - 'info' is information about the actor
         """
         actor_type = info['actor_type']
-        actor_def = self.node.am.lookup_and_verify(actor_type)
+        actor_def = self.node.actorstore.lookup_and_verify_actor(actor_type)
         info['requires'] = actor_def.requires if hasattr(actor_def, "requires") else []
         self._verified_actors[actor_name] = (info, actor_def)
         if cb:

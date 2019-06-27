@@ -21,8 +21,8 @@ import pytest
 
 from calvin.runtime.north.calvinsys import CalvinSys
 from calvin.runtime.north.calvinlib import CalvinLib
-from calvin.runtime.north.actormanager import class_factory
-from calvinservices.actorstore.store import Pathinfo 
+from calvin.common import metadata_proxy as actorstore
+from calvinservices.actorstore.store import Pathinfo
 
 from calvin.runtime.north.calvin_token import Token
 from calvin.runtime.north.plugins.port.endpoint import Endpoint
@@ -32,7 +32,7 @@ from calvin.common import calvinlogger
 
 _log = calvinlogger.get_logger(__name__)
 
-        
+
 class MockCalvinSys(CalvinSys):
 
     def init(self, capabilities):
@@ -317,7 +317,7 @@ def mock_calvinsys():
 @pytest.fixture
 def mock_calvinlib():
     """Mock calvinlib instance"""
-    cl = MockCalvinLib()    
+    cl = MockCalvinLib()
     cl.init(capabilities={
         "math.arithmetic.compare": {
             "module": "mathlib.Arithmetic"
@@ -355,7 +355,7 @@ def mock_calvinlib():
         }
     })
     return cl
-    
+
 class DummyInEndpoint(Endpoint):
 
     """
@@ -460,18 +460,18 @@ def run_actor_unittests(aut, actor_type, mock_sys):
                 actual = set(actual)
             if actual != expected:
                 __tracebackhide__ = True
-                pytest.fail("Failed test {}, {}\nActual output '{}' does not match expected '{}'".format(test_index, test, actual, expected))    
+                pytest.fail("Failed test {}, {}\nActual output '{}' does not match expected '{}'".format(test_index, test, actual, expected))
 
         if not all(f(aut) for f in postconds):
             __tracebackhide__ = True
             pytest.fail("Failed post condition of test {}".format(test_index))
-    
+
 
 
 def actor_list():
     # return ['std.Sum', 'flow.Init']
     dir_path = os.path.dirname(os.path.realpath(__file__))
-    dir_path = os.path.join(dir_path, "../../../calvinservices/actorstore/systemactors")    
+    dir_path = os.path.join(dir_path, "../../../calvinservices/actorstore/systemactors")
     actors = []
     for dirpath, dirnames, filenames in os.walk(dir_path):
         filenames = [os.path.join(dirpath, f) for f in filenames if f.endswith('.py') and f != '__init__.py']
@@ -487,29 +487,29 @@ def actor_list():
 def test_actors(mock_calvinsys, mock_calvinlib, monkeypatch, store, actor_type):
     # Patch the global _calvinsys used by get_calvinsys
     import calvin.runtime.north.calvinsys
-    monkeypatch.setattr(calvin.runtime.north.calvinsys, '_calvinsys', mock_calvinsys)    
+    monkeypatch.setattr(calvin.runtime.north.calvinsys, '_calvinsys', mock_calvinsys)
     import calvin.runtime.north.calvinlib
-    monkeypatch.setattr(calvin.runtime.north.calvinlib, '_calvinlib', mock_calvinlib)    
-    
+    monkeypatch.setattr(calvin.runtime.north.calvinlib, '_calvinlib', mock_calvinlib)
+
     # 1. Load class from store
     metadata = store.get_metadata(actor_type)
     src = store.get_source(actor_type)
     assert metadata['type'] == 'actor'
-    actor_class = class_factory(src, metadata, actor_type)
+    actor_class = actorstore.class_factory(src, metadata, actor_type)
 
     # 2. Check for unit test information
     if hasattr(actor_class, 'test_args') and actor_class.test_args:
         pytest.fail("Actor unittest argument 'test_args' is deprecated and only 'test_kwargs' should be used")
-    kwargs = actor_class.test_kwargs if hasattr(actor_class, 'test_kwargs') else {}  
+    kwargs = actor_class.test_kwargs if hasattr(actor_class, 'test_kwargs') else {}
     test_set = actor_class.test_set if hasattr(actor_class, 'test_set') else []
     if not test_set:
-        pytest.skip("No 'test_set' provided for {}".format(actor_type)) 
-    
+        pytest.skip("No 'test_set' provided for {}".format(actor_type))
+
     # 3. Instatiate actor
     actor = actor_class('aut', disable_state_checks=True)
     actor.init(**kwargs)
     actor.setup_complete()
-    
+
     # 4. Attach ports
     for inport in actor.inports.values():
         inport.set_queue(queue.fanout_fifo.FanoutFIFO({'queue_length': 100, 'direction': "in"}, {}))
@@ -519,10 +519,10 @@ def test_actors(mock_calvinsys, mock_calvinlib, monkeypatch, store, actor_type):
         outport.set_queue(queue.fanout_fifo.FanoutFIFO({'queue_length': 100, 'direction': "out"}, {}))
         outport.queue.add_reader(actor.id, {})
         outport.endpoints.append(DummyOutEndpoint(outport))
-    
+
     # 5. Run unittests
-    run_actor_unittests(actor, actor_type, mock_calvinsys) 
-    
-    
+    run_actor_unittests(actor, actor_type, mock_calvinsys)
+
+
 if __name__ == '__main__':
-    print(actor_list())    
+    print(actor_list())

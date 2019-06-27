@@ -32,37 +32,6 @@ def log_callback(reply, **kwargs):
     if reply:
         _log.info("%s: %s" % (kwargs['prefix'], reply))
 
-def class_factory(src, metadata, actor_type):
-    co = compile(src, actor_type, 'exec')
-    import calvin.actor.actor as caa
-    import calvin.common.calvinlogger as clog
-    import calvin.runtime.north.calvin_token as ctok
-    import copy as ccopy
-    namespace = {
-        'Actor':caa.Actor, 
-        'manage':caa.manage, 
-        'condition':caa.condition, 
-        'stateguard':caa.stateguard, 
-        'calvinsys':caa.calvinsys,
-        'calvinlib':caa.calvinlib, 
-        'get_logger':clog.get_logger,
-        'get_actor_logger':clog.get_actor_logger,
-        'calvinlogger': clog,
-        'EOSToken': ctok.EOSToken,
-        'ExceptionToken': ctok.ExceptionToken,
-        'deepcopy': ccopy.deepcopy,
-    }
-    exec(co, namespace)
-    _, name = actor_type.split('.') 
-    actor_class = namespace[name]
-    # append metadata
-    actor_class.requires = metadata['requires']
-    actor_class.inport_properties = {} # {p: pp for p, pp in inports}
-    actor_class.outport_properties = {} #{p: pp for p, pp in outports}
-    for port in metadata["ports"]:
-        target = actor_class.inport_properties if port['direction'] == "in" else actor_class.outport_properties
-        target[port['name']] = port.get('properties', {})
-    return actor_class
 
 
 class ActorManager(object):
@@ -134,7 +103,7 @@ class ActorManager(object):
     def _new_actor(self, actor_type, class_=None, actor_id=None):
         """Return a 'bare' actor of actor_type, raises an exception on failure."""
         if class_ is None:
-            class_ = self.lookup_and_verify(actor_type)
+            class_ = self.node.actorstore.lookup_and_verify_actor(actor_type)
         try:
             # Create a 'bare' instance of the actor
             a = class_(actor_type, actor_id=actor_id)
@@ -163,7 +132,7 @@ class ActorManager(object):
         """Instantiate an actor of type 'actor_type' and apply the 'state' to the actor."""
         try:
             _log.analyze(self.node.id, "+", state)
-            actor_def = self.lookup_and_verify(actor_type)
+            actor_def = self.node.actorstore.lookup_and_verify_actor(actor_type)
             requirements = actor_def.requires if hasattr(actor_def, "requires") else []
             self.check_requirements(requirements=requirements,
                                                    callback=CalvinCB(self.new, actor_type, None,
@@ -227,21 +196,6 @@ class ActorManager(object):
         self.destroy(actor_id)
         if callback:
             callback(status=status)
-
-    def new_actorstore_lookup(self, actor_type):
-        metadata = self.node.actorstore.get_metadata(actor_type)
-        src = self.node.actorstore.get_source(actor_type)
-        found = src is not None
-        is_primitive = True
-        actor_def = class_factory(src, metadata, actor_type) if found else None
-        return (found, is_primitive, actor_def)
-        
-    def lookup_and_verify(self, actor_type):
-        """Lookup and verify actor in actor store."""
-        found, is_primitive, actor_def = self.new_actorstore_lookup(actor_type)
-        if not found or not is_primitive:
-            raise Exception("Not known actor type: %s" % actor_type)
-        return actor_def
 
     def check_requirements(self, requirements, callback):
         for req in requirements:
