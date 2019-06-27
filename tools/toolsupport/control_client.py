@@ -50,6 +50,11 @@ class ControlAPI(object):
         response = requests.get(host_uri + NODE_PATH.format(node_id))
         return response.status_code, response.json()
 
+    # cscontrol
+    def get_nodes(self, host_uri):
+        response = requests.get(host_uri + NODES)
+        return response.status_code, response.json()
+        
     # # cscontrol
     def quit(self, host_uri, method=None):
         if method is None:
