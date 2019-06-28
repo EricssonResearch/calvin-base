@@ -17,7 +17,7 @@
 from calvin.common.calvin_callback import CalvinCB
 from calvin.runtime.north.plugins.port import endpoint
 from calvin.runtime.north.calvin_token import Token
-from calvin.runtime.north.calvin_proto import CalvinTunnel
+from calvin.runtime.north.calvin_proto import CalvinTunnel, TunnelHandler
 from calvin.runtime.north.plugins.port import queue
 import calvin.common.calvinresponse as response
 from calvin.common import calvinlogger
@@ -25,6 +25,86 @@ from calvin.runtime.north.plugins.port.connection.common import BaseConnection, 
 from calvin.runtime.north.plugins.port import DISCONNECT
 
 _log = calvinlogger.get_logger(__name__)
+
+
+class TokenTunnel(TunnelHandler):
+    """ Handles token transport over tunnel, common instance for all token tunnel connections """
+    def __init__(self, proto, get_local_port):
+        cmd_map = {
+            'TOKEN': self.recv_token_handler,
+            'TOKEN_REPLY': self.recv_token_reply_handler
+        }
+        super(TokenTunnel, self).__init__(proto, 'token', cmd_map)
+        self._get_local_port = get_local_port
+        self.pending_tunnels = {}  # key: peer_node_id, value: list of CalvinCB instances
+
+    def _inform_ports(self, peer_node_id, status):
+        for callback in self.pending_tunnels.get(peer_node_id, []):
+            try:
+                callback(status=response.CalvinResponse(status))
+            except:
+                pass
+        self.pending_tunnels.pop(peer_node_id, None)
+
+    def tunnel_down(self, tunnel):
+        """ Callback that the tunnel is not accepted or is going down """
+        super().tunnel_down(tunnel)
+        # If a port connect have ordered a tunnel then it have a callback in pending
+        # which want information on the failure
+        self._inform_ports(tunnel.peer_node_id, False)
+        return True
+
+    def tunnel_up(self, tunnel):
+        """ Callback that the tunnel is working """
+        super().tunnel_up(tunnel)
+        # If a port connect have ordered a tunnel then it have a callback in pending
+        # which want to continue with the connection
+        self._inform_ports(tunnel.peer_node_id, True)
+        return True
+
+    def recv_token_handler(self, tunnel, payload):
+        """ Gets called when a token arrives on any port """
+        try:
+            port = self._get_local_port(port_id=payload['peer_port_id'])
+        except:
+            # Inform other end that it sent token to a port that does not exist on this node or
+            # that we have initiated a disconnect (endpoint does not have recv_token).
+            # Can happen e.g. when the actor and port just migrated and the token was in the air
+            _log.debug("recv_token_handler, ABORT")
+            reply = {'cmd': 'TOKEN_REPLY',
+                     'port_id': payload['port_id'],
+                     'peer_port_id': payload['peer_port_id'],
+                     'sequencenbr': payload['sequencenbr'],
+                     'value': 'ABORT'}
+            tunnel.send(reply)
+        else:
+            for e in port.endpoints:
+                # We might have started a disconnect, just ignore in that case
+                # it is sorted out if we connect again
+                try:
+                    if e.peer_id == payload['port_id']:
+                        e.recv_token(payload)
+                        break
+                except:
+                    pass
+
+    def recv_token_reply_handler(self, tunnel, payload):
+        """ Gets called when a token is (N)ACKed for any port """
+        try:
+            port = self._get_local_port(port_id=payload['port_id'])
+        except:
+            pass
+        else:
+            # Send the reply to correct endpoint (an outport may have several when doing fan-out)
+            for e in port.endpoints:
+                # We might have started disconnect before getting the reply back, just ignore in that case
+                # it is sorted out if we connect again
+                try:
+                    if e.get_peer()[1] == payload['peer_port_id']:
+                        e.reply(payload['sequencenbr'], payload['value'])
+                        break
+                except:
+                    pass
 
 
 class TunnelConnection(BaseConnection):
@@ -278,114 +358,8 @@ class TunnelConnection(BaseConnection):
             ep.destroy()
         return remaining_tokens
 
-    class TokenTunnel(object):
-        """ Handles token transport over tunnel, common instance for all token tunnel connections """
-
-        def __init__(self, node, pm):
-            super(TunnelConnection.TokenTunnel, self).__init__()
-            self.node = node
-            self.pm = pm
-            self.proto = node.proto
-            # Register that we are interested in peer's requests for token transport tunnels
-            self.proto.register_tunnel_handler('token', CalvinCB(self.tunnel_request_handles))
-            self.tunnels = {}  # key: peer_node_id, value: tunnel instances
-            self.pending_tunnels = {}  # key: peer_node_id, value: list of CalvinCB instances
-            # Alias to port manager's port lookup
-            self._get_local_port = self.pm._get_local_port
-
-        def tunnel_request_handles(self, tunnel):
-            """ Incoming tunnel request for token transport """
-            # TODO check if we want a tunnel first
-            self.tunnels[tunnel.peer_node_id] = tunnel
-            tunnel.register_tunnel_down(CalvinCB(self.tunnel_down, tunnel))
-            tunnel.register_tunnel_up(CalvinCB(self.tunnel_up, tunnel))
-            tunnel.register_recv(CalvinCB(self.tunnel_recv_handler, tunnel))
-            # We accept it by returning True
-            return True
-
-        def tunnel_down(self, tunnel):
-            """ Callback that the tunnel is not accepted or is going down """
-            tunnel_peer_id = tunnel.peer_node_id
-            try:
-                self.tunnels.pop(tunnel_peer_id)
-            except:
-                pass
-
-            # If a port connect have ordered a tunnel then it have a callback in pending
-            # which want information on the failure
-            if tunnel_peer_id in self.pending_tunnels:
-                for cb in self.pending_tunnels[tunnel_peer_id]:
-                    try:
-                        cb(status=response.CalvinResponse(False))
-                    except:
-                        pass
-                self.pending_tunnels.pop(tunnel_peer_id)
-            # We should always return True which sends an OK on the destruction of the tunnel
-            return True
-
-        def tunnel_up(self, tunnel):
-            """ Callback that the tunnel is working """
-            tunnel_peer_id = tunnel.peer_node_id
-            # If a port connect have ordered a tunnel then it have a callback in pending
-            # which want to continue with the connection
-            if tunnel_peer_id in self.pending_tunnels:
-                for cb in self.pending_tunnels[tunnel_peer_id]:
-                    try:
-                        cb(status=response.CalvinResponse(True))
-                    except:
-                        pass
-                self.pending_tunnels.pop(tunnel_peer_id)
-
-        def recv_token_handler(self, tunnel, payload):
-            """ Gets called when a token arrives on any port """
-            try:
-                port = self._get_local_port(port_id=payload['peer_port_id'])
-                for e in port.endpoints:
-                    # We might have started a disconnect, just ignore in that case
-                    # it is sorted out if we connect again
-                    try:
-                        if e.peer_id == payload['port_id']:
-                            e.recv_token(payload)
-                            break
-                    except:
-                        pass
-            except:
-                # Inform other end that it sent token to a port that does not exist on this node or
-                # that we have initiated a disconnect (endpoint does not have recv_token).
-                # Can happen e.g. when the actor and port just migrated and the token was in the air
-                _log.debug("recv_token_handler, ABORT")
-                reply = {'cmd': 'TOKEN_REPLY',
-                         'port_id': payload['port_id'],
-                         'peer_port_id': payload['peer_port_id'],
-                         'sequencenbr': payload['sequencenbr'],
-                         'value': 'ABORT'}
-                tunnel.send(reply)
-
-        def recv_token_reply_handler(self, tunnel, payload):
-            """ Gets called when a token is (N)ACKed for any port """
-            try:
-                port = self._get_local_port(port_id=payload['port_id'])
-            except:
-                pass
-            else:
-                # Send the reply to correct endpoint (an outport may have several when doing fan-out)
-                for e in port.endpoints:
-                    # We might have started disconnect before getting the reply back, just ignore in that case
-                    # it is sorted out if we connect again
-                    try:
-                        if e.get_peer()[1] == payload['peer_port_id']:
-                            e.reply(payload['sequencenbr'], payload['value'])
-                            break
-                    except:
-                        pass
-
-        def tunnel_recv_handler(self, tunnel, payload):
-            """ Gets called when we receive a message over a tunnel """
-            if 'cmd' in payload:
-                if 'TOKEN' == payload['cmd']:
-                    self.recv_token_handler(tunnel, payload)
-                elif 'TOKEN_REPLY' == payload['cmd']:
-                    self.recv_token_reply_handler(tunnel, payload)
 
     def init(self):
-        return TunnelConnection.TokenTunnel(self.node, self.kwargs['portmanager'])
+        # Alias to port manager's port lookup
+        get_local_port = self.kwargs['portmanager']._get_local_port
+        return TokenTunnel(self.node.proto, get_local_port)
