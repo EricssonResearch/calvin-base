@@ -23,6 +23,7 @@ from calvin.common.calvin_callback import CalvinCB
 from calvin.runtime.south import asynchronous
 from calvin.common import calvinresponse
 from calvin.common import calvinconfig
+from calvin.runtime.north.calvin_proto import TunnelHandler
 #
 # Dynamically build selected set of APIs
 #
@@ -43,6 +44,7 @@ def factory(node, use_proxy, uri, external_control_uri=None):
         return CalvinControlTunnelClient(node, uri)
     else:
         return CalvinControl(node, uri, external_control_uri)
+
 
 class CalvinControlBase(object):
 
@@ -175,6 +177,37 @@ class CalvinControlBase(object):
     def log_log_message(self, message):
         pass
 
+
+class ControlTunnelHandler(TunnelHandler):
+    """docstring for ControlTunnelHandler"""
+    def __init__(self, proto, host, external_host):
+        super(ControlTunnelHandler, self).__init__(proto, 'control', {})
+        self.host = host
+        self.external_host = external_host
+        self.controltunnels = {}
+
+    def tunnel_request_handler(self, tunnel):
+        """ Incoming tunnel request for control proxy server
+            Start a socket server and update peer node with control uri
+        """
+        # FIXME: Move to tunnel up?
+        self.controltunnels[tunnel.peer_node_id] = CalvinControlTunnelServer(tunnel, self.host, self.external_host)
+        return super().tunnel_request_handler(tunnel)
+
+    def tunnel_down(self, tunnel):
+        """ Callback that the tunnel is not accepted or is going down """
+        server = self.controltunnels.pop(tunnel.peer_node_id)
+        server.close()
+        return super().tunnel_down(tunnel)
+
+    def tunnel_recv_handler(self, tunnel, payload):
+        self.controltunnels[tunnel.peer_node_id].handle_response(payload)
+
+    def stop(self):
+        for _, control in self.controltunnels.items():
+            control.close()
+
+
 class CalvinControl(CalvinControlBase):
     """ An HTTP REST API for calvin nodes
     """
@@ -184,8 +217,7 @@ class CalvinControl(CalvinControlBase):
         url = urlparse(self.uri)
         self.host = url.hostname
         self.port = int(url.port)
-        self.tunnels = {}
-        self.controltunnels = {}
+        self.tunnel_handler = None
         self.external_host = urlparse(external_control_uri).hostname if external_control_uri is not None else self.host
 
     def start(self):
@@ -195,14 +227,13 @@ class CalvinControl(CalvinControlBase):
         self.server.start()
 
         if self.external_host is not None:
-            self.node.proto.register_tunnel_handler("control", CalvinCB(self.tunnel_request_handles))
+            self.tunnel_handler = ControlTunnelHandler(self.node.proto, self.host, self.external_host)
 
     def stop(self):
         """ Stop """
         self.server.stop()
-        if self.external_host is not None:
-            for _, control in self.controltunnels.items():
-                control.close()
+        if self.tunnel_handler:
+            self.tunnel_handler.stop()
 
     def send_response(self, handle, data, status=200, content_type=None):
         """ Send response header text/html
@@ -227,37 +258,6 @@ class CalvinControl(CalvinControlBase):
         response = self.prepare_optionsheader(hdr)
         self.server.send_response(handle, response)
 
-    def tunnel_request_handles(self, tunnel):
-        """ Incoming tunnel request for storage proxy server
-            Start a socket server and update peer node with control uri
-        """
-        # Register tunnel
-        print("******** {} ********".format(tunnel))
-        self.tunnels[tunnel.peer_node_id] = tunnel
-        self.controltunnels[tunnel.peer_node_id] = CalvinControlTunnelServer(tunnel, self.host, self.external_host)
-        tunnel.register_tunnel_down(CalvinCB(self.tunnel_down, tunnel))
-        tunnel.register_tunnel_up(CalvinCB(self.tunnel_up, tunnel))
-        tunnel.register_recv(CalvinCB(self.tunnel_recv_handler, tunnel))
-        # We accept it by returning True
-        return True
-
-    def tunnel_down(self, tunnel):
-        """ Callback that the tunnel is not accepted or is going down """
-        self.controltunnels[tunnel.peer_node_id].close()
-        del self.tunnels[tunnel.peer_node_id]
-        del self.controltunnels[tunnel.peer_node_id]
-        # We should always return True which sends an ACK on the destruction of the tunnel
-        return True
-
-    def tunnel_up(self, tunnel):
-        """ Callback that the tunnel is working """
-        _log.analyze(self.node.id, "+ SERVER", {"tunnel_id": tunnel.id})
-        # We should always return True which sends an ACK on the destruction of the tunnel
-        return True
-
-    def tunnel_recv_handler(self, tunnel, payload):
-        """ Gets called when a storage client request"""
-        self.controltunnels[tunnel.peer_node_id].handle_response(payload)
 
 
 class CalvinControlTunnelServer(object):
