@@ -11,7 +11,7 @@ from calvin.runtime.north.calvin_proto import CalvinProto
 def test_control_tunnel_server():
     # Give the dummy node communication power (for proxy tests)
     node = Mock()
-    node.control_uri = "http://localhost:5001"
+    node.control_uri = "http://localhost:5003"
     node.control = calvincontrol.CalvinControl(node, node.control_uri, node.control_uri)
     node.network = CalvinNetwork(node)
     node.proto = CalvinProto(node, node.network)

@@ -76,7 +76,6 @@ def _storage(request, working_dir):
     mode, host, system_config = request.param
     config = yaml.load(system_config, Loader=yaml.SafeLoader)
     sysmgr = orchestration.SystemManager(config, working_dir)
-    print(config)
     # Give the dummy node communication power (for proxy tests)
     node = Mock()
     node.control = CalvinControl(node, "http://localhost:5001")
@@ -145,8 +144,6 @@ def _storage(request, working_dir):
 
 def test_set_get_delete(_storage):
     def cb(*args, **kwargs):
-        print(f"{args}")
-        print(f"{kwargs}")
         assert not args
         assert len(kwargs) == 3
         assert 'key' in kwargs
