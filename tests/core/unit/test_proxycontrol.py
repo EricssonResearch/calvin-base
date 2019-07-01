@@ -15,18 +15,19 @@ def test_control_tunnel_server():
     node.control = calvincontrol.CalvinControl(node, node.control_uri, node.control_uri)
     node.network = CalvinNetwork(node)
     node.proto = CalvinProto(node, node.network)
+    node.control.start()
 
 #    ts = calvincontrol.CalvinControlTunnelServer(node, None)
 
     tunnel = Mock()
     tunnel.peer_node_id = "other_id"
 
-    assert node.control.tunnel_request_handles(tunnel)
+    assert node.control.tunnel_handler.tunnel_request_handler(tunnel)
     tunnel.register_tunnel_down.assert_called_once()
     tunnel.register_tunnel_up.assert_called_once()
     tunnel.register_recv.assert_called_once()
-    assert node.control.controltunnels[tunnel.peer_node_id]
-    control_tunnel = node.control.controltunnels[tunnel.peer_node_id]
+    assert node.control.tunnel_handler.controltunnels[tunnel.peer_node_id]
+    control_tunnel = node.control.tunnel_handler.controltunnels[tunnel.peer_node_id]
     print(control_tunnel)
 
     tunnel.send.assert_called_once()
@@ -34,15 +35,15 @@ def test_control_tunnel_server():
         name, args, kwargs = call_
         print(name, args, kwargs)
 
-    assert node.control.tunnel_up(tunnel)
+    assert node.control.tunnel_handler.tunnel_up(tunnel)
 
 
-    node.control.tunnel_recv_handler(tunnel, {})
+    node.control.tunnel_handler.tunnel_recv_handler(tunnel, {})
     for index, call_ in enumerate(tunnel.method_calls):
         name, args, kwargs = call_
         print(name, args, kwargs)
 
-    assert node.control.tunnel_down(tunnel)
-    assert tunnel.peer_node_id not in node.control.controltunnels
-    assert tunnel.peer_node_id not in node.control.tunnels
+    assert node.control.tunnel_handler.tunnel_down(tunnel)
+    assert tunnel.peer_node_id not in node.control.tunnel_handler.controltunnels
+    # assert tunnel.peer_node_id not in node.control.tunnels
     # tunnel.close.assert_called_once()
