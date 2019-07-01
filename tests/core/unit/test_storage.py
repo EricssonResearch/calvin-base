@@ -15,18 +15,18 @@ storage_configs = [
     (
         'local', None, "[]"),
     (
-        'rest', 
-        "http://127.0.0.1:4998", 
+        'rest',
+        "http://127.0.0.1:4998",
         """
         - class: REGISTRY
           name: registry
           port: 4998
           type: REST
         """
-    ),    
+    ),
     (
-        'proxy', 
-        "http://127.0.0.1:5000", 
+        'proxy',
+        "http://127.0.0.1:5000",
         """
         - class: RUNTIME
           name: runtime1
@@ -38,8 +38,8 @@ storage_configs = [
         """
     ),
     (
-        'proxy', 
-        "http://127.0.0.1:5000", 
+        'proxy',
+        "http://127.0.0.1:5000",
         """
         - class: REGISTRY
           name: registry
@@ -59,19 +59,19 @@ storage_configs = storage_configs
 @pytest.fixture(scope='module', params=storage_configs)
 def _storage(request, working_dir):
     """
-    Setup a test system according to a system config in YAML or JSON and pass 
+    Setup a test system according to a system config in YAML or JSON and pass
     the system info to the tests.
-    
-    The test module must define either 
+
+    The test module must define either
     - 'system_config_file' to name a config file in 'tests/systems/', or
     - 'system_config' to be a string with the system config
     where the latter is suitable for very simple setups only.
-    
-    This fixture relies on the tool-suite (csruntime et al.) so it is probably 
+
+    This fixture relies on the tool-suite (csruntime et al.) so it is probably
     a good idea to make sure that they are tested first.
 
-    This fixture pretty much replaces all previous fixtures and avoids 
-    monkeypatching environment etc.    
+    This fixture pretty much replaces all previous fixtures and avoids
+    monkeypatching environment etc.
     """
     mode, host, system_config = request.param
     config = yaml.load(system_config, Loader=yaml.SafeLoader)
@@ -83,18 +83,18 @@ def _storage(request, working_dir):
     node.network = CalvinNetwork(node)
     node.proto = CalvinProto(node, node.network)
     storage = Storage(node, mode, host)
-    storage.start()    
+    storage.start()
 
     yield storage
 
     sysmgr.teardown()
-    
-    
+
+
 # def test_foo(system_setup2):
 #     assert system_setup2 in [1, 2]
-        
 
-    
+
+
 # set(self, prefix, key, value, cb):
 # """ Set registry key: prefix+key to be single value: value
 #     It is assumed that the prefix and key are strings,
@@ -103,7 +103,7 @@ def _storage(request, working_dir):
 #     note that the key here is without the prefix and
 #     value indicate success.
 # """
-# 
+#
 # get(self, prefix, key, cb):
 # """ Get single value for registry key: prefix+key,
 #     first look in locally set but not yet distributed registry
@@ -113,8 +113,8 @@ def _storage(request, working_dir):
 #     note that the key here is without the prefix.
 #     CalvinResponse object is returned when value is not found.
 # """
-# 
-# 
+#
+#
 # get_iter(self, prefix, key, it, include_key=False):
 # """ Get single value for registry key: prefix+key,
 #     first look in locally set but not yet distributed registry.
@@ -132,7 +132,7 @@ def _storage(request, working_dir):
 #     Value is False when value has been deleted and
 #     None if never set (this is current behaviour and might change).
 # """
-# 
+#
 # delete(self, prefix, key, cb):
 # """ Delete registry key: prefix+key
 #     It is assumed that the prefix and key are strings,
@@ -144,19 +144,24 @@ def _storage(request, working_dir):
 # """
 
 def test_set_get_delete(_storage):
-    def cb(expected, *args, **kwargs):
+    def cb(*args, **kwargs):
+        print(f"{args}")
+        print(f"{kwargs}")
         assert not args
-        assert len(kwargs) == 2
-        assert 'key' in kwargs 
+        assert len(kwargs) == 3
+        assert 'key' in kwargs
         assert 'value' in kwargs
-        if expected:
-            assert kwargs['value'] == expected
-        
+        key = kwargs.get('key')
+        value = kwargs.get('value')
+        expected = kwargs.get('expected')
+        assert key == 'key'
+        assert expected == value
+
     _storage.set('prefix', 'key', 'value', cb=CalvinCB(cb, expected=200))
     _storage.get('prefix', 'key', cb=CalvinCB(cb, expected='value'))
     _storage.delete('prefix', 'key', cb=CalvinCB(cb, expected=200))
     _storage.get('prefix', 'key', cb=CalvinCB(cb, expected=404))
-    
+
 
 # get_iter(self, prefix, key, it, include_key=False):
 # """ Get single value for registry key: prefix+key,
@@ -193,8 +198,8 @@ def test_get_iter(_storage):
     with pytest.raises(Exception) as exc_info:
         value = next(it)
     assert exc_info.type is dynops.PauseIteration
-    
-    
+
+
 # add_index(self, index, value, root_prefix_level=None, cb=None):
 # """
 # Add single value (e.g. a node id) or list to a set stored in registry
@@ -280,51 +285,51 @@ def test_add_remove_get_delete_index(_storage):
         if expected:
             if type(expected) is set:
                 assert set(kwargs['value']) == expected
-            else:    
+            else:
                 assert kwargs['value'] == expected
-        
-    # cb returns {'value': <calvin.requests.calvinresponse.CalvinResponse>, 'key': 'NO-SUCH-KEY'} 
-    _storage.add_index("node/affiliation/owner/com.ericsson/me", 'foo', 
-        root_prefix_level=2, 
+
+    # cb returns {'value': <calvin.requests.calvinresponse.CalvinResponse>, 'key': 'NO-SUCH-KEY'}
+    _storage.add_index("node/affiliation/owner/com.ericsson/me", 'foo',
+        root_prefix_level=2,
         cb=CalvinCB(cb, expected=200))
-    _storage.add_index("node/affiliation/owner/com.ericsson/you", 'bar', 
-        root_prefix_level=2, 
+    _storage.add_index("node/affiliation/owner/com.ericsson/you", 'bar',
+        root_prefix_level=2,
         cb=CalvinCB(cb, expected=200))
     # cb returns {'value': <list>}
-    _storage.get_index("node/affiliation/owner/com.ericsson/me",         
-        root_prefix_level=2, 
+    _storage.get_index("node/affiliation/owner/com.ericsson/me",
+        root_prefix_level=2,
         cb=CalvinCB(cb, expected=['foo']))
-    _storage.get_index("node/affiliation/owner/com.ericsson/you",         
-        root_prefix_level=2, 
+    _storage.get_index("node/affiliation/owner/com.ericsson/you",
+        root_prefix_level=2,
         cb=CalvinCB(cb, expected=['bar']))
-    _storage.get_index("node/affiliation/owner/com.ericsson",         
-        root_prefix_level=2, 
+    _storage.get_index("node/affiliation/owner/com.ericsson",
+        root_prefix_level=2,
         cb=CalvinCB(cb, expected=set(['foo', 'bar'])))
     # cb returns  {'key': 'NO-SUCH-KEY', 'value': CalvinResponse(status=200)}
-    _storage.remove_index("node/affiliation/owner/com.ericsson/you", 'baz', 
-        root_prefix_level=2, 
+    _storage.remove_index("node/affiliation/owner/com.ericsson/you", 'baz',
+        root_prefix_level=2,
         cb=CalvinCB(cb, expected=200))
-    _storage.remove_index("node/affiliation/owner/com.ericsson/you", 'bar', 
-        root_prefix_level=2, 
+    _storage.remove_index("node/affiliation/owner/com.ericsson/you", 'bar',
+        root_prefix_level=2,
         cb=CalvinCB(cb, expected=200))
-    _storage.get_index("node/affiliation/owner/com.ericsson",         
-        root_prefix_level=2, 
+    _storage.get_index("node/affiliation/owner/com.ericsson",
+        root_prefix_level=2,
         cb=CalvinCB(cb, expected=set(['foo'])))
-    _storage.remove_index("node/affiliation/owner/com.ericsson", 'foo', 
-        root_prefix_level=2, 
+    _storage.remove_index("node/affiliation/owner/com.ericsson", 'foo',
+        root_prefix_level=2,
         cb=CalvinCB(cb, expected=200))
-    _storage.get_index("node/affiliation/owner/com.ericsson",         
-        root_prefix_level=2, 
+    _storage.get_index("node/affiliation/owner/com.ericsson",
+        root_prefix_level=2,
         cb=CalvinCB(cb, expected=set(['foo'])))
-    _storage.remove_index("node/affiliation/owner/com.ericsson/me", 'foo', 
-        root_prefix_level=2, 
+    _storage.remove_index("node/affiliation/owner/com.ericsson/me", 'foo',
+        root_prefix_level=2,
         cb=CalvinCB(cb, expected=200))
-    _storage.get_index("node/affiliation/owner/com.ericsson",         
-        root_prefix_level=2, 
+    _storage.get_index("node/affiliation/owner/com.ericsson",
+        root_prefix_level=2,
         cb=CalvinCB(cb, expected=set()))
     with pytest.raises(NotImplementedError):
         _storage.delete_index("node/affiliation/owner/com.ericsson")
-        
+
 
 # get_index_iter(self, index, include_key=False, root_prefix_level=None):
 # """
@@ -347,7 +352,7 @@ def test_add_remove_get_delete_index(_storage):
 #     of how they are used. The final method will be called when
 #     all values are appended to the returned dynamic iterable.
 # """
-    
+
 
 @pytest.mark.skipif(reason="Can't test this without async support")
 def test_get_index_iter(_storage):
@@ -381,6 +386,6 @@ def test_get_index_iter(_storage):
     with pytest.raises(Exception) as exc_info:
         value = next(it)
     assert exc_info.type in [StopIteration, dynops.PauseIteration]
-    
+
 
 

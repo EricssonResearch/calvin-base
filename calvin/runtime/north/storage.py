@@ -50,7 +50,7 @@ def _index_strings(index, root_prefix_level):
 
     return items
 
-                    
+
 class PrivateStorage(object):
 
     """
@@ -61,7 +61,7 @@ class PrivateStorage(object):
     def __init__(self, node, storage_type, server=None):
         self.node = node
         self.localstorage = LocalRegistry()
-        self.storage = NullRegistryClient() 
+        self.storage = NullRegistryClient()
 
         self.storage_type = storage_type
         self.storage_host = server
@@ -204,7 +204,7 @@ class PrivateStorage(object):
         """ Called when storage has started, flushes localstore
         """
         # print "started_cb", args, kwargs
-        
+
         if not args[0]:
             return
         # self.storage = registry(self.node, self.storage_type)
@@ -225,8 +225,8 @@ class PrivateStorage(object):
         if self.storage_type != 'local':
             self.storage = registry(self.storage_type, self.node, self.storage_host)
         self.storage.start(CalvinCB(self.started_cb, org_cb=cb))
-        
-        if self.storage_type != 'proxy':         
+
+        if self.storage_type != 'proxy':
             self.storage_proxy_server = StorageProxyServer(self.node, self)
 
 
@@ -240,7 +240,7 @@ class PrivateStorage(object):
 
     def barrier(self):
         self.storage.barrier()
-    
+
     ### Storage operations ###
 
     def set_cb(self, key, value, org_key, org_value, org_cb, silent=False):
@@ -288,7 +288,7 @@ class PrivateStorage(object):
         try:
             value = self.localstorage.get(prefix + key)
             cb(key=key, value=value)
-        except:    
+        except:
             self.storage.get(key=prefix + key, cb=CalvinCB(func=self.get_cb, org_cb=cb, org_key=key))
 
     def get_iter_cb(self, key, value, it, org_key, include_key=False):
@@ -336,7 +336,7 @@ class PrivateStorage(object):
         """ delete callback
         """
         if org_cb:
-            org_cb(org_key, value)
+            org_cb(key=org_key, value=value)
 
     def delete(self, prefix, key, cb):
         r""" Delete registry key: prefix+key
@@ -361,7 +361,7 @@ class PrivateStorage(object):
             self.reset_flush_timeout() # FIXME: Only if change made?
         else:
             if not silent:
-                _log.warning("Failed to update %s" % key)
+                _log.warning(f"Failed to update {key}")
 
         if org_cb:
             org_cb(value=value)
@@ -388,7 +388,7 @@ class PrivateStorage(object):
         indexes = _index_strings(index, root_prefix_level)
 
         self.localstorage.add_index(indexes=indexes, value=value)
-        
+
         self.storage.add_index(indexes=indexes, value=value,
                 cb=CalvinCB(self.add_index_cb, org_cb=cb, index_items=indexes, org_value=value))
 
@@ -401,7 +401,7 @@ class PrivateStorage(object):
             self.reset_flush_timeout() # FIXME: Only if change made?
         else:
             if not silent:
-                _log.warning("Failed to update %s" % key)
+                _log.warning(f"Failed to update {key}")
 
         if org_cb:
             org_cb(value=value)
@@ -428,7 +428,7 @@ class PrivateStorage(object):
         _log.debug("remove index %s: %s" % (index, value))
         # Get a list of the index levels
         indexes = _index_strings(index, root_prefix_level)
-        
+
         self.localstorage.remove_index(indexes=indexes, value=value)
 
         self.storage.remove_index(indexes=indexes, value=value,
@@ -461,7 +461,7 @@ class PrivateStorage(object):
         else:
             value = local_values
             if not silent:
-                _log.warning("Failed to find %s" % "/".join(index_items))
+                _log.warning("Failed to find {}".format("/".join(index_items)))
 
         if org_cb:
             org_cb(value=list(value))
@@ -532,8 +532,8 @@ class PrivateStorage(object):
         return it
 
 class Storage(PrivateStorage):
-#    
-# Secondary methods (using the above methods) 
+#
+# Secondary methods (using the above methods)
 #
 
     ### Calvin object handling ###
@@ -656,7 +656,7 @@ class Storage(PrivateStorage):
         Add application to storage
         """
         # FIXME: Add method to application class: data_for_registry()?
-        
+
         _log.debug("Add application %s id %s" % (application.name, application.id))
 
         self.set(prefix="application-", key=application.id,
