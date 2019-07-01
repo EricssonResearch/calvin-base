@@ -23,14 +23,6 @@ from unittest.mock import Mock, patch
 from calvin.runtime.north.calvincontrol import CalvinControl
 
 
-def calvincontrol():
-    control = CalvinControl()
-    control.send_response = Mock()
-    control.send_response = Mock()
-    control.node = Mock()
-    control.node.quitting = False
-    return control
-
 @pytest.fixture(scope="module", params=["prefixed", "non-prefixed"])
 def _uuids(request):
     if request.param == "prefixed":

@@ -23,7 +23,6 @@ filt.out > snk.token
 system_config = r"""
 - class: ACTORSTORE
   name: actorstore
-  port: 4999
   type: REST
 """
 

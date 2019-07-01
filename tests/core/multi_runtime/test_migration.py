@@ -33,11 +33,9 @@ testlist = [
 system_config = r"""
 - class: REGISTRY
   name: registry
-  port: 4998
   type: REST
 - class: ACTORSTORE
   name: actorstore
-  port: 4999
   type: REST
 - class: RUNTIME
   actorstore: $actorstore

@@ -10,11 +10,9 @@ import pytest
 system_config = """
 - class: REGISTRY
   name: registry
-  port: 4998
   type: REST
 - class: ACTORSTORE
   name: actorstore
-  port: 4999
   type: REST
 - class: RUNTIME
   name: testNode1
@@ -202,7 +200,7 @@ def deploy_application(request, system_setup, deploy_app, destroy_app):
 def test_deployment(deploy_application, control_api):
     setup, app_info, checker = deploy_application
     # FIXME: Adding some time for the registry to settle, add check instead.
-    time.sleep(2)
+    time.sleep(3)
     checker(setup, app_info, control_api)
     
     

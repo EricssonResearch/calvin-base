@@ -14,15 +14,11 @@ import pytest
 system_config = r"""
 - class: REGISTRY
   name: registry
-  port: 4998
   type: REST
 - class: RUNTIME
   name: rt1
-  registry:
-    uri: calvinip://127.0.0.1:5000
-    type: proxy
+  registry: $rt2
 - class: RUNTIME
-  rt2rt_port: 5000
   name: rt2
   registry: $registry
   control_proxy: $rt1

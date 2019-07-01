@@ -19,7 +19,6 @@ PORT=7789
 system_config = f"""
 - class: ACTORSTORE
   name: actorstore
-  port: 4999
   type: REST
 - class: RUNTIME
   name: runtime

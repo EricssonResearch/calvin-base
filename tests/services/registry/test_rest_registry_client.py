@@ -5,7 +5,7 @@ import subprocess
 import time
 
 import pytest
-from unittest.mock import MagicMock, Mock
+from unittest.mock import Mock
 from calvin.common.calvin_callback import CalvinCB
 from calvin.runtime.north.plugins.storage.storage_clients import RESTRegistryClient
 import calvin.common.calvinresponse as calvinresponse
@@ -18,25 +18,16 @@ from requests_futures.sessions import FuturesSession
 # Testing of remote storage
 #
 
-
-# FIXTURE: actorstore
-# Setup actorstore for the duration of the test module
-    
-
-# @pytest.fixture()
-# def _host():
-#     return "http://localhost:4998"
-
 system_config = r"""
 - class: REGISTRY
   name: registry
-  port: 4998
   type: REST
 """
 
 @pytest.fixture()
-def _registry():
-    r = RESTRegistryClient(None, "http://127.0.0.1:4998")
+def _registry(system_setup):
+    uri = system_setup['registry']['uri']
+    r = RESTRegistryClient(None, uri)
     return r    
     
 @pytest.fixture(scope='module')

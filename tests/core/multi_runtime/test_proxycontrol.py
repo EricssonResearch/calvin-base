@@ -7,7 +7,6 @@ import pytest
 system_config = r"""
 - class: REGISTRY
   name: registry
-  port: 4998
   type: REST
 - class: RUNTIME
   name: rt1
