@@ -42,6 +42,8 @@ from calvin.runtime.north.resource_monitor.cpu import CpuMonitor
 from calvin.runtime.north.resource_monitor.memory import MemMonitor
 from calvin.runtime.north.proxyhandler import ProxyHandler
 
+
+
 _log = get_logger(__name__)
 _conf = calvinconfig.get()
 
@@ -146,38 +148,6 @@ class Node(object):
 
         # The initialization that requires the main loop operating is deferred to start function
         asynchronous.DelayedCall(0, self.start)
-
-    def insert_local_reply(self):
-        msg_id = str(uuid.uuid4())
-        self.async_msg_ids[msg_id] = None
-        return msg_id
-
-    def set_local_reply(self, msg_id, reply):
-        if msg_id in self.async_msg_ids:
-            self.async_msg_ids[msg_id] = reply
-
-    def connect(self, actor_id=None, port_name=None, port_dir=None, port_properties=None, port_id=None,
-                peer_node_id=None, peer_actor_id=None, peer_port_name=None,
-                peer_port_dir=None, peer_port_properties=None, peer_port_id=None, cb=None):
-        if port_properties is None and port_dir is not None:
-            port_properties = {'direction': port_dir}
-        if peer_port_properties is None and peer_port_dir is not None:
-            peer_port_properties = {'direction': peer_port_dir}
-        self.pm.connect(actor_id=actor_id,
-                        port_name=port_name,
-                        port_properties=port_properties,
-                        port_id=port_id,
-                        peer_node_id=peer_node_id,
-                        peer_actor_id=peer_actor_id,
-                        peer_port_name=peer_port_name,
-                        peer_port_properties=peer_port_properties,
-                        peer_port_id=peer_port_id,
-                        callback=CalvinCB(self.logging_callback, preamble="connect cb")  if cb is None else cb)
-
-
-    def logging_callback(self, preamble=None, *args, **kwargs):
-        _log.debug("\n%s# NODE: %s \n# %s %s %s \n%s" %
-                   ('#' * 40, self.id, preamble if preamble else "*", args, kwargs, '#' * 40))
 
     #
     # Event loop
@@ -308,7 +278,7 @@ class Node(object):
 
     def _storage_started_cb(self, *args, **kwargs):
         pass
-        
+
 def setup_logging(filename):
 
     #from twisted.python import log
