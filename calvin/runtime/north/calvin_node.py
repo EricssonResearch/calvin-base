@@ -14,11 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from multiprocessing import Process
-# For trace
-import sys
 import os
-import trace
 import logging
 import uuid
 
@@ -48,20 +44,35 @@ _log = get_logger(__name__)
 _conf = calvinconfig.get()
 
 
-# FIXME: UNUSED
-def addr_from_uri(uri):
-    _, host = uri.split("://")
-    addr, _ = host.split(":")
-    return addr
-
-
 class Node(object):
-
-    """A node of calvin
-       the uri is a list of server connection points
-       the control_uri is the local console
-       attributes is a supplied list of external defined attributes that will be used as the key when storing index
-       such as name of node
+    """
+    Calvin runtime node
+    
+    Arguments:       
+        uris : a list of calvinip URIs that this runtime listens to
+        control_uri : the URI of the REST API (control) that this runtime listens to
+        attributes : an (optional) dictionary of externally defined attributes
+    
+    Properties:
+        quitting : a boolean set during shutdown
+        uris : 
+        control_uri : 
+        external_control_uri : 
+        attributes : 
+        node_name : 
+        id : 
+        actorstore : 
+        am : 
+        sched : 
+        storage : 
+        control : 
+        network : 
+        proto : 
+        pm : 
+        app_manager : 
+        cpu_monitor : 
+        mem_monitor : 
+        proxy_handler :         
     """
 
     def __init__(self, uris, control_uri, attributes=None):
@@ -69,72 +80,50 @@ class Node(object):
         self.quitting = False
         self.super_node_class = None
 
-        # Warn if its not a uri
+        attributes = attributes or {}
         if not isinstance(uris, list):
             _log.error("Calvin uris must be a list %s" % uris)
             raise TypeError("Calvin uris must be a list!")
 
         # Uris
-        self.uris = uris
-        if attributes:
-            ext_uris = attributes.pop('external_uri', None)
-        if ext_uris is not None:
-            self.uris += ext_uris
+        self.uris = uris + attributes.pop('external_uri', [])
 
         # Control uri
         self.control_uri = control_uri
-        self.external_control_uri = attributes.pop('external_control_uri', self.control_uri) \
-            if attributes else self.control_uri
+        self.external_control_uri = attributes.pop('external_control_uri', self.control_uri)
 
-        try:
-            self.attributes = AttributeResolver(attributes)
-        except:
-            _log.exception("Attributes not correct, uses empty attribute!")
-            self.attributes = AttributeResolver(None)
+        self.attributes = AttributeResolver(attributes)
+        
         self.node_name = self.attributes.get_node_name_as_str()
         # Obtain node id, when using security also handle runtime certificate
         self.id = str(uuid.uuid4())
+        
         actorstore_uri = _conf.get('global', 'actorstore')
         self.actorstore = mdproxy.ActorMetadataProxy(actorstore_uri)
+        
         self.am = actormanager.ActorManager(self)
 
-        # _scheduler = scheduler.DebugScheduler if _log.getEffectiveLevel() <= logging.DEBUG else scheduler.Scheduler
-        # _scheduler = scheduler.NonPreemptiveScheduler
-        # _scheduler = scheduler.RoundRobinScheduler
-        _scheduler = scheduler.SimpleScheduler
-        # _scheduler = scheduler.BaselineScheduler
-        self.sched = _scheduler(self, self.am)
-        self.async_msg_ids = {}
+        self.sched = scheduler.SimpleScheduler(self, self.am)
+        
+        
         calvinsys = get_calvinsys()
         calvinsys.init(self)
         calvinlib = get_calvinlib()
         calvinlib.init()
 
-        # Default will multicast and listen on all interfaces
-        # TODO: be able to specify the interfaces
-        # @TODO: Store capabilities
-        # storage.Storage(node, storage_type, server=None, security_conf=None, override_storage=None)
 
         storage_type = _conf.get('global', 'storage_type')
         storage_host = _conf.get('global', 'storage_host')
         self.storage = storage.Storage(self, storage_type, server=storage_host)
-
-        proxy_control_uri = _conf.get(None, 'control_proxy')
-        _log.info("+++++++++++++++ proxy_control_uri: %s" % proxy_control_uri)
-        _log.info("+++++++++++++++ self.control_uri: %s" % self.control_uri)
-        if proxy_control_uri:
-            _log.info("+++++++++++++++ proxy_control_uri overrides control_uri")
+        
         #
         # FIXME: The following section is sensitive to order due to circular references
         #
-        if proxy_control_uri:
-            self.control = calvincontrol.factory(self, True, proxy_control_uri)
-        else:
-            self.control = calvincontrol.factory(self, False, self.control_uri, self.external_control_uri)
+        proxy_control_uri = _conf.get(None, 'control_proxy')
+        self.control = self.start_control(proxy_control_uri)
 
         self.network = CalvinNetwork(self)
         self.proto = CalvinProto(self, self.network)
-
         #
         # FIXME: The above section is sensitive to order due to circular references
         #
@@ -150,6 +139,18 @@ class Node(object):
         # The initialization that requires the main loop operating is deferred to start function
         asynchronous.DelayedCall(0, self.start)
 
+
+    def start_control(self, proxy_control_uri):
+        _log.info("+++++++++++++++ proxy_control_uri: %s" % proxy_control_uri)
+        _log.info("+++++++++++++++ self.control_uri: %s" % self.control_uri)
+        if proxy_control_uri:
+            _log.info("+++++++++++++++ proxy_control_uri overrides control_uri")
+        if proxy_control_uri:
+            control = calvincontrol.factory(self, True, proxy_control_uri)
+        else:
+            control = calvincontrol.factory(self, False, self.control_uri, self.external_control_uri)
+        return control
+        
     #
     # Event loop
     #
@@ -322,37 +323,3 @@ def create_node(uri, control_uri, attributes=None):
     _log.info('Quitting node "%s"' % n.uris)
 
 
-def create_tracing_node(uri, control_uri, attributes=None, logfile=None):
-    """
-    Same as create_node, but will trace every line of execution.
-    Creates trace dump in output file '<host>_<port>.trace'
-    """
-    logfile = os.getenv('CALVIN_TEST_LOG_FILE', None)
-    setup_logging(logfile)
-    n = Node(uri, control_uri, attributes)
-    _, host = uri.split('://')
-    with open("%s.trace" % (host, ), "w") as f:
-        tmp = sys.stdout
-        # Modules to ignore
-        ignore = [
-            'queue', 'calvin', 'actor', 'pickle', 'socket',
-            'uuid', 'codecs', 'copy_reg', 'string_escape', '__init__',
-            'colorlog', 'posixpath', 'glob', 'genericpath', 'base',
-            'sre_parse', 'sre_compile', 'fdesc', 'posixbase', 'escape_codes',
-            'fnmatch', 'urlparse', 're', 'stat', 'six'
-        ]
-        with f as sys.stdout:
-            paths = sys.path
-            #tracer = trace.Trace(trace=1, count=0, ignoremods=ignore)
-            tracer = trace.Trace(trace=1, count=0, ignoredir=paths)
-            tracer.runfunc(n.run)
-        sys.stdout = tmp
-    _log.info('Quitting node "%s"' % n.uris)
-
-
-def start_node(uri, control_uri, trace_exec=False, attributes=None):
-    _create_node = create_tracing_node if trace_exec else create_node
-    p = Process(target=_create_node, args=(uri, control_uri, attributes))
-    p.daemon = True
-    p.start()
-    return p

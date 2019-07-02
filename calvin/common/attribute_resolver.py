@@ -329,10 +329,14 @@ class AttributeResolver(object):
     def __init__(self, attr):
         super(AttributeResolver, self).__init__()
         self.attr = attr
-        if self.attr is None:
+        if not self.attr:
             self.attr = {"indexed_public": {}, "public": {}, "private": {}}
         else:
-            self.resolve()
+            try:
+                self.resolve()
+            except:
+                _log.exception("Attributes not correct, uses empty attribute!")
+                self.attr = {"indexed_public": {}, "public": {}, "private": {}}
 
     def __str__(self):
         return str(self.attr)
