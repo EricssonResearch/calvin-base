@@ -41,6 +41,7 @@ class StorageProxyTunnelHandler(TunnelHandler):
         tunnel.send(kwargs)
     
 
+# FIXME: Get rid of node (-> proto) and self.storage (unnecessary)
 class StorageProxyServer(object):
     """docstring for StorageProxyServer"""
     def __init__(self, node, storage):

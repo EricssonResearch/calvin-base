@@ -337,6 +337,7 @@ class AttributeResolver(object):
     def __str__(self):
         return str(self.attr)
 
+    # Used in __init__() only
     def resolve(self):
         if not isinstance(self.attr, dict):
             raise Exception('Attributes must be a dictionary with "public", "private" and "indexed_public" keys.')
@@ -347,12 +348,15 @@ class AttributeResolver(object):
         if "private" not in self.attr:
             self.attr["private"] = {}
 
+    # Unused
     def set_indexed_public(self, attributes):
         attr = {}
         for attr_type, attribute in attributes.items():
             attr[attr_type] = attr_resolver[attr_type](attribute)
         self.attr["indexed_public"] = attr
 
+    
+    # Used in resolve() only
     def resolve_indexed_public(self, attr):
         if attr:
             for attr_type, attribute in list(attr.items()):
@@ -364,12 +368,14 @@ class AttributeResolver(object):
         else:
             return {}
 
+    # Internal use
     def _get_attribute_helper(self, indices, value):
         if indices == []:
             return value
         else:
             return self._get_attribute_helper(indices[1:], value[indices[0]])
     
+    # Used in calvinsys.sys.attribute.Attribute
     def _get_attribute(self, index, which):
         indices = [idx for idx in index.split("/") if idx] # remove extra /'s
         try:
@@ -380,6 +386,7 @@ class AttributeResolver(object):
         except:
             _log.error("Error: Invalid attribute '%r'" % (index,))
 
+    # Used in calvinsys.sys.attribute.Attribute
     def _has_attribute(self, index, which):
         indices = [idx for idx in index.split("/") if idx] # remove extra /'s
         try:
@@ -389,26 +396,32 @@ class AttributeResolver(object):
         except:
             _log.error("Error: Invalid attribute '%r'" % (index,))
         
+    # Used in calvinsys.sys.attribute.Attribute
     def has_private_attribute(self, index):
         return self._has_attribute(index, "private")
         
+    # Used in calvinsys.sys.attribute.Attribute
     def has_public_attribute(self, index):
         return self._has_attribute(index, "public")
         
+    # Used in calvinsys.sys.attribute.Attribute (and security/)
     def get_private(self, index=None):
         if not index:
             return self.attr["private"]
         return self._get_attribute(index, "private")            
 
+    # Used in calvinsys.sys.attribute.Attribute, proxyhandler, storage (and security/)
     def get_public(self, index=None):
         if not index:
             return self.attr["public"]
         return self._get_attribute(index, "public")
 
+    # Used in calvinsys, proxyhandler, storage, resource_monitor (and security/)
     def get_indexed_public(self, as_list=False):
         # Return all indexes encoded for storage as a list of lists
         return [AttributeResolverHelper.encode_index([AttributeResolverHelper._stringify(k)] + v, as_list=as_list) for k, v in self.attr["indexed_public"].items()]
 
+    # Used in node, storage (and security)
     def get_node_name_as_str(self):
         """
         Generate a string corresponding to the attribute node name.
@@ -420,6 +433,7 @@ class AttributeResolver(object):
         except:
             return None
 
+    # Used in calvinsys.sys.attribute.Attribute (and security/)    
     def get_indexed_public_with_keys(self):
         """
         Return a dictionary with all indexed_public attributes that have been set.

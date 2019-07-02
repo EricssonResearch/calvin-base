@@ -48,6 +48,7 @@ _log = get_logger(__name__)
 _conf = calvinconfig.get()
 
 
+# FIXME: UNUSED
 def addr_from_uri(uri):
     _, host = uri.split("://")
     addr, _ = host.split(":")
@@ -278,7 +279,7 @@ class Node(object):
 
     def _storage_started_cb(self, *args, **kwargs):
         pass
-
+        
 def setup_logging(filename):
 
     #from twisted.python import log
