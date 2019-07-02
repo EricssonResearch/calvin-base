@@ -39,7 +39,7 @@ from tools.toolsupport.control_client import ControlAPI
 
 def _file_dir():
     return os.path.dirname(os.path.realpath(__file__))
-    
+
 
 @pytest.fixture
 def execute_cmd_check_output():
@@ -60,7 +60,7 @@ def execute_cmd_check_output():
 @pytest.fixture(scope='module')
 def tests_dir():
     """
-    Return the POSIX path to the tests/ dir as a string.  
+    Return the POSIX path to the tests/ dir as a string.
     FIXME: Fragile, depends on location of this file.
     """
     return _file_dir()
@@ -73,9 +73,9 @@ def working_dir(tmpdir_factory, tests_dir):
     """
     wdir = tmpdir_factory.mktemp('work')
     wdir = str(wdir)
-    return wdir   
-    
-    
+    return wdir
+
+
 @pytest.fixture()
 def dummy_node():
     """
@@ -96,19 +96,19 @@ def dummy_node():
 @pytest.fixture(scope='module')
 def system_setup(request, tests_dir, working_dir):
     """
-    Setup a test system according to a system config in YAML and pass 
+    Setup a test system according to a system config in YAML and pass
     the system info to the tests.
-    
-    The test module must define either 
+
+    The test module must define either
     - 'system_config_file' to name a config file in 'tests/systems/', or
     - 'system_config' to be a string with the system config
     where the latter is suitable for very simple setups only.
-    
-    This fixture relies on the tool-suite (csruntime et al.) so it is probably 
+
+    This fixture relies on the tool-suite (csruntime et al.) so it is probably
     a good idea to make sure that they are tested first.
 
-    This fixture pretty much replaces all previous fixtures and avoids 
-    monkeypatching environment etc.    
+    This fixture pretty much replaces all previous fixtures and avoids
+    monkeypatching environment etc.
     """
     system_config_file = getattr(request.module, "system_config_file", None)
     if system_config_file:
@@ -117,15 +117,15 @@ def system_setup(request, tests_dir, working_dir):
             system_config = fp.read()
     else:
         system_config = getattr(request.module, "system_config", None)
-        if not system_config: 
+        if not system_config:
             pytest.fail("Need system config!")
-    system_config = system_config.format(working_dir=working_dir)        
-    config = yaml.load(system_config, Loader=yaml.SafeLoader)    
-        
+    system_config = system_config.format(working_dir=working_dir)
+    config = yaml.load(system_config, Loader=yaml.SafeLoader)
+
     sysmgr = orchestration.SystemManager(config, working_dir)
 
     yield sysmgr.info
-    
+
     sysmgr.teardown()
 
 @pytest.fixture(scope='module')
@@ -148,7 +148,7 @@ def deploy_app(control_api):
         return app_info
     return _deploy_app
 
-    
+
 @pytest.fixture(scope='module')
 def destroy_app(control_api):
     """
@@ -165,17 +165,17 @@ def destroy_app(control_api):
         assert app_id not in applications
     return _destroy_app
 
-            
+
 @pytest.fixture(scope='module')
 def control_api():
     """
     Provides a simple way to access the control API of a runtime over HTTP.
     Usage: e.g. control_api.get_node_id("http://localhost:5001")
-    It faithfully reflects the flaws of the control API so check source for 
+    It faithfully reflects the flaws of the control API so check source for
     return value format.
-    """                             
+    """
     return ControlAPI()
-        
+
 
 ##################################
 # End new system setup fixures   #
