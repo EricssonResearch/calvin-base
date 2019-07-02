@@ -336,14 +336,6 @@ class ActorManager(object):
             if callback:
                 callback(status=status, state=state, ports=ports, actor_type=actor_type)
 
-    def peernew_to_local_cb(self, reply, **kwargs):
-        if kwargs['actor_id'] == reply:
-            # Managed to setup since new returned same actor id
-            self.node.set_local_reply(kwargs['lmsg_id'], "OK")
-        else:
-            # Just pass on new cmd reply if it failed
-            self.node.set_local_reply(kwargs['lmsg_id'], reply)
-
     def _prev_connections_to_connection_list(self, prev_connections):
         """Convert prev_connection format to connection_list format"""
         cl = []
