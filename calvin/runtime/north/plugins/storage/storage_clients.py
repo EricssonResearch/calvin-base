@@ -18,6 +18,7 @@
 
 import itertools
 import re
+from functools import partial
 
 from .storage_base import StorageBase
 from calvin.common import calvinresponse
@@ -27,10 +28,10 @@ from .proxy_client import ProxyRegistryClient
 # _log = calvinlogger.get_logger(__name__)
 # _conf = calvinconfig.get()
 
-    
+
 # Define:
- # LocalRegistry() - Always succeeds; returns nothing        
- # NullRegistryClient() - Does nothing except for start; all methods returns False except for start 
+ # LocalRegistry() - Always succeeds; returns nothing
+ # NullRegistryClient() - Does nothing except for start; all methods returns False except for start
  # RegistryClient() - Does the right thing; all methods returns True; start method raises exception
  # All have the same API methods
 
@@ -66,14 +67,42 @@ def registry(kind, node, host):
     class_ = all_kinds.get(kind.lower())
     if not class_:
         raise ValueError("Unknown registry type '{}', must be one of: {}".format(kind, ",".join(list(all_kinds.keys()))))
-    print("Instantiating {}({}, {})".format(class_.__name__, node, host))   
-    return class_(node, host)        
-                
+    print("Instantiating {}({}, {})".format(class_.__name__, node, host))
+    return class_(node, host)
+
+
+def response_callback(key, callback, fut):
+    try:
+        resp = fut.result()
+        status_code = resp.status_code
+    except Exception as e:
+        print(f"StorageClient Error: {e}")
+        status_code = 500
+
+    if key is None:
+        callback(value=calvinresponse.CalvinResponse(status_code))
+    else:
+        callback(key=key, value=calvinresponse.CalvinResponse(status_code))
+
+def response_callback_content(key, callback, fut):
+    try:
+        resp = fut.result()
+        status_code = resp.status_code
+    except Exception as e:
+        print(f"StorageClient Error: {e}")
+        status_code = 500
+
+    value = resp.json() if status_code == 200 else calvinresponse.CalvinResponse(status_code)
+    if key is None:
+        callback(value=value)
+    else:
+        callback(key=key, value=value)
+
 
 class RESTRegistryClient(StorageBase):
     from requests_futures.sessions import FuturesSession
     session = FuturesSession(max_workers=10)
-    
+
     def __init__(self, node, host):
         # UNUSED: node
         super(RESTRegistryClient, self).__init__()
@@ -83,7 +112,7 @@ class RESTRegistryClient(StorageBase):
     def barrier(self):
         from concurrent.futures import wait
         wait(self.futures, timeout=5)
-    
+
     def _request(self, op, path, data=None, cb=None):
         uri = self.host + path
         if op == 'post':
@@ -97,45 +126,35 @@ class RESTRegistryClient(StorageBase):
         self.futures.append(f)
         if cb:
             f.add_done_callback(cb)
-        
+
     def _post(self, path, data, cb):
         self._request('post', path, data, cb)
-        
+
     def _get(self, path, cb):
         self._request('get', path, cb=cb)
-    
+
     def _delete(self, path, cb):
         self._request('delete', path, cb=cb)
-    
+
     def start(self, cb):
         cb.args_append(True)
         cb()
-        
+
     def set(self, key, value, cb):
         # cb is CalvinCallback(func=cb, org_key=key, org_value=value, org_cb=cb)
-        def _response_cb(f):
-            resp = f.result()
-            cb(key=key, value=calvinresponse.CalvinResponse(resp.status_code))
         path = '/storage/'+key
-        data = {'value':value} 
-        self._post(path, data, _response_cb)
-        
+        data = {'value':value}
+        self._post(path, data, partial(response_callback, key, cb))
+
     def get(self, key, cb):
-        def _response_cb(f):
-            resp = f.result()
-            value = resp.json() if resp.status_code == 200 else calvinresponse.CalvinResponse(resp.status_code)
-            cb(key=key, value=value)
         path = '/storage/'+key
-        self._get(path, _response_cb)
-                
+        self._get(path, partial(response_callback_content, key, cb))
+
     def delete(self, key, cb):
-        def _response_cb(f):
-            resp = f.result()
-            cb(key=key, value=calvinresponse.CalvinResponse(resp.status_code))
         path = '/storage/'+key
-        self._delete(path, _response_cb)
-        
-    
+        self._delete(path, partial(response_callback, key, cb))
+
+
     def add_index(self, indexes, value, cb):
         if not isinstance(indexes, (list, set, tuple)):
             raise TypeError("Argument 'indexes' is not list, set, or tuple")
@@ -143,13 +162,10 @@ class RESTRegistryClient(StorageBase):
         data = {
             'indexes': indexes,
             'value': value,
-        } 
-        def _response_cb(f):
-            resp = f.result()
-            cb(value=calvinresponse.CalvinResponse(resp.status_code))
-        self._post(path, data, _response_cb)
-        
-            
+        }
+        self._post(path, data, partial(response_callback, None, cb))
+
+
     def remove_index(self, indexes, value, cb):
         if not isinstance(indexes, (list, set, tuple)):
             raise TypeError("Argument 'indexes' is not list, set, or tuple")
@@ -157,12 +173,9 @@ class RESTRegistryClient(StorageBase):
         data = {
             'indexes': indexes,
             'value': value,
-        } 
-        def _response_cb(f):
-            resp = f.result()
-            cb(value=calvinresponse.CalvinResponse(resp.status_code))
-        self._post(path, data, _response_cb)
-            
+        }
+        self._post(path, data, partial(response_callback, None, cb))
+
 
     def get_index(self, indexes, cb):
         if not isinstance(indexes, (list, set, tuple)):
@@ -170,13 +183,9 @@ class RESTRegistryClient(StorageBase):
         path = '/get_index/'
         data = {
             'indexes': indexes,
-        } 
-        def _response_cb(f):
-            resp = f.result()
-            value = resp.json() if resp.status_code == 200 else calvinresponse.CalvinResponse(resp.status_code)
-            cb(value=value)
-        self._post(path, data, _response_cb)
-            
+        }
+        self._post(path, data, partial(response_callback_content, None, cb))
+
 
 class NullRegistryClient(StorageBase):
     """args: - """
@@ -187,12 +196,12 @@ class NullRegistryClient(StorageBase):
 
     def barrier(self):
         pass
-    
+
     def start(self, cb):
         # Don't trigger flush
         cb.kwargs['org_key'] = 'placeholder'
         self._response(cb, True)
-                
+
     # def start(self, iface='', name=None, nodeid=None, cb=None):
     #     """
     #         Starts the service if its nneeded for the storage service
@@ -208,7 +217,7 @@ class NullRegistryClient(StorageBase):
     #     if callback:
     #         callback(True)
     #         # asynchronous.DelayedCall(0, callback, True)
-    
+
     def _response(self, cb, value):
         if not cb:
             return
@@ -216,9 +225,9 @@ class NullRegistryClient(StorageBase):
         if callback:
             org_key = cb.kwargs.get('org_key', 'NO-SUCH-KEY')
             callback(key=org_key, value=calvinresponse.CalvinResponse(value))
-            # FIXME: Should this be used instead?         
-            # asynchronous.DelayedCall(0, callback, key=org_key, value=calvinresponse.CalvinResponse(value))        
-    
+            # FIXME: Should this be used instead?
+            # asynchronous.DelayedCall(0, callback, key=org_key, value=calvinresponse.CalvinResponse(value))
+
     #
     # Remaining methods will only pass on the callback on behalf of the preceeding LocalStorage operation
     #
@@ -233,46 +242,46 @@ class NullRegistryClient(StorageBase):
         # cb is CalvinCallback(func=cb, org_key=key, org_value=value, org_cb=cb)
         # Get org_cb (known to exist) and call that with failure response:
         self._response(cb, calvinresponse.NOT_FOUND)
-        
+
     def delete(self, key, cb):
         # From our point of view, delete always succeeds
         self._response(cb, True)
-        
+
     def add_index(self, indexes, value, cb):
         # From our point of view, add_index always succeeds
         self._response(cb, True)
-           
+
     def remove_index(self, indexes, value, cb):
         # From our point of view, add_index always succeeds
         self._response(cb, True)
-    
+
     def get_index(self, indexes, cb):
         # The result is actually in the callback cb, as is the original callback
         # Strangely, this callback has a different behaviour than the rest...
         callback = cb.kwargs.get('org_cb')
         if callback:
-            value = list(cb.kwargs['local_values']) 
+            value = list(cb.kwargs['local_values'])
             callback(value=value)
-        
+
 
 class LocalRegistry(StorageBase):
     """args: -"""
     def __init__(self, node=None, host=None):
-        # UNUSED: node, host 
+        # UNUSED: node, host
         super(LocalRegistry, self).__init__()
         self.localstore = {}
         self.localstore_sets = {}
-    
+
     def dump(self):
-        data = [ 
+        data = [
             {str(k): v for k, v in iter(self.localstore.items())},
             {str(k): list(v['+']) for k, v in iter(self.localstore_sets.items())}
         ]
-        return data   
-            
+        return data
+
     def set(self, key, value):
         self.localstore[key] = value
-    
+
     def get(self, key):
         """Return value if found, raise exception otherwise."""
         return self.localstore[key]
@@ -289,7 +298,7 @@ class LocalRegistry(StorageBase):
         # Make sure we send in a list as value
         value = list(value) if isinstance(value, (list, set, tuple)) else [value]
         self._append(key, value)
-        
+
     def remove_index(self, indexes, value):
         if not isinstance(indexes, (list, set, tuple)):
             raise TypeError("Argument 'indexes' is not list, set, or tuple")
@@ -302,15 +311,15 @@ class LocalRegistry(StorageBase):
     def get_index(self, indexes):
         if not isinstance(indexes, (list, set, tuple)):
             raise TypeError("Argument 'indexes' is not list, set, or tuple")
-        key = tuple(indexes)    
+        key = tuple(indexes)
         # Collect a value set from all key-indexes that include the indexes, always compairing full index levels
         local_values = set(itertools.chain(
             *(v['+'] for k, v in self.localstore_sets.items()
                 if all(map(lambda x, y: False if x is None else True if y is None else x==y, k, key)))))
-        return local_values       
-            
+        return local_values
+
 ## Additional methods
-        
+
     def _append(self, key, value):
         if not isinstance(value, (list, set, tuple)):
             raise TypeError("Argument 'value' is not list, set, or tuple")
@@ -331,20 +340,20 @@ class LocalRegistry(StorageBase):
         else:
             self.localstore_sets[key] = {'+': set([]), '-': set(value)}
 
-    def _update_sets(self, key, op1, op2):    
+    def _update_sets(self, key, op1, op2):
         if key not in self.localstore_sets:
-            return   
+            return
         if self.localstore_sets[key][op1]:
             self.localstore_sets[key][op2] = set([])
         else:
             del self.localstore_sets[key]
 
     def _update_sets_add(self, key):
-        self._update_sets(key, '-', '+')    
-    
-    def _update_sets_remove(self, key):    
-        self._update_sets(key, '+', '-')    
-            
+        self._update_sets(key, '-', '+')
+
+    def _update_sets_remove(self, key):
+        self._update_sets(key, '+', '-')
+
     def _update_sets_index(self, key, value, op):
         if key not in self.localstore_sets:
             return
@@ -354,16 +363,16 @@ class LocalRegistry(StorageBase):
 
     def _update_sets_add_index(self, key, value):
         self._update_sets_index(key, value, '+')
-    
+
     def _update_sets_remove_index(self, key, value):
         self._update_sets_index(key, value, '-')
-            
-    
+
+
 class DebugRegistryClient(LocalRegistry):
     """
     LocalRegistry with callbacks to emulate remote clients
     """
-    
+
     def _response(self, cb, value):
         cb(value=calvinresponse.CalvinResponse(value))
         # FIXME: Should this be used instead?
@@ -383,11 +392,11 @@ class DebugRegistryClient(LocalRegistry):
     def delete(self, key, cb):
         super(DebugRegistryClient, self).delete(key)
         self._response(cb, True)
-        
+
     def add_index(self, indexes, value, cb):
         super(DebugRegistryClient, self).add_index(indexes, value)
         self._response(cb, True)
-        
+
     def remove_index(self, indexes, value, cb):
         super(DebugRegistryClient, self).remove_index(indexes, value)
         self._response(cb, True)
@@ -395,7 +404,7 @@ class DebugRegistryClient(LocalRegistry):
     def get_index(self, indexes, cb):
         retval = super(DebugRegistryClient, self).get_index(indexes)
         self._response(cb, retval)
-        
-         
-        
-        
+
+
+
+
