@@ -22,10 +22,10 @@ _log = get_logger(__name__)
 
 
 # FIXME: Fold into scehduler?
-class Event_Monitor(object):
+class EventMonitor(object):
 
     def __init__(self):
-        super(Event_Monitor, self).__init__()
+        super(EventMonitor, self).__init__()
         """docstring for __init__"""
 
         self.endpoints = []
@@ -47,7 +47,7 @@ class Event_Monitor(object):
 
     def _check_backoff(self):
         current = time.time()
-        for ep in self._backoff:
+        for ep in list(self._backoff.keys()):
             tc = self._backoff[ep][0]
             if tc < current:
                 self.clear_backoff(ep)
@@ -72,10 +72,10 @@ class Event_Monitor(object):
 
         return did_comm
 
-class VisualizingMonitor(Event_Monitor):
-    
+class VisualizingMonitor(EventMonitor):
+
     def communicate(self, endpoints):
-        
+
         # Helper function
         def visualize(ports):
             for port in ports:
@@ -92,12 +92,12 @@ class VisualizingMonitor(Event_Monitor):
 
         # Grab all ports
         outports = [e.port for e in endpoints]
-        inports = [e.peer_port for p in outports for e in p.endpoints if hasattr(e, 'peer_port')]        
+        inports = [e.peer_port for p in outports for e in p.endpoints if hasattr(e, 'peer_port')]
         ports = outports + inports
         _log.debug("------------------------")
         _log.debug("Before commmunicate")
         visualize(ports)
-        # Call the actual communication method        
+        # Call the actual communication method
         super(VisualizingMonitor, self).communicate(endpoints)
         _log.debug("After communicate")
         visualize(ports)
