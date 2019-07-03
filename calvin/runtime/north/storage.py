@@ -650,6 +650,7 @@ class Storage(PrivateStorage):
         _log.debug("Add actor %s id %s" % (actor, node_id))
         data = actor.data_for_registry()
         data["node_id"] = node_id
+        self._add_ports_for_actor(actor, node_id)
         self.set(prefix="actor-", key=actor.id, value=data, cb=cb)
 
     def get_actor(self, actor_id, cb=None):
@@ -674,6 +675,11 @@ class Storage(PrivateStorage):
 
     def delete_actor_requirements(self, actor_id, cb=None):
         self.delete(prefix="actorreq-", key=actor_id, cb=cb)
+
+    def _add_ports_for_actor(self, actor, node_id):
+        ports = list(actor.inports.values()) + list(actor.outports.values())
+        for p in ports:
+            self.add_port(p, node_id, actor.id)
 
     def add_port(self, port, node_id, actor_id=None, cb=None):
         """
