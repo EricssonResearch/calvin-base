@@ -650,7 +650,10 @@ class Storage(PrivateStorage):
         _log.debug("Add actor %s id %s" % (actor, node_id))
         data = actor.data_for_registry()
         data["node_id"] = node_id
-        self._add_ports_for_actor(actor, node_id)
+        
+        ports = list(actor.inports.values()) + list(actor.outports.values())
+        self._add_ports(ports, node_id)
+        
         self.set(prefix="actor-", key=actor.id, value=data, cb=cb)
 
     def get_actor(self, actor_id, cb=None):
@@ -666,22 +669,16 @@ class Storage(PrivateStorage):
         _log.debug("Delete actor id %s" % (actor_id))
         self.delete(prefix="actor-", key=actor_id, cb=cb)
 
-    def _add_ports_for_actor(self, actor, node_id):
-        ports = list(actor.inports.values()) + list(actor.outports.values())
+    def _add_ports(self, ports, node_id):
         for p in ports:
-            self.add_port(p, node_id, actor.id)
+            self.add_port(p, node_id)
 
-    def add_port(self, port, node_id, actor_id=None, cb=None):
+    def add_port(self, port, node_id, cb=None):
         """
         Add port to storage
         """
-        if actor_id is None:
-            actor_id = port.owner.id
-
-        data = {"name": port.name, "connected": port.is_connected(),
-                "node_id": node_id, "actor_id": actor_id, "properties": port.properties}
-        if port.is_connected():
-            data["peers"] = port.get_peers()
+        data = port.data_for_registry()
+        data["node_id"] = node_id
         self.set(prefix="port-", key=port.id, value=data, cb=cb)
 
     def get_port(self, port_id, cb=None):

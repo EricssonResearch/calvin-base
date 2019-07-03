@@ -241,7 +241,7 @@ class TunnelConnection(BaseConnection):
         self.async_reply(status=response.CalvinResponse(True))
 
         # Update storage
-        self.node.storage.add_port(self.port, self.node.id, self.port.owner.id)
+        self.node.storage.add_port(self.port, self.node.id)
 
     def connection_request(self):
         """ A request from a peer to connect a port"""
@@ -275,7 +275,7 @@ class TunnelConnection(BaseConnection):
         endp.register(self.node.sched)
 
         # Update storage
-        self.node.storage.add_port(self.port, self.node.id, self.port.owner.id)
+        self.node.storage.add_port(self.port, self.node.id)
 
         _log.analyze(self.node.id, "+ OK", payload, peer_node_id=self.peer_port_meta.node_id)
         return response.CalvinResponse(response.OK, {'port_id': self.port.id, 'port_properties': self.port.properties})
@@ -320,7 +320,7 @@ class TunnelConnection(BaseConnection):
             _log.exception("Did not have remaining_tokens")
             remaining_tokens = {}
         if terminate:
-            self.node.storage.add_port(self.port, self.node.id, self.port.owner.id)
+            self.node.storage.add_port(self.port, self.node.id)
         if not getattr(self, 'sent_callback', False) and not self._parallel_connections:
             # Last peer connection we should send OK
             if self.callback:
@@ -342,7 +342,7 @@ class TunnelConnection(BaseConnection):
         remaining_tokens = self._destroy_endpoints(terminate=terminate)
         self._deserialize_remaining_tokens(peer_remaining_tokens)
         if terminate:
-            self.node.storage.add_port(self.port, self.node.id, self.port.owner.id)
+            self.node.storage.add_port(self.port, self.node.id)
         self._serialize_remaining_tokens(remaining_tokens)
         return response.CalvinResponse(True, {'remaining_tokens': remaining_tokens})
 

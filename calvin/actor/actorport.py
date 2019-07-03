@@ -127,6 +127,13 @@ class Port(object):
     @property
     def direction(self):
         return self.properties.get('direction', '')
+        
+    def data_for_registry(self):
+        data = {"name": self.name, "connected": self.is_connected(),
+                "actor_id": self.owner.id, "properties": self.properties}
+        if self.is_connected():
+            data["peers"] = self.get_peers()
+        return data    
 
 
 class InPort(Port):

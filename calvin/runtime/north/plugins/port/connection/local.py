@@ -73,8 +73,8 @@ class LocalConnection(BaseConnection):
         ein.register(self.node.sched)
 
         # Update storage
-        self.node.storage.add_port(inport, self.node.id, inport.owner.id)
-        self.node.storage.add_port(outport, self.node.id, outport.owner.id)
+        self.node.storage.add_port(inport, self.node.id)
+        self.node.storage.add_port(outport, self.node.id)
 
     def disconnect(self, terminate=DISCONNECT.TEMPORARY):
         """ Obtain any missing information to enable disconnecting one peer port and make the disconnect"""
@@ -105,8 +105,8 @@ class LocalConnection(BaseConnection):
 
         # Update storage, the ports are disconnected even if an inport during exhaustion still delivers tokens
         if terminate:
-            self.node.storage.add_port(self.port, self.node.id, self.port.owner.id)
-            self.node.storage.add_port(self.peer_port_meta.port, self.node.id, self.peer_port_meta.port.owner.id)
+            self.node.storage.add_port(self.port, self.node.id)
+            self.node.storage.add_port(self.peer_port_meta.port, self.node.id)
 
         try:
             # Remove this peer from the list of peer connections
