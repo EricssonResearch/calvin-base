@@ -104,7 +104,7 @@ class ProxyRegistryClient(StorageBase):
         # FIXME assumes that the org_cb is the callback given by storage when starting, can only be called once
         # not future up/down
         if org_cb:
-            org_cb(False)
+            org_cb(value=calvinresponse.CalvinResponse(False))
         # We should always return True which sends an ACK on the destruction of the tunnel
         return True
 
@@ -117,7 +117,7 @@ class ProxyRegistryClient(StorageBase):
         # FIXME assumes that the org_cb is the callback given by storage when starting, can only be called once
         # not future up/down
         if org_cb:
-            org_cb(True)
+            org_cb(value=calvinresponse.CalvinResponse(True))
         # We should always return True which sends an ACK on the destruction of the tunnel
         return True
 

@@ -200,17 +200,12 @@ class PrivateStorage(object):
 #
 # Start of primitive methods
 #
-    def started_cb(self, *args, **kwargs):
+    def started_cb(self, org_cb, value):
         """ Called when storage has started, flushes localstore
         """
-        # print "started_cb", args, kwargs
-
-        if not args[0]:
-            return
-        # self.storage = registry(self.node, self.storage_type)
         self.trigger_flush(0)
-        if kwargs["org_cb"]:
-            asynchronous.DelayedCall(0, kwargs["org_cb"], args[0])
+        if org_cb:
+            asynchronous.DelayedCall(0, org_cb, value)
 
     def start(self, cb=None):
         """ Start storage
