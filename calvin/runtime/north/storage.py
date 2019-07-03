@@ -654,13 +654,11 @@ class Storage(PrivateStorage):
         for p in actor.inports.values():
             port = {"id": p.id, "name": p.name}
             inports.append(port)
-            self.add_port(p, node_id, actor.id)
         data["inports"] = inports
         outports = []
         for p in actor.outports.values():
             port = {"id": p.id, "name": p.name}
             outports.append(port)
-            self.add_port(p, node_id, actor.id)
         data["outports"] = outports
         self.set(prefix="actor-", key=actor.id, value=data, cb=cb)
 
