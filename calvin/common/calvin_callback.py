@@ -54,13 +54,6 @@ class CalvinCB(object):
         except:
             self.name = self.func.name if hasattr(self.func, 'name') else "unknown"
 
-    def args_append(self, *args):
-        """ Append specific args to the call"""
-        self.args.append(*args)
-
-    def kwargs_update(self, **kwargs):
-        """ Update specific kwargs to the call"""
-        self.kwargs.update(kwargs)
 
     def __call__(self, *args, **kwargs):
         """ Call function
@@ -88,34 +81,6 @@ class CalvinCB(object):
         return "CalvinCB - " + self.name + "(%s, %s)" % (self.args, self.kwargs)
 
 
-class CalvinCBGroup(object):
-    """ A group of callbacks that will have some common args
-        funcs: a list of callbacks of CalvinCB type
-
-        For example see example code at end of file.
-    """
-    def __init__(self, funcs=None):
-        super(CalvinCBGroup, self).__init__()
-        self._id = str(uuid.uuid4())
-        self.funcs = funcs if funcs else []
-
-    def func_append(self, func):
-        """ Add CalvinCB instances to be called"""
-        self.funcs.append(func)
-
-    def __call__(self, *args, **kwargs):
-        """ Call functions
-            args: any positional arguments for this call of the callbacks
-            kwargs: any key-value arguments for this call of the callbacks
-
-            returns a dictionary of the individual callbacks return value, with callback id as key.
-        """
-        reply = {}
-        for f in self.funcs:
-            reply[f._id] = f(*args, **kwargs)
-        return reply
-
-
 class CalvinCBClass(object):
     """ Callback class that handles named sets of callbacks
         that outside users can register callbacks for. The class
@@ -123,7 +88,7 @@ class CalvinCBClass(object):
 
         callbacks: a dictionary of names with list of callbacks
                    {'n1': [cb1, cb2], ...}
-                   cb1, cb2 is CalvinCB or CalvinCBGroup type
+                   cb1, cb2 is CalvinCB type
 
         callback_valid_names: None or a list of strings setting the
                    valid names of callbacks, when None all names allowed
@@ -145,6 +110,7 @@ class CalvinCBClass(object):
                         raise Exception("One callback of name %s is not a CalvinCB object %s, %s", name, type(cb), repr(cb))
                     self.__callbacks[name][cb._id] = cb
     
+    # Unused
     def get_callbacks_by_name(self, name):
         if name not in self.__callbacks:
             _log.info("Did not find callbacks for %s" % name)
@@ -158,16 +124,17 @@ class CalvinCBClass(object):
     def callback_register(self, name, cb):
         """ Registers a callback on a name.
             name: a name string
-            cb: a callback of CalvinCB or CalvinCBGroup type
+            cb: a callback of CalvinCB type
         """
         if self.__callback_valid_names is None or name in self.__callback_valid_names:
             if name not in self.__callbacks:
                 self.__callbacks[name] = {}
             self.__callbacks[name][cb._id] = cb
 
+    # Unused
     def callback_unregister(self, _id):
         """ Unregisters a callback
-            _id: the id of the callback to unregister (CalvinCB and CalvinCBGroup have an attribute id)
+            _id: the id of the callback to unregister (CalvinCB have an attribute id)
         """
         for k, v in self.__callbacks.items():
             if _id in v:

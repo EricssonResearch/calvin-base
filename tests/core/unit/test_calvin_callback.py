@@ -17,7 +17,7 @@
 import pytest
 from unittest.mock import Mock
 
-from calvin.common.calvin_callback import CalvinCB, CalvinCBGroup, CalvinCBClass
+from calvin.common.calvin_callback import CalvinCB, CalvinCBClass
 
 
 def test_call_callback():
@@ -44,29 +44,28 @@ def test_call_callback_with_kwargs():
 def test_args_update():
     func = Mock()
     cb = CalvinCB(func, 1, 2)
-    cb.args_append(3)
-    cb()
+    with pytest.raises(AttributeError):
+        cb.args_append(3)
+
+
+def test_args_update_alt():
+    func = Mock()
+    cb = CalvinCB(func, 1, 2)
+    cb(3)
     func.assert_called_with(1, 2, 3)
 
 
 def test_kwargs_update():
     func = Mock()
     cb = CalvinCB(func, 1, b=2)
-    cb.kwargs_update(c=3)
-    cb()
+    with pytest.raises(AttributeError):
+        cb.kwargs_update(c=3)
+
+def test_kwargs_update_alt():
+    func = Mock()
+    cb = CalvinCB(func, 1, b=2)
+    cb(c=3)
     func.assert_called_with(1, b=2, c=3)
-
-
-def test_calvin_cb_group():
-    func1 = Mock()
-    func2 = Mock()
-    cb1 = CalvinCB(func1)
-    cb2 = CalvinCB(func2)
-    cbs = CalvinCBGroup([cb1, cb2])
-    cbs(1, 2, a=3)
-
-    func1.assert_called_with(1, 2, a=3)
-    func2.assert_called_with(1, 2, a=3)
 
 
 def test_calvin_cb_class():

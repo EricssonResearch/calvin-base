@@ -137,8 +137,7 @@ class RESTRegistryClient(StorageBase):
         self._request('delete', path, cb=cb)
 
     def start(self, cb):
-        cb.args_append(True)
-        cb()
+        cb(True)
 
     def set(self, key, value, cb):
         # cb is CalvinCallback(func=cb, org_key=key, org_value=value, org_cb=cb)
