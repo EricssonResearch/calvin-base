@@ -122,7 +122,7 @@ class Node(object):
         proxy_control_uri = _conf.get(None, 'control_proxy')
         self.control = self.start_control(proxy_control_uri)
 
-        self.network = CalvinNetwork(self)
+        self.network = CalvinNetwork(self.id, self.node_name, self.storage, self.control)
         self.proto = CalvinProto(self, self.network)
         #
         # FIXME: The above section is sensitive to order due to circular references

@@ -79,7 +79,7 @@ def _storage(request, working_dir):
     # Give the dummy node communication power (for proxy tests)
     node = Mock()
     node.control = CalvinControl(node, "http://localhost:5001")
-    node.network = CalvinNetwork(node)
+    node.network = CalvinNetwork('fake_id', 'anonymous', Mock(), node.control)
     node.proto = CalvinProto(node, node.network)
     storage = Storage(node, mode, host)
     storage.start()

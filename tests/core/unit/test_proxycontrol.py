@@ -13,7 +13,7 @@ def test_control_tunnel_server():
     node = Mock()
     node.control_uri = "http://localhost:5003"
     node.control = calvincontrol.CalvinControl(node, node.control_uri, node.control_uri)
-    node.network = CalvinNetwork(node)
+    node.network = CalvinNetwork('fake_id', 'anonymous', Mock(), node.control)
     node.proto = CalvinProto(node, node.network)
     node.control.start()
 
