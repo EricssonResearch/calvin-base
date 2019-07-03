@@ -29,7 +29,7 @@ class PortManager(object):
     PortManager handles the setup of communication between ports intra- & inter-runtimes
     """
 
-    def __init__(self, node, proto):
+    def __init__(self, node):
         super(PortManager, self).__init__()
         self.node = node
         self.ports = {}  # key: port_id, value: port

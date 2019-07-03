@@ -123,18 +123,18 @@ class Node(object):
         self.control = self.start_control(proxy_control_uri)
 
         self.network = CalvinNetwork(self.id, self.node_name, self.storage, self.control)
-        self.proto = CalvinProto(self, self.network)
+        self.proto = CalvinProto(node=self, network=self.network)
         #
         # FIXME: The above section is sensitive to order due to circular references
         #
 
-        self.pm = PortManager(self, self.proto)
-        self.app_manager = appmanager.AppManager(self)
+        self.pm = PortManager(node=self)
+        self.app_manager = appmanager.AppManager(node=self)
 
         self.cpu_monitor = CpuMonitor(self.id, self.storage)
         self.mem_monitor = MemMonitor(self.id, self.storage)
 
-        self.proxy_handler = ProxyHandler(self)
+        self.proxy_handler = ProxyHandler(node=self)
 
         # The initialization that requires the main loop operating is deferred to start function
         asynchronous.DelayedCall(0, self.start)
