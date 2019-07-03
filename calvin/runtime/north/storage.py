@@ -620,14 +620,8 @@ class Storage(PrivateStorage):
 
         _log.debug("Add application %s id %s" % (application.name, application.id))
 
-        self.set(prefix="application-", key=application.id,
-                 value={"name": application.name,
-                        "ns": application.ns,
-                        # FIXME when all users of the actors field is updated, save the full dict only
-                        "actors": list(application.actors.keys()),
-                        "actors_name_map": application.actors,
-                        "origin_node_id": application.origin_node_id},
-                 cb=cb)
+        data = application.data_for_registry()
+        self.set(prefix="application-", key=application.id, value=data, cb=cb)
 
     def get_application(self, application_id, cb=None):
         """

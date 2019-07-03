@@ -150,6 +150,17 @@ class Application(object):
 
     def complete_node_info(self):
         return sum([len(a) for a in self.node_info.values()]) == len(self.actors)
+        
+    def data_for_registry(self):
+        data = {
+            "name": self.name,
+            "ns": self.ns,
+            # FIXME when all users of the actors field is updated, save the full dict only
+            "actors": list(self.actors.keys()),
+            "actors_name_map": self.actors,
+            "origin_node_id": self.origin_node_id
+        }
+        return data    
 
 
 class AppManager(object):
