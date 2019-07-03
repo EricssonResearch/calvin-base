@@ -54,7 +54,8 @@ class ReqMatch(object):
         def _got_requirements(key, value):
             if response.isnotfailresponse(value):
                 try:
-                    self.match(value, actor_id)
+                    reqs = value['requirements']
+                    self.match(reqs, actor_id)
                 except:
                     if callable(self.callback):
                         self.callback(status=response.CalvinResponse(response.BAD_REQUEST), possible_placements=set([]))
@@ -65,7 +66,7 @@ class ReqMatch(object):
             # Don't waste time if local
             return self.match_for_actor(actor_id)
         else:
-            self.node.storage.get_actor_requirements(actor_id, cb=_got_requirements)
+            self.node.storage.get_actor(actor_id, cb=_got_requirements)
 
     def match(self, requirements, actor_id=None, component_ids=None):
         """ Match the list of requirements either from a local actor or on behalf of

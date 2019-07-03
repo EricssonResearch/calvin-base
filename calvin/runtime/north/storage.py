@@ -665,16 +665,6 @@ class Storage(PrivateStorage):
         """
         _log.debug("Delete actor id %s" % (actor_id))
         self.delete(prefix="actor-", key=actor_id, cb=cb)
-        self.delete_actor_requirements(actor_id)
-
-    def add_actor_requirements(self, actor, cb=None):
-        self.set(prefix="actorreq-", key=actor.id, value=actor.requirements_get(), cb=cb)
-
-    def get_actor_requirements(self, actor_id, cb=None):
-        self.get(prefix="actorreq-", key=actor_id, cb=cb)
-
-    def delete_actor_requirements(self, actor_id, cb=None):
-        self.delete(prefix="actorreq-", key=actor_id, cb=cb)
 
     def _add_ports_for_actor(self, actor, node_id):
         ports = list(actor.inports.values()) + list(actor.outports.values())

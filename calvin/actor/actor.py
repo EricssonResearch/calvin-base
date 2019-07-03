@@ -640,6 +640,7 @@ class Actor(object):
             port = {"id": p.id, "name": p.name}
             outports.append(port)
         data["outports"] = outports
+        data["requirements"] = self.requirements_get()
         return data
     
 

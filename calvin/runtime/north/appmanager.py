@@ -601,19 +601,17 @@ class Deployer(object):
                                     actor_def=actor_def, port_properties=port_properties)
         if not actor_id:
             raise Exception("Could not instantiate actor %s" % actor_name)
+        actor = self.node.am.actors[actor_id]
         deploy_req = get_req(actor_name, self.deploy_info)
         if deploy_req:
             # Placement requirements
             actor_reqs = [r for r in deploy_req if requirement_type(r)]
             # Placement requirements
-            self.node.am.actors[actor_id].requirements_add(actor_reqs, extend=False)
-            # Update requirements in registry
-            self.node.storage.add_actor(self.node.am.actors[actor_id], self.node.id)
+            actor.requirements_add(actor_reqs, extend=False)
+        # Update actor (incl requirements) in registry
+        self.node.storage.add_actor(actor, self.node.id)
 
-        # store actor requirements in registry
-        actor = self.node.am.actors[actor_id]
         self._requires_counter += 1
-        self.node.storage.add_actor_requirements(actor)
 
         self.actor_map[actor_name] = actor_id
         self.node.app_manager.add(self.app_id, actor_id)
