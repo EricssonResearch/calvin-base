@@ -646,20 +646,10 @@ class Storage(PrivateStorage):
         """
         Add actor and its ports to storage
         """
-        # FIXME: Add method to actor class: data_for_registry()?
         # TODO need to store app-id
         _log.debug("Add actor %s id %s" % (actor, node_id))
-        data = {"name": actor.name, "type": actor._type, "node_id": node_id}
-        inports = []
-        for p in actor.inports.values():
-            port = {"id": p.id, "name": p.name}
-            inports.append(port)
-        data["inports"] = inports
-        outports = []
-        for p in actor.outports.values():
-            port = {"id": p.id, "name": p.name}
-            outports.append(port)
-        data["outports"] = outports
+        data = actor.data_for_registry()
+        data["node_id"] = node_id
         self.set(prefix="actor-", key=actor.id, value=data, cb=cb)
 
     def get_actor(self, actor_id, cb=None):

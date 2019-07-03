@@ -627,4 +627,19 @@ class Actor(object):
     def signature_set(self, signature):
         if self._signature is None:
             self._signature = signature
+            
+    def data_for_registry(self):
+        data = {"name": self.name, "type": self._type}
+        inports = []
+        for p in self.inports.values():
+            port = {"id": p.id, "name": p.name}
+            inports.append(port)
+        data["inports"] = inports
+        outports = []
+        for p in self.outports.values():
+            port = {"id": p.id, "name": p.name}
+            outports.append(port)
+        data["outports"] = outports
+        return data
+    
 
