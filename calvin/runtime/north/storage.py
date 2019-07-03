@@ -291,45 +291,6 @@ class PrivateStorage(object):
         except:
             self.storage.get(key=prefix + key, cb=CalvinCB(func=self.get_cb, org_cb=cb, org_key=key))
 
-    def get_iter_cb(self, key, value, it, org_key, include_key=False):
-        """ get callback
-        """
-        _log.analyze(self.node.id, "+ BEGIN", {'value': value, 'key': org_key})
-        if calvinresponse.isnotfailresponse(value):
-            it.append((key, value) if include_key else value)
-            _log.analyze(self.node.id, "+", {'value': value, 'key': org_key})
-        else:
-            _log.analyze(self.node.id, "+", {'value': 'FailedElement', 'key': org_key})
-            it.append((key, dynops.FailedElement) if include_key else dynops.FailedElement)
-
-    # FIXME: UNUSED
-    def get_iter(self, prefix, key, it, include_key=False):
-        """ Get single value for registry key: prefix+key,
-            first look in locally set but not yet distributed registry.
-            It is assumed that the prefix and key are strings,
-            the sum has to be an immutable object.
-            Value is placed in supplied dynamic iterable it parameter.
-            The dynamic iterable are of a subclass to calvin.common.dynops.DynOps
-            that supports the append function call (currently only List), see DynOps
-            for details of how they are used. It is common to call auto_final method
-            with parameter max_length to number of get_iter calls.
-            If a key is not found the special value dynops.FailedElement is put in the
-            iterable. When the parameter include_key is True a tuple of (key, value)
-            is placed in it instead of only the retrived value,
-            note that the key here is without the prefix.
-            Value is False when value has been deleted and
-            None if never set (this is current behaviour and might change).
-        """
-        if not it:
-            return
-
-        try:
-            value = self.localstorage.get(prefix + key)
-            it.append((prefix + key, value) if include_key else value)
-        except:
-            pass
-        self.storage.get(key=prefix + key,
-                         cb=CalvinCB(func=self.get_iter_cb, it=it, org_key=key, include_key=include_key))
 
     def delete_cb(self, key, value, org_cb, org_key):
         # FIXME: To work properly we need an extra callback layer...
@@ -494,14 +455,14 @@ class PrivateStorage(object):
         self.storage.get_index(indexes=indexes,
                 cb=CalvinCB(self.get_index_cb, org_cb=cb, index_items=indexes, local_values=local_values))
 
-    def get_index_iter_cb(self, value, it, org_key, include_key=False):
+    def get_index_iter_cb(self, value, it, org_key):
         _log.debug("get index iter cb key: %s value: %s" % (org_key, value))
         if calvinresponse.isnotfailresponse(value):
-            it.extend([(org_key, v) for v in value] if include_key else value)
+            it.extend(value)
         it.final()
 
     # FIXME: include_key and root_prefix_level are UNUSED
-    def get_index_iter(self, index, include_key=False, root_prefix_level=None):
+    def get_index_iter(self, index, root_prefix_level=None):
         r"""
         Get multiple values from the registry stored at the index level or
         below it in hierarchy.
@@ -528,7 +489,7 @@ class PrivateStorage(object):
         # TODO push also iterable into plugin?
         it = dynops.List()
         self.get_index(index=index, root_prefix_level=root_prefix_level,
-            cb=CalvinCB(self.get_index_iter_cb, it=it, include_key=include_key, org_key=org_key))
+            cb=CalvinCB(self.get_index_iter_cb, it=it, org_key=org_key))
         return it
 
 class Storage(PrivateStorage):
