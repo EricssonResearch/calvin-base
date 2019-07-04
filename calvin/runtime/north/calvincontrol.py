@@ -326,12 +326,14 @@ class CalvinControlTunnelServer(object):
 
         _log.error("Malformed %s" % payload)
 
-class CalvinControlTunnelClient(CalvinControlBase):
-    """ A Calvin control tunnel client
-    """
-    def __init__(self, node, uri):
-        super(CalvinControlTunnelClient, self).__init__(node, uri)
-        _log.info("Control tunnel client with proxy %s" % uri)
+
+class ControlTunnelProvider(object):
+    """docstring for ControlTunnelProvider"""
+    def __init__(self, node, uri, cmd_map):
+        super(ControlTunnelProvider, self).__init__()
+        self.node = node
+        self.uri = uri
+        self.cmd_map = cmd_map
         self.tunnel = None
         self.max_retries = _conf.get('global', 'storage_retries') or -1
         self.retries = 0
@@ -345,42 +347,7 @@ class CalvinControlTunnelClient(CalvinControlBase):
         self.node.network.join([self.uri],
                                callback=CalvinCB(self._start_link_cb),
                                corresponding_server_node_names=[self._server_node_name])
-
-    def stop(self):
-        pass
-
-    def send_response(self, handle, data, status=200, content_type=None):
-        """ Send response header text/html
-        """
-        header, data = self.prepare_response(data, status, content_type)
-        msg = {"cmd": "httpresp", "msgid": handle, "header": header, "data": data}
-        self.send(msg)
-
-    def send_streamheader(self, handle):
-        """ Send response header for text/event-stream
-        """
-        response = self.prepare_streamheader()
-        msg = {"cmd": "logresp", "msgid": handle, "header": response, "data": None}
-        self.send(msg)
-
-    def send_streamdata(self, handle, data):
-        """ Send stream data
-        """
-        self.send({"cmd": "logevent", "msgid": handle, "header": None, "data": "data: %s\n\n" % data})
-
-    def send_optionsheader(self, handle, hdr):
-        """ Send response header for options
-        """
-        response = self.prepare_optionsheader()
-        msg = {"cmd": "httpresp", "msgid": handle, "header": response, "data": None}
-        self.send(msg)
-
-    # FIXME: Refactor
-    # The code below should be CalvinControlTunnelClient class, compare CalvinControlTunnelServer below.
-    # If CalvinControlTunnelClient (above) is renamed (to what?) and self.tunnel is renamed self.server
-    # and refer to the an instance of the new CalvinControlTunnelClient class, then the code would be a
-    # lot easier to read...
-
+        
     def _start_link_cb(self, status, uri, peer_node_id):
         if status != 200:
             self.retries += 1
@@ -420,26 +387,84 @@ class CalvinControlTunnelClient(CalvinControlBase):
 
     def tunnel_recv_handler(self, payload):
         """ Gets called when a control proxy replies"""
-        if "cmd" in payload:
-            if payload["cmd"] == "httpreq":
-                try:
-                    self.route_request(
-                        payload["msgid"], payload["command"], payload["headers"], payload["data"])
-                except:
-                    _log.exception("FIXME! Caught exception in calvincontrol when tunneling.")
-                    self.send_response(payload["msgid"], None, status=calvinresponse.INTERNAL_ERROR)
-                return
-            elif payload["cmd"] == "started":
-                self.node.external_control_uri = payload["controluri"]
-                self.node.storage.add_node(self.node)
-                return
-            elif payload["cmd"] == "logclose":
-                self.close_log_tunnel(payload["msg_id"])
-                return
-        _log.error("Tunnel client received unknown command %s" % payload['cmd'] if 'cmd' in payload else "")
+        try:
+            cmd = payload['cmd']
+        except:
+            _log.error("Missing 'cmd' in payload")
+            return
+        cmd_handler = self.cmd_map.get(cmd, self._bad_command)
+        cmd_handler(payload)
+            
+    def _bad_command(self, payload):    
+        _log.error(f"{self.__class__.__name__} received unknown command {payload['cmd']}")
 
     def send(self, msg):
         if self.tunnel:
             self.tunnel.send(msg)
         else:
             _log.error("No tunnel connected")
+
+class CalvinControlTunnelClient(CalvinControlBase):
+    """ A Calvin control tunnel client
+    """
+    def __init__(self, node, uri):
+        super(CalvinControlTunnelClient, self).__init__(node, uri)
+        _log.info("Control tunnel client with proxy %s" % uri)
+        cmd_map = {
+            'httpreq': self.handle_httpreq, 
+            'started': self.handle_started, 
+            'logclose': self.handle_logclose,
+        }
+        self.tunnel_provider = ControlTunnelProvider(node, uri, cmd_map)
+
+    def start(self):
+        self.tunnel_provider.start()
+        
+    def stop(self):
+        pass
+
+    def send_response(self, handle, data, status=200, content_type=None):
+        """ Send response header text/html
+        """
+        header, data = self.prepare_response(data, status, content_type)
+        msg = {"cmd": "httpresp", "msgid": handle, "header": header, "data": data}
+        self.tunnel_provider.send(msg)
+
+    def send_streamheader(self, handle):
+        """ Send response header for text/event-stream
+        """
+        response = self.prepare_streamheader()
+        msg = {"cmd": "logresp", "msgid": handle, "header": response, "data": None}
+        self.tunnel_provider.send(msg)
+
+    def send_streamdata(self, handle, data):
+        """ Send stream data
+        """
+        self.tunnel_provider.send({"cmd": "logevent", "msgid": handle, "header": None, "data": "data: %s\n\n" % data})
+
+    def send_optionsheader(self, handle, hdr):
+        """ Send response header for options
+        """
+        response = self.prepare_optionsheader()
+        msg = {"cmd": "httpresp", "msgid": handle, "header": response, "data": None}
+        self.tunnel_provider.send(msg)
+    
+    def handle_httpreq(self, payload):
+        try:
+            self.route_request(
+                handle=payload["msgid"], 
+                command=payload["command"], 
+                headers=payload["headers"], 
+                data=payload["data"]
+            )
+        except:
+            _log.error(f"No route for message {payload['msgid']}")
+            self.send_response(payload["msgid"], None, status=calvinresponse.INTERNAL_ERROR)
+
+    def handle_started(self, payload):
+        self.node.external_control_uri = payload["controluri"]
+        # FIXME: Add node to storage when we get ACK that we have storage, not here!
+        self.node.storage.add_node(self.node)
+
+    def handle_logclose(self, payload):
+        self.close_log_tunnel(payload["msg_id"])
