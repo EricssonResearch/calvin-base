@@ -443,7 +443,7 @@ def run_actor_unittests(aut, actor_type, mock_sys):
                 f(aut)
             except Exception as e:
                 __tracebackhide__ = True
-                pytest.fail("Actor {} failed during setup of test {}: {}".format(actor_type, test_index, e.message))
+                pytest.fail(f"Actor {actor_type} failed during setup of test {test_index}: {e}")
 
         for port, values in inputs.items():
             pwrite(aut, port, values)
@@ -452,7 +452,7 @@ def run_actor_unittests(aut, actor_type, mock_sys):
         mock_sys.init_done(actor_type)
 
         sched = scheduler.BaseScheduler(None, None)
-        sched._fire_actor(aut)
+        sched._fire_actor_non_preemptive(aut)
 
         for port, expected in outputs.items():
             actual = pread(aut, port, len(expected))
@@ -512,11 +512,11 @@ def test_actors(mock_calvinsys, mock_calvinlib, monkeypatch, store, actor_type):
 
     # 4. Attach ports
     for inport in actor.inports.values():
-        inport.set_queue(queue.fanout_fifo.FanoutFIFO({'queue_length': 100, 'direction': "in"}, {}))
+        inport.set_queue(queue.fanout_fifo.FanoutFIFO({'queue_length': 20, 'direction': "in"}, {}))
         inport.endpoint = DummyInEndpoint(inport)
         inport.queue.add_reader(inport.id, {})
     for outport in actor.outports.values():
-        outport.set_queue(queue.fanout_fifo.FanoutFIFO({'queue_length': 100, 'direction': "out"}, {}))
+        outport.set_queue(queue.fanout_fifo.FanoutFIFO({'queue_length': 20, 'direction': "out"}, {}))
         outport.queue.add_reader(actor.id, {})
         outport.endpoints.append(DummyOutEndpoint(outport))
 
