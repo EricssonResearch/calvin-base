@@ -23,6 +23,8 @@ from calvin.common.calvin_callback import CalvinCB, CalvinCBClass
 from calvin.common import calvinlogger
 from calvin.common import calvinconfig
 import calvin.common.calvinresponse as response
+from calvin.runtime.south import asynchronous
+
 
 _log = calvinlogger.get_logger(__name__)
 _conf = calvinconfig.get()

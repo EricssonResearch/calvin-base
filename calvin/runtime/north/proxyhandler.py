@@ -75,6 +75,13 @@ class PeerNode(object):
         except Exception as e:
             _log.error("Failed to remove index %s" % e)
 
+
+class ProxyTunnelHandler(TunnelHandler):
+    """docstring for StorageProxyTunnelHandler"""
+    def __init__(self, proto, proxy_cmds):
+        super(ProxyTunnelHandler, self).__init__(proto, 'proxy', proxy_cmds)            
+
+
 class ProxyHandler(object):
 
     def __init__(self, node):
@@ -88,7 +95,7 @@ class ProxyHandler(object):
             'GET_ACTOR_MODULE': self.handle_get_actor_module,
             'DESTROY_REPLY' : self.handle_destroy_reply
         }
-        self.tunnel_handler = TunnelHandler(self.node.proto, 'proxy', proxy_cmds)
+        self.tunnel_handler = ProxyTunnelHandler(self.node.proto, proxy_cmds)
         
 
     def handle_config_cb(self, key, value, tunnel, msgid):
