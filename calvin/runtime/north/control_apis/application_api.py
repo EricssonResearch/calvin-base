@@ -253,13 +253,9 @@ def handle_deploy(self, handle, match, data, hdr):
             self.send_response(handle, None, status=status.status)
     try:
         # FIXME: Clean up deployer next
-        deployer = Deployer(
-                deployable=data,
-                node=self.node,
-                cb=deploy_cb
-            )
+        deployer = Deployer(deployable=data, node=self.node)
         print(self.node.id, "Deployer instantiated")
-        deployer.deploy()
+        deployer.deploy(deploy_cb)
     except Exception as e:
         _log.exception(f"Deployer failed: {e}")
         self.send_response(

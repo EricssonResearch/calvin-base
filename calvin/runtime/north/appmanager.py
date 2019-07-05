@@ -558,7 +558,7 @@ class Deployer(object):
     produce a running calvin application.
     """
 
-    def __init__(self, deployable, node, cb=None):
+    def __init__(self, deployable, node):
         super(Deployer, self).__init__()
         # Node dependencies
         self.node = node
@@ -573,72 +573,66 @@ class Deployer(object):
         # from node
         self.actor_map = {}
         self.actor_connections = {}
-        self.cb = cb
-        self._verified_actors = {}
+g        self._verified_actors = {}
         self._instantiate_counter = 0
-        self._requires_counter = 0
         self.name = self.app_info["name"]
         self.app_id = self.app_manager.new(self.name)
         self.ns = os.path.splitext(os.path.basename(self.name))[0]
         self.components = group_components(self.ns, self.app_info['actors'])
 
-
-    def instantiate(self, actor_name, info, actor_def, callback):
+    def deploy(self, done_callback):
         """
-        Instantiate an actor.
-        - 'actor_name' is <namespace>:<identifier>, e.g. app:src, or app:component:src
-        - 'info' is information about the actor
-            info['args'] is a dictionary of key-value arguments for this instance
-            info['signature'] is the GlobalStore actor-signature to lookup the actor
+            Verify actors, instantiate and link them together.
         """
-        def _instantiate():
 
-            def requirement_type(req):
-                try:
-                    return req_operations[req['op']].req_type
-                except:
-                    return "unknown"
+        def instantiate(actor_name, info, actor_def):
+            """
+                Instantiate an actor.
+                - 'actor_name' is <namespace>:<identifier>, e.g. app:src, or app:component:src
+                - 'info' is information about the actor
+                    info['args'] is a dictionary of key-value arguments for this instance
+                    info['signature'] is the GlobalStore actor-signature to lookup the actor
+            """
 
-            # TODO component ns needs to be stored in registry /component/<app-id>/ns[0]/ns[1]/.../actor_name: actor_id
-            if 'port_properties' in self.app_info:
-                port_properties = self.app_info['port_properties'].get(actor_name, None)
-            else:
-                port_properties = None
-            info['args']['name'] = actor_name
-            # TODO add requirements should be part of actor_manager new
-            actor_id = self.actor_manager.new(actor_type=info['actor_type'], args=info['args'], signature=info['signature'],
-                                              actor_def=actor_def, port_properties=port_properties)
-            if not actor_id:
-                raise Exception("Could not instantiate actor %s" % actor_name)
-            actor = self.node.am.actors[actor_id]
-            deploy_req = get_req(actor_name, self.deploy_info)
-            if deploy_req:
-                # Placement requirements
-                actor_reqs = [r for r in deploy_req if requirement_type(r)]
-                # Placement requirements
-                actor.requirements_add(actor_reqs, extend=False)
-            # Update actor (incl requirements) in registry
-            self.storage.add_actor(actor, self.node.id)
+            def create_actor(info, port_properties):
+                # TODO add requirements should be part of actor_manager new
+                actor_id = self.actor_manager.new(actor_type=info['actor_type'], args=info['args'], signature=info['signature'],
+                                                actor_def=actor_def, port_properties=port_properties)
+                if not actor_id:
+                    raise Exception("Could not instantiate actor %s" % actor_name)
+                return self.node.am.actors[actor_id]
 
-            self._requires_counter += 1
+            def add_requirements(actor):
+                def requirement_type(req):
+                    try:
+                        return req_operations[req['op']].req_type
+                    except:
+                        return "unknown"
+                deploy_req = get_req(actor_name, self.deploy_info)
+                if deploy_req:
+                    # Placement requirements
+                    actor_reqs = [r for r in deploy_req if requirement_type(r)]
+                    # Placement requirements
+                    actor.requirements_add(actor_reqs, extend=False)
 
-            self.actor_map[actor_name] = actor_id
-            self.app_manager.add(self.app_id, actor_id)
+            try:
+                # TODO component ns needs to be stored in registry /component/<app-id>/ns[0]/ns[1]/.../actor_name: actor_id
+                if 'port_properties' in self.app_info:
+                    port_properties = self.app_info['port_properties'].get(actor_name, None)
+                else:
+                    port_properties = None
+                info['args']['name'] = actor_name
+                actor = create_actor(info, port_properties)
+                add_requirements(actor)
 
-        try:
-            _instantiate()
-        except Exception as e:
-            # FIXME: what should happen here?
-            _log.exception(f"Instantiate failed {e}")
-            raise e
-        finally:
-            callback()
-
-
-    def deploy(self):
-        """Verify actors, instantiate and link them together.
-        """
-        deploy_counter = 0
+                # Update actor (incl requirements) in registry
+                self.storage.add_actor(actor, self.node.id)
+                self.actor_map[actor_name] = actor.id
+                self.app_manager.add(self.app_id, actor.id)
+            except Exception as e:
+                # FIXME: what should happen here?
+                _log.exception(f"Instantiate failed {e}")
+                raise e
 
         def connect(src, dst, cb):
             def update_actor(*args, **kwargs):
@@ -677,13 +671,14 @@ class Deployer(object):
                                (str(status), str(kwargs)))
                     connection_status = status
                 if connection_count == 0:
-                    _log.debug("wait_for_all_connections final")
-                    if self._requires_counter >= len(self.app_info['actors']):
-                        self.app_manager.finalize(self.app_id, migrate=bool(self.deploy_info), cb=self.cb)
+                    self.app_manager.finalize(self.app_id, migrate=bool(self.deploy_info), cb=done_callback)
+                else:
+                    _log.info(f"Not yet connected, {connection_count} left")
 
             self._instantiate_counter += 1
             if self._instantiate_counter < len(self._verified_actors):
                 return
+
             for component_name, actor_names in self.components.items():
                 actor_ids = [self.actor_map[n] for n in actor_names]
                 for actor_id in actor_ids:
@@ -697,6 +692,7 @@ class Deployer(object):
                         self.port_manager.set_port_nbr_peers(actor_id=actor_id, port_name=src_port, nbr_peers=len(dst_list))
                     except Exception as e:
                         _log.exception(f"Failed to set nbr peers for port: {e}")
+                        raise e
 
             connection_count = sum(map(len, list(self.app_info['connections'].values())))
             connection_status = response.CalvinResponse(True)
@@ -704,35 +700,44 @@ class Deployer(object):
                 for dst in dst_list:
                     connect(src, dst, cb=wait_for_all_connections)
 
-        def check_actor_requirements():
-            def check_requirements(requirements):
-                for req in requirements:
-                    if not get_calvinsys().has_capability(req) and not get_calvinlib().has_capability(req):
-                        # @TODO: Is this the right thing to do here?
-                        raise Exception("Actor requires %s" % req)
-                return True
+        def check_requirements(requirements):
+            for req in requirements:
+                if not get_calvinsys().has_capability(req) and not get_calvinlib().has_capability(req):
+                    # @TODO: Is this the right thing to do here?
+                    raise Exception("Actor requires %s" % req)
+            return True
 
-            nonlocal deploy_counter
-            deploy_counter += 1
-            if deploy_counter < len(self.app_info['actors']):
-                return
+        def verify_actors():
+            for actor_name, info in self.app_info['actors'].items():
+                """
+                Lookup and verify actor in actor store.
+                - 'actor_name' is <namespace>:<identifier>, e.g. app:src, or app:component:src
+                - 'info' is information about the actor
+                """
+                _log.info(f"Actor: {actor_name}")
+                actor_def = self.actorstore.lookup_and_verify_actor(info['actor_type'])
+                info['requires'] = actor_def.requires if hasattr(actor_def, "requires") else []
+                self._verified_actors[actor_name] = (info, actor_def)
+            return True
+
+        def instantiate_actors():
+            """
+            Check requirements of verified actors and call instantiate for those that checks out
+            @TODO: What to do if they don't?
+            """
             for actor_name, info in self._verified_actors.items():
+                _log.info(f"checking requirements for actor {actor_name}")
                 actor_info = info[0]
                 actor_def = info[1]
                 if check_requirements(actor_info["requires"]):
-                    self.instantiate(actor_name, actor_info, actor_def, callback=finalize)
+                    instantiate(actor_name, actor_info, actor_def)
+                    finalize()
 
         if not self.app_info['valid']:
             raise Exception("Deploy information is not valid")
 
-        for actor_name, info in self.app_info['actors'].items():
-            """
-            Lookup and verify actor in actor store.
-            - 'actor_name' is <namespace>:<identifier>, e.g. app:src, or app:component:src
-            - 'info' is information about the actor
-            """
-            actor_type = info['actor_type']
-            actor_def = self.actorstore.lookup_and_verify_actor(actor_type)
-            info['requires'] = actor_def.requires if hasattr(actor_def, "requires") else []
-            self._verified_actors[actor_name] = (info, actor_def)
-            check_actor_requirements()
+        if verify_actors():
+            instantiate_actors()
+        else:
+            _log.error("Could not verify actors")
+            raise Exception("Cannot verify actors")
