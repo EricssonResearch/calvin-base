@@ -121,18 +121,22 @@ countries = ["AD", "AE", "AF", "AG", "AI", "AL", "AM", "AO", "AQ", "AR", "AS", "
 #
 # Helper functions
 #
+
+# FIXME: None --> '', use str(attr.get(k, ''))
 def owner_resolver(attr):
     if not isinstance(attr, dict):
         raise Exception('Owner attribute must be a dictionary with %s keys.' % owner_keys)
     resolved = [str(attr[k]) if k in attr else None for k in owner_keys]
     return resolved
 
+# FIXME: None --> '', use str(attr.get(k, ''))
 def node_name_resolver(attr):
     if not isinstance(attr, dict):
         raise Exception('Node name attribute must be a dictionary with %s keys.' % node_name_keys)
     resolved = [str(attr[k]) if k in attr else None for k in node_name_keys]
     return resolved
 
+# FIXME: None --> '', use str(attr.get(k, ''))
 def address_resolver(attr):
     if not isinstance(attr, dict):
         raise Exception('Address attribute must be a dictionary with %s keys.' % address_keys)
@@ -151,6 +155,7 @@ def extra_resolver(attr):
     else:
         raise Exception('User extra attribute must be a list of ordered attribute lists.')
 
+# FIXME: as_list mandatory, None --> '', no escape => err if / or \, use one truth and split/join
 def encode_index(attr, as_list=False):
     attr_str = '/node/attribute'
     attr_list = ['node', 'attribute']
@@ -167,6 +172,7 @@ def encode_index(attr, as_list=False):
         attr_list.append(a)
     return attr_list if as_list else attr_str
 
+# FIXME: None --> '', no escape => err if / or \, use one truth and split/join
 def decode_index(attr_str):
     if not attr_str.startswith('/node/attribute'):
         raise Exception('Index %s not a node attribute' % attr_str)
@@ -317,6 +323,7 @@ class AttributeResolver(object):
             return self.attr["public"]
         return self._get_attribute(index, "public")
 
+    # FIXME: as_list mandatory
     # Used in calvinsys, proxyhandler, storage, resource_monitor (and security/)
     def get_indexed_public(self, as_list=False):
         # Return all indexes encoded for storage as a list of lists
