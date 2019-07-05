@@ -69,8 +69,6 @@ def _uuids(request):
     ("GET /index/abc123 HTTP/1", ["abc123", None, None], "handle_get_index"),
     ("GET /index/abc123?root_prefix_level=3 HTTP/1", ["abc123", "?root_prefix_level=3", "3"], "handle_get_index"),
     ("OPTIONS /abc123 HTTP/1", None, "handle_options"),
-    ("POST /node/resource/cpu_avail HTTP/1", ["cpu_avail"], "handle_resource_avail"),
-    ("POST /node/resource/mem_avail HTTP/1", ["mem_avail"], "handle_resource_avail")
 ])
 
 def test_routes_correctly(url, match, handler, _uuids):

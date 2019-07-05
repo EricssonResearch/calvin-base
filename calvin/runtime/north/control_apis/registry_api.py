@@ -145,39 +145,3 @@ def handle_get_port(self, handle, match, data, hdr):
     self.node.storage.get_port(match.group(2), CalvinCB(
         func=self.storage_cb, handle=handle))
 
-
-# FIXME: This doesn't belong here? Move to runtime_api
-@handler(method="POST", path="/node/resource/", optional=["mem_avail", "cpu_avail", "memAvail", "cpuAvail"])
-
-def handle_resource_avail(self, handle, match, data, hdr):
-    """
-    POST /node/resource/{mem_avail|cpu_avail}
-    Updates {mem|cpu]} availability in the local node
-    Body:
-    {
-        "value": <{RAM|CPU} avail (0,25,50,75,100)>
-    }
-
-    Note: memAvail, cpuAvail versions are deprecated. Use lowercase
-    Response status code: OK, NOT_FOUND, INTERNAL_ERROR
-    Response: none
-    """
-    if match.group(1) in ['mem_avail', "memAvail"]:
-        self.node.mem_monitor.set_avail(data['value'], CalvinCB(self.index_cb, handle))
-    elif match.group(1) in ['cpu_avail', "cpuAvail"]:
-        self.node.cpu_monitor.set_avail(data['value'], CalvinCB(self.index_cb, handle))
-    else:
-        self.send_response(handle, None, status=calvinresponse.NOT_FOUND)
-        
-@register
-def index_cb(self, handle, *args, **kwargs):
-    """ Index operation response
-    """
-    _log.debug("index cb (in control) %s, %s" % (args, kwargs))
-    if 'value' in kwargs:
-        value = kwargs['value']
-    else:
-        value = None
-    self.send_response(handle, None,
-                       status=calvinresponse.INTERNAL_ERROR if value is None else calvinresponse.OK)
-        

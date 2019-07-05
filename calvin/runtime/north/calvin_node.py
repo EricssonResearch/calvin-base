@@ -34,8 +34,6 @@ from calvin.common.calvin_callback import CalvinCB
 from calvin.common.calvinlogger import get_logger, set_file
 from calvin.common import calvinconfig
 from calvin.common import metadata_proxy as mdproxy
-from calvin.runtime.north.resource_monitor.cpu import CpuMonitor
-from calvin.runtime.north.resource_monitor.memory import MemMonitor
 from calvin.runtime.north.proxyhandler import ProxyHandler
 
 
@@ -70,8 +68,6 @@ class Node(object):
         proto : 
         pm : 
         app_manager : 
-        cpu_monitor : 
-        mem_monitor : 
         proxy_handler :         
     """
 
@@ -131,9 +127,6 @@ class Node(object):
         self.pm = PortManager(node=self)
         self.app_manager = appmanager.AppManager(node=self)
 
-        self.cpu_monitor = CpuMonitor(self.id, self.storage)
-        self.mem_monitor = MemMonitor(self.id, self.storage)
-
         self.proxy_handler = ProxyHandler(node=self)
 
         # The initialization that requires the main loop operating is deferred to start function
@@ -188,8 +181,6 @@ class Node(object):
 
         _log.analyze(self.id, "+", {})
         self.storage.delete_node(self, cb=deleted_node)
-        self.cpu_monitor.stop()
-        self.mem_monitor.stop()
         for link in self.network.list_direct_links():
             self.network.link_get(link).close()
 
