@@ -1,4 +1,4 @@
-from calvin.common.enum import enum
+from calvin.common._enum import enum
 # Only TEMPORARY, TERMINATE and EXHAUST are used on highest level in actor and port manager
 # TEMPORARY is used during migration
 # TERMINATE is used for dereplication without preserving tokens

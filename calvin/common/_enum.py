@@ -16,7 +16,7 @@
 
 import warnings
 
-warnings.warn("calvin.common.enum should be replaced by python's enum.", DeprecationWarning)
+warnings.warn("calvin.common._enum should be replaced by python's enum.", DeprecationWarning)
 
 # FIXME: Some of our code relies on the fact that enums are really ints, and  
 #        that ENUM.FOO can be serialized over tunnels/rt2rt communication

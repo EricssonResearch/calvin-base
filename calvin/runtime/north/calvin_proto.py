@@ -18,7 +18,7 @@ import uuid
 import socket
 from urllib.parse import urlparse
 
-from calvin.common.enum import enum
+from calvin.common._enum import enum
 from calvin.common.calvin_callback import CalvinCB, CalvinCBClass
 from calvin.common import calvinlogger
 from calvin.common import calvinconfig

@@ -21,7 +21,7 @@ import wrapt
 
 from calvin.actor import actorport
 from calvin.common.calvinlogger import get_logger
-from calvin.common.enum import enum
+from calvin.common._enum import enum
 from calvin.runtime.north.calvin_token import Token, ExceptionToken
 import calvin.common.calvinresponse as response
 from calvin.actor.port_property_syntax import get_port_property_capabilities, get_port_property_runtime
