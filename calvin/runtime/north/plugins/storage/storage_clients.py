@@ -58,6 +58,25 @@ from .proxy_client import ProxyRegistryClient
   #   self.localstorage.op(args)
   #   self.storage.op(args, nested_callback) # NullClient() unwinds nested_callback and calls callback as DelayedCall
 
+from requests_futures.sessions import FuturesSession
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+
+
+def requests_retry_session(retries=3, backoff_factor=0.3, status_forcelist=(500, 502, 504), session=None):
+    session = session or FuturesSession(max_workers=10)
+    retry = Retry(
+        total=retries,
+        read=retries,
+        connect=retries,
+        backoff_factor=backoff_factor,
+        status_forcelist=status_forcelist,
+    )
+    adapter = HTTPAdapter(max_retries=retry)
+    session.mount('http://', adapter)
+    session.mount('https://', adapter)
+    return session
+
 def registry(kind, node, host):
     all_kinds = {
         'debug': DebugRegistryClient,
@@ -98,10 +117,8 @@ def response_callback_content(key, callback, fut):
     else:
         callback(key=key, value=value)
 
-
 class RESTRegistryClient(StorageBase):
-    from requests_futures.sessions import FuturesSession
-    session = FuturesSession(max_workers=10)
+    session = requests_retry_session(retries=5, backoff_factor=0.5, status_forcelist=(500, 502, 504))
 
     def __init__(self, node, host):
         # UNUSED: node
