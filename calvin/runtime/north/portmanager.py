@@ -14,6 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from functools import partial
+
 from calvin.common.calvin_callback import CalvinCB
 from calvin.runtime.north.plugins.port.connection import ConnectionFactory, PURPOSE
 from calvin.actor.actorport import PortMeta
@@ -66,19 +68,13 @@ class PortManager(object):
         ok = all(success)
         return response.CalvinResponse(True) if ok else response.CalvinResponse(response.BAD_REQUEST)
 
-    def set_port_properties(self, port_id=None, actor_id=None, port_dir=None, port_name=None,
-                            **port_properties):
-        _log.analyze(self.node.id, "+", port_properties)
-        port = self._get_local_port(actor_id=actor_id, port_name=port_name, port_dir=port_dir, port_id=port_id)
-        success = []
-        for port_property, value in port_properties.items():
-            success.append(self._set_port_property(port, port_property, value))
-        ok = all(success)
-        return response.CalvinResponse(True) if ok else response.CalvinResponse(response.BAD_REQUEST)
+    def set_port_nbr_peers(self, actor_id, port_name, nbr_peers):
+        port = self._get_local_port(actor_id=actor_id, port_name=port_name, port_dir="out")
+        result = self._set_port_property(port, 'nbr_peers', nbr_peers)
+        if not port.properties.get("routing") or port.properties.get("routing") == 'default':
+            result |= self._set_port_property(port, "routing", "fanout")
 
-    def get_port_properties(self, port_id=None, actor_id=None, port_dir=None, port_name=None):
-        port = self._get_local_port(actor_id=actor_id, port_name=port_name, port_dir=port_dir, port_id=port_id)
-        return port.properties
+        return response.CalvinResponse(True) if result else response.CalvinResponse(response.BAD_REQUEST)
 
     def connection_request(self, payload):
         """ A request from a peer to connect a port"""
@@ -124,16 +120,36 @@ class PortManager(object):
                 peer_actor_id, peer_port_name and peer_port_dir='in'/'out' or
                 peer_port_id
         """
+        def _connect(local_port=None, callback=None, status=None, port_meta=None):
+            """ Do the connection of ports, all neccessary information supplied but
+                maybe not all pre-requisites for remote connections.
+            """
+            if not status:
+                callback(status=status,
+                        actor_id=local_port.owner.id,
+                        port_name=local_port.name,
+                        port_id=local_port.id,
+                        peer_node_id=port_meta.node_id,
+                        peer_actor_id=port_meta.actor_id,
+                        peer_port_name=port_meta.port_name,
+                        peer_port_id=port_meta.port_id)
+                return
+            _log.analyze(self.node.id, "+", {'local_port': local_port, 'peer_port': port_meta},
+                            peer_node_id=port_meta.node_id, tb=True)
+
+            ConnectionFactory(self.node, PURPOSE.CONNECT).get(local_port, port_meta, callback).connect()
 
         local_port_meta = PortMeta(self, actor_id=actor_id, port_id=port_id, port_name=port_name,
-                            properties=port_properties, node_id=self.node.id)
+                                   properties=port_properties, node_id=self.node.id)
         peer_port_meta = PortMeta(self, actor_id=peer_actor_id, port_id=peer_port_id, port_name=peer_port_name,
-                            properties=peer_port_properties, node_id=peer_node_id)
+                                  properties=peer_port_properties, node_id=peer_node_id)
 
         _log.analyze(self.node.id, "+", {'local': local_port_meta, 'peer': peer_port_meta},
-                    peer_node_id=peer_node_id, tb=True)
+                     peer_node_id=peer_node_id, tb=True)
         try:
             port = local_port_meta.port
+            # Retrieve node id etc, raise exception if not possible, continue in _connect otherwise
+            peer_port_meta.retrieve(callback=partial(_connect, local_port=port, callback=callback))
         except response.CalvinResponseException as e:
             if callback:
                 callback(status=e.response,
@@ -148,42 +164,6 @@ class PortManager(object):
             else:
                 raise e.response
 
-        # Retrieve node id etc, raise exception if not possible, continue in _connect otherwise
-        try:
-            peer_port_meta.retrieve(callback=CalvinCB(self._connect, local_port=port, callback=callback))
-        except response.CalvinResponseException as e:
-            if callback:
-                callback(status=e.response,
-                         actor_id=actor_id,
-                         port_name=port_name,
-                         port_id=port_id,
-                         peer_node_id=peer_node_id,
-                         peer_actor_id=peer_actor_id,
-                         peer_port_name=peer_port_name,
-                         peer_port_id=peer_port_id)
-                return
-            else:
-                raise e.response
-
-    def _connect(self, local_port=None, callback=None, status=None, port_meta=None):
-        """ Do the connection of ports, all neccessary information supplied but
-            maybe not all pre-requisites for remote connections.
-        """
-        if not status:
-            if callback:
-                callback(status=status,
-                         actor_id=local_port.owner.id,
-                         port_name=local_port.name,
-                         port_id=local_port.id,
-                         peer_node_id=port_meta.node_id,
-                         peer_actor_id=port_meta.actor_id,
-                         peer_port_name=port_meta.port_name,
-                         peer_port_id=port_meta.port_id)
-            return
-        _log.analyze(self.node.id, "+", {'local_port': local_port, 'peer_port': port_meta},
-                        peer_node_id=port_meta.node_id, tb=True)
-
-        ConnectionFactory(self.node, PURPOSE.CONNECT).get(local_port, port_meta, callback).connect()
 
     def disconnect(self, callback=None, actor_id=None, port_name=None, port_dir=None, port_id=None,
                    terminate=DISCONNECT.TEMPORARY):
@@ -246,7 +226,7 @@ class PortManager(object):
                     port_ids.append(port.id)
 
         _log.analyze(self.node.id, "+", {'port_ids': port_ids})
-        
+
         # Run over copy of list of ports since modified inside the loop
         for port_id in port_ids[:]:
             _log.analyze(self.node.id, "+ PRE FACTORY", {'port_id': port_id})
@@ -303,7 +283,7 @@ class PortManager(object):
         peer_port_meta = PortMeta(self, port_id=payload['port_id'], node_id=payload['from_rt_uuid'])
 
         _log.analyze(self.node.id, "+", {'local': local_port_meta, 'peer': peer_port_meta},
-                    peer_node_id=payload['from_rt_uuid'], tb=True)
+                     peer_node_id=payload['from_rt_uuid'], tb=True)
         try:
             port = local_port_meta.port
         except response.CalvinResponseException as e:

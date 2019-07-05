@@ -17,6 +17,7 @@
 import os
 import copy
 import uuid
+from functools import partial
 
 from calvin.common.calvin_callback import CalvinCB
 from calvin.common import dynops
@@ -24,6 +25,9 @@ from calvin.common import calvinlogger
 from calvin.runtime.north.plugins.requirements import req_operations
 import calvin.common.calvinresponse as response
 from calvin.common.requirement_matching import ReqMatch
+
+from calvin.runtime.north.calvinsys import get_calvinsys
+from calvin.runtime.north.calvinlib import get_calvinlib
 
 _log = calvinlogger.get_logger(__name__)
 
@@ -50,37 +54,34 @@ def get_req(actor_name, deploy_info):
 
 def group_components(namespace, actors):
     import json
+
+    def _group_components():
+        components = {}
+        l = (len(namespace)+1) if namespace else 0
+        for name in actors.keys():
+            if name.find(':', l) > -1:
+                # This is part of a component
+                # component name including optional namespace
+                component = ':'.join(name.split(':')[0:(2 if namespace else 1)])
+                if component in components:
+                    components[component].append(name)
+                else:
+                    components[component] = [name]
+        return components
     try:
-        return _group_components(namespace, actors)
+        return _group_components()
     except Exception as e:
-        _log.info(f"Failed to group componens {e}")
-        _log.info(f"namespace: {namespace}")
-        _log.info(f"actors: {json.dumps(actors, indent=2, default=str)}")
+        _log.error(f"Failed to group components {e}")
         raise e
-
-
-def _group_components(namespace, actors):
-    components = {}
-    l = (len(namespace)+1) if namespace else 0
-    for name in actors.keys():
-        if name.find(':', l) > -1:
-            # This is part of a component
-            # component name including optional namespace
-            component = ':'.join(name.split(':')[0:(2 if namespace else 1)])
-            if component in components:
-                components[component].append(name)
-            else:
-                components[component] = [name]
-    return components
 
 
 class Application(object):
 
     """ Application class """
 
-    def __init__(self, id, name, origin_node_id, actor_manager, actors=None, deploy_info=None):
-        self.id = id
-        self.name = name or id
+    def __init__(self, appid, name, origin_node_id, actor_manager, actors=None, deploy_info=None):
+        self.id = appid
+        self.name = name or appid
         self.ns = os.path.splitext(os.path.basename(self.name))[0]
         self.am = actor_manager
         self.actors = {} if actors is None else actors
@@ -150,7 +151,7 @@ class Application(object):
 
     def complete_node_info(self):
         return sum([len(a) for a in self.node_info.values()]) == len(self.actors)
-        
+
     def data_for_registry(self):
         data = {
             "name": self.name,
@@ -160,7 +161,7 @@ class Application(object):
             "actors_name_map": self.actors,
             "origin_node_id": self.origin_node_id
         }
-        return data    
+        return data
 
 
 class AppManager(object):
@@ -559,73 +560,80 @@ class Deployer(object):
 
     def __init__(self, deployable, node, cb=None):
         super(Deployer, self).__init__()
+        # Node dependencies
+        self.node = node
+        self.storage = node.storage
+        self.app_manager = node.app_manager
+        self.actor_manager = node.am
+        self.port_manager = node.pm
+        self.actorstore = node.actorstore
+
         self.app_info = deployable["app_info"]
         self.deploy_info = deployable["deploy_info"]
+        # from node
         self.actor_map = {}
         self.actor_connections = {}
-        self.node = node
-        self.app_manager = node.app_manager
         self.cb = cb
         self._verified_actors = {}
         self._instantiate_counter = 0
         self._requires_counter = 0
         self.name = self.app_info["name"]
-        self.app_id = self.node.app_manager.new(self.name)
+        self.app_id = self.app_manager.new(self.name)
         self.ns = os.path.splitext(os.path.basename(self.name))[0]
         self.components = group_components(self.ns, self.app_info['actors'])
 
 
-    def instantiate(self, actor_name, info, actor_def=None, cb=None):
-        try:
-            self._instantiate(actor_name, info, actor_def, cb)
-        except Exception as e:
-            # FIXME: what should happen here?
-            _log.exception("Instantiate failed")
-            raise e
-        finally:
-            if cb:
-                cb()
-
-    def _instantiate(self, actor_name, info, actor_def=None, cb=None):
+    def instantiate(self, actor_name, info, actor_def, callback):
         """
         Instantiate an actor.
-          - 'actor_name' is <namespace>:<identifier>, e.g. app:src, or app:component:src
-          - 'info' is information about the actor
-             info['args'] is a dictionary of key-value arguments for this instance
-             info['signature'] is the GlobalStore actor-signature to lookup the actor
+        - 'actor_name' is <namespace>:<identifier>, e.g. app:src, or app:component:src
+        - 'info' is information about the actor
+            info['args'] is a dictionary of key-value arguments for this instance
+            info['signature'] is the GlobalStore actor-signature to lookup the actor
         """
+        def _instantiate():
 
-        def requirement_type(req):
-            try:
-                return req_operations[req['op']].req_type
-            except:
-                return "unknown"
+            def requirement_type(req):
+                try:
+                    return req_operations[req['op']].req_type
+                except:
+                    return "unknown"
 
-        # TODO component ns needs to be stored in registry /component/<app-id>/ns[0]/ns[1]/.../actor_name: actor_id
-        if 'port_properties' in self.app_info:
-            port_properties = self.app_info['port_properties'].get(actor_name, None)
-        else:
-            port_properties = None
-        info['args']['name'] = actor_name
-        # TODO add requirements should be part of actor_manager new
-        actor_id = self.node.am.new(actor_type=info['actor_type'], args=info['args'], signature=info['signature'],
-                                    actor_def=actor_def, port_properties=port_properties)
-        if not actor_id:
-            raise Exception("Could not instantiate actor %s" % actor_name)
-        actor = self.node.am.actors[actor_id]
-        deploy_req = get_req(actor_name, self.deploy_info)
-        if deploy_req:
-            # Placement requirements
-            actor_reqs = [r for r in deploy_req if requirement_type(r)]
-            # Placement requirements
-            actor.requirements_add(actor_reqs, extend=False)
-        # Update actor (incl requirements) in registry
-        self.node.storage.add_actor(actor, self.node.id)
+            # TODO component ns needs to be stored in registry /component/<app-id>/ns[0]/ns[1]/.../actor_name: actor_id
+            if 'port_properties' in self.app_info:
+                port_properties = self.app_info['port_properties'].get(actor_name, None)
+            else:
+                port_properties = None
+            info['args']['name'] = actor_name
+            # TODO add requirements should be part of actor_manager new
+            actor_id = self.actor_manager.new(actor_type=info['actor_type'], args=info['args'], signature=info['signature'],
+                                              actor_def=actor_def, port_properties=port_properties)
+            if not actor_id:
+                raise Exception("Could not instantiate actor %s" % actor_name)
+            actor = self.node.am.actors[actor_id]
+            deploy_req = get_req(actor_name, self.deploy_info)
+            if deploy_req:
+                # Placement requirements
+                actor_reqs = [r for r in deploy_req if requirement_type(r)]
+                # Placement requirements
+                actor.requirements_add(actor_reqs, extend=False)
+            # Update actor (incl requirements) in registry
+            self.storage.add_actor(actor, self.node.id)
 
-        self._requires_counter += 1
+            self._requires_counter += 1
 
-        self.actor_map[actor_name] = actor_id
-        self.node.app_manager.add(self.app_id, actor_id)
+            self.actor_map[actor_name] = actor_id
+            self.app_manager.add(self.app_id, actor_id)
+
+        try:
+            _instantiate()
+        except Exception as e:
+            # FIXME: what should happen here?
+            _log.exception(f"Instantiate failed {e}")
+            raise e
+        finally:
+            callback()
+
 
     def deploy(self):
         """Verify actors, instantiate and link them together.
@@ -633,6 +641,10 @@ class Deployer(object):
         deploy_counter = 0
 
         def connect(src, dst, cb):
+            def update_actor(*args, **kwargs):
+                """ Update actor in storage after ports connected """
+                self.storage.add_actor(self.actor_manager.actors[actor_id], self.node.id, cb=partial(cb, *args, **kwargs))
+
             # connect from dst to src
             dst_actor, port_name = dst.split('.')
             src_actor, peer_port_name = src.split('.')
@@ -644,14 +656,14 @@ class Deployer(object):
             port_properties = {'direction': 'in'}
             peer_port_properties = {'direction': 'out'}
 
-            self.node.pm.connect(actor_id=actor_id,
+            self.port_manager.connect(actor_id=actor_id,
                                  port_name=port_name,
                                  port_properties=port_properties,
                                  peer_node_id=peer_node_id,
                                  peer_actor_id=peer_actor_id,
                                  peer_port_name=peer_port_name,
                                  peer_port_properties=peer_port_properties,
-                                 callback=cb)
+                                 callback=update_actor)
 
         def finalize():
             def wait_for_all_connections(status, *args, **kwargs):
@@ -667,8 +679,7 @@ class Deployer(object):
                 if connection_count == 0:
                     _log.debug("wait_for_all_connections final")
                     if self._requires_counter >= len(self.app_info['actors']):
-                        self.node.app_manager.finalize(self.app_id, migrate=bool(self.deploy_info),
-                                                       cb=CalvinCB(self.cb, deployer=self))
+                        self.app_manager.finalize(self.app_id, migrate=bool(self.deploy_info), cb=self.cb)
 
             self._instantiate_counter += 1
             if self._instantiate_counter < len(self._verified_actors):
@@ -676,22 +687,16 @@ class Deployer(object):
             for component_name, actor_names in self.components.items():
                 actor_ids = [self.actor_map[n] for n in actor_names]
                 for actor_id in actor_ids:
-                    self.node.am.actors[actor_id].component_add(actor_ids)
+                    self.actor_manager.actors[actor_id].component_add(actor_ids)
 
             for src, dst_list in self.app_info['connections'].items():
                 if len(dst_list) > 1:
-                    src_name, src_port = src.split('.')
-                    _log.debug("GET PROPERTIES for %s, %s.%s" % (src, src_name, src_port))
-                    current_properties = self.node.pm.get_port_properties(
-                        actor_id=self.actor_map[src_name], port_dir='out', port_name=src_port)
-                    kwargs = {'nbr_peers': len(dst_list)}
-                    if 'routing' in current_properties and current_properties['routing'] != 'default':
-                        kwargs['routing'] = current_properties['routing']
-                    else:
-                        kwargs['routing'] = 'fanout'
-                    _log.debug("CURRENT PROPERTIES\n%s\n%s" % (current_properties, kwargs))
-                    self.node.pm.set_port_properties(actor_id=self.actor_map[src_name], port_dir='out', port_name=src_port,
-                                                     **kwargs)
+                    try:
+                        src_name, src_port = src.split('.')
+                        actor_id = self.actor_map[src_name]
+                        self.port_manager.set_port_nbr_peers(actor_id=actor_id, port_name=src_port, nbr_peers=len(dst_list))
+                    except Exception as e:
+                        _log.exception(f"Failed to set nbr peers for port: {e}")
 
             connection_count = sum(map(len, list(self.app_info['connections'].values())))
             connection_status = response.CalvinResponse(True)
@@ -700,6 +705,13 @@ class Deployer(object):
                     connect(src, dst, cb=wait_for_all_connections)
 
         def check_actor_requirements():
+            def check_requirements(requirements):
+                for req in requirements:
+                    if not get_calvinsys().has_capability(req) and not get_calvinlib().has_capability(req):
+                        # @TODO: Is this the right thing to do here?
+                        raise Exception("Actor requires %s" % req)
+                return True
+
             nonlocal deploy_counter
             deploy_counter += 1
             if deploy_counter < len(self.app_info['actors']):
@@ -707,13 +719,8 @@ class Deployer(object):
             for actor_name, info in self._verified_actors.items():
                 actor_info = info[0]
                 actor_def = info[1]
-                actor_reqs = actor_info["requires"]
-                self.node.am.check_requirements(actor_reqs,
-                                                callback=CalvinCB(self.instantiate,
-                                                                  actor_name,
-                                                                  actor_info,
-                                                                  actor_def,
-                                                                  cb=finalize))
+                if check_requirements(actor_info["requires"]):
+                    self.instantiate(actor_name, actor_info, actor_def, callback=finalize)
 
         if not self.app_info['valid']:
             raise Exception("Deploy information is not valid")
@@ -725,7 +732,7 @@ class Deployer(object):
             - 'info' is information about the actor
             """
             actor_type = info['actor_type']
-            actor_def = self.node.actorstore.lookup_and_verify_actor(actor_type)
+            actor_def = self.actorstore.lookup_and_verify_actor(actor_type)
             info['requires'] = actor_def.requires if hasattr(actor_def, "requires") else []
             self._verified_actors[actor_name] = (info, actor_def)
             check_actor_requirements()

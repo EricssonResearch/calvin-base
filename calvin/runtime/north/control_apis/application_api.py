@@ -237,15 +237,29 @@ def handle_deploy(self, handle, match, data, hdr):
                        'exception': <exception string>}
     """
 
+    def deploy_cb(status, placement=None, **kwargs):
+        _log.analyze(self.node.id, "+ DEPLOYED", {'status': status.status})
+        _log.info(f"DEPLOY: {json.dumps(kwargs, indent=2)}")
+        if status and deployer.app_id:
+            print("DEPLOY STATUS", str(status))
+            response = {'application_id': deployer.app_id,
+                        'actor_map': deployer.actor_map,
+                        'placement': placement,
+                        'requirements_fulfilled': status.status == calvinresponse.OK}
+            self.send_response(handle,
+                            json.dumps(response),
+                            status=status.status)
+        else:
+            self.send_response(handle, None, status=status.status)
     try:
         # FIXME: Clean up deployer next
-        d = Deployer(
+        deployer = Deployer(
                 deployable=data,
                 node=self.node,
-                cb=CalvinCB(self.handle_deploy_cb, handle)
+                cb=deploy_cb
             )
         print(self.node.id, "Deployer instantiated")
-        d.deploy()
+        deployer.deploy()
     except Exception as e:
         _log.exception(f"Deployer failed: {e}")
         self.send_response(
@@ -254,20 +268,6 @@ def handle_deploy(self, handle, match, data, hdr):
             status=calvinresponse.INTERNAL_ERROR
         )
 
-@register
-def handle_deploy_cb(self, handle, status, deployer, **kwargs):
-    _log.analyze(self.node.id, "+ DEPLOYED", {'status': status.status})
-    if status:
-        print("DEPLOY STATUS", str(status))
-        self.send_response(handle,
-                           json.dumps({'application_id': deployer.app_id,
-                                       'actor_map': deployer.actor_map,
-                                       'placement': kwargs.get('placement', None),
-                                       'requirements_fulfilled': status.status == calvinresponse.OK}
-                                      ) if deployer.app_id else None,
-                           status=status.status)
-    else:
-        self.send_response(handle, None, status=status.status)
 
 
 # USED BY: GUI, CSWEB, CSCONTROL
