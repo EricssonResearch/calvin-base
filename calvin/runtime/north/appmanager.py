@@ -573,7 +573,7 @@ class Deployer(object):
         # from node
         self.actor_map = {}
         self.actor_connections = {}
-g        self._verified_actors = {}
+        self._verified_actors = {}
         self._instantiate_counter = 0
         self.name = self.app_info["name"]
         self.app_id = self.app_manager.new(self.name)
