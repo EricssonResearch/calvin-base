@@ -122,31 +122,27 @@ countries = ["AD", "AE", "AF", "AG", "AI", "AL", "AM", "AO", "AQ", "AR", "AS", "
 # Helper functions
 #
 
-# FIXME: None --> '', use str(attr.get(k, ''))
+def _key_resolver(attr, keys):
+    if not isinstance(attr, dict):
+        # FIXME: Also validate keys?
+        raise Exception('Attribute must be a dictionary with %s keys.' % keys)
+    return [str(attr.get(k, '')) for k in keys]
+
 def owner_resolver(attr):
-    if not isinstance(attr, dict):
-        raise Exception('Owner attribute must be a dictionary with %s keys.' % owner_keys)
-    resolved = [str(attr[k]) if k in attr else None for k in owner_keys]
-    return resolved
+    return _key_resolver(attr, owner_keys)
 
-# FIXME: None --> '', use str(attr.get(k, ''))
 def node_name_resolver(attr):
-    if not isinstance(attr, dict):
-        raise Exception('Node name attribute must be a dictionary with %s keys.' % node_name_keys)
-    resolved = [str(attr[k]) if k in attr else None for k in node_name_keys]
-    return resolved
+    return _key_resolver(attr, node_name_keys)
 
-# FIXME: None --> '', use str(attr.get(k, ''))
 def address_resolver(attr):
-    if not isinstance(attr, dict):
-        raise Exception('Address attribute must be a dictionary with %s keys.' % address_keys)
-    if "country" in attr:
-        attr["country"] = attr["country"].upper()
-        if attr["country"] not in countries:
-            raise Exception("country must be ISO 3166-1 alpha2")
-    if "stateOrProvince" in attr and "country" not in attr:
+    resolved = _key_resolver(attr, address_keys)
+    resolved[0] = resolved[0].upper()
+    country = resolved[0]
+    if country and country not in countries:
+        raise Exception("country must be ISO 3166-1 alpha2")
+    stateOrProvince = resolved[1] 
+    if stateOrProvince and not country:
         raise Exception("country required for stateOrProvince, see ISO 3166-2 for proper code")
-    resolved = [str(attr[k]) if k in attr else None for k in address_keys]
     return resolved
 
 def extra_resolver(attr):
@@ -155,24 +151,18 @@ def extra_resolver(attr):
     else:
         raise Exception('User extra attribute must be a list of ordered attribute lists.')
 
-# FIXME: as_list mandatory, None --> '', no escape => err if / or \, use one truth and split/join
+# FIXME: as_list mandatory, no escape => err if / or \, use one truth and split/join
 def encode_index(attr, as_list=False):
-    attr_str = '/node/attribute'
     attr_list = ['node', 'attribute']
-
     for a in attr:
-        if a is None:
-            a = ''
-        else:
-            # Replace \ with \\, looks funny due to \ is used to escape characters in python also
-            a = a.replace('\\', '\\\\')
-            # Replace / with \/
-            a = a.replace('/', '\\/')
-        attr_str += '/' + a
+        # Replace \ with \\, looks funny due to \ is used to escape characters in python also
+        a = a.replace('\\', '\\\\')
+        # Replace / with \/
+        a = a.replace('/', '\\/')
         attr_list.append(a)
-    return attr_list if as_list else attr_str
+    return attr_list if as_list else "/"+"/".join(attr_list)
 
-# FIXME: None --> '', no escape => err if / or \, use one truth and split/join
+# FIXME: no escape => err if / or \, use one truth and split/join
 def decode_index(attr_str):
     if not attr_str.startswith('/node/attribute'):
         raise Exception('Index %s not a node attribute' % attr_str)
@@ -183,10 +173,7 @@ def decode_index(attr_str):
     for a in attr:
         a = a.replace('\\/', '/')
         a = a.replace('\\\\', '\\')
-        if a:
-            attr2.append(a)
-        else:
-            attr2.append(None)
+        attr2.append(a)
     return attr2
 
 
@@ -351,7 +338,7 @@ class AttributeResolver(object):
         """
         return {attr_type + "." + keys[attr_type][i]: value 
                 for attr_type, value_list in iter(self.attr["indexed_public"].items()) 
-                for i, value in enumerate(value_list) if value is not None}
+                for i, value in enumerate(value_list) if value is not ''}
 
 if __name__ == "__main__":
     print(attribute_docs)

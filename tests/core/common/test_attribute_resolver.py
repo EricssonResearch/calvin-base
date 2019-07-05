@@ -109,9 +109,9 @@ def test_format_index_string_trim():
 def test_resolve_indexed_public():
     att = AttributeResolver({})
     data = att.resolve_indexed_public({"owner": {"organization": "org.testexample", "personOrGroup": "testOwner1"}})
-    assert data == {'owner': ['org.testexample', None, None, 'testOwner1']}
+    assert data == {'owner': ['org.testexample', '', '', 'testOwner1']}
     data = att.resolve_indexed_public({"owner": {"organization": "org.testexample"}})
-    assert data == {'owner': ['org.testexample', None, None, None]}
+    assert data == {'owner': ['org.testexample', '', '', '']}
 
 
 def test_encode_decode_index():
@@ -208,5 +208,17 @@ def test_abuse(attributes):
     assert att._has_attribute(index="", which="indexed_public")
     assert att._has_attribute(index="address", which="indexed_public")
     assert att._has_attribute(index="address/streetNumber", which="indexed_public") is None
-
-
+    
+def test_address_resolver():
+    # Good case
+    data = attribute_resolver.address_resolver({"country": "SE", "stateOrProvince": "Skåne"})
+    assert data == ['SE', 'Skåne', '', '', '', '', '', '']
+    # Lower case country
+    data = attribute_resolver.address_resolver({"country": "se"})
+    assert data == ['SE', '', '', '', '', '', '', '']
+    # Bad country
+    with pytest.raises(Exception):
+        attribute_resolver.address_resolver({"country": "SF"})
+    # Bad stateOrProvince
+    with pytest.raises(Exception):
+        attribute_resolver.address_resolver({"stateOrProvince": "Skåne"})
