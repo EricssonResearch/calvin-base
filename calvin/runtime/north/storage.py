@@ -99,7 +99,8 @@ class PrivateStorage(object):
         # N.B. Must use copy of keys here since content may change
         for key in list(self.localstorage.localstore.keys()):
             _log.debug("Flush key %s: " % (key,))
-            self.storage.set(key=key, value=self.localstorage.get(key), cb=CalvinCB(func=self.set_cb, key=key, org_key=None, org_value=None, org_cb=None, silent=True))
+            value = self.localstorage.get(key)
+            self.storage.set(key=key, value=value, cb=CalvinCB(func=self.set_cb, key=key, org_key=None, org_value=None, org_cb=None, silent=True))
 
         # FIXME: localstorage_sets iterable as a stop-gap measure?
         # N.B. Must use copy of items here since content may change
@@ -200,12 +201,34 @@ class PrivateStorage(object):
 #
 # Start of primitive methods
 #
-    def started_cb(self, org_cb, value):
+    def _started_cb(self, *args, **kwargs):
         """ Called when storage has started, flushes localstore
         """
-        self.trigger_flush(0)
-        if org_cb:
-            asynchronous.DelayedCall(0, org_cb, value)
+        if args:
+            value = args[0]
+        else:
+            value = False
+
+        if kwargs.get("value") :
+            value = kwargs.get("value")
+        # self.storage = registry(self.node, self.storage_type)
+
+        if kwargs.get("flush", True):
+            # Default is to flush
+            self.trigger_flush(0)
+        else:
+            _log.warning("Not flushing local store")
+
+        if kwargs["org_cb"]:
+            asynchronous.DelayedCall(0, kwargs["org_cb"], value)
+        else:
+            _log.warning("No original callback in storage started")
+
+    def started_cb(self, *args, **kwargs):
+        try:
+            self._started_cb(*args, **kwargs)
+        except Exception as e:
+            _log.exception(f"Failed to start storage: {e}")
 
     def start(self, cb=None):
         """ Start storage
@@ -639,10 +662,10 @@ class Storage(PrivateStorage):
         _log.debug("Add actor %s id %s" % (actor, node_id))
         data = actor.data_for_registry()
         data["node_id"] = node_id
-        
+
         ports = list(actor.inports.values()) + list(actor.outports.values())
         self._add_ports(ports, node_id)
-        
+
         self.set(prefix="actor-", key=actor.id, value=data, cb=cb)
 
     def get_actor(self, actor_id, cb=None):

@@ -86,7 +86,6 @@ def registry(kind, node, host):
     class_ = all_kinds.get(kind.lower())
     if not class_:
         raise ValueError("Unknown registry type '{}', must be one of: {}".format(kind, ",".join(list(all_kinds.keys()))))
-    print("Instantiating {}({}, {})".format(class_.__name__, node, host))
     return class_(node, host)
 
 
@@ -95,7 +94,6 @@ def response_callback(key, callback, fut):
         resp = fut.result()
         status_code = resp.status_code
     except Exception as e:
-        print(f"StorageClient Error: {e}")
         status_code = 500
 
     if key is None:
@@ -108,7 +106,6 @@ def response_callback_content(key, callback, fut):
         resp = fut.result()
         status_code = resp.status_code
     except Exception as e:
-        print(f"StorageClient Error: {e}")
         status_code = 500
 
     value = resp.json() if status_code == 200 else calvinresponse.CalvinResponse(status_code)
@@ -214,25 +211,8 @@ class NullRegistryClient(StorageBase):
         pass
 
     def start(self, cb):
-        # Don't trigger flush
-        cb.kwargs['org_key'] = 'placeholder'
-        self._response(cb, True)
-
-    # def start(self, iface='', name=None, nodeid=None, cb=None):
-    #     """
-    #         Starts the service if its nneeded for the storage service
-    #         cb  is the callback called when the srtart is finished
-    #     """
-    #     if self.local_mode:
-    #         # unwind the CalvinCB and call the original cb
-    #         print "LOCAL MODE"
-    #         callback = cb.kwargs.get('org_cb')
-    #     else:
-    #         print "REMOTE MODE"
-    #         callback = cb
-    #     if callback:
-    #         callback(True)
-    #         # asynchronous.DelayedCall(0, callback, True)
+        # HACK: Don't trigger flush
+        cb(True, flush=False)
 
     def _response(self, cb, value):
         if not cb:
