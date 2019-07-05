@@ -3,119 +3,83 @@
 import unittest
 import pytest
 
-from calvin.common.attribute_resolver import AttributeResolver
+from calvin.common.attribute_resolver import AttributeResolver, format_index_string
+from calvin.common import attribute_resolver
 
-@pytest.mark.skip(reason="resource_monitor removed, but need tests for AttributeResolver")
-class AttributeResolverTester(unittest.TestCase):
 
-    def test_cpu_resources(self):
-        """
-        Tests valid cpu resources in the indexed_public field
-        """
-        att = AttributeResolver({"indexed_public": {"cpuAvail": "100"}})
-        att_list = att.get_indexed_public(as_list=True)
-        self.assertEqual(att_list[0][2], 'cpuAvail')
-        self.assertEqual(att_list[0][3], '0')
-        self.assertEqual(att_list[0][4], '25')
-        self.assertEqual(att_list[0][5], '50')
-        self.assertEqual(att_list[0][6], '75')
-        self.assertEqual(att_list[0][7], '100')
+def test_empty_attr():
+    att = AttributeResolver({})
+    assert att.get_private() == {}
+    assert att.get_public() == {}
+    assert att.get_indexed_public() == []
+    assert att.get_node_name_as_str() == None
+    
+def test_attr():
+    attributes = {
+        "indexed_public": {
+            "address": {
+                "country": "SE", 
+                "locality": "Lund", 
+                "street": "Sölvegatan", 
+                "streetNumber": 53
+            },
+            "owner": {
+                "organization": "ericsson.com", 
+                "organizationalUnit": "Ericsson Research", 
+                "personOrGroup": "CT"
+            },
+            "node_name": {
+                "organization": "ericsson.com", 
+                "purpose": "Test", 
+                "name": "alpha1"
+            }
+        }
+    }
+    att = AttributeResolver(attributes)
+    assert att.get_private() == {}
+    assert att.get_public() == {}
+    assert att.get_indexed_public() == [
+        '/node/attribute/address/SE//Lund/Sölvegatan/53///',
+        '/node/attribute/owner/ericsson.com/Ericsson Research//CT',
+        '/node/attribute/node_name/ericsson.com//Test//alpha1'
+    ]
+    assert att.get_node_name_as_str() == "ericsson.com--Test--alpha1"
+    attr_lists = att.get_indexed_public(as_list=True)
+    assert len(attr_lists) == 3
+    assert len(attr_lists[0]) == 11
+    assert len(attr_lists[1]) == 7
+    assert len(attr_lists[2]) == 8
+    assert attr_lists[0][3] == 'SE'
+    assert attr_lists[0][4] == ''
+    assert attr_lists[0][7] == '53'
+    
+def test_format_index_string():
+    s = format_index_string({"owner": {"organization": "org.testexample", "personOrGroup": "testOwner1"}})
+    assert s == "/node/attribute/owner/org.testexample///testOwner1"
+    s = format_index_string({"owner": {"organization": "org.testexample"}})
+    assert s == "/node/attribute/owner/org.testexample"
+    s = format_index_string({"owner": {}})
+    assert s == "/node/attribute/owner"
+    
+def test_resolve_indexed_public():
+    att = AttributeResolver({})
+    data = att.resolve_indexed_public({"owner": {"organization": "org.testexample", "personOrGroup": "testOwner1"}})
+    assert data == {'owner': ['org.testexample', None, None, 'testOwner1']}
+    data = att.resolve_indexed_public({"owner": {"organization": "org.testexample"}})
+    assert data == {'owner': ['org.testexample', None, None, None]}
+    
+def test_encode_decode_index():
+    s = attribute_resolver.encode_index(['a1', 'å2', 'ö3'])    
+    assert s == "/node/attribute/a1/å2/ö3"
+    assert attribute_resolver.decode_index(s) == ['a1', 'å2', 'ö3']
+    
+@pytest.mark.xfail(reason="Make decision if escaped chars should be allowed in index")
+def test_escaped_encode_decode_index():
+    s = attribute_resolver.encode_index(['a/1', 'a\\2', 'a3'])
+    assert s == "/node/attribute/a\/1/a\\2/ö3"
+    assert attribute_resolver.decode_index(s) == ['a/1', 'a\\2', 'a3']
 
-        self.assertEqual(att.get_indexed_public()[0], '/node/resource/cpuAvail/0/25/50/75/100')
-
-    def test_cpu_invalid_value(self):
-        """
-        Tests invalid cpu resources in the indexed_public field
-        """
-        att = AttributeResolver({"indexed_public": {"cpuAvail": "1"}})
-        att_list = att.get_indexed_public(as_list=True)
-        self.assertEqual(att_list[0][2], 'cpuAvail')
-
-        self.assertEqual(att.get_indexed_public()[0], '/node/resource/cpuAvail')
-
-    def test_cpu_total(self):
-        """
-        Tests valid CPU power in the indexed_public field
-        """
-        att = AttributeResolver({"indexed_public": {"cpuTotal": "10000000"}})
-        att_list = att.get_indexed_public(as_list=True)
-        self.assertEqual(att_list[0][2], 'cpuTotal')
-        self.assertEqual(att_list[0][3], '1')
-        self.assertEqual(att_list[0][4], '1000')
-        self.assertEqual(att_list[0][5], '100000')
-        self.assertEqual(att_list[0][6], '1000000')
-        self.assertEqual(att_list[0][7], '10000000')
-
-        self.assertEqual(att.get_indexed_public()[0], '/node/attribute/cpuTotal/1/1000/100000/1000000/10000000')
-
-    def test_cpu_total_invalid_value(self):
-        """
-        Tests invalid CPU power in the indexed_public field
-        """
-        att = AttributeResolver({"indexed_public": {"cpuTotal": "2"}})
-        att_list = att.get_indexed_public(as_list=True)
-        self.assertEqual(att_list[0][2], 'cpuTotal')
-
-        self.assertEqual(att.get_indexed_public()[0], '/node/attribute/cpuTotal')
-
-    def test_mem_avail(self):
-        """
-        Tests valid RAM resources in the indexed_public field
-        """
-        att = AttributeResolver({"indexed_public": {"memAvail": "100"}})
-        att_list = att.get_indexed_public(as_list=True)
-        self.assertEqual(att_list[0][2], 'memAvail')
-        self.assertEqual(att_list[0][3], '0')
-        self.assertEqual(att_list[0][4], '25')
-        self.assertEqual(att_list[0][5], '50')
-        self.assertEqual(att_list[0][6], '75')
-        self.assertEqual(att_list[0][7], '100')
-
-        self.assertEqual(att.get_indexed_public()[0], '/node/resource/memAvail/0/25/50/75/100')
-
-    def test_cpu_affinity(self):
-        """
-        Tests cpu affinity parameter in indexed_public field
-        """
-        att = AttributeResolver({"indexed_public": {"cpuAffinity": "dedicated"}})
-        att_list = att.get_indexed_public(as_list=True)
-        self.assertEqual(att_list[0][2], 'cpuAffinity')
-        self.assertEqual(att_list[0][3], 'dedicated')
-
-        self.assertEqual(att.get_indexed_public()[0], '/node/attribute/cpuAffinity/dedicated')
-
-    def test_mem_avail_invalid_value(self):
-        """
-        Tests invalid RAM resources in the indexed_public field
-        """
-        att = AttributeResolver({"indexed_public": {"memAvail": "1"}})
-        att_list = att.get_indexed_public(as_list=True)
-        self.assertEqual(att_list[0][2], 'memAvail')
-
-        self.assertEqual(att.get_indexed_public()[0], '/node/resource/memAvail')
-
-    def test_mem_total(self):
-        """
-        Tests valid RAM resources in the indexed_public field
-        """
-        att = AttributeResolver({"indexed_public": {"memTotal": "10G"}})
-        att_list = att.get_indexed_public(as_list=True)
-        self.assertEqual(att_list[0][2], 'memTotal')
-        self.assertEqual(att_list[0][3], '1K')
-        self.assertEqual(att_list[0][4], '100K')
-        self.assertEqual(att_list[0][5], '1M')
-        self.assertEqual(att_list[0][6], '100M')
-        self.assertEqual(att_list[0][7], '1G')
-        self.assertEqual(att_list[0][8], '10G')
-
-        self.assertEqual(att.get_indexed_public()[0], '/node/attribute/memTotal/1K/100K/1M/100M/1G/10G')
-
-    def test_mem_total_invalid_value(self):
-        """
-        Tests invalid RAM resources in the indexed_public field
-        """
-        att = AttributeResolver({"indexed_public": {"memTotal": "10K"}})
-        att_list = att.get_indexed_public(as_list=True)
-        self.assertEqual(att_list[0][2], 'memTotal')
-
-        self.assertEqual(att.get_indexed_public()[0], '/node/attribute/memTotal')
+    s = attribute_resolver.encode_index(['a1/', '', 'a2\\', 'a3'])
+    assert s == "/node/attribute/a1\///a2\\/a3"
+    assert attribute_resolver.decode_index(s) == ['a1/', '', 'a2\\', 'a3']
+    

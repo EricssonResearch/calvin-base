@@ -118,88 +118,77 @@ countries = ["AD", "AE", "AF", "AG", "AI", "AL", "AM", "AO", "AQ", "AR", "AS", "
              "VG", "VI", "VN", "VU", "WF", "WS", "YE", "YT", "ZA", "ZM", "ZW"]
 
 
+#
+# Helper functions
+#
+def owner_resolver(attr):
+    if not isinstance(attr, dict):
+        raise Exception('Owner attribute must be a dictionary with %s keys.' % owner_keys)
+    resolved = [str(attr[k]) if k in attr else None for k in owner_keys]
+    return resolved
 
-class AttributeResolverHelper(object):
-    '''Resolves attributes'''
+def node_name_resolver(attr):
+    if not isinstance(attr, dict):
+        raise Exception('Node name attribute must be a dictionary with %s keys.' % node_name_keys)
+    resolved = [str(attr[k]) if k in attr else None for k in node_name_keys]
+    return resolved
 
-    @staticmethod
-    def _stringify(value):
-        return str(value)
+def address_resolver(attr):
+    if not isinstance(attr, dict):
+        raise Exception('Address attribute must be a dictionary with %s keys.' % address_keys)
+    if "country" in attr:
+        attr["country"] = attr["country"].upper()
+        if attr["country"] not in countries:
+            raise Exception("country must be ISO 3166-1 alpha2")
+    if "stateOrProvince" in attr and "country" not in attr:
+        raise Exception("country required for stateOrProvince, see ISO 3166-2 for proper code")
+    resolved = [str(attr[k]) if k in attr else None for k in address_keys]
+    return resolved
 
-    @classmethod
-    def owner_resolver(cls, attr):
-        if not isinstance(attr, dict):
-            raise Exception('Owner attribute must be a dictionary with %s keys.' % owner_keys)
-        resolved = [cls._stringify(attr[k]) if k in attr else None for k in owner_keys]
-        return resolved
+def extra_resolver(attr):
+    if isinstance(attr, list) and attr and isinstance(attr[0], list):
+        return attr
+    else:
+        raise Exception('User extra attribute must be a list of ordered attribute lists.')
 
-    @classmethod
-    def node_name_resolver(cls, attr):
-        if not isinstance(attr, dict):
-            raise Exception('Node name attribute must be a dictionary with %s keys.' % node_name_keys)
-        resolved = [cls._stringify(attr[k]) if k in attr else None for k in node_name_keys]
-        return resolved
+def encode_index(attr, as_list=False):
+    attr_str = '/node/attribute'
+    attr_list = ['node', 'attribute']
 
-    @classmethod
-    def address_resolver(cls, attr):
-        if not isinstance(attr, dict):
-            raise Exception('Address attribute must be a dictionary with %s keys.' % address_keys)
-        if "country" in attr:
-            attr["country"] = attr["country"].upper()
-            if attr["country"] not in countries:
-                raise Exception("country must be ISO 3166-1 alpha2")
-        if "stateOrProvince" in attr and "country" not in attr:
-            raise Exception("country required for stateOrProvince, see ISO 3166-2 for proper code")
-        resolved = [cls._stringify(attr[k]) if k in attr else None for k in address_keys]
-        return resolved
-
-    @classmethod
-    def extra_resolver(cls, attr):
-        if isinstance(attr, list) and attr and isinstance(attr[0], list):
-            return attr
+    for a in attr:
+        if a is None:
+            a = ''
         else:
-            raise Exception('User extra attribute must be a list of ordered attribute lists.')
+            # Replace \ with \\, looks funny due to \ is used to escape characters in python also
+            a = a.replace('\\', '\\\\')
+            # Replace / with \/
+            a = a.replace('/', '\\/')
+        attr_str += '/' + a
+        attr_list.append(a)
+    return attr_list if as_list else attr_str
 
-    @staticmethod
-    def encode_index(attr, as_list=False):
-        attr_str = '/node/attribute'
-        attr_list = ['node', 'attribute']
+def decode_index(attr_str):
+    if not attr_str.startswith('/node/attribute'):
+        raise Exception('Index %s not a node attribute' % attr_str)
+    attr_str = attr_str[len('/node/attribute') + 1:]
 
-        for a in attr:
-            if a is None:
-                a = ''
-            else:
-                # Replace \ with \\, looks funny due to \ is used to escape characters in python also
-                a = a.replace('\\', '\\\\')
-                # Replace / with \/
-                a = a.replace('/', '\\/')
-            attr_str += '/' + a
-            attr_list.append(a)
-        return attr_list if as_list else attr_str
-
-    @staticmethod
-    def decode_index(attr_str):
-        if not attr_str.startswith('/node/attribute'):
-            raise Exception('Index %s not a node attribute' % attr_str)
-        attr_str = attr_str[len('/node/attribute') + 1:]
-
-        attr = re.split(r"(?<![^\\]\\)/", attr_str)
-        attr2 = []
-        for a in attr:
-            a = a.replace('\\/', '/')
-            a = a.replace('\\\\', '\\')
-            if a:
-                attr2.append(a)
-            else:
-                attr2.append(None)
-        return attr2
+    attr = re.split(r"(?<![^\\]\\)/", attr_str)
+    attr2 = []
+    for a in attr:
+        a = a.replace('\\/', '/')
+        a = a.replace('\\\\', '\\')
+        if a:
+            attr2.append(a)
+        else:
+            attr2.append(None)
+    return attr2
 
 
 attr_resolver = {
-    "owner": AttributeResolverHelper.owner_resolver,
-    "node_name": AttributeResolverHelper.node_name_resolver,
-    "address": AttributeResolverHelper.address_resolver,
-    "user_extra": AttributeResolverHelper.extra_resolver
+    "owner": owner_resolver,
+    "node_name": node_name_resolver,
+    "address": address_resolver,
+    "user_extra": extra_resolver
 }
 
 keys = {
@@ -208,6 +197,9 @@ keys = {
     "address": address_keys,
 }
 
+#
+# Public API
+#
 def format_index_string(attr, trim=True):
     ''' To format the index search string an attribute resolver function needs to be used:
         where the attr should only contain ONE attribute e.g.
@@ -226,7 +218,7 @@ def format_index_string(attr, trim=True):
     _attr = attr_resolver[attr_type](attribute)
     if trim:
         _attr = [_attr[i] for i in range(len(_attr)) if any(_attr[i:])]
-    return AttributeResolverHelper.encode_index([attr_type] + _attr)
+    return encode_index([attr_type] + _attr)
 
 
 class AttributeResolver(object):
@@ -328,7 +320,7 @@ class AttributeResolver(object):
     # Used in calvinsys, proxyhandler, storage, resource_monitor (and security/)
     def get_indexed_public(self, as_list=False):
         # Return all indexes encoded for storage as a list of lists
-        return [AttributeResolverHelper.encode_index([AttributeResolverHelper._stringify(k)] + v, as_list=as_list) for k, v in self.attr["indexed_public"].items()]
+        return [encode_index([k] + v, as_list=as_list) for k, v in self.attr["indexed_public"].items()]
 
     # Used in node, storage (and security)
     def get_node_name_as_str(self):
@@ -355,32 +347,4 @@ class AttributeResolver(object):
                 for i, value in enumerate(value_list) if value is not None}
 
 if __name__ == "__main__":
-    ar = AttributeResolver({"indexed_public": {
-                            "address": {"country": "SE", "locality": "Lund", "street": "Sölvegatan", "streetNumber": 53},
-                            "owner": {"organization": "ericsson.com", "organizationalUnit": "Ericsson Research", "personOrGroup": "CT"},
-                            "node_name": {"organization": "ericsson.com", "purpose": "Test", "name": "alpha1"}}})
-
     print(attribute_docs)
-
-    s = AttributeResolverHelper.encode_index(['a1', 'a2', 'a3'])
-    print(s)
-    print(AttributeResolverHelper.decode_index(s))
-    s = AttributeResolverHelper.encode_index(['a/1', 'a\\2', 'ö3'])
-    print(s)
-    aa = AttributeResolverHelper.decode_index(s)
-    print(aa, 'correct?', aa[2])
-    s = AttributeResolverHelper.encode_index(['a1/', '', 'a2\\', 'a3'])
-    print(s)
-    print(AttributeResolverHelper.decode_index(s))
-    aa = ar.get_indexed_public(as_list=True)
-    print(aa)
-    print(aa[2][6])
-    ar = AttributeResolver(None)
-    aa = ar.get_indexed_public(as_list=True)
-    print(aa)
-    print(ar.resolve_indexed_public({"owner": {"organization": "org.testexample", "personOrGroup": "testOwner1"}}))
-    print(format_index_string({"owner": {"organization": "org.testexample", "personOrGroup": "testOwner1"}}))
-    print(ar.resolve_indexed_public({"owner": {"organization": "org.testexample"}}))
-    print(format_index_string({"owner": {"organization": "org.testexample"}}))
-    print(format_index_string({"owner": {}}))
-    
