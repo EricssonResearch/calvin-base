@@ -41,9 +41,9 @@ class PeerNode(object):
     def add_node(self, cb):
         try:
             for c in list_port_property_capabilities(which=self.port_property_capability):
-                self.node.storage.add_index(['node', 'capabilities', c], self.id, root_prefix_level=3)
+                self.node.storage.add_index("/".join(['node', 'capabilities', c]), self.id, root_prefix_level=3)
             for c in self.capabilities:
-                self.node.storage.add_index(['node', 'capabilities', c], self.id, root_prefix_level=3)
+                self.node.storage.add_index("/".join(['node', 'capabilities', c]), self.id, root_prefix_level=3)
         except Exception as e:
             _log.error("Failed to set capabilities %s" % e)
 
@@ -51,7 +51,7 @@ class PeerNode(object):
         indexed_public = None
         indexes = self.attributes.get_indexed_public()
         for index in indexes:
-            self.node.storage.add_index(index, self.id)
+            self.node.storage.add_index("/".join(index), self.id, root_prefix_level=2)
         public = self.attributes.get_public()
         indexed_public = self.attributes.get_indexed_public(as_list=False)
 
@@ -67,11 +67,11 @@ class PeerNode(object):
         self.node.storage.delete(prefix="node-", key=self.id, cb=None)
         try:
             for c in list_port_property_capabilities(which=self.port_property_capability):
-                self.node.storage.remove_index(['node', 'capabilities', c], self.id)
+                self.node.storage.remove_index("/".join(['node', 'capabilities', c]), self.id, root_prefix_level=2)
             for c in self.capabilities:
-                self.node.storage.remove_index(['node', 'capabilities', c], self.id)
+                self.node.storage.remove_index("/".join(['node', 'capabilities', c]), self.id, root_prefix_level=2)
             for index in self.attributes.get_indexed_public():
-                self.node.storage.remove_index(index, self.id)
+                self.node.storage.remove_index("/".join(index), self.id, root_prefix_level=2)
         except Exception as e:
             _log.error("Failed to remove index %s" % e)
 
