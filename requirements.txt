@@ -11,7 +11,7 @@ passlib==1.7.1
 PyJWT==1.7.1
 service-identity==18.1.0
 ndg-httpsclient==0.5.1
-pyasn1==0.4.5
+pyasn1==0.4.6
 pystache==0.5.4
 jsonschema==3.0.1
 u-msgpack-python==2.5.1
