@@ -16,6 +16,10 @@
 
 from twisted.internet import reactor, inotify
 from twisted.python import filepath
+from calvin.runtime.south import asynchronous
+from calvin.common.calvinlogger import get_logger
+
+_log = get_logger(__name__)
 
 class INotify(object):
     """Monitor filesystems events"""
@@ -31,18 +35,37 @@ class INotify(object):
         if "create" in events:
             mask = mask | inotify.IN_CREATE
         if "delete" in events:
-            mask = mask | inotify.IN_DELETE
+            mask = mask | inotify.IN_DELETE | inotify.IN_DELETE_SELF
+        self._mask = mask
+        self._backoffcnt = 0
         self._notifier = inotify.INotify(reactor=reactor)
         self._notifier.startReading()
-        self._notifier.watch(filepath.FilePath(path), callbacks=[self.notify_cb], mask=mask)
+        try:
+            self._notifier.watch(filepath.FilePath(path), callbacks=[self.notify_cb], mask=mask)
+        except:
+            # No way to respond with failure, retry instead
+            _log.exception("Failed watching {} with inotify, retry in a while".format(self._path))
+            self._delayedwatch = asynchronous.DelayedCall(1, self.rewatch_cb)
+
+    def rewatch_cb(self):
+        try:
+            self._notifier.watch(filepath.FilePath(self._path), callbacks=[self.notify_cb], mask=self._mask)
+            self._backoffcnt = 0
+        except:
+            _log.error("Failed watching {} with inotify, retry in a while".format(self._path))
+            self._backoffcnt += 1
+            self._delayedwatch.reset(1 if self._backoffcnt < 60 else 30)
 
     def notify_cb(self, ignored, filepath, mask):
         path = filepath.path.decode('utf-8')
         if mask & inotify.IN_CREATE:
             self.last_event = {"type": "create", "path": path}
             self._trigger(self._actor)
-        elif mask & inotify.IN_DELETE:
+        elif (mask & inotify.IN_DELETE) or (mask & inotify.IN_DELETE_SELF):
             self.last_event = {"type": "delete", "path": path}
+            if mask & inotify.IN_DELETE_SELF:
+                # Since object is deleted commonly is used to replace a file, try to watch path again
+                self._delayedwatch = asynchronous.DelayedCall(0, self.rewatch_cb)
             self._trigger(self._actor)
         elif mask & inotify.IN_MODIFY:
             self.last_event = {"type": "modify", "path": path}
@@ -57,4 +80,7 @@ class INotify(object):
         return event
 
     def close(self):
-        self._notifier.ignore(self._path)
+        try:
+            self._notifier.ignore(self._path)
+        except:
+            pass
