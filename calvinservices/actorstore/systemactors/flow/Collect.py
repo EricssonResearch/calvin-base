@@ -35,6 +35,12 @@ class Collect(Actor):
     def init(self):
         pass
 
+    def exception_handler(self, action, args):
+        if action.__name__ == "collect":
+            return (args[0], )
+        else:
+            return ()
+
     @condition(['token'], ['token'])
     def collect(self, input):
         return (input, )
