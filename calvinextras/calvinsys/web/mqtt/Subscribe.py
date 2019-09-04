@@ -47,6 +47,10 @@ class Subscribe(base_calvinsys_object.BaseCalvinsysObject):
                 "description": "MQTT client id to use; will be generated if not given",
                 "type": "string"
             },
+            "clean_session": {
+                "description": "True: client session removed when disconnected, False: maintained across sessions",
+                "type": "boolean"
+            },
             "will": {
                 "description": "message to send on connection lost",
                 "type": "object",
@@ -163,6 +167,10 @@ class Subscribe(base_calvinsys_object.BaseCalvinsysObject):
                 "description": "MQTT client id to use; will be generated if not given",
                 "type": "string"
             },
+            "clean_session": {
+                "description": "True: client session removed when disconnected, False: maintained across sessions",
+                "type": "boolean"
+            },
             "will": {
                 "description": "message to send on connection lost",
                 "type": "object",
@@ -236,7 +244,7 @@ class Subscribe(base_calvinsys_object.BaseCalvinsysObject):
         }
     }
 
-    def init(self, topics=None, hostname=None, port=1883, qos=0, client_id='', will=None, auth=None, tls=None, transport='tcp', payload_only=False, **kwargs):
+    def init(self, topics=None, hostname=None, port=1883, qos=0, client_id='', clean_session=True, will=None, auth=None, tls=None, transport='tcp', payload_only=False, **kwargs):
         # Config
         self.settings = {
             "msg_count": 1,
@@ -244,6 +252,7 @@ class Subscribe(base_calvinsys_object.BaseCalvinsysObject):
             "port": port,
             "client_id": client_id,
             "qos": qos,
+            "clean_session": clean_session,
             "will": will,
             "auth": auth,
             "tls": tls,
@@ -286,11 +295,14 @@ class Subscribe(base_calvinsys_object.BaseCalvinsysObject):
         port = self.settings["port"]
         client_id = self.settings["client_id"]
         transport = self.settings["transport"]
+        clean_session = self.settings["clean_session"]
         will = self.settings["will"]
         auth = self.settings["auth"]
         tls = self.settings["tls"]
 
-        self.client = paho.mqtt.client.Client(client_id=client_id, transport=transport)
+        _log.debug("Setup MQTT {}".format(self.settings))
+
+        self.client = paho.mqtt.client.Client(client_id=client_id, clean_session=clean_session, transport=transport)
         self.client.on_connect = on_connect
         self.client.on_disconnect = on_disconnect
         self.client.on_message = on_message
@@ -327,6 +339,8 @@ class Subscribe(base_calvinsys_object.BaseCalvinsysObject):
             self.settings["client_id"] = data["client_id"]
         if "qos" in data:
             self.settings["qos"] = data["qos"]
+        if "clean_session" in data:
+            self.settings["clean_session"] = data["clean_session"]
         if "will" in data:
             self.settings["will"] = data["will"]
         if "auth" in data:
