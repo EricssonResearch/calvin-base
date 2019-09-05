@@ -19,6 +19,8 @@
 
 """
 
+import platform
+
 # FIXME: Here we actually need to be able to switch between twisted and asyncio,
 #        at least while testing until the asyncio version is feature complete.
 
@@ -59,19 +61,21 @@ if async_impl == 'twisted':
     # Used in calvinsys.ui.uicalvinsys.py
     from .twistedimpl.sse_event_source import EventSource
 
-    # Used in calvinsys.io.inotifier
-    from .twistedimpl.inotify import INotify
+    if platform.system() == "Linux":
+        # Only available under LInux
+        # Used in calvinsys.io.inotifier
+        from .twistedimpl.inotify import INotify
 
 elif async_impl == 'asyncio':
 
     from .asyncioimpl.asynchronous import DelayedCall
     from .asyncioimpl.asynchronous import run_ioloop
     from .asyncioimpl.asynchronous import stop_ioloop
-    
+
     from .asyncioimpl.threads import defer_to_thread
-    
+
     from .asyncioimpl.sse_event_source import EventSource
-        
+
 else:
     raise AssertionError("Unknown asynchronous implementation: '{}'".format(async_impl))
 
