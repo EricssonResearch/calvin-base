@@ -56,7 +56,7 @@ class MockCalvinSys(CalvinSys):
 
     def write(self, ref, data):
         obj = self._get_capability_object(ref)
-        obj.write(data)
+        return obj.write(data)
 
     def can_read(self, ref):
         obj = self._get_capability_object(ref)
@@ -104,6 +104,7 @@ class MockCalvinSys(CalvinSys):
             if obj:
                 obj.start_verifying_calvinsys()
 
+
 def fwrite(port, value):
     if isinstance(value, Token):
         port.queue.write(value, None)
@@ -126,6 +127,7 @@ def pwrite(actor, portname, value):
         # TODO make all actors' test compliant and change to raise exception
         pass
 
+
 def pread(actor, portname, number=1):
     port = actor.outports.get(portname, None)
     assert port
@@ -138,7 +140,7 @@ def pread(actor, portname, number=1):
                 available = -9999
             raise AssertionError("Too few tokens available, %d, expected %d" % (available, number))
     else:
-        if pavailable(actor, portname, number+1):
+        if pavailable(actor, portname, number + 1):
             raise AssertionError("Too many tokens available, expected %d" % number)
 
     values = [port.queue.peek(actor.id).value for _ in range(number)]
@@ -177,9 +179,10 @@ class DummyOutEndpoint(Endpoint):
     def is_connected(self):
         return True
 
+
 def setup_calvinlib():
     import calvin.runtime.north.calvinlib as calvinlib
-    calvinlib.TESTING=True
+    calvinlib.TESTING = True
     from calvin.runtime.north.calvinlib import get_calvinlib
     lib = get_calvinlib()
     lib.init(capabilities={
@@ -261,7 +264,6 @@ def setup_calvinsys():
             "module": "mock.MockInput",
             "attributes": {"data": [False, True, False, True]}
         },
-
 
         "io.buzzer": {
             "module": "mock.MockOutput",
@@ -410,6 +412,10 @@ def setup_calvinsys():
         "weather.local": {
             "module": "mock.MockInputOutput",
             "attributes": {"data": ["dummy"]}
+        },
+        "mqtt.subscribe": {
+            "module": "web.mqtt.Subscribe",
+            "attributes": {}
         }
     })
     return sys
@@ -417,9 +423,9 @@ def setup_calvinsys():
 
 def teardown_calvinlib():
     import calvin.runtime.north.calvinlib as calvinlib
-    calvinlib.TESTING=False
+    calvinlib.TESTING = False
     del calvinlib._calvinlib
-    calvinlib._calvinlib=None
+    calvinlib._calvinlib = None
 
 
 def teardown_calvinsys():
@@ -523,7 +529,7 @@ class ActorTester(object):
                     f(aut)
                 except Exception as e:
                     print "Actor %s failed during setup of test %d: %s" % (actor, test_index, e.message)
-                    raise Exception("Failed during setup of test %d" % (test_index, ))
+                    raise Exception("Failed during setup of test %d" % (test_index,))
 
             for port, values in inputs.iteritems():
                 pwrite(aut, port, values)
@@ -547,7 +553,7 @@ class ActorTester(object):
                     raise AssertionError("Failed test %d" % (test_index,))
 
             if not all(f(aut) for f in postconds):
-                raise AssertionError("Failed post condition of test %d" % (test_index, ))
+                raise AssertionError("Failed post condition of test %d" % (test_index,))
 
         return True
 
@@ -573,6 +579,7 @@ class ActorTester(object):
         return {'pass': test_pass, 'fail': test_fail, 'skipped': no_test,
                 'errors': self.illegal_actors, 'components': self.components}
 
+
 def merge_results(result1, result2):
   result = {}
   for k in result1.keys():
@@ -588,7 +595,7 @@ def merge_results(result1, result2):
 def show_result(header, result):
     print header
     for actor in result:
-        print "  %s" % (actor, )
+        print "  %s" % (actor,)
 
 
 def show_issue(header, result):
@@ -640,7 +647,7 @@ def test_actors(actor="", show=False, path=None):
         show_issues(results)
 
     if results['errors']:
-        raise Exception("%d actor(s) had errors" % (len(results['errors']), ))
+        raise Exception("%d actor(s) had errors" % (len(results['errors']),))
     if results['fail']:
         raise Exception("%d actor(s) failed tests" % (len(results['fail']),))
 

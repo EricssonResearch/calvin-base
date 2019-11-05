@@ -1,0 +1,25 @@
+define QOS = 1
+define SETTINGS = {"clean_session": "False"}
+
+client_id : std.Constantify(constant="dummy_id")
+uri : std.Constantify(constant="mqtt://test.mosquitto.org:1883")
+cmd : std.Trigger(data="subscribe", tick=1.0)
+topic : std.Iterate()
+topics : std.Constantify(constant=["$SYS/#"])
+qos : std.Constantify(constant=1)
+subscriber : net.MQTTDynamicSubscriber(settings=SETTINGS)
+printer : io.Print()
+terminator : flow.Terminator()
+
+"dummy_id" > client_id.in
+"mqtt://test.mosquitto.org:1883" > uri.in
+["$SYS/#"] > topics.in
+QOS > qos.in
+client_id.out > subscriber.client_id
+uri.out > subscriber.uri
+topics.out > topic.token
+topic.item > subscriber.topic
+qos.out > subscriber.qos
+cmd.data > subscriber.cmd
+subscriber.message > printer.token
+topic.index > terminator.void

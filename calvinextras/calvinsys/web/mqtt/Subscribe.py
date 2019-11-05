@@ -21,6 +21,9 @@ from calvin.runtime.south.async import threads
 from calvin.runtime.south.calvinsys import base_calvinsys_object
 from calvin.utilities.calvinlogger import get_logger
 
+from collections import deque
+from grpc._channel import _unsubscribe
+
 _log = get_logger(__name__)
 
 
@@ -116,7 +119,7 @@ class Subscribe(base_calvinsys_object.BaseCalvinsysObject):
                 "type": "array",
                 "items": {
                     "type": "string",
-                    "minItems": 1
+                    "minItems": 0
                 }
             },
             "payload_only": {
@@ -146,27 +149,57 @@ class Subscribe(base_calvinsys_object.BaseCalvinsysObject):
     }
 
     can_write_schema = {
-        "description": "Does nothing, always return true",
+        "description": "Always return true, allowing configuration of MQTT client",
         "type": "boolean"
     }
 
     write_schema = {
-        "description": "Does nothing"
-    }
+        "description": "Update topic subscriptions",
+        "type": "object",
+            "properties": {
+                "topic": {
+                    "type": "string"
+                },
+                "qos": {
+                    "description": "The message Quality of Service 0, 1 or 2"
+                    "The default value is 0",
+                    "type": "integer"
+                },
+                "cmd": {
+                    "description": "MQTT topic related command"
+                    "The default value is 'subscribe'",
+                    "type": "string",
+                    "enum": ["subscribe", "unsubscribe"]
+                }
+            },
+            "required": ["topic"]
 
-    def init(self, topics, uri=None, hostname=None, port=1883, qos=0, client_id='', will=None, auth=None, tls=None, transport='tcp', payload_only=False, **kwargs):
+    }
+    CMD_SUBSCRIBE = "subscribe"
+    CMD_UNSUBSCRIBE = "unsubscribe"
+
+    def init(self, topics=[], uri=None, hostname=None, port=1883, qos=0, client_id='',
+             will=None, auth=None, tls=None, transport='tcp', payload_only=False,
+             **kwargs):
 
         def on_connect(client, userdata, flags, rc):
             if rc != 0:
                 _log.warning("Connection to MQTT broker {}:{} failed".format(hostname, port))
             else :
                 _log.info("Connected to MQTT broker {}:{}".format(hostname, port))
-                client.subscribe(self.topics)
+                topics = dict(self.topics)
+                for topic, meta in topics.iteritems():
+                    if meta["unsubscribe"]:
+                        if self._unsubscribe(topic):
+                            self.topics.remove((topic, meta))
+                    else:
+                        self._subscribe(topic, meta["qos"])
 
         def on_disconnect(client, userdata, rc):
             _log.warning("MQTT broker {}:{} disconnected".format(hostname, port))
 
         def on_message(client, userdata, message):
+            _log.info("New message {}".format(message))
             self.data.append({"topic": message.topic, "payload": message.payload})
             self.scheduler_wakeup()
 
@@ -209,9 +242,9 @@ class Subscribe(base_calvinsys_object.BaseCalvinsysObject):
         }
 
         is_tls = False
-        if (uri):
+        if uri:
             result = urlparse(uri)
-            if (result.scheme.lower() in ["https", "mqtts"]):
+            if result.scheme.lower() in ["https", "mqtts"]:
                 is_tls = True
             # override hostname and port
             hostname = result.hostname
@@ -219,10 +252,13 @@ class Subscribe(base_calvinsys_object.BaseCalvinsysObject):
 
         _log.info("TLS: {}".format(tls))
         self.payload_only = payload_only
-        self.topics = [(topic.encode("ascii"), qos) for topic in topics]
+        # topics is a deque({<topic>:{qos:<integer>,unsubscribe:<boolean>]})
+        self.topics = deque((topic.encode("ascii"), {"qos":qos, "unsubscribe":False})
+                            for topic in list(set(topics)))
         self.data = []
+        clean_session = kwargs.get('clean_session', False)
 
-        self.client = mqtt.Client(client_id=client_id, transport=transport)
+        self.client = mqtt.Client(client_id=client_id, transport=transport, clean_session=clean_session)
         self.client.on_connect = on_connect
         self.client.on_disconnect = on_disconnect
         self.client.on_message = on_message
@@ -252,30 +288,86 @@ class Subscribe(base_calvinsys_object.BaseCalvinsysObject):
         return True
 
     def write(self, data):
+        ret = True
+        cmd = data.get("cmd", Subscribe.CMD_SUBSCRIBE)
         topic = data.get("topic", "").encode("ascii")
+        if not topic:
+            _log.error("The topic is missing!")
+            return False
         qos = data.get("qos", 0)
-        update_topic = True
-        topic_index = -1
-        # check if topic already exist
-        for idx in range(len(self.topics)):
-            (t, q) = self.topics[idx]
-            if t == topic:
-                if (q == qos):
-                    update_topic = False
-                else:
-                    topic_index = idx
-                break
+        topics = dict(self.topics)
+        item = None
+        if topic in topics.iterkeys():
+            item = next((t, meta) for t, meta in topics.iteritems() if t == topic)
 
-        if (update_topic):
-            status = self.client.subscribe([(topic, qos)])
-            if (status[0] == mqtt.MQTT_ERR_SUCCESS):
-                if (topic_index >= 0):
-                    self.topics[topic_index] = (topic, qos)
+        if cmd == Subscribe.CMD_SUBSCRIBE:
+            if not item or topics[topic]["qos"] != qos:
+                # the case when qos is changing
+                if self._validate_qos(qos):
+                    ret = self._subscribe(topic, qos)
+                    # store the topic only if it is subscribed or the subscription
+                    # is postponed until the client connects to the broker
+                    if ret:
+                        if item:
+                            self.topics.remove(item)
+                        self.topics.append((topic, {"qos":qos, "unsubscribe":False}))
                 else:
-                    self.topics.append((topic, qos))
+                    _log.error("Invalid QOS value!")
+                    ret = False
             else:
-                _log.error("Failed to update topic: ({}, {}) Check MQTT logs"
-                           .format(topic, qos))
+                _log.debug("Subscription to topic '{}' already exist!")
+        elif cmd == Subscribe.CMD_UNSUBSCRIBE:
+            if item:
+                ret = self._unsubscribe(topic)
+                self.topics.remove(item)
+                if not ret:
+                    # postpone subscription removal
+                    item[1]["unsubscribe"] = True
+                    self.topics.append(item)
+            else:
+                _log.error("Unknown topic!")
+                ret = False
+        else:
+            _log.error("Unknown command: {}!", cmd)
+            ret = False
+        if ret:
+            _log.debug("Command {}({},[{}]) successfully finished".format(cmd, topic, qos))
+        return ret
+
+    def _subscribe(self, topic, qos):
+        ret = False
+        status = self.client.subscribe((topic, qos))
+        if status[0] == mqtt.MQTT_ERR_SUCCESS:
+            _log.info("Successfully subscribed to topic '{}'".format(topic))
+            ret = True
+        elif status[0] == mqtt.MQTT_ERR_NO_CONN:
+            # the topic will subscribe on next connect
+            _log.warn("No connection to the MQTT broker. Postpone subscription")
+            ret = True
+        else:
+            _log.error("Failed to subscribe topic: ({}, {}) error code {}"
+                       .format(topic, qos, status[0]))
+        return ret
+
+    def _validate_qos(self, qos):
+        # see MQTT client QOS validation
+        valid = False
+        if 0 <= qos <= 2:
+            valid = True
+        return valid
+
+    def _unsubscribe(self, topic):
+        ret = False
+        status = self.client.unsubscribe(topic)
+        if status[0] == mqtt.MQTT_ERR_SUCCESS:
+            _log.info("Successfully removed topic '{}' subscription".format(topic))
+            ret = True
+        elif status[0] == mqtt.MQTT_ERR_NO_CONN:
+            _log.warn("No connection to the MQTT broker. Postpone subscription removal")
+        else:
+            _log.error("Failed to unsubscribe topic: ({}) error code {}"
+                       .format(topic, status[0]))
+        return ret
 
     def can_read(self):
         return bool(self.data)
@@ -284,7 +376,7 @@ class Subscribe(base_calvinsys_object.BaseCalvinsysObject):
         data = self.data.pop(0)
         if self.payload_only:
             return data.get("payload")
-        else :
+        else:
             return data
 
     def close(self):

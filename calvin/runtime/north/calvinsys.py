@@ -165,7 +165,7 @@ class CalvinSys(object):
         obj = self._get_capability_object(ref)
         try:
             validate(data, obj.write_schema)
-            obj.write(data)
+            return obj.write(data)
         except Exception as e:
             _log.exception("Failed to validate schema for {}.write(), exception={}".format(obj.__class__.__name__, e))
 
@@ -206,7 +206,7 @@ class CalvinSys(object):
         if len(csobjects) == 0:
             idx = 0
         else :
-            idx = int(csobjects[-1].rsplit('#', 1)[1])+1
+            idx = int(csobjects[-1].rsplit('#', 1)[1]) + 1
 
         ref = "{}#{}".format(actor.id, idx)
         self._objects[ref] = {"name": capability_name, "obj": obj, "args": kwargs}
@@ -236,7 +236,7 @@ class CalvinSys(object):
         serz = {}
         for ref in references:
             csobj = self._objects.get(ref)
-            state = csobj["obj"].serialize() # serialize object
+            state = csobj["obj"].serialize()  # serialize object
             serz[ref] = {"name": csobj["name"], "obj": state, "args": csobj["args"]}
         return serz
 
