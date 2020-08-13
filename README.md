@@ -1,6 +1,6 @@
 # Calvin is no longer actively maintained.
 
-With `python2.7` reaching end of life and the Calvin team havin moved on to other projects and activites, we unfortunately have to retire this repository. It will be kept in an archived state for the time being. You are welcome to fork, clone, and work on it, but it is unlikely there will be any further official releases and updates from our side.
+With `python2.7` reaching end of life and the Calvin team having moved on to other projects and activites, we unfortunately have to retire this repository. It will be kept in an archived state for the time being. You are welcome to fork, clone, and work on it, but it is unlikely there will be any further official releases and updates from our side.
 
 It's been fun. Take care.
 
